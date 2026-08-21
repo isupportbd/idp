@@ -229,7 +229,8 @@ export default function ClientCredentialsManager() {
     formData.append('file', file);
 
     try {
-      const res = await fetch('/api/client-credentials/upload', {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/api/client-credentials/upload`, {
         method: 'POST',
         body: formData,
         headers: {

@@ -49,7 +49,8 @@ export default function UsersManager() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/users?page=${currentPage}&limit=${itemsPerPage}&search=${encodeURIComponent(searchQuery)}`, {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/api/users?page=${currentPage}&limit=${itemsPerPage}&search=${encodeURIComponent(searchQuery)}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -136,7 +137,8 @@ export default function UsersManager() {
   const handleDelete = async (id: number) => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
     try {
-      const res = await fetch(`/api/users/${id}`, {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/api/users/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });

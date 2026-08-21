@@ -330,7 +330,8 @@ export default function TenantReports() {
     setIsLoadingStatement(true);
     try {
       // Temporary direct fetch before generating Hono client types
-      const res = await fetch(`/api/reports/statement?clientId=${cId}&month=${month}`, {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/api/reports/statement?clientId=${cId}&month=${month}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       if (res.ok) {
