@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-slate-900 text-slate-50 antialiased selection:bg-blue-500/30;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-slate-800 border border-slate-700 shadow-md;
+  }
+  .glass-input {
+    @apply bg-slate-900 border border-slate-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-slate-400 outline-none transition-all;
+  }
+  .glass-button {
+    @apply bg-blue-600 hover:bg-blue-500 text-white transition-all active:scale-95;
+  }
+  .glass-table-header {
+    @apply bg-slate-700/50 text-slate-300 font-semibold border-b border-slate-700;
+  }
+  .glass-table-row {
+    @apply border-b border-slate-700 hover:bg-slate-700/30 transition-colors;
+  }
+}
+
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient-bg {
+  background-size: 400% 400%;
+  animation: gradientBG 15s ease infinite;
+}

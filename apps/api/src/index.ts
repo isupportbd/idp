@@ -1,0 +1,49 @@
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import authApp from './routes/auth';
+import clientsApp from './routes/clients';
+import itemsApp from './routes/items';
+import purchasesApp from './routes/purchases';
+import salesRatesApp from './routes/salesRates';
+import superAdminApp from './routes/superAdmin';
+import uploadApp from './routes/upload';
+import reportsApp from './routes/reports';
+import settingsApp from './routes/settings';
+import clientCredentialsApp from './routes/clientCredentials';
+import usersApp from './routes/users';
+import notificationsApp from './routes/notifications';
+import profileApp from './routes/profile';
+
+type Variables = {
+  user: {
+    userId: number;
+    role: string;
+    adminId: number;
+  };
+};
+
+const app = new Hono<{ Variables: Variables }>();
+
+app.use('*', cors());
+
+const api = app.basePath('/api')
+  .route('/auth', authApp)
+  .route('/clients', clientsApp)
+  .route('/items', itemsApp)
+  .route('/purchases', purchasesApp)
+  .route('/sales-rates', salesRatesApp)
+  .route('/superadmin', superAdminApp)
+  .route('/upload', uploadApp)
+  .route('/reports', reportsApp)
+  .route('/settings', settingsApp)
+  .route('/client-credentials', clientCredentialsApp)
+  .route('/users', usersApp)
+  .route('/notifications', notificationsApp)
+  .route('/profile', profileApp);
+
+export type AppType = typeof api;
+
+export default {
+  port: process.env.PORT || 3000,
+  fetch: app.fetch,
+};
