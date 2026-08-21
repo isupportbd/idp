@@ -36,7 +36,7 @@ clientCredentialsApp.get('/', async (c) => {
           ilike(clients.name, `%${search}%`),
           ilike(clients.bin, `%${search}%`),
           ilike(clientCredentials.loginId, `%${search}%`)
-        )
+        )!
       );
     }
 

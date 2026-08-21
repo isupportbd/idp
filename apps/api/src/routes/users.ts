@@ -125,7 +125,7 @@ usersApp.get('/', async (c) => {
           ilike(users.name, `%${search}%`),
           ilike(users.email, `%${search}%`),
           ilike(users.mobile, `%${search}%`)
-        )
+        )!
       );
     }
 

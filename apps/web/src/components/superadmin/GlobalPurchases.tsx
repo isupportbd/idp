@@ -26,7 +26,8 @@ export default function GlobalPurchases() {
   const { data: monthsData } = useQuery({
     queryKey: ['superadmin-global-purchases-months'],
     queryFn: async () => {
-      const res = await fetch('/api/superadmin/global-purchases/months', {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/api/superadmin/global-purchases/months`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       return res.json();
@@ -51,7 +52,8 @@ export default function GlobalPurchases() {
       });
       if (debouncedLc) queryParams.append('lcNumber', debouncedLc);
       
-      const res = await fetch(`/api/superadmin/global-purchases?${queryParams}`, {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/api/superadmin/global-purchases?${queryParams}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       return res.json();
@@ -61,7 +63,8 @@ export default function GlobalPurchases() {
 
   const deleteMutation = useMutation({
     mutationFn: async (month: string) => {
-      const res = await fetch(`/api/superadmin/global-purchases/months/${month}`, {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/api/superadmin/global-purchases/months/${month}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
