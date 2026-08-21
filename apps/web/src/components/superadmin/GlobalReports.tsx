@@ -17,7 +17,8 @@ export default function GlobalReports() {
   const { data: tenantsData } = useQuery({
     queryKey: ['superadmin-tenants-list'],
     queryFn: async () => {
-      const res = await fetch('/api/superadmin/tenants', {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/api/superadmin/tenants`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       return res.json();
@@ -28,7 +29,8 @@ export default function GlobalReports() {
   const { data: unitsData } = useQuery({
     queryKey: ['superadmin-unit-conversions'],
     queryFn: async () => {
-      const res = await fetch('/api/superadmin/unit-conversions', {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/api/superadmin/unit-conversions`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       return res.json();
@@ -39,7 +41,8 @@ export default function GlobalReports() {
   const { data: monthsData } = useQuery({
     queryKey: ['superadmin-global-purchases-months'],
     queryFn: async () => {
-      const res = await fetch('/api/superadmin/global-purchases/months', {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/api/superadmin/global-purchases/months`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       return res.json();
@@ -51,7 +54,8 @@ export default function GlobalReports() {
     queryKey: ['superadmin-global-reports', selectedAdminId, selectedMonth],
     queryFn: async () => {
       if (!selectedAdminId || !selectedMonth) return { data: [] };
-      const res = await fetch(`/api/superadmin/global-reports?adminId=${selectedAdminId}&month=${selectedMonth}`, {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/api/superadmin/global-reports?adminId=${selectedAdminId}&month=${selectedMonth}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       return res.json();
