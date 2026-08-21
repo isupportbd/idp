@@ -24,6 +24,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/bun": "latest",
     "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^26.2.0",
     "@types/nodemailer": "^8.0.1",
     "drizzle-kit": "^0.24.0",
     "typescript": "^5.0.0"
