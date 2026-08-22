@@ -101,7 +101,8 @@ export default function UsersManager() {
     
     try {
       const method = editMode ? 'PUT' : 'POST';
-      const url = editMode ? `/api/users/${formData.id}` : '/api/users';
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const url = editMode ? `${baseUrl}/api/users/${formData.id}` : `${baseUrl}/api/users`;
       
       const res = await fetch(url, {
         method,
