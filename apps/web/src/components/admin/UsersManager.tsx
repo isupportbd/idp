@@ -97,6 +97,29 @@ export default function UsersManager() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Explicit Validation
+    if (!formData.name.trim()) {
+      showToast('error', 'Please enter a full name.');
+      return;
+    }
+    if (!formData.email.trim()) {
+      showToast('error', 'Please enter an email address.');
+      return;
+    }
+    if (!formData.mobile.trim()) {
+      showToast('error', 'Please enter a mobile number (required).');
+      return;
+    }
+    if (!editMode && (!formData.password || formData.password.length < 6)) {
+      showToast('error', 'Password must be at least 6 characters long.');
+      return;
+    }
+    if (editMode && formData.password && formData.password.length < 6) {
+      showToast('error', 'New password must be at least 6 characters long.');
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
@@ -357,7 +380,6 @@ export default function UsersManager() {
                     type="text" 
                     value={formData.name} 
                     onChange={e => setFormData({...formData, name: e.target.value})}
-                    required
                     className="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-2.5 text-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter full name"
                   />
@@ -369,14 +391,13 @@ export default function UsersManager() {
                     type="email" 
                     value={formData.email} 
                     onChange={e => setFormData({...formData, email: e.target.value})}
-                    required
                     className="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-2.5 text-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter email address"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-1.5">Mobile Number (Optional)</label>
+                  <label className="block text-sm font-medium text-slate-400 mb-1.5">Mobile Number</label>
                   <input 
                     type="text" 
                     value={formData.mobile} 
@@ -394,8 +415,6 @@ export default function UsersManager() {
                     type="password" 
                     value={formData.password} 
                     onChange={e => setFormData({...formData, password: e.target.value})}
-                    required={!editMode}
-                    minLength={6}
                     className="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-2.5 text-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder={editMode ? "Enter new password" : "Enter password"}
                   />
