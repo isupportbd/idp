@@ -13,7 +13,7 @@ export default function DashboardOverview() {
         
         <Link 
           to="/admin/clients" 
-          className="flex-1 min-w-[220px] max-w-[300px] bg-slate-800 p-6 rounded-xl shadow-sm text-slate-200 no-underline transition-all duration-200 border border-slate-700 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-md hover:border-blue-500"
+          className="flex-1 min-w-[220px] max-w-[300px] glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
         >
           <div className="text-4xl mb-4">💼</div>
           <h3 className="text-lg font-semibold m-0 mb-2 text-slate-100">Clients</h3>
@@ -23,7 +23,7 @@ export default function DashboardOverview() {
         {isAdmin && (
           <Link 
             to="/admin/client-credentials" 
-            className="flex-1 min-w-[220px] max-w-[300px] bg-slate-800 p-6 rounded-xl shadow-sm text-slate-200 no-underline transition-all duration-200 border border-slate-700 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-md hover:border-blue-500"
+            className="flex-1 min-w-[220px] max-w-[300px] glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
           >
             <div className="text-4xl mb-4">🔑</div>
             <h3 className="text-lg font-semibold m-0 mb-2 text-slate-100">User Name & Password</h3>
@@ -34,7 +34,7 @@ export default function DashboardOverview() {
         {user?.role === 'admin' && (
           <Link 
             to="/admin/users" 
-            className="flex-1 min-w-[220px] max-w-[300px] bg-slate-800 p-6 rounded-xl shadow-sm text-slate-200 no-underline transition-all duration-200 border border-slate-700 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-md hover:border-blue-500"
+            className="flex-1 min-w-[220px] max-w-[300px] glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
           >
             <div className="text-4xl mb-4">👥</div>
             <h3 className="text-lg font-semibold m-0 mb-2 text-slate-100">Users</h3>
@@ -45,7 +45,7 @@ export default function DashboardOverview() {
         {user?.role === 'admin' && (
           <Link 
             to="/admin/sales-rates" 
-            className="flex-1 min-w-[220px] max-w-[300px] bg-slate-800 p-6 rounded-xl shadow-sm text-slate-200 no-underline transition-all duration-200 border border-slate-700 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-md hover:border-blue-500"
+            className="flex-1 min-w-[220px] max-w-[300px] glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
           >
             <div className="text-4xl mb-4">💰</div>
             <h3 className="text-lg font-semibold m-0 mb-2 text-slate-100">Sales Rates</h3>
@@ -56,7 +56,7 @@ export default function DashboardOverview() {
         {user?.role === 'admin' && (
           <Link 
             to="/admin/upload" 
-            className="flex-1 min-w-[220px] max-w-[300px] bg-slate-800 p-6 rounded-xl shadow-sm text-slate-200 no-underline transition-all duration-200 border border-slate-700 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-md hover:border-blue-500"
+            className="flex-1 min-w-[220px] max-w-[300px] glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
           >
             <div className="mb-4"><UploadIcon3D size={64} /></div>
             <h3 className="text-lg font-semibold m-0 mb-2 text-slate-100">Upload File</h3>
@@ -67,7 +67,7 @@ export default function DashboardOverview() {
         {isSuperAdmin && (
           <Link 
             to="/admin/purchases" 
-            className="flex-1 min-w-[220px] max-w-[300px] bg-slate-800 p-6 rounded-xl shadow-sm text-slate-200 no-underline transition-all duration-200 border border-slate-700 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-md hover:border-blue-500"
+            className="flex-1 min-w-[220px] max-w-[300px] glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
           >
             <div className="text-4xl mb-4">🛒</div>
             <h3 className="text-lg font-semibold m-0 mb-2 text-slate-100">Purchases</h3>
@@ -77,7 +77,7 @@ export default function DashboardOverview() {
 
         <Link 
           to="/admin/reports" 
-          className="flex-1 min-w-[220px] max-w-[300px] bg-slate-800 p-6 rounded-xl shadow-sm text-slate-200 no-underline transition-all duration-200 border border-slate-700 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-md hover:border-blue-500"
+          className="flex-1 min-w-[220px] max-w-[300px] glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
         >
           <div className="text-4xl mb-4">📈</div>
           <h3 className="text-lg font-semibold m-0 mb-2 text-slate-100">Reports</h3>

@@ -39,6 +39,13 @@ authApp.post('/register', zValidator('json', registerSchema), async (c) => {
       return c.json({ success: false, error: 'Mobile number is already registered.' }, 400);
     }
 
+    if (trxId) {
+      const existingTrx = await db.select().from(users).where(eq(users.trxId, trxId));
+      if (existingTrx.length > 0) {
+        return c.json({ success: false, error: 'This Transaction ID has already been used.' }, 400);
+      }
+    }
+
     const usersCount = await db.select({ count: sql<number>`count(*)` }).from(users);
     const countVal = Number(usersCount[0].count);
     const isFirstUser = countVal === 0;

@@ -21,7 +21,7 @@ export default function SuperAdminDashboard() {
         
         <Link 
           to="/superadmin/tenants" 
-          className="relative flex-1 min-w-[240px] max-w-[320px] bg-slate-800/80 p-8 rounded-2xl shadow-lg text-slate-200 no-underline transition-all duration-300 border border-slate-700/50 flex flex-col items-center text-center hover:-translate-y-2 hover:shadow-xl hover:shadow-blue-900/20 hover:border-blue-500/50 group backdrop-blur-sm"
+          className="relative flex-1 min-w-[240px] max-w-[320px] glass-panel p-8 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-2 hover:shadow-xl hover:shadow-blue-900/20 hover:border-blue-500/50 group backdrop-blur-sm"
         >
           <div className="p-4 bg-blue-500/10 rounded-2xl mb-5 group-hover:scale-110 transition-transform duration-300">
             <Users size={40} className="text-blue-400" />
@@ -37,7 +37,7 @@ export default function SuperAdminDashboard() {
 
         <Link 
           to="/superadmin/plans" 
-          className="flex-1 min-w-[240px] max-w-[320px] bg-slate-800/80 p-8 rounded-2xl shadow-lg text-slate-200 no-underline transition-all duration-300 border border-slate-700/50 flex flex-col items-center text-center hover:-translate-y-2 hover:shadow-xl hover:shadow-emerald-900/20 hover:border-emerald-500/50 group backdrop-blur-sm"
+          className="flex-1 min-w-[240px] max-w-[320px] glass-panel p-8 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-2 hover:shadow-xl hover:shadow-emerald-900/20 hover:border-emerald-500/50 group backdrop-blur-sm"
         >
           <div className="p-4 bg-emerald-500/10 rounded-2xl mb-5 group-hover:scale-110 transition-transform duration-300">
             <CreditCard size={40} className="text-emerald-400" />
@@ -48,7 +48,7 @@ export default function SuperAdminDashboard() {
 
         <Link 
           to="/superadmin/purchases" 
-          className="flex-1 min-w-[240px] max-w-[320px] bg-slate-800/80 p-8 rounded-2xl shadow-lg text-slate-200 no-underline transition-all duration-300 border border-slate-700/50 flex flex-col items-center text-center hover:-translate-y-2 hover:shadow-xl hover:shadow-orange-900/20 hover:border-orange-500/50 group backdrop-blur-sm"
+          className="flex-1 min-w-[240px] max-w-[320px] glass-panel p-8 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-2 hover:shadow-xl hover:shadow-orange-900/20 hover:border-orange-500/50 group backdrop-blur-sm"
         >
           <div className="p-4 bg-orange-500/10 rounded-2xl mb-5 group-hover:scale-110 transition-transform duration-300">
             <ShoppingCart size={40} className="text-orange-400" />
@@ -59,7 +59,7 @@ export default function SuperAdminDashboard() {
 
         <Link 
           to="/superadmin/settings" 
-          className="flex-1 min-w-[240px] max-w-[320px] bg-slate-800/80 p-8 rounded-2xl shadow-lg text-slate-200 no-underline transition-all duration-300 border border-slate-700/50 flex flex-col items-center text-center hover:-translate-y-2 hover:shadow-xl hover:shadow-purple-900/20 hover:border-purple-500/50 group backdrop-blur-sm"
+          className="flex-1 min-w-[240px] max-w-[320px] glass-panel p-8 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-2 hover:shadow-xl hover:shadow-purple-900/20 hover:border-purple-500/50 group backdrop-blur-sm"
         >
           <div className="p-4 bg-purple-500/10 rounded-2xl mb-5 group-hover:scale-110 transition-transform duration-300">
             <SettingsIcon size={40} className="text-purple-400" />
@@ -70,7 +70,7 @@ export default function SuperAdminDashboard() {
         
         <Link 
           to="/superadmin/reports" 
-          className="flex-1 min-w-[240px] max-w-[320px] bg-slate-800/80 p-8 rounded-2xl shadow-lg text-slate-200 no-underline transition-all duration-300 border border-slate-700/50 flex flex-col items-center text-center hover:-translate-y-2 hover:shadow-xl hover:shadow-indigo-900/20 hover:border-indigo-500/50 group backdrop-blur-sm"
+          className="flex-1 min-w-[240px] max-w-[320px] glass-panel p-8 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-2 hover:shadow-xl hover:shadow-indigo-900/20 hover:border-indigo-500/50 group backdrop-blur-sm"
         >
           <div className="p-4 bg-indigo-500/10 rounded-2xl mb-5 group-hover:scale-110 transition-transform duration-300">
             <LineChart size={40} className="text-indigo-400" />
@@ -81,7 +81,7 @@ export default function SuperAdminDashboard() {
 
         <Link 
           to="/superadmin/storage" 
-          className="flex-1 min-w-[240px] max-w-[320px] bg-slate-800/80 p-8 rounded-2xl shadow-lg text-slate-200 no-underline transition-all duration-300 border border-slate-700/50 flex flex-col items-center text-center hover:-translate-y-2 hover:shadow-xl hover:shadow-cyan-900/20 hover:border-cyan-500/50 group backdrop-blur-sm"
+          className="flex-1 min-w-[240px] max-w-[320px] glass-panel p-8 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-2 hover:shadow-xl hover:shadow-cyan-900/20 hover:border-cyan-500/50 group backdrop-blur-sm"
         >
           <div className="p-4 bg-cyan-500/10 rounded-2xl mb-5 group-hover:scale-110 transition-transform duration-300">
             <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-cyan-400"><line x1="22" y1="12" x2="2" y2="12"></line><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path><line x1="6" y1="16" x2="6.01" y2="16"></line><line x1="10" y1="16" x2="10.01" y2="16"></line></svg>

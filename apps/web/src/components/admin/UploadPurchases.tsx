@@ -211,10 +211,13 @@ export default function UploadPurchases() {
         .glass-panel {
           display: flex;
           align-items: center;
-          background: var(--bg-surface-hover);
+          background: rgba(30, 41, 59, 0.4);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 16px;
-          box-shadow: var(--shadow-sm);
-          border: 1px solid var(--border-color);
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+          overflow: hidden;
           padding: 0.5rem;
           flex: 1;
         }

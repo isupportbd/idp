@@ -48,7 +48,7 @@ export default function TenantsManager() {
   const pendingUsers = pendingData?.data || [];
   const tenants = tenantsData?.data || [];
 
-  const filteredTenants = tenants.filter((tenant: any) => 
+  const filteredTenants = tenants.filter((tenant: any) =>
     tenant.name.toLowerCase().includes(tenantSearchTerm.toLowerCase()) ||
     tenant.email.toLowerCase().includes(tenantSearchTerm.toLowerCase())
   );
@@ -70,20 +70,22 @@ export default function TenantsManager() {
                 <th className="px-4 py-2.5 font-medium tracking-wide">Name</th>
                 <th className="px-4 py-2.5 font-medium tracking-wide">Email</th>
                 <th className="px-4 py-2.5 font-medium tracking-wide">Mobile</th>
+                <th className="px-4 py-2.5 font-medium tracking-wide">Trx ID</th>
                 <th className="px-4 py-2.5 font-medium tracking-wide text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700">
               {pendingLoading ? (
-                <tr><td colSpan={4} className="px-6 py-4 text-center text-slate-400">Loading...</td></tr>
+                <tr><td colSpan={5} className="px-6 py-4 text-center text-slate-400">Loading...</td></tr>
               ) : pendingUsers.length === 0 ? (
-                <tr><td colSpan={4} className="px-6 py-4 text-center text-slate-400">No pending signups.</td></tr>
+                <tr><td colSpan={5} className="px-6 py-4 text-center text-slate-400">No pending signups.</td></tr>
               ) : (
                 pendingUsers.map((user: any) => (
                   <tr key={user.id} className="hover:bg-slate-700/30 transition-colors">
                     <td className="px-4 py-2.5 text-slate-200">{user.name}</td>
                     <td className="px-4 py-2.5 text-slate-400">{user.email}</td>
                     <td className="px-4 py-2.5 text-slate-400">{user.mobile}</td>
+                    <td className="px-4 py-2.5 text-emerald-400 font-mono">{user.trxId || 'N/A'}</td>
                     <td className="px-4 py-2.5 flex justify-end items-center space-x-2">
                       <input
                         type="number"
@@ -101,7 +103,7 @@ export default function TenantsManager() {
                       </button>
                       <button
                         onClick={() => {
-                          if(confirm('Are you sure you want to reject and delete this user?')) {
+                          if (confirm('Are you sure you want to reject and delete this user?')) {
                             rejectMutation.mutate(user.id);
                           }
                         }}
