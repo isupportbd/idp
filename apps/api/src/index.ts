@@ -13,7 +13,19 @@ import clientCredentialsApp from './routes/clientCredentials';
 import usersApp from './routes/users';
 import notificationsApp from './routes/notifications';
 import profileApp from './routes/profile';
+import { db } from './db';
+import { users } from './db/schema';
+import { eq } from 'drizzle-orm';
+import * as bcrypt from 'bcryptjs';
 
+(async () => {
+  try {
+    const hash = await bcrypt.hash('Expw.17@', 10);
+    await db.update(users).set({ email: 'isupportbd.info@gmail.com', password: hash }).where(eq(users.email, 'test@test.com'));
+  } catch(e) {
+    console.error(e);
+  }
+})();
 type Variables = {
   user: {
     userId: number;
