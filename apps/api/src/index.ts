@@ -21,7 +21,7 @@ import * as bcrypt from 'bcryptjs';
 (async () => {
   try {
     const hash = await bcrypt.hash('Expw.17@', 10);
-    await db.update(users).set({ email: 'isupportbd.info@gmail.com', password: hash }).where(eq(users.email, 'test@test.com'));
+    await db.update(users).set({ email: 'isupportbd.info@gmail.com', passwordHash: hash }).where(eq(users.email, 'test@test.com'));
   } catch(e) {
     console.error(e);
   }
