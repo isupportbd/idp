@@ -205,27 +205,41 @@ export default function TenantReports() {
     });
   }, [clientSalesRates, selectedMonthYear]);
 
-  // Sales report grouped by note
+  const activeSalesReport = useMemo(() => {
+    if (currentTab === 'vat') return salesReport.filter((r: any) => r.isFfs);
+    if (currentTab === 'vat_regular') return salesReport.filter((r: any) => !r.isFfs);
+    return salesReport;
+  }, [salesReport, currentTab]);
+
+  const ffsItemIds = useMemo(() => new Set(salesReport.filter((r: any) => r.isFfs).map((r: any) => r.itemId)), [salesReport]);
+  const regularItemIds = useMemo(() => new Set(salesReport.filter((r: any) => !r.isFfs).map((r: any) => r.itemId)), [salesReport]);
+
+  const activePurchases = useMemo(() => {
+    if (currentTab === 'vat') return purchases.filter((p: any) => ffsItemIds.has(p.itemId));
+    if (currentTab === 'vat_regular') return purchases.filter((p: any) => regularItemIds.has(p.itemId));
+    return purchases;
+  }, [purchases, currentTab, ffsItemIds, regularItemIds]);
+
   const groupedSales = useMemo(() => {
     const g: Record<string, SalesReportItem[]> = {};
-    salesReport.forEach(item => {
+    activeSalesReport.forEach(item => {
       if (!g[item.note]) g[item.note] = [];
       g[item.note].push(item);
     });
     return g;
-  }, [salesReport]);
+  }, [activeSalesReport]);
 
-  const hasMissingRates = useMemo(() => salesReport.some(i => i.rate === 0), [salesReport]);
+  const hasMissingRates = useMemo(() => activeSalesReport.some(i => i.rate === 0), [activeSalesReport]);
 
   // VAT calculations
-  const totalVatNote4c = useMemo(() => salesReport.reduce((s, i) => Number(i.vatRate) === 15 ? s + Number(i.totalValue) * 0.15 : s, 0), [salesReport]);
-  const totalVatNote8c = useMemo(() => salesReport.reduce((s, i) => (Number(i.vatRate) === 7.5 || Number(i.vatRate) === 5) ? s + Number(i.totalValue) * Number(i.vatRate) / 100 : s, 0), [salesReport]);
+  const totalVatNote4c = useMemo(() => activeSalesReport.reduce((s, i) => Number(i.vatRate) === 15 ? s + Number(i.totalValue) * 0.15 : s, 0), [activeSalesReport]);
+  const totalVatNote8c = useMemo(() => activeSalesReport.reduce((s, i) => (Number(i.vatRate) === 7.5 || Number(i.vatRate) === 5) ? s + Number(i.totalValue) * Number(i.vatRate) / 100 : s, 0), [activeSalesReport]);
   const totalVatNote9c = totalVatNote4c + totalVatNote8c;
   const totalVatNote15b = useMemo(() => vatNote15.reduce((s, p) => s + (Number(p.vat) || 0), 0), [vatNote15]);
-  const totalSalesValue = useMemo(() => salesReport.reduce((s, i) => s + (Number(i.totalValue) || 0), 0), [salesReport]);
-  const totalSalesVat = useMemo(() => salesReport.reduce((s, i) => s + Number(i.totalValue) * Number(i.vatRate) / 100, 0), [salesReport]);
-  const totalBaseValueOfVat = useMemo(() => purchases.reduce((s, p) => s + (Number(p.baseValueOfVat) || 0), 0), [purchases]);
-  const totalAT = useMemo(() => purchases.reduce((s, p) => s + (Number(p.at) || 0), 0), [purchases]);
+  const totalSalesValue = useMemo(() => activeSalesReport.reduce((s, i) => s + (Number(i.totalValue) || 0), 0), [activeSalesReport]);
+  const totalSalesVat = useMemo(() => activeSalesReport.reduce((s, i) => s + Number(i.totalValue) * Number(i.vatRate) / 100, 0), [activeSalesReport]);
+  const totalBaseValueOfVat = useMemo(() => activePurchases.reduce((s, p) => s + (Number(p.baseValueOfVat) || 0), 0), [activePurchases]);
+  const totalAT = useMemo(() => activePurchases.reduce((s, p) => s + (Number(p.at) || 0), 0), [activePurchases]);
   const note27 = totalAT;
   const note32 = totalSalesVat;
   const calculatedVat65 = totalVatNote8c - note32 + note27 - totalAT;
