@@ -72,8 +72,8 @@ uploadApp.post('/', async (c) => {
       const mappedRow: any = {};
       
       dbMappings.forEach(mapping => {
-        const cleanExcelHeader = mapping.excelHeader.trim();
-        const rowKey = Object.keys(row).find(k => k.trim() === cleanExcelHeader);
+        const cleanExcelHeader = mapping.excelHeader.trim().toLowerCase().replace(/\s+/g, '');
+        const rowKey = Object.keys(row).find(k => k.trim().toLowerCase().replace(/\s+/g, '') === cleanExcelHeader);
         
         if (rowKey && row[rowKey] !== undefined && row[rowKey] !== null && String(row[rowKey]).trim() !== '') {
           let val = row[rowKey];
@@ -110,6 +110,13 @@ uploadApp.post('/', async (c) => {
 
       mappedRow.tempId = Math.random().toString(36).substr(2, 9);
       processedData.push(mappedRow);
+    }
+    
+    if (processedData.length === 0) {
+      return c.json({ 
+        success: false, 
+        message: 'No valid rows found in the uploaded file. Please ensure the Excel headers exactly match the Database Column Mappings (especially BE_NO and HSCode).' 
+      }, 400);
     }
     
     // Validate HS Codes
