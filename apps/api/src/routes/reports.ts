@@ -70,6 +70,7 @@ reportsApp.get('/sales', async (c) => {
         salesRate: salesRates.salesRate,
         vatRate: salesRates.vatRate,
         activationDate: salesRates.activationDate,
+        isFfs: salesRates.isFfs,
         factor: unitConversions.factor
       })
       .from(salesRates)
@@ -168,6 +169,7 @@ reportsApp.get('/sales', async (c) => {
         addition: additionPercent,
         vatRate,
         note,
+        isFfs: rateObj ? Boolean(rateObj.isFfs) : false,
       });
     }
 

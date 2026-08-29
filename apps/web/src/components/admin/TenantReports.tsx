@@ -773,31 +773,37 @@ export default function TenantReports() {
 
             {/* VAT Report (Final Settlement) */}
             {currentTab === 'vat' && (
-              <div>
-                <div className="text-center mb-4 mt-2">
-                  <p className="text-slate-400 text-sm font-bold mb-3">From Jul 2025</p>
-                  <button
-                    onClick={calculateVat}
-                    disabled={isLoadingVat || !selectedClientId || !selectedMonthYear}
-                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
-                  >
-                    {isLoadingVat ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Calculating...</> : '⚡ Calculate'}
-                  </button>
+              salesReport.length > 0 && !salesReport.some((r: any) => r.isFfs) ? (
+                <div className="text-center py-16 text-slate-400">
+                  <h4 className="text-xl font-bold text-slate-300 mb-2">Not Applicable</h4>
+                  <p>এই মাসের জন্য এই রিপোর্টটি (Final Settlement) প্রযোজ্য নয়।</p>
                 </div>
-
-                {isVatCalculated && currentCredential && (
-                  <div className="max-w-2xl mx-auto mb-4 mt-6 bg-blue-500/10 border border-blue-500/30 rounded-lg py-4 px-6 text-center">
-                    <div className="font-bold text-blue-500 mb-3 text-[1.1rem]">eVAT Login Details</div>
-                    <div className="flex justify-center gap-12 text-[1.05rem]">
-                      <p className="text-slate-200 flex items-center gap-2 m-0"><strong>User Name:</strong> <span className="bg-slate-800 px-2.5 py-1 rounded border border-slate-700 font-mono font-bold tracking-[0.5px] text-slate-200">{currentCredential.loginId}</span></p>
-                      <p className="text-slate-200 flex items-center gap-2 m-0"><strong>Password:</strong> <span className="bg-slate-800 px-2.5 py-1 rounded border border-slate-700 font-mono font-bold tracking-[0.5px] text-slate-200">{currentCredential.loginPassword}</span></p>
-                    </div>
+              ) : (
+                <div>
+                  <div className="text-center mb-4 mt-2">
+                    <p className="text-slate-400 text-sm font-bold mb-3">From Jul 2025</p>
+                    <button
+                      onClick={calculateVat}
+                      disabled={isLoadingVat || !selectedClientId || !selectedMonthYear}
+                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
+                    >
+                      {isLoadingVat ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Calculating...</> : '⚡ Calculate'}
+                    </button>
                   </div>
-                )}
 
-                {isVatCalculated && (
-                  <div className="max-w-2xl mx-auto overflow-x-auto rounded-lg border border-slate-700">
-                    <table className="w-full text-sm">
+                  {isVatCalculated && currentCredential && (
+                    <div className="max-w-2xl mx-auto mb-4 mt-6 bg-blue-500/10 border border-blue-500/30 rounded-lg py-4 px-6 text-center">
+                      <div className="font-bold text-blue-500 mb-3 text-[1.1rem]">eVAT Login Details</div>
+                      <div className="flex justify-center gap-12 text-[1.05rem]">
+                        <p className="text-slate-200 flex items-center gap-2 m-0"><strong>User Name:</strong> <span className="bg-slate-800 px-2.5 py-1 rounded border border-slate-700 font-mono font-bold tracking-[0.5px] text-slate-200">{currentCredential.loginId}</span></p>
+                        <p className="text-slate-200 flex items-center gap-2 m-0"><strong>Password:</strong> <span className="bg-slate-800 px-2.5 py-1 rounded border border-slate-700 font-mono font-bold tracking-[0.5px] text-slate-200">{currentCredential.loginPassword}</span></p>
+                      </div>
+                    </div>
+                  )}
+
+                  {isVatCalculated && (
+                    <div className="max-w-2xl mx-auto overflow-x-auto rounded-lg border border-slate-700">
+                      <table className="w-full text-sm">
                       <thead className="bg-slate-900 text-slate-400">
                         <tr>
                           <th className="px-4 py-3 text-left w-36">Note</th>
@@ -821,21 +827,29 @@ export default function TenantReports() {
                     </table>
                   </div>
                 )}
-              </div>
+                  </div>
+                </div>
+              )
             )}
 
             {/* VAT Report (Regular) */}
             {currentTab === 'vat_regular' && (
-              <div>
-                <div className="text-center mb-4 mt-2">
-                  <button
-                    onClick={calculateVat}
-                    disabled={isLoadingVat || !selectedClientId || !selectedMonthYear}
-                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
-                  >
-                    {isLoadingVat ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Calculating...</> : '⚡ Calculate'}
-                  </button>
+              salesReport.length > 0 && salesReport.every((r: any) => r.isFfs) ? (
+                <div className="text-center py-16 text-slate-400">
+                  <h4 className="text-xl font-bold text-slate-300 mb-2">Not Applicable</h4>
+                  <p>এই মাসের জন্য এই রিপোর্টটি (Regular VAT) প্রযোজ্য নয়।</p>
                 </div>
+              ) : (
+                <div>
+                  <div className="text-center mb-4 mt-2">
+                    <button
+                      onClick={calculateVat}
+                      disabled={isLoadingVat || !selectedClientId || !selectedMonthYear}
+                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
+                    >
+                      {isLoadingVat ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Calculating...</> : '⚡ Calculate'}
+                    </button>
+                  </div>
 
                 {isVatCalculated && currentCredential && (
                   <div className="max-w-2xl mx-auto mb-4 mt-6 bg-blue-500/10 border border-blue-500/30 rounded-lg py-4 px-6 text-center">
@@ -873,7 +887,9 @@ export default function TenantReports() {
                     </table>
                   </div>
                 )}
-              </div>
+                  </div>
+                </div>
+              )
             )}
 
             {/* Statement Report */}
