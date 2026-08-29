@@ -8,6 +8,7 @@ export default function SalesRatesManager() {
   const [totalCount, setTotalCount] = useState(0);
   const [clients, setClients] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
+  const [clientPurchasedItems, setClientPurchasedItems] = useState<any[]>([]);
   const [unitConversions, setUnitConversions] = useState<any[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -57,6 +58,26 @@ export default function SalesRatesManager() {
   useEffect(() => {
     fetchClientsAndItems();
   }, []);
+
+  useEffect(() => {
+    if (formData.clientId) {
+      fetchClientItems(formData.clientId);
+    } else {
+      setClientPurchasedItems([]);
+    }
+  }, [formData.clientId]);
+
+  const fetchClientItems = async (clientId: string) => {
+    try {
+      const res = await apiClient.api.clients[':id'].items.$get({ param: { id: clientId } });
+      if (res.ok) {
+        const data = await res.json() as any;
+        setClientPurchasedItems(data.data || []);
+      }
+    } catch (e) {
+      console.error('Error fetching client items:', e);
+    }
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -241,7 +262,8 @@ export default function SalesRatesManager() {
     (c.bin && c.bin.toLowerCase().includes(clientSearchText.toLowerCase()))
   );
 
-  const filteredFormItems = items.filter(i => 
+  const itemsToFilter = formData.clientId ? clientPurchasedItems : items;
+  const filteredFormItems = itemsToFilter.filter(i => 
     i.name.toLowerCase().includes(itemSearchText.toLowerCase()) || 
     (i.hsCode && i.hsCode.toLowerCase().includes(itemSearchText.toLowerCase()))
   );

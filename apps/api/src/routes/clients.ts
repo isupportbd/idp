@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { db } from '../db';
-import { clients, purchases, salesRates, users, clientCredentials, notifications } from '../db/schema';
+import { clients, purchases, salesRates, users, clientCredentials, notifications, items } from '../db/schema';
 import { eq, and, inArray, ilike, or, sql } from 'drizzle-orm';
 import { authenticate, requireRole } from '../middlewares/auth';
 import { zValidator } from '@hono/zod-validator';
@@ -96,6 +96,43 @@ clientsApp.get('/', async (c) => {
   } catch (error) {
     console.error('Error fetching clients:', error);
     return c.json({ error: 'Failed to fetch clients' }, 500);
+  }
+});
+
+// GET /:id/items
+clientsApp.get('/:id/items', async (c) => {
+  try {
+    const user = c.get('user');
+    const clientId = parseInt(c.req.param('id'));
+
+    if (isNaN(clientId)) {
+      return c.json({ success: false, message: 'Invalid client ID' }, 400);
+    }
+
+    const pQuery = await db
+      .select({ 
+        id: items.id, 
+        name: items.name, 
+        hsCode: items.hsCode 
+      })
+      .from(purchases)
+      .innerJoin(items, eq(purchases.itemId, items.id))
+      .where(eq(purchases.clientId, clientId));
+
+    // Remove duplicates based on item ID
+    const uniqueItemsMap = new Map();
+    for (const item of pQuery) {
+      if (!uniqueItemsMap.has(item.id)) {
+        uniqueItemsMap.set(item.id, item);
+      }
+    }
+
+    const data = Array.from(uniqueItemsMap.values());
+
+    return c.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching client items:', error);
+    return c.json({ success: false, message: 'Failed to fetch client items' }, 500);
   }
 });
 
