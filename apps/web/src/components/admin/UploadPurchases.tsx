@@ -9,11 +9,11 @@ export default function UploadPurchases() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadResult, setUploadResult] = useState<any>(null);
-  
+
   const [tempData, setTempData] = useState<any[]>([]);
   const [requiresMapping, setRequiresMapping] = useState(false);
   const [missingItems, setMissingItems] = useState<any[]>([]);
-  
+
   const [showCompareModal, setShowCompareModal] = useState(false);
   const [duplicateList, setDuplicateList] = useState<any[]>([]);
 
@@ -24,7 +24,7 @@ export default function UploadPurchases() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const totalPages = Math.max(1, Math.ceil(tempData.length / pageSize));
-  
+
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     const end = start + pageSize;
@@ -75,7 +75,7 @@ export default function UploadPurchases() {
       const response = await apiClient.api.upload.$post({
         form: { file: selectedFile }
       });
-      
+
       const data = await response.json() as any;
       if (data.success) {
         setTempData(data.data);
@@ -108,7 +108,7 @@ export default function UploadPurchases() {
       const response = await apiClient.api.items.bulk.$post({
         json: { items: missingItems }
       });
-      
+
       const data = await response.json() as any;
       if (data.success) {
         setRequiresMapping(false);
@@ -140,7 +140,7 @@ export default function UploadPurchases() {
           isFfs: isFfs
         }
       });
-      
+
       const data = await response.json() as any;
       if (data.success) {
         setTempData([]);
@@ -150,7 +150,7 @@ export default function UploadPurchases() {
         if (data.duplicatesList && data.duplicatesList.length > 0) {
           setDuplicateList(data.duplicatesList);
           setShowCompareModal(true);
-          
+
           if (data.totalRowsProcessed > 0) {
             setUploadResult({ success: true, message: `${data.totalRowsProcessed} new records saved successfully. Please review the duplicates below.` });
           } else {
@@ -183,7 +183,8 @@ export default function UploadPurchases() {
 
   return (
     <div className="max-w-6xl mx-auto upload-container">
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .colorful-theme {
           --text-main: #f8fafc;
           --text-muted: #94a3b8;
@@ -213,13 +214,13 @@ export default function UploadPurchases() {
         .glass-panel {
           display: flex;
           align-items: center;
+          gap: 0.5rem;
           background: rgba(30, 41, 59, 0.4);
           backdrop-filter: blur(16px);
           -webkit-backdrop-filter: blur(16px);
           border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 16px;
           box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
-          overflow: hidden;
           padding: 0.5rem;
           flex: 1;
         }
@@ -227,8 +228,8 @@ export default function UploadPurchases() {
         .input-group {
           display: flex;
           align-items: center;
-          gap: 1rem;
-          padding: 0.75rem 1.5rem;
+          gap: 0.5rem;
+          padding: 0.5rem 1rem;
           border-radius: 12px;
           transition: all 0.3s ease;
         }
@@ -239,7 +240,6 @@ export default function UploadPurchases() {
 
         .file-picker {
           cursor: pointer;
-          flex: 1;
         }
 
         .icon-wrapper {
@@ -257,6 +257,7 @@ export default function UploadPurchases() {
         .bg-blue { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
         .bg-purple { background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%); }
         .bg-emerald { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .bg-orange { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
 
         .file-picker:hover .icon-wrapper {
           transform: scale(1.05);
@@ -290,7 +291,7 @@ export default function UploadPurchases() {
           width: 2px;
           height: 48px;
           background: rgba(150, 150, 150, 0.4);
-          margin: 0 1rem;
+          margin: 0 0.5rem;
           border-radius: 2px;
         }
 
@@ -373,11 +374,11 @@ export default function UploadPurchases() {
       {tempData.length === 0 && (
         <div className="premium-upload-bar colorful-theme">
           <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" hidden />
-          
+
           <div className="glass-panel overflow-x-auto">
             <div className={`input-group file-picker ${selectedFile ? 'has-file' : ''}`} onClick={() => fileInputRef.current?.click()}>
               <div className="icon-wrapper bg-blue shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" className="custom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.2 15c.7-1.2 1-2.5.7-3.9-.6-2-2.4-3.5-4.4-3.5h-1.2c-.7-3-3.2-5.2-6.2-5.6-3-.3-5.9 1.3-7.3 4-1.2 2.5-1 6.5.5 8.8m8.7-1.6V21"/><path d="M16 16l-4-4-4 4"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" className="custom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.2 15c.7-1.2 1-2.5.7-3.9-.6-2-2.4-3.5-4.4-3.5h-1.2c-.7-3-3.2-5.2-6.2-5.6-3-.3-5.9 1.3-7.3 4-1.2 2.5-1 6.5.5 8.8m8.7-1.6V21" /><path d="M16 16l-4-4-4 4" /></svg>
               </div>
               <div className="info-stack">
                 <span className="info-label text-blue">Source File</span>
@@ -385,27 +386,27 @@ export default function UploadPurchases() {
               </div>
             </div>
 
-            <div className="divider shrink-0"></div>
+            <div className="divider shrink-0" style={{ marginLeft: 'auto' }}></div>
 
-            <div className="input-group month-picker mx-auto shrink-0">
+            <div className="input-group month-picker shrink-0">
               <div className="icon-wrapper bg-emerald shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" className="custom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" className="custom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
               </div>
               <div className="info-stack">
                 <span className="info-label text-emerald">Reporting Month</span>
                 <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="stylish-month-input" style={{ colorScheme: 'dark' }} />
               </div>
             </div>
-            
+
             <div className="divider shrink-0"></div>
 
-            <div className="input-group rebate-group shrink-0 mr-4 cursor-pointer transition-all duration-300" 
-                 style={{ opacity: (!selectedFile || !selectedMonth) ? '0.5' : '1', pointerEvents: (!selectedFile || !selectedMonth) ? 'none' : 'auto' }}
-                 onClick={() => {
-                   const newValue = !isRebate;
-                   setIsRebate(newValue);
-                   if (newValue) setIsFfs(false);
-                 }}>
+            <div className="input-group rebate-group shrink-0 cursor-pointer transition-all duration-300"
+              style={{ opacity: (!selectedFile || !selectedMonth) ? '0.5' : '1', pointerEvents: (!selectedFile || !selectedMonth) ? 'none' : 'auto' }}
+              onClick={() => {
+                const newValue = !isRebate;
+                setIsRebate(newValue);
+                if (newValue) setIsFfs(false);
+              }}>
               <div className="icon-wrapper bg-purple shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" className="custom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 10 4 15 9 20"></polyline><path d="M20 4v7a4 4 0 0 1-4 4H4"></path></svg>
               </div>
@@ -413,20 +414,20 @@ export default function UploadPurchases() {
                 <input type="checkbox" id="rebateCheck" checked={isRebate} onChange={(e) => {
                   setIsRebate(e.target.checked);
                   if (e.target.checked) setIsFfs(false);
-                }} 
-                       disabled={!selectedFile || !selectedMonth}
-                       className="w-5 h-5 cursor-pointer accent-purple-500" />
+                }}
+                  disabled={!selectedFile || !selectedMonth}
+                  className="w-5 h-5 cursor-pointer accent-purple-500" />
                 <label htmlFor="rebateCheck" className="text-white font-bold text-base cursor-pointer mb-0">Rebate</label>
               </div>
             </div>
 
-            <div className="input-group ffs-group shrink-0 mr-4 cursor-pointer transition-all duration-300" 
-                 style={{ opacity: (!selectedFile || !selectedMonth) ? '0.5' : '1', pointerEvents: (!selectedFile || !selectedMonth) ? 'none' : 'auto', backgroundColor: 'var(--slate-800)', border: '1px solid var(--slate-700)' }}
-                 onClick={() => {
-                   const newValue = !isFfs;
-                   setIsFfs(newValue);
-                   if (newValue) setIsRebate(false);
-                 }}>
+            <div className="input-group ffs-group shrink-0 cursor-pointer transition-all duration-300"
+              style={{ opacity: (!selectedFile || !selectedMonth) ? '0.5' : '1', pointerEvents: (!selectedFile || !selectedMonth) ? 'none' : 'auto' }}
+              onClick={() => {
+                const newValue = !isFfs;
+                setIsFfs(newValue);
+                if (newValue) setIsRebate(false);
+              }}>
               <div className="icon-wrapper bg-orange shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" className="custom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
               </div>
@@ -434,15 +435,15 @@ export default function UploadPurchases() {
                 <input type="checkbox" id="ffsCheck" checked={isFfs} onChange={(e) => {
                   setIsFfs(e.target.checked);
                   if (e.target.checked) setIsRebate(false);
-                }} 
-                       disabled={!selectedFile || !selectedMonth}
-                       className="w-5 h-5 cursor-pointer accent-orange-500" />
+                }}
+                  disabled={!selectedFile || !selectedMonth}
+                  className="w-5 h-5 cursor-pointer accent-orange-500" />
                 <label htmlFor="ffsCheck" className="text-white font-bold text-base cursor-pointer mb-0">FFS</label>
               </div>
             </div>
 
-            <button disabled={!selectedFile || !selectedMonth || isProcessing} onClick={processFile} className="colorful-btn shrink-0">
-              <span className="btn-text">{isProcessing ? 'Processing...' : 'Add to Temp List'}</span>
+            <button disabled={!selectedFile || !selectedMonth || isProcessing} onClick={processFile} className="colorful-btn shrink-0 mr-4">
+              <span className="btn-text">{isProcessing ? 'Processing...' : 'Add to Temp'}</span>
             </button>
           </div>
         </div>
@@ -454,7 +455,7 @@ export default function UploadPurchases() {
             <h3 className="text-xl font-semibold">Temp Data Preview ({tempData.length} rows)</h3>
             <div className="flex items-center gap-2 text-sm text-slate-400">
               <label>Rows per page:</label>
-              <select value={pageSize} onChange={e => {setPageSize(Number(e.target.value)); setCurrentPage(1);}} className="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-slate-200">
+              <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }} className="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-slate-200">
                 <option value={10}>10</option>
                 <option value={25}>25</option>
                 <option value={50}>50</option>
@@ -462,7 +463,7 @@ export default function UploadPurchases() {
               </select>
             </div>
           </div>
-          
+
           <div className="overflow-x-auto border border-slate-700 rounded-lg mb-4">
             <table className="w-full text-left">
               <thead>
@@ -531,7 +532,7 @@ export default function UploadPurchases() {
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <h3 className="text-xl font-bold text-white mb-2">Missing Item Mappings</h3>
             <p className="text-slate-400 mb-6">The following HS Codes were found in the uploaded file but are not mapped in the database. Please provide the formatted HS Code and Item Name.</p>
-            
+
             <div className="space-y-4 mb-6">
               {missingItems.map((item, index) => (
                 <div key={index} className="flex gap-4 p-4 bg-slate-900 rounded-lg border border-slate-700">
@@ -574,7 +575,7 @@ export default function UploadPurchases() {
               <button onClick={() => setShowCompareModal(false)} className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded text-sm transition-colors">Close</button>
             </div>
             <p className="text-slate-400 mb-6 shrink-0">The following records already exist in the database. Please choose to replace them with the new uploaded data or ignore them.</p>
-            
+
             <div className="overflow-y-auto flex-1 space-y-6 pr-2">
               {duplicateList.map((item, index) => (
                 <div key={index} className="bg-slate-900 border border-slate-700 rounded-lg p-4">
@@ -585,7 +586,7 @@ export default function UploadPurchases() {
                         const newList = [...duplicateList];
                         newList.splice(index, 1);
                         setDuplicateList(newList);
-                        if(newList.length === 0) {
+                        if (newList.length === 0) {
                           setShowCompareModal(false);
                           setTempData([]);
                         }
@@ -597,11 +598,11 @@ export default function UploadPurchases() {
                             json: { itemsToReplace: [item] }
                           });
                           const data = await response.json() as any;
-                          if(data.success) {
+                          if (data.success) {
                             const newList = [...duplicateList];
                             newList.splice(index, 1);
                             setDuplicateList(newList);
-                            if(newList.length === 0) {
+                            if (newList.length === 0) {
                               setShowCompareModal(false);
                               setTempData([]);
                             }
@@ -612,7 +613,7 @@ export default function UploadPurchases() {
                       }} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm transition-colors" disabled={isSaving}>Replace</button>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <h5 className="text-sm font-semibold text-slate-400 mb-2">Existing Data</h5>
