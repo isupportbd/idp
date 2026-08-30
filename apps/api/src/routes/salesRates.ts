@@ -69,7 +69,6 @@ salesRatesApp.get('/', async (c) => {
         vatableValue: salesRates.vatableValue,
         additionPercent: salesRates.additionPercent,
         activationDate: salesRates.activationDate,
-        isFfs: salesRates.isFfs,
         status: salesRates.status,
       })
       .from(salesRates)
@@ -110,18 +109,15 @@ const salesRateSchema = z.object({
   vatableValue: z.number().or(z.string().transform(Number)),
   additionPercent: z.union([z.number(), z.string()]).transform(val => val === '' ? 0 : Number(val)).optional(),
   activationDate: z.string(),
-  isFfs: z.boolean().optional(),
 });
 
 // POST /
 salesRatesApp.post('/', requireRole(['admin']), zValidator('json', salesRateSchema), async (c) => {
   try {
     const user = c.get('user');
-    const { clientId, itemId, unitId, salesRate, vatRate, vatableValue, additionPercent, activationDate, isFfs } = c.req.valid('json');
+    const { clientId, itemId, unitId, salesRate, vatRate, vatableValue, additionPercent, activationDate } = c.req.valid('json');
 
     const parsedActivationDate = new Date(activationDate);
-    const isBeforeJuly2025 = parsedActivationDate < new Date('2025-07-01');
-    const finalIsFfs = isBeforeJuly2025 ? false : Boolean(isFfs);
 
     await db.insert(salesRates).values({
       adminId: user.adminId,
@@ -133,7 +129,6 @@ salesRatesApp.post('/', requireRole(['admin']), zValidator('json', salesRateSche
       vatableValue,
       additionPercent: additionPercent || 0,
       activationDate: parsedActivationDate.toISOString(),
-      isFfs: finalIsFfs,
       status: 'Active',
     });
 
@@ -149,22 +144,25 @@ salesRatesApp.put('/:id', requireRole(['admin']), zValidator('json', salesRateSc
   try {
     const id = parseInt(c.req.param('id'));
     const user = c.get('user');
-    const { clientId, itemId, unitId, salesRate, vatRate, vatableValue, additionPercent, activationDate, isFfs } = c.req.valid('json');
-
-    if (isNaN(id)) return c.json({ error: 'Invalid ID' }, 400);
+    const { clientId, itemId, unitId, salesRate, vatRate, vatableValue, additionPercent, activationDate } = c.req.valid('json');
 
     const parsedActivationDate = new Date(activationDate);
-    const isBeforeJuly2025 = parsedActivationDate < new Date('2025-07-01');
-    const finalIsFfs = isBeforeJuly2025 ? false : Boolean(isFfs);
+
+    let whereCondition: any = eq(salesRates.id, id);
+    if (user.role !== 'superadmin') {
+      whereCondition = and(whereCondition, eq(salesRates.adminId, user.adminId));
+    }
 
     await db.update(salesRates)
       .set({
+        clientId,
+        itemId,
         unitId,
         salesRate,
         vatRate,
         vatableValue,
         additionPercent: additionPercent || 0,
-        isFfs: finalIsFfs,
+        activationDate: parsedActivationDate.toISOString(),
       })
       .where(and(eq(salesRates.id, id), eq(salesRates.adminId, user.adminId)));
 

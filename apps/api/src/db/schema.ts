@@ -72,6 +72,7 @@ export const purchases = pgTable('purchases', {
   vat: doublePrecision('vat'),
   at: doublePrecision('at'),
   isRebate: boolean('is_rebate').default(false),
+  isFfs: boolean('is_ffs').default(false),
   createdAt: timestamp('created_at').defaultNow(),
 }, (table) => ({
   adminIdIdx: index('purchases_admin_id_idx').on(table.adminId),
@@ -90,7 +91,6 @@ export const salesRates = pgTable('sales_rates', {
   vatableValue: doublePrecision('vatable_value').notNull(),
   additionPercent: doublePrecision('addition_percent').default(0),
   activationDate: date('activation_date').notNull(),
-  isFfs: boolean('is_ffs').default(false),
   status: varchar('status', { length: 20 }).default('Active'),
 }, (table) => ({
   adminIdIdx: index('sales_rates_admin_id_idx').on(table.adminId),

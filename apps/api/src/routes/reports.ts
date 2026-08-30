@@ -52,6 +52,7 @@ reportsApp.get('/sales', async (c) => {
         totalQty: purchases.totalQty,
         netWt: purchases.netWt,
         baseValueOfVat: purchases.baseValueOfVat,
+        isFfs: purchases.isFfs,
       })
       .from(purchases)
       .leftJoin(items, eq(purchases.itemId, items.id))
@@ -70,7 +71,6 @@ reportsApp.get('/sales', async (c) => {
         salesRate: salesRates.salesRate,
         vatRate: salesRates.vatRate,
         activationDate: salesRates.activationDate,
-        isFfs: salesRates.isFfs,
         factor: unitConversions.factor
       })
       .from(salesRates)
@@ -89,11 +89,12 @@ reportsApp.get('/sales', async (c) => {
     // Fetch VAT notes mapping
     const vatNotes = await db.select().from(vatNotesMapping);
 
-    // Group purchases by itemId only, calculating split values
-    const itemGroups: Record<number, any> = {};
+    // Group purchases by itemId and isFfs, calculating split values
+    const itemGroups: Record<string, any> = {};
     for (const p of purchaseData) {
       if (!p.itemId) continue;
 
+      const groupKey = `${p.itemId}-${Boolean(p.isFfs)}`;
       const pDate = new Date(p.beDate);
       
       // Find applicable rate: latest rate <= beDate
@@ -112,8 +113,8 @@ reportsApp.get('/sales', async (c) => {
       const pTotalValue = pQty * vatableValue;
       const pTotalSalesRateValue = pQty * salesRate;
 
-      if (!itemGroups[p.itemId]) {
-        itemGroups[p.itemId] = {
+      if (!itemGroups[groupKey]) {
+        itemGroups[groupKey] = {
           itemId: p.itemId,
           itemName: p.itemName || '-',
           hsCode: p.hsCode || '',
@@ -123,14 +124,15 @@ reportsApp.get('/sales', async (c) => {
           totalValue: 0,
           totalBaseValueOfVat: 0,
           totalSalesRateValue: 0,
-          latestRateObj: applicableRate
+          latestRateObj: applicableRate,
+          isFfs: Boolean(p.isFfs)
         };
       }
-      itemGroups[p.itemId].totalQty += pQty;
-      itemGroups[p.itemId].netWt += Number(p.netWt) || 0;
-      itemGroups[p.itemId].totalValue += pTotalValue;
-      itemGroups[p.itemId].totalBaseValueOfVat += Number(p.baseValueOfVat) || 0;
-      itemGroups[p.itemId].totalSalesRateValue += pTotalSalesRateValue;
+      itemGroups[groupKey].totalQty += pQty;
+      itemGroups[groupKey].netWt += Number(p.netWt) || 0;
+      itemGroups[groupKey].totalValue += pTotalValue;
+      itemGroups[groupKey].totalBaseValueOfVat += Number(p.baseValueOfVat) || 0;
+      itemGroups[groupKey].totalSalesRateValue += pTotalSalesRateValue;
     }
 
     // Build sales report items
@@ -169,7 +171,7 @@ reportsApp.get('/sales', async (c) => {
         addition: additionPercent,
         vatRate,
         note,
-        isFfs: rateObj ? Boolean(rateObj.isFfs) : false,
+        isFfs: group.isFfs,
       });
     }
 

@@ -247,8 +247,7 @@ export default function SalesRatesManager() {
       salesRate: rate.salesRate.toString(),
       vatRate: rate.vatRate.toString(),
       additionPercent: rate.additionPercent ? rate.additionPercent.toString() : '0',
-      activationDate: new Date(rate.activationDate).toISOString().split('T')[0],
-      isFfs: Boolean(rate.isFfs)
+      activationDate: new Date(rate.activationDate).toISOString().split('T')[0]
     });
     
     setClientSearchText(rate.clientName);
@@ -329,18 +328,6 @@ export default function SalesRatesManager() {
           <h3 className="text-xl font-bold text-slate-100">{isEditing ? 'Edit Sales Rate' : 'Add New Sales Rate'}</h3>
           
           <div className="flex items-center gap-4">
-            {formData.activationDate >= '2025-07-01' && (
-              <div className="flex items-center gap-2">
-                <input 
-                  type="checkbox" 
-                  id="isFfs" 
-                  checked={formData.isFfs} 
-                  onChange={e => setFormData({...formData, isFfs: e.target.checked})} 
-                  className="w-4 h-4 accent-blue-500 rounded cursor-pointer" 
-                />
-                <label htmlFor="isFfs" className="text-sm font-medium text-slate-300 cursor-pointer">FFS (Full & Final Settlement)</label>
-              </div>
-            )}
             
             <div className="flex gap-2">
               <button 
@@ -643,7 +630,6 @@ export default function SalesRatesManager() {
                   <th className="px-4 py-3 font-semibold text-right">Sales Rate</th>
                   <th className="px-4 py-3 font-semibold text-right">VAT (%)</th>
                   <th className="px-4 py-3 font-semibold text-right">Addition (%)</th>
-                  <th className="px-4 py-3 font-semibold text-center">FFS</th>
                   <th className="px-4 py-3 font-semibold">Activation Date</th>
                   <th className="px-4 py-3 font-semibold">Status</th>
                   <th className="px-4 py-3 font-semibold text-right">Actions</th>
@@ -668,11 +654,6 @@ export default function SalesRatesManager() {
                     <td className="px-4 py-3 text-right font-medium text-slate-200">{Number(rate.salesRate).toFixed(2)}</td>
                     <td className="px-4 py-3 text-right text-slate-300">{Number(rate.vatRate).toFixed(2)}%</td>
                     <td className="px-4 py-3 text-right text-slate-300">{rate.additionPercent ? Number(rate.additionPercent).toFixed(2) + '%' : '0.00%'}</td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-1 rounded text-[10px] font-bold ${rate.isFfs ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20' : 'bg-slate-700 text-slate-400 border border-slate-600'}`}>
-                        {rate.isFfs ? 'YES' : 'NO'}
-                      </span>
-                    </td>
                     <td className="px-4 py-3">
                       <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-xs font-semibold border border-emerald-500/20">
                         {formatDateLabel(rate.activationDate)}

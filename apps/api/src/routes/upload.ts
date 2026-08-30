@@ -195,8 +195,9 @@ uploadApp.post('/', async (c) => {
 // POST /save
 uploadApp.post('/save', async (c) => {
   try {
-    const { data, month, isRebate } = await c.req.json();
+    const { data, month, isRebate, isFfs } = await c.req.json();
     const isRebateValue = Boolean(isRebate);
+    const isFfsValue = Boolean(isFfs);
     
     if (!data || !Array.isArray(data) || data.length === 0) {
       return c.json({ success: false, message: 'No data provided to save.' }, 400);
@@ -336,6 +337,7 @@ uploadApp.post('/save', async (c) => {
               vat,
               at,
               isRebate: isRebateValue,
+              isFfs: isFfsValue,
               tempId: mappedRow.tempId
             }
           });
@@ -363,6 +365,7 @@ uploadApp.post('/save', async (c) => {
           vat: vat,
           at: at,
           isRebate: isRebateValue,
+          isFfs: isFfsValue,
         });
         insertedRows++;
       }
@@ -409,6 +412,7 @@ uploadApp.post('/replace', async (c) => {
           vat: item.newData.vat,
           at: item.newData.at,
           isRebate: item.newData.isRebate,
+          isFfs: item.newData.isFfs,
         })
         .where(eq(purchases.id, item.existing.id));
       

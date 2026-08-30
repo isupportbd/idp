@@ -5,6 +5,7 @@ export default function UploadPurchases() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedMonth, setSelectedMonth] = useState('');
   const [isRebate, setIsRebate] = useState(false);
+  const [isFfs, setIsFfs] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadResult, setUploadResult] = useState<any>(null);
@@ -135,7 +136,8 @@ export default function UploadPurchases() {
         json: {
           data: tempData,
           month: selectedMonth,
-          isRebate: isRebate
+          isRebate: isRebate,
+          isFfs: isFfs
         }
       });
       
@@ -399,15 +401,43 @@ export default function UploadPurchases() {
 
             <div className="input-group rebate-group shrink-0 mr-4 cursor-pointer transition-all duration-300" 
                  style={{ opacity: (!selectedFile || !selectedMonth) ? '0.5' : '1', pointerEvents: (!selectedFile || !selectedMonth) ? 'none' : 'auto' }}
-                 onClick={() => setIsRebate(!isRebate)}>
+                 onClick={() => {
+                   const newValue = !isRebate;
+                   setIsRebate(newValue);
+                   if (newValue) setIsFfs(false);
+                 }}>
               <div className="icon-wrapper bg-purple shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" className="custom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 10 4 15 9 20"></polyline><path d="M20 4v7a4 4 0 0 1-4 4H4"></path></svg>
               </div>
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="rebateCheck" checked={isRebate} onChange={(e) => setIsRebate(e.target.checked)} 
+                <input type="checkbox" id="rebateCheck" checked={isRebate} onChange={(e) => {
+                  setIsRebate(e.target.checked);
+                  if (e.target.checked) setIsFfs(false);
+                }} 
                        disabled={!selectedFile || !selectedMonth}
                        className="w-5 h-5 cursor-pointer accent-purple-500" />
                 <label htmlFor="rebateCheck" className="text-white font-bold text-base cursor-pointer mb-0">Rebate</label>
+              </div>
+            </div>
+
+            <div className="input-group ffs-group shrink-0 mr-4 cursor-pointer transition-all duration-300" 
+                 style={{ opacity: (!selectedFile || !selectedMonth) ? '0.5' : '1', pointerEvents: (!selectedFile || !selectedMonth) ? 'none' : 'auto', backgroundColor: 'var(--slate-800)', border: '1px solid var(--slate-700)' }}
+                 onClick={() => {
+                   const newValue = !isFfs;
+                   setIsFfs(newValue);
+                   if (newValue) setIsRebate(false);
+                 }}>
+              <div className="icon-wrapper bg-orange shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" className="custom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="ffsCheck" checked={isFfs} onChange={(e) => {
+                  setIsFfs(e.target.checked);
+                  if (e.target.checked) setIsRebate(false);
+                }} 
+                       disabled={!selectedFile || !selectedMonth}
+                       className="w-5 h-5 cursor-pointer accent-orange-500" />
+                <label htmlFor="ffsCheck" className="text-white font-bold text-base cursor-pointer mb-0">FFS</label>
               </div>
             </div>
 
