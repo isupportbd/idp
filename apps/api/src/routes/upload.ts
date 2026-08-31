@@ -344,6 +344,11 @@ uploadApp.post('/save', async (c) => {
       const beNo = (mappedRow.beNo?.toString() || '').trim();
       const dedupKey = `${beNo}|${formattedDate}|${itemId}|${office}`;
 
+      let rowFfs = isFfsValue;
+      if (parsedDate && parsedDate < new Date('2025-07-01T00:00:00')) {
+        rowFfs = false;
+      }
+
       if (existingKeys.has(dedupKey)) {
         const existing = existingPurchases.find(p =>
           p.beNo === beNo &&
@@ -353,7 +358,7 @@ uploadApp.post('/save', async (c) => {
         );
         duplicatesList.push({
           existing,
-          newData: { clientId, itemId, office, beNo, beDate: formattedDate, month, lcNumber: (mappedRow.lcNumber?.toString() || '').trim(), netWt, excessQty, totalQty, assValue, unitValue, cd, rd, sd, baseValueOfVat, vat, at, isRebate: isRebateValue, isFfs: isFfsValue, tempId: mappedRow.tempId }
+          newData: { clientId, itemId, office, beNo, beDate: formattedDate, month, lcNumber: (mappedRow.lcNumber?.toString() || '').trim(), netWt, excessQty, totalQty, assValue, unitValue, cd, rd, sd, baseValueOfVat, vat, at, isRebate: isRebateValue, isFfs: rowFfs, tempId: mappedRow.tempId }
         });
         continue;
       }
@@ -369,7 +374,7 @@ uploadApp.post('/save', async (c) => {
         lcNumber: (mappedRow.lcNumber?.toString() || '').trim(),
         netWt, excessQty, totalQty, assValue, unitValue, cd, rd, sd, baseValueOfVat, vat, at,
         isRebate: isRebateValue,
-        isFfs: isFfsValue,
+        isFfs: rowFfs,
       });
     }
 
