@@ -21,6 +21,7 @@ interface Purchase {
   unitValue: number;
   cd: number; rd: number; sd: number; vat: number; at: number;
   isRebate: boolean;
+  isFfs: boolean;
   clientName: string; clientBin: string;
   itemId?: number;
   itemName: string;
@@ -151,8 +152,10 @@ export default function TenantReports() {
   }, [clientMonthItems, itemSearchText]);
 
   // Derived purchase groups
+  // Note 22: VAT > 0, NOT rebate (includes isFfs since FFS is not a rebate type)
   const vatNote22 = useMemo(() => purchases.filter(p => p.vat && parseFloat(p.vat.toString()) > 0 && !p.isRebate), [purchases]);
-  const vatNote15 = useMemo(() => purchases.filter(p => p.vat && parseFloat(p.vat.toString()) > 0 && p.isRebate), [purchases]);
+  // Note 15: VAT > 0, IS rebate (rebate only — FFS does NOT go here)
+  const vatNote15 = useMemo(() => purchases.filter(p => p.vat && parseFloat(p.vat.toString()) > 0 && p.isRebate && !p.isFfs), [purchases]);
   const vatNote13 = useMemo(() => purchases.filter(p => !p.vat || parseFloat(p.vat.toString()) === 0), [purchases]);
 
   // Purchase summary builder

@@ -87,6 +87,7 @@ purchasesApp.get('/', async (c) => {
       vat: purchases.vat,
       at: purchases.at,
       isRebate: purchases.isRebate,
+      isFfs: purchases.isFfs,
       clientId: purchases.clientId,
       clientName: clients.name,
       clientBin: clients.bin,
