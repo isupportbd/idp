@@ -19,9 +19,13 @@ notificationsApp.use('*', authenticate, requireRole(['superadmin']));
 // GET /
 notificationsApp.get('/', async (c) => {
   try {
-    const data = await db.select().from(notifications).orderBy(notifications.createdAt);
-    
-    let allNotifications = [...data];
+    let allNotifications: any[] = [];
+    try {
+      const data = await db.select().from(notifications).orderBy(notifications.createdAt);
+      allNotifications = [...data];
+    } catch (dbErr) {
+      console.error('Warning: could not fetch from notifications table:', dbErr);
+    }
 
     if (c.var.user.role === 'superadmin') {
       const pendingAdmins = await db.select().from(users).where(eq(users.status, 'pending'));
