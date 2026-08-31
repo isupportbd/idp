@@ -200,6 +200,7 @@ uploadApp.post('/save', async (c) => {
 
     const user = c.get('user');
     const duplicatesList: any[] = [];
+    const ffsPendingList: any[] = [];
 
     // ── Step 1: Preload all clients by BIN in ONE query ──────────────────
     const uniqueBins = [...new Set(
@@ -344,9 +345,9 @@ uploadApp.post('/save', async (c) => {
       const beNo = (mappedRow.beNo?.toString() || '').trim();
       const dedupKey = `${beNo}|${formattedDate}|${itemId}|${office}`;
 
-      let rowFfs = isFfsValue;
-      if (parsedDate && parsedDate < new Date('2025-07-01T00:00:00')) {
-        rowFfs = false;
+      let isPreJulyFfs = false;
+      if (isFfsValue && parsedDate && parsedDate < new Date('2025-07-01T00:00:00')) {
+        isPreJulyFfs = true;
       }
 
       if (existingKeys.has(dedupKey)) {
@@ -358,7 +359,14 @@ uploadApp.post('/save', async (c) => {
         );
         duplicatesList.push({
           existing,
-          newData: { clientId, itemId, office, beNo, beDate: formattedDate, month, lcNumber: (mappedRow.lcNumber?.toString() || '').trim(), netWt, excessQty, totalQty, assValue, unitValue, cd, rd, sd, baseValueOfVat, vat, at, isRebate: isRebateValue, isFfs: rowFfs, tempId: mappedRow.tempId }
+          newData: { clientId, itemId, office, beNo, beDate: formattedDate, month, lcNumber: (mappedRow.lcNumber?.toString() || '').trim(), netWt, excessQty, totalQty, assValue, unitValue, cd, rd, sd, baseValueOfVat, vat, at, isRebate: isRebateValue, isFfs: isPreJulyFfs ? false : isFfsValue, tempId: mappedRow.tempId }
+        });
+        continue;
+      }
+
+      if (isPreJulyFfs) {
+        ffsPendingList.push({
+          clientId, itemId, office, beNo, beDate: formattedDate, month, lcNumber: (mappedRow.lcNumber?.toString() || '').trim(), netWt, excessQty, totalQty, assValue, unitValue, cd, rd, sd, baseValueOfVat, vat, at, tempId: mappedRow.tempId
         });
         continue;
       }
@@ -374,7 +382,7 @@ uploadApp.post('/save', async (c) => {
         lcNumber: (mappedRow.lcNumber?.toString() || '').trim(),
         netWt, excessQty, totalQty, assValue, unitValue, cd, rd, sd, baseValueOfVat, vat, at,
         isRebate: isRebateValue,
-        isFfs: rowFfs,
+        isFfs: isFfsValue,
       });
     }
 
@@ -387,7 +395,8 @@ uploadApp.post('/save', async (c) => {
       success: true,
       message: 'Data saved to database successfully.',
       totalRowsProcessed: toInsert.length,
-      duplicatesList: duplicatesList.length > 0 ? duplicatesList : undefined
+      duplicatesList: duplicatesList.length > 0 ? duplicatesList : undefined,
+      ffsPendingList: ffsPendingList.length > 0 ? ffsPendingList : undefined
     });
 
   } catch (error: any) {
@@ -439,6 +448,55 @@ uploadApp.post('/replace', async (c) => {
   } catch (error: any) {
     console.error('Error replacing duplicates:', error);
     return c.json({ success: false, message: 'Failed to replace duplicates.' }, 500);
+  }
+});
+
+// POST /save-pending-ffs
+uploadApp.post('/save-pending-ffs', async (c) => {
+  try {
+    const { itemsToSave, takeRebate } = await c.req.json();
+    const user = c.get('user');
+
+    if (!itemsToSave || !Array.isArray(itemsToSave) || itemsToSave.length === 0) {
+      return c.json({ success: false, message: 'No items provided to save.' }, 400);
+    }
+
+    const toInsert = itemsToSave.map((row: any) => ({
+      adminId: user.adminId,
+      clientId: row.clientId,
+      itemId: row.itemId,
+      office: row.office,
+      beNo: row.beNo,
+      beDate: row.beDate,
+      month: row.month,
+      lcNumber: row.lcNumber,
+      netWt: row.netWt,
+      excessQty: row.excessQty,
+      totalQty: row.totalQty,
+      assValue: row.assValue,
+      unitValue: row.unitValue,
+      cd: row.cd,
+      rd: row.rd,
+      sd: row.sd,
+      baseValueOfVat: row.baseValueOfVat,
+      vat: row.vat,
+      at: row.at,
+      isRebate: Boolean(takeRebate),
+      isFfs: false
+    }));
+
+    if (toInsert.length > 0) {
+      await db.insert(purchases).values(toInsert);
+    }
+
+    return c.json({
+      success: true,
+      message: 'Pending FFS items saved successfully.',
+      totalRowsProcessed: toInsert.length,
+    });
+  } catch (error: any) {
+    console.error('Error saving pending FFS:', error);
+    return c.json({ success: false, message: 'Failed to save pending FFS.' }, 500);
   }
 });
 

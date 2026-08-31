@@ -17,6 +17,9 @@ export default function UploadPurchases() {
   const [showCompareModal, setShowCompareModal] = useState(false);
   const [duplicateList, setDuplicateList] = useState<any[]>([]);
 
+  const [showFfsModal, setShowFfsModal] = useState(false);
+  const [ffsPendingList, setFfsPendingList] = useState<any[]>([]);
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -96,6 +99,31 @@ export default function UploadPurchases() {
     }
   };
 
+  const handleSavePendingFfs = async (takeRebate: boolean) => {
+    setIsSaving(true);
+    try {
+      const response = await apiClient.api.upload['save-pending-ffs'].$post({
+        json: {
+          itemsToSave: ffsPendingList,
+          takeRebate
+        }
+      });
+      const data = await response.json() as any;
+      if (data.success) {
+        setUploadResult({ success: true, message: data.message });
+        setShowFfsModal(false);
+        setFfsPendingList([]);
+      } else {
+        setUploadResult({ success: false, message: data.message || 'Failed to save pending items.' });
+      }
+    } catch (error: any) {
+      console.error('Error saving pending FFS:', error);
+      setUploadResult({ success: false, message: 'Failed to save pending items.' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const cancelMapping = () => {
     setRequiresMapping(false);
     setMissingItems([]);
@@ -150,16 +178,22 @@ export default function UploadPurchases() {
         if (data.duplicatesList && data.duplicatesList.length > 0) {
           setDuplicateList(data.duplicatesList);
           setShowCompareModal(true);
+        }
+        if (data.ffsPendingList && data.ffsPendingList.length > 0) {
+          setFfsPendingList(data.ffsPendingList);
+          setShowFfsModal(true);
+        }
 
+        if ((data.duplicatesList && data.duplicatesList.length > 0) || (data.ffsPendingList && data.ffsPendingList.length > 0)) {
           if (data.totalRowsProcessed > 0) {
-            setUploadResult({ success: true, message: `${data.totalRowsProcessed} new records saved successfully. Please review the duplicates below.` });
+            setUploadResult({ success: true, message: `${data.totalRowsProcessed} new records saved successfully. Please review the pending items below.` });
           } else {
             setUploadResult(null);
           }
         } else {
           setUploadResult(data);
-          setTimeout(() => setUploadResult(null), 1000);
         }
+        setTimeout(() => setUploadResult(null), 1000);
       } else {
         setUploadResult({ success: false, message: data.message || 'Failed to save data to database.' });
         setTimeout(() => setUploadResult(null), 1000);
@@ -646,6 +680,40 @@ export default function UploadPurchases() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FFS Resolution Modal */}
+      {showFfsModal && ffsPendingList.length > 0 && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-lg w-full flex flex-col shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+            
+            <h3 className="text-xl font-bold text-white mb-2">FFS Resolution Required</h3>
+            
+            <p className="text-slate-300 mb-6 leading-relaxed">
+              আপনার আপলোড করা ফাইলে <span className="font-bold text-amber-400">{ffsPendingList.length}</span> টি ডাটা জুলাই ১, ২০২৫ এর আগের পাওয়া গিয়েছে, যা FFS এর আওতাভুক্ত নয়।
+              <br /><br />
+              আপনি কি এই পেন্ডিং ডাটাগুলোর জন্য রিবেট (Rebate) নিতে চান?
+            </p>
+
+            <div className="flex gap-3 justify-end mt-4">
+              <button 
+                onClick={() => handleSavePendingFfs(false)} 
+                disabled={isSaving}
+                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                No (Non-Rebate)
+              </button>
+              <button 
+                onClick={() => handleSavePendingFfs(true)} 
+                disabled={isSaving}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center"
+              >
+                {isSaving ? 'Saving...' : 'Yes (Claim Rebate)'}
+              </button>
             </div>
           </div>
         </div>
