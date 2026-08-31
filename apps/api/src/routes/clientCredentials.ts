@@ -26,11 +26,15 @@ clientCredentialsApp.get('/', async (c) => {
     const page = parseInt(c.req.query('page') || '1');
     const limit = parseInt(c.req.query('limit') || '10');
     const search = c.req.query('search') || '';
+    const filterClientId = c.req.query('clientId');
     const offset = (page - 1) * limit;
 
     const conditions = [eq(clientCredentials.adminId, user.adminId)];
-    
-    if (search) {
+
+    // Fast single-client lookup (used by TenantReports)
+    if (filterClientId) {
+      conditions.push(eq(clientCredentials.clientId, parseInt(filterClientId)));
+    } else if (search) {
       conditions.push(
         or(
           ilike(clients.name, `%${search}%`),

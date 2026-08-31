@@ -100,6 +100,45 @@ salesRatesApp.get('/', async (c) => {
   }
 });
 
+// GET /active/:clientId — fast endpoint for reports (only active rates for a specific client)
+salesRatesApp.get('/active/:clientId', async (c) => {
+  try {
+    const user = c.get('user');
+    const clientId = parseInt(c.req.param('clientId'));
+    if (isNaN(clientId)) return c.json({ error: 'Invalid clientId' }, 400);
+
+    const conditions = [
+      eq(salesRates.clientId, clientId),
+      eq(salesRates.status, 'Active'),
+    ];
+    if (user.role !== 'superadmin') {
+      conditions.push(eq(salesRates.adminId, user.adminId));
+    }
+
+    const data = await db
+      .select({
+        id: salesRates.id,
+        clientId: salesRates.clientId,
+        itemId: salesRates.itemId,
+        unitId: salesRates.unitId,
+        salesRate: salesRates.salesRate,
+        vatRate: salesRates.vatRate,
+        vatableValue: salesRates.vatableValue,
+        additionPercent: salesRates.additionPercent,
+        activationDate: salesRates.activationDate,
+        status: salesRates.status,
+      })
+      .from(salesRates)
+      .where(and(...conditions))
+      .orderBy(desc(salesRates.activationDate));
+
+    return c.json({ data });
+  } catch (error) {
+    console.error('Error fetching active sales rates:', error);
+    return c.json({ error: 'Failed to fetch active sales rates' }, 500);
+  }
+});
+
 const salesRateSchema = z.object({
   clientId: z.number().or(z.string().transform(Number)),
   itemId: z.number().or(z.string().transform(Number)),

@@ -254,26 +254,30 @@ export default function SalesRatesManager() {
   };
 
   // Autocomplete filtering
-  const filteredFormClients = clients.filter(c => 
-    c.name.toLowerCase().includes(clientSearchText.toLowerCase()) || 
-    (c.bin && c.bin.toLowerCase().includes(clientSearchText.toLowerCase()))
-  );
+  const filteredFormClients = !clientSearchText ? [] : clients
+    .filter(c => 
+      c.name.toLowerCase().includes(clientSearchText.toLowerCase()) || 
+      (c.bin && c.bin.toLowerCase().includes(clientSearchText.toLowerCase()))
+    ).slice(0, 50);
 
   const itemsToFilter = formData.clientId ? clientPurchasedItems : items;
-  const filteredFormItems = itemsToFilter.filter(i => 
-    i.name.toLowerCase().includes(itemSearchText.toLowerCase()) || 
-    (i.hsCode && i.hsCode.toLowerCase().includes(itemSearchText.toLowerCase()))
-  );
+  const filteredFormItems = !itemSearchText ? [] : itemsToFilter
+    .filter(i => 
+      i.name.toLowerCase().includes(itemSearchText.toLowerCase()) || 
+      (i.hsCode && i.hsCode.toLowerCase().includes(itemSearchText.toLowerCase()))
+    ).slice(0, 50);
 
-  const filterDropdownClients = clients.filter(c => 
-    c.name.toLowerCase().includes(filterClientText.toLowerCase()) || 
-    (c.bin && c.bin.toLowerCase().includes(filterClientText.toLowerCase()))
-  );
+  const filterDropdownClients = !filterClientText ? [] : clients
+    .filter(c => 
+      c.name.toLowerCase().includes(filterClientText.toLowerCase()) || 
+      (c.bin && c.bin.toLowerCase().includes(filterClientText.toLowerCase()))
+    ).slice(0, 50);
 
-  const filterDropdownItems = items.filter(i => 
-    i.name.toLowerCase().includes(filterItemText.toLowerCase()) || 
-    (i.hsCode && i.hsCode.toLowerCase().includes(filterItemText.toLowerCase()))
-  );
+  const filterDropdownItems = !filterItemText ? [] : items
+    .filter(i => 
+      i.name.toLowerCase().includes(filterItemText.toLowerCase()) || 
+      (i.hsCode && i.hsCode.toLowerCase().includes(filterItemText.toLowerCase()))
+    ).slice(0, 50);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
   const paginatedSalesRates = salesRates;

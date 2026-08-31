@@ -42,7 +42,7 @@ export default function TenantPurchases() {
       
       if (clientsRes.ok) {
         const cData = await clientsRes.json() as any;
-        setClients(cData || []);
+        setClients(cData.data || cData || []);
       }
       if (itemsRes.ok) {
         const iData = await itemsRes.json() as any;
@@ -135,12 +135,14 @@ export default function TenantPurchases() {
   };
 
   const filteredClients = useMemo(() => {
-    if (!clientSearchText) return clients;
+    if (!clientSearchText) return [];
     const lowerSearch = clientSearchText.toLowerCase();
-    return clients.filter(c => 
-      c.name.toLowerCase().includes(lowerSearch) || 
-      (c.bin && c.bin.toLowerCase().includes(lowerSearch))
-    );
+    return clients
+      .filter(c => 
+        c.name.toLowerCase().includes(lowerSearch) || 
+        (c.bin && c.bin.toLowerCase().includes(lowerSearch))
+      )
+      .slice(0, 50);
   }, [clients, clientSearchText]);
 
   const filteredItems = useMemo(() => {
@@ -202,7 +204,9 @@ export default function TenantPurchases() {
           )}
           {showClientDropdown && (
             <div className="absolute top-full left-0 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto z-50">
-              {filteredClients.length > 0 ? filteredClients.map(client => (
+              {!clientSearchText ? (
+                <div className="px-4 py-3 text-slate-400 italic text-sm">Type to search for a client...</div>
+              ) : filteredClients.length > 0 ? filteredClients.map(client => (
                 <div key={client.id} className="px-4 py-2 hover:bg-slate-700 cursor-pointer border-b border-slate-700/50 last:border-0" onMouseDown={() => {
                   setSelectedClientId(client.id);
                   setClientSearchText(client.name);

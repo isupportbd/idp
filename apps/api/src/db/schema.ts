@@ -78,6 +78,8 @@ export const purchases = pgTable('purchases', {
   adminIdIdx: index('purchases_admin_id_idx').on(table.adminId),
   clientIdIdx: index('purchases_client_id_idx').on(table.clientId),
   monthIdx: index('purchases_month_idx').on(table.month),
+  adminMonthIdx: index('purchases_admin_month_idx').on(table.adminId, table.month),
+  clientMonthIdx: index('purchases_client_month_idx').on(table.clientId, table.month),
 }));
 
 export const salesRates = pgTable('sales_rates', {
@@ -95,6 +97,8 @@ export const salesRates = pgTable('sales_rates', {
 }, (table) => ({
   adminIdIdx: index('sales_rates_admin_id_idx').on(table.adminId),
   clientIdIdx: index('sales_rates_client_id_idx').on(table.clientId),
+  itemIdIdx: index('sales_rates_item_id_idx').on(table.itemId),
+  clientStatusIdx: index('sales_rates_client_status_idx').on(table.clientId, table.status),
 }));
 
 export const columnMappings = pgTable('column_mappings', {

@@ -63,7 +63,7 @@ const fmt = (val: any, decimals = 2) => {
 export default function TenantReports() {
   const [clients, setClients] = useState<Client[]>([]);
   const [unitConversions, setUnitConversions] = useState<UnitConversion[]>([]);
-  const [clientCredentials, setClientCredentials] = useState<ClientCredential[]>([]);
+  const [currentCredential, setCurrentCredential] = useState<ClientCredential | null>(null);
   const [clientSalesRates, setClientSalesRates] = useState<any[]>([]);
 
   // Client autocomplete
@@ -134,12 +134,14 @@ export default function TenantReports() {
   }, [selectedUnitId, unitConversions]);
 
   const selectedClient = useMemo(() => clients.find(c => c.id === selectedClientId) || null, [clients, selectedClientId]);
-  const currentCredential = useMemo(() => clientCredentials.find(c => c.clientId === selectedClientId) || null, [clientCredentials, selectedClientId]);
+  // currentCredential is fetched per-client when a client is selected (see selectClient)
 
   const filteredClients = useMemo(() => {
-    if (!clientSearchText) return clients;
+    if (!clientSearchText) return [];
     const l = clientSearchText.toLowerCase();
-    return clients.filter(c => c.name.toLowerCase().includes(l) || (c.bin && c.bin.toLowerCase().includes(l)));
+    return clients
+      .filter(c => c.name.toLowerCase().includes(l) || (c.bin && c.bin.toLowerCase().includes(l)))
+      .slice(0, 50);
   }, [clients, clientSearchText]);
 
   const filteredItems = useMemo(() => {
@@ -262,10 +264,9 @@ export default function TenantReports() {
   // API calls
   const fetchAll = useCallback(async () => {
     try {
-      const [clientsRes, unitsRes, credsRes] = await Promise.all([
+      const [clientsRes, unitsRes] = await Promise.all([
         apiClient.api.clients.$get({ query: { limit: '10000' } }),
         apiClient.api.settings['unit-conversions'].$get(),
-        apiClient.api['client-credentials'].$get(),
       ]);
       if (clientsRes.ok) {
         const cData = await clientsRes.json() as any;
@@ -274,10 +275,6 @@ export default function TenantReports() {
       if (unitsRes.ok) {
         const uData = await unitsRes.json() as any;
         setUnitConversions(uData.data || []);
-      }
-      if (credsRes.ok) {
-        const crData = await credsRes.json() as any;
-        setClientCredentials(crData.data || []);
       }
     } catch (e) { console.error('Fetch error', e); }
   }, []);
@@ -301,11 +298,14 @@ export default function TenantReports() {
     if (!cId || !month) { setPurchases([]); return; }
     setIsLoadingPurchases(true);
     try {
-      const srRes = await apiClient.api['sales-rates'].$get({ query: { limit: '10000' } });
+      // Use targeted endpoint — only fetch active rates for this specific client
+      const srRes = await fetch(
+        `${import.meta.env.VITE_API_URL || ''}/api/sales-rates/active/${cId}`,
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
       if (srRes.ok) {
         const allRates = await srRes.json() as any;
-        const ratesData = allRates.data || allRates;
-        setClientSalesRates(ratesData.filter((r: any) => r.clientId === cId && r.status === 'Active'));
+        setClientSalesRates(allRates.data || []);
       }
 
       const res = await apiClient.api.purchases.$get({
@@ -357,7 +357,6 @@ export default function TenantReports() {
     if (!cId || !month) { setStatementReport([]); return; }
     setIsLoadingStatement(true);
     try {
-      // Temporary direct fetch before generating Hono client types
       const baseUrl = import.meta.env.VITE_API_URL || '';
       const res = await fetch(`${baseUrl}/api/reports/statement?clientId=${cId}&month=${month}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -382,23 +381,36 @@ export default function TenantReports() {
   useEffect(() => {
     setIsVatCalculated(false);
     if (!selectedClientId) { setClientMonthItems([]); setItemSearchText(''); setSelectedItemId(''); }
+    // vat and vat_regular tabs only re-use already-loaded purchases and salesReport — no new fetch needed
     if (currentTab === 'purchases') fetchPurchases();
     else if (currentTab === 'sales') fetchSalesReport();
     else if (currentTab === 'statement') fetchStatementReport();
   }, [selectedClientId, selectedMonthYear, currentTab]);
 
   // Client selection
-  const selectClient = (client: Client) => {
+  const selectClient = async (client: Client) => {
     setSelectedClientId(client.id);
     setClientSearchText(client.name);
     setShowClientDropdown(false);
     setSelectedItemId(''); setItemSearchText('');
+    setCurrentCredential(null);
     fetchAvailableMonths(client.id);
+    // Fetch credential for this specific client only
+    try {
+      const res = await apiClient.api['client-credentials'].$get({
+        query: { clientId: client.id.toString() }
+      });
+      if (res.ok) {
+        const data = await res.json() as any;
+        setCurrentCredential((data.data || [])[0] || null);
+      }
+    } catch (e) { console.error('Failed to fetch credential', e); }
   };
 
   const clearClient = () => {
     setSelectedClientId(''); setClientSearchText(''); setAvailableMonths([]);
     setSelectedMonthYear(''); setPurchases([]); setSalesReport([]); setClientMonthItems([]);
+    setCurrentCredential(null);
   };
 
   const selectItem = (item: Item) => {
@@ -597,7 +609,9 @@ export default function TenantReports() {
           )}
           {showClientDropdown && (
             <div className="absolute top-full left-0 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-52 overflow-y-auto z-50">
-              {filteredClients.length > 0 ? filteredClients.map(c => (
+              {!clientSearchText ? (
+                <div className="px-4 py-3 text-slate-400 text-sm italic">Type to search for a client...</div>
+              ) : filteredClients.length > 0 ? filteredClients.map(c => (
                 <div key={c.id} className="px-4 py-2 hover:bg-slate-700 cursor-pointer border-b border-slate-700/50 last:border-0" onMouseDown={() => selectClient(c)}>
                   <div className="font-medium text-slate-200 text-sm">{c.name}</div>
                   {c.bin && <div className="text-xs text-slate-400">BIN: {c.bin}</div>}
