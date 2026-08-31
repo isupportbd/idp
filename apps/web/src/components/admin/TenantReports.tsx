@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Edit2 } from 'lucide-react';
+import { Edit2, Copy, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import * as XLSX from 'xlsx';
 
@@ -100,6 +100,20 @@ export default function TenantReports() {
   // VAT
   const [isVatCalculated, setIsVatCalculated] = useState(false);
   const [isLoadingVat, setIsLoadingVat] = useState(false);
+  
+  const [copiedText, setCopiedText] = useState<string | null>(null);
+  const [visiblePassword, setVisiblePassword] = useState(false);
+
+  const handleCopy = async (text: string) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedText(text);
+      setTimeout(() => setCopiedText(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy', err);
+    }
+  };
 
   // Change Month Modal
   const [showChangeMonthModal, setShowChangeMonthModal] = useState(false);
@@ -799,18 +813,39 @@ export default function TenantReports() {
                     <button
                       onClick={calculateVat}
                       disabled={isLoadingVat || !selectedClientId || !selectedMonthYear}
-                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
+                      className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
                     >
                       {isLoadingVat ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Calculating...</> : '⚡ Calculate'}
                     </button>
                   </div>
 
                   {isVatCalculated && currentCredential && (
-                    <div className="max-w-2xl mx-auto mb-4 mt-6 bg-blue-500/10 border border-blue-500/30 rounded-lg py-4 px-6 text-center">
-                      <div className="font-bold text-blue-500 mb-3 text-[1.1rem]">eVAT Login Details</div>
-                      <div className="flex justify-center gap-12 text-[1.05rem]">
-                        <p className="text-slate-200 flex items-center gap-2 m-0"><strong>User Name:</strong> <span className="bg-slate-800 px-2.5 py-1 rounded border border-slate-700 font-mono font-bold tracking-[0.5px] text-slate-200">{currentCredential.loginId}</span></p>
-                        <p className="text-slate-200 flex items-center gap-2 m-0"><strong>Password:</strong> <span className="bg-slate-800 px-2.5 py-1 rounded border border-slate-700 font-mono font-bold tracking-[0.5px] text-slate-200">{currentCredential.loginPassword}</span></p>
+                    <div className="max-w-2xl mx-auto mb-4 mt-6 bg-slate-800/50 border border-slate-700 rounded-lg py-4 px-6 text-center">
+                      <div className="font-bold text-emerald-500 mb-4 text-[1.1rem]">eVAT Login Details</div>
+                      <div className="flex justify-center gap-8 text-[1.05rem]">
+                        <div className="flex items-center gap-3">
+                          <strong className="text-slate-400">User ID:</strong>
+                          <div className="flex items-center gap-1.5 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700">
+                            <span className="font-mono font-bold tracking-wide text-blue-400">{currentCredential.loginId}</span>
+                            <button onClick={() => handleCopy(currentCredential.loginId)} className={`${copiedText === currentCredential.loginId ? 'text-emerald-500' : 'text-slate-500 hover:text-white'} transition-colors ml-1`} title="Copy User ID">
+                              {copiedText === currentCredential.loginId ? <CheckCircle2 size={16} /> : <Copy size={16} />}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <strong className="text-slate-400">Password:</strong>
+                          <div className="flex items-center gap-1.5 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700">
+                            <span className="font-mono font-bold tracking-wide text-slate-200">
+                              {visiblePassword ? currentCredential.loginPassword : '••••••••'}
+                            </span>
+                            <button onClick={() => setVisiblePassword(!visiblePassword)} className="text-slate-500 hover:text-white transition-colors ml-1" title={visiblePassword ? "Hide Password" : "Show Password"}>
+                              {visiblePassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                            <button onClick={() => handleCopy(currentCredential.loginPassword)} className={`${copiedText === currentCredential.loginPassword ? 'text-emerald-500' : 'text-slate-500 hover:text-white'} transition-colors`} title="Copy Password">
+                              {copiedText === currentCredential.loginPassword ? <CheckCircle2 size={16} /> : <Copy size={16} />}
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -858,18 +893,39 @@ export default function TenantReports() {
                     <button
                       onClick={calculateVat}
                       disabled={isLoadingVat || !selectedClientId || !selectedMonthYear}
-                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
+                      className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
                     >
                       {isLoadingVat ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Calculating...</> : '⚡ Calculate'}
                     </button>
                   </div>
 
                 {isVatCalculated && currentCredential && (
-                  <div className="max-w-2xl mx-auto mb-4 mt-6 bg-blue-500/10 border border-blue-500/30 rounded-lg py-4 px-6 text-center">
-                    <div className="font-bold text-blue-500 mb-3 text-[1.1rem]">eVAT Login Details</div>
-                    <div className="flex justify-center gap-12 text-[1.05rem]">
-                      <p className="text-slate-200 flex items-center gap-2 m-0"><strong>User Name:</strong> <span className="bg-slate-800 px-2.5 py-1 rounded border border-slate-700 font-mono font-bold tracking-[0.5px] text-slate-200">{currentCredential.loginId}</span></p>
-                      <p className="text-slate-200 flex items-center gap-2 m-0"><strong>Password:</strong> <span className="bg-slate-800 px-2.5 py-1 rounded border border-slate-700 font-mono font-bold tracking-[0.5px] text-slate-200">{currentCredential.loginPassword}</span></p>
+                  <div className="max-w-2xl mx-auto mb-4 mt-6 bg-slate-800/50 border border-slate-700 rounded-lg py-4 px-6 text-center">
+                    <div className="font-bold text-emerald-500 mb-4 text-[1.1rem]">eVAT Login Details</div>
+                    <div className="flex justify-center gap-8 text-[1.05rem]">
+                      <div className="flex items-center gap-3">
+                        <strong className="text-slate-400">User ID:</strong>
+                        <div className="flex items-center gap-1.5 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700">
+                          <span className="font-mono font-bold tracking-wide text-blue-400">{currentCredential.loginId}</span>
+                          <button onClick={() => handleCopy(currentCredential.loginId)} className={`${copiedText === currentCredential.loginId ? 'text-emerald-500' : 'text-slate-500 hover:text-white'} transition-colors ml-1`} title="Copy User ID">
+                            {copiedText === currentCredential.loginId ? <CheckCircle2 size={16} /> : <Copy size={16} />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <strong className="text-slate-400">Password:</strong>
+                        <div className="flex items-center gap-1.5 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700">
+                          <span className="font-mono font-bold tracking-wide text-slate-200">
+                            {visiblePassword ? currentCredential.loginPassword : '••••••••'}
+                          </span>
+                          <button onClick={() => setVisiblePassword(!visiblePassword)} className="text-slate-500 hover:text-white transition-colors ml-1" title={visiblePassword ? "Hide Password" : "Show Password"}>
+                            {visiblePassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                          <button onClick={() => handleCopy(currentCredential.loginPassword)} className={`${copiedText === currentCredential.loginPassword ? 'text-emerald-500' : 'text-slate-500 hover:text-white'} transition-colors`} title="Copy Password">
+                            {copiedText === currentCredential.loginPassword ? <CheckCircle2 size={16} /> : <Copy size={16} />}
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
