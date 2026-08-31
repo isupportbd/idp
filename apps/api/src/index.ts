@@ -14,7 +14,7 @@ import usersApp from './routes/users';
 import notificationsApp from './routes/notifications';
 import profileApp from './routes/profile';
 import { db } from './db';
-import { users, purchases, salesRates } from './db/schema';
+import { users, purchases, salesRates, items, clients } from './db/schema';
 import { eq } from 'drizzle-orm';
 import * as bcrypt from 'bcryptjs';
 
@@ -59,7 +59,9 @@ app.get('/api/reset-data-now', async (c) => {
   try {
     await db.delete(purchases);
     await db.delete(salesRates);
-    return c.text('Data reset successful!');
+    await db.delete(items);
+    await db.delete(clients);
+    return c.text('Data reset successful! Purchases, Sales Rates, Clients, and Items have been deleted.');
   } catch (error: any) {
     return c.text('Error: ' + error.message, 500);
   }
