@@ -19,6 +19,7 @@ export default function ClientCredentialsManager() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [visiblePasswords, setVisiblePasswords] = useState<Record<number, boolean>>({});
+  const [copiedText, setCopiedText] = useState<string | null>(null);
   
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -102,7 +103,10 @@ export default function ClientCredentialsManager() {
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
-      // could show a toast here
+      setCopiedText(text);
+      setTimeout(() => {
+        setCopiedText(null);
+      }, 2000);
     } catch (err) {
       console.error('Failed to copy', err);
     }
@@ -411,8 +415,8 @@ export default function ClientCredentialsManager() {
                     <td className="p-4">
                       <div className="flex items-center gap-2 bg-slate-900/50 px-3 py-1.5 rounded-lg w-fit border border-slate-700/50">
                         <code className="text-blue-400 font-bold tracking-wide">{cred.loginId}</code>
-                        <button onClick={() => handleCopy(cred.loginId)} className="text-slate-500 hover:text-white transition-colors" title="Copy ID">
-                          <Copy size={14} />
+                        <button onClick={() => handleCopy(cred.loginId)} className={`${copiedText === cred.loginId ? 'text-emerald-500' : 'text-slate-500 hover:text-white'} transition-colors`} title="Copy ID">
+                          {copiedText === cred.loginId ? <CheckCircle2 size={14} /> : <Copy size={14} />}
                         </button>
                       </div>
                     </td>
@@ -428,8 +432,8 @@ export default function ClientCredentialsManager() {
                         <button onClick={() => setVisiblePasswords(prev => ({...prev, [cred.id]: !prev[cred.id]}))} className="text-slate-500 hover:text-white transition-colors ml-2" title={visiblePasswords[cred.id] ? "Hide Password" : "Show Password"}>
                           {visiblePasswords[cred.id] ? <EyeOff size={14} /> : <Eye size={14} />}
                         </button>
-                        <button onClick={() => handleCopy(cred.loginPassword || '')} className="text-slate-500 hover:text-white transition-colors" title="Copy Password">
-                          <Copy size={14} />
+                        <button onClick={() => handleCopy(cred.loginPassword || '')} className={`${copiedText === cred.loginPassword ? 'text-emerald-500' : 'text-slate-500 hover:text-white'} transition-colors`} title="Copy Password">
+                          {copiedText === cred.loginPassword ? <CheckCircle2 size={14} /> : <Copy size={14} />}
                         </button>
                       </div>
                     </td>
