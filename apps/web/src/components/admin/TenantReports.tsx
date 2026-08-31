@@ -152,10 +152,10 @@ export default function TenantReports() {
   }, [clientMonthItems, itemSearchText]);
 
   // Derived purchase groups
-  // Note 22: VAT > 0, NOT rebate (includes isFfs since FFS is not a rebate type)
+  // Note 22: VAT > 0, NOT rebate (isFfs=true purchases are always isRebate=false, so they naturally land here)
   const vatNote22 = useMemo(() => purchases.filter(p => p.vat && parseFloat(p.vat.toString()) > 0 && !p.isRebate), [purchases]);
-  // Note 15: VAT > 0, IS rebate (rebate only — FFS does NOT go here)
-  const vatNote15 = useMemo(() => purchases.filter(p => p.vat && parseFloat(p.vat.toString()) > 0 && p.isRebate && !p.isFfs), [purchases]);
+  // Note 15: VAT > 0, IS rebate (isFfs and isRebate are mutually exclusive — no need to exclude isFfs here)
+  const vatNote15 = useMemo(() => purchases.filter(p => p.vat && parseFloat(p.vat.toString()) > 0 && p.isRebate), [purchases]);
   const vatNote13 = useMemo(() => purchases.filter(p => !p.vat || parseFloat(p.vat.toString()) === 0), [purchases]);
 
   // Purchase summary builder
