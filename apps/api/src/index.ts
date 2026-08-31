@@ -14,7 +14,7 @@ import usersApp from './routes/users';
 import notificationsApp from './routes/notifications';
 import profileApp from './routes/profile';
 import { db } from './db';
-import { users, purchases, salesRates, items, clients } from './db/schema';
+import { users, purchases, salesRates, items, clients, clientCredentials, notifications } from './db/schema';
 import { eq } from 'drizzle-orm';
 import * as bcrypt from 'bcryptjs';
 
@@ -57,11 +57,13 @@ app.get('/api/reset-data-now', async (c) => {
   const secret = c.req.query('secret');
   if (secret !== 'isupportbd123') return c.text('Unauthorized', 401);
   try {
+    await db.delete(clientCredentials);
+    await db.delete(notifications);
     await db.delete(purchases);
     await db.delete(salesRates);
     await db.delete(items);
     await db.delete(clients);
-    return c.text('Data reset successful! Purchases, Sales Rates, Clients, and Items have been deleted.');
+    return c.text('Data reset successful! All non-settings/users data has been deleted.');
   } catch (error: any) {
     return c.text('Error: ' + error.message, 500);
   }
