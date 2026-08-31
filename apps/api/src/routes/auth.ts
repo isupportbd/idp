@@ -7,8 +7,9 @@ import { db } from '../db';
 import { users, plans, otps } from '../db/schema';
 import { registerSchema, loginSchema, changePasswordSchema } from '../utils/validations';
 import * as nodemailer from 'nodemailer';
+import { authenticate } from '../middlewares/auth';
 
-const authApp = new Hono();
+const authApp = new Hono<{ Variables: { user: { userId: number, role: string, adminId: number } } }>();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 
@@ -120,6 +121,20 @@ authApp.post('/login', zValidator('json', loginSchema), async (c) => {
   } catch (error) {
     console.error('Login error:', error);
     return c.json({ success: false, error: 'Login failed' }, 500);
+  }
+});
+
+// Logout
+authApp.post('/logout', authenticate, async (c) => {
+  try {
+    const user = c.get('user');
+    if (user && user.userId) {
+      await db.update(users).set({ lastActive: null, lastPage: null }).where(eq(users.id, user.userId));
+    }
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Logout error:', error);
+    return c.json({ success: false, error: 'Logout failed' }, 500);
   }
 });
 

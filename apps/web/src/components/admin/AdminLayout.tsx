@@ -19,7 +19,12 @@ export default function AdminLayout() {
   const [showNotifications, setShowNotifications] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await apiClient.api.auth.logout.$post();
+    } catch(e) {
+      console.error(e);
+    }
     logout();
     setIsDropdownOpen(false);
     navigate('/login');
