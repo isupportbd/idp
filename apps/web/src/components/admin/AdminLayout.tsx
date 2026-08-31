@@ -184,7 +184,7 @@ export default function AdminLayout() {
                                   onClick={async () => {
                                     const adminId = Math.abs(notif.id);
                                     try {
-                                      const res = await apiClient.api.superadmin.tenants[':id'].approve.$put({ param: { id: adminId.toString() } });
+                                      const res = await apiClient.api.superadmin['approve-signup'].$post({ json: { userId: adminId } });
                                       const data = await res.json() as any;
                                       if (data.success) setNotifications(prev => prev.filter(n => n.id !== notif.id));
                                       else alert(data.message || 'Failed to approve');
@@ -199,7 +199,7 @@ export default function AdminLayout() {
                                     if (!window.confirm('Reject and delete this admin account?')) return;
                                     const adminId = Math.abs(notif.id);
                                     try {
-                                      const res = await apiClient.api.superadmin.tenants[':id'].$delete({ param: { id: adminId.toString() } });
+                                      const res = await apiClient.api.superadmin['reject-signup'].$post({ json: { userId: adminId } });
                                       const data = await res.json() as any;
                                       if (data.success) setNotifications(prev => prev.filter(n => n.id !== notif.id));
                                       else alert(data.message || 'Failed to reject');
