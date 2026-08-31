@@ -527,8 +527,10 @@ export default function ClientCredentialsManager() {
                       )}
                       {showClientDropdown && (
                         <div className="absolute top-full left-0 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-52 overflow-y-auto z-50">
-                          {clients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase()) || (c.bin && c.bin.includes(clientSearch))).length > 0 ? (
-                            clients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase()) || (c.bin && c.bin.includes(clientSearch))).map(c => (
+                          {!clientSearch.trim() ? (
+                            <div className="px-4 py-3 text-slate-400 text-sm italic">Type to search for a client...</div>
+                          ) : clients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase()) || (c.bin && c.bin.includes(clientSearch))).length > 0 ? (
+                            clients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase()) || (c.bin && c.bin.includes(clientSearch))).slice(0, 50).map(c => (
                               <div 
                                 key={c.id} 
                                 className="px-4 py-2 hover:bg-slate-700 cursor-pointer border-b border-slate-700/50 last:border-0"
