@@ -221,7 +221,7 @@ uploadApp.post('/save', async (c) => {
       : [];
     const itemByHsCode = new Map(existingItems.map(i => [i.awHsCode as string, i]));
 
-    // ── Step 3: Preload existing purchases for this month (duplicate check) ─
+    // ── Step 3: Preload existing purchases for this admin (global duplicate check across all months) ─
     const existingPurchases = await db.select({
       id: purchases.id,
       beNo: purchases.beNo,
@@ -229,7 +229,7 @@ uploadApp.post('/save', async (c) => {
       itemId: purchases.itemId,
       office: purchases.office,
     }).from(purchases).where(
-      and(eq(purchases.adminId, user.adminId), eq(purchases.month, month))
+      eq(purchases.adminId, user.adminId)
     );
     const existingKeys = new Set(
       existingPurchases.map(p =>
