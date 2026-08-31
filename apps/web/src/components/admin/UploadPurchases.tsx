@@ -111,14 +111,17 @@ export default function UploadPurchases() {
       const data = await response.json() as any;
       if (data.success) {
         setUploadResult({ success: true, message: data.message });
+        setTimeout(() => setUploadResult(null), 1000);
         setShowFfsModal(false);
         setFfsPendingList([]);
       } else {
         setUploadResult({ success: false, message: data.message || 'Failed to save pending items.' });
+        setTimeout(() => setUploadResult(null), 1000);
       }
     } catch (error: any) {
       console.error('Error saving pending FFS:', error);
       setUploadResult({ success: false, message: 'Failed to save pending items.' });
+      setTimeout(() => setUploadResult(null), 1000);
     } finally {
       setIsSaving(false);
     }
