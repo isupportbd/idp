@@ -68,6 +68,6 @@ app.get('/api/reset-data-now', async (c) => {
 export type AppType = typeof api;
 
 export default {
-  port: process.env.PORT || 3000,
+  port: 3001,
   fetch: app.fetch,
 };
