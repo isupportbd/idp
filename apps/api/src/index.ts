@@ -14,7 +14,7 @@ import usersApp from './routes/users';
 import notificationsApp from './routes/notifications';
 import profileApp from './routes/profile';
 import { db } from './db';
-import { users } from './db/schema';
+import { users, purchases, salesRates } from './db/schema';
 import { eq } from 'drizzle-orm';
 import * as bcrypt from 'bcryptjs';
 
@@ -52,6 +52,18 @@ const api = app.basePath('/api')
   .route('/users', usersApp)
   .route('/notifications', notificationsApp)
   .route('/profile', profileApp);
+
+app.get('/api/reset-data-now', async (c) => {
+  const secret = c.req.query('secret');
+  if (secret !== 'isupportbd123') return c.text('Unauthorized', 401);
+  try {
+    await db.delete(purchases);
+    await db.delete(salesRates);
+    return c.text('Data reset successful!');
+  } catch (error: any) {
+    return c.text('Error: ' + error.message, 500);
+  }
+});
 
 export type AppType = typeof api;
 
