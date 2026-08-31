@@ -133,7 +133,10 @@ export const clientCredentials = pgTable('client_credentials', {
   loginId: varchar('login_id', { length: 255 }).notNull(),
   loginPassword: varchar('login_password', { length: 255 }).notNull(),
   createdAt: timestamp('created_at').defaultNow(),
-});
+}, (table) => ({
+  adminIdIdx: index('client_credentials_admin_id_idx').on(table.adminId),
+  clientIdIdx: index('client_credentials_client_id_idx').on(table.clientId),
+}));
 
 export const notifications = pgTable('notifications', {
   id: serial('id').primaryKey(),

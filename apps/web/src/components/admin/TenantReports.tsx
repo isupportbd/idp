@@ -263,7 +263,7 @@ export default function TenantReports() {
   const fetchAll = useCallback(async () => {
     try {
       const [clientsRes, unitsRes, credsRes] = await Promise.all([
-        apiClient.api.clients.$get(),
+        apiClient.api.clients.$get({ query: { limit: '10000' } }),
         apiClient.api.settings['unit-conversions'].$get(),
         apiClient.api['client-credentials'].$get(),
       ]);

@@ -35,7 +35,7 @@ export default function TenantPurchases() {
   const loadBaseData = async () => {
     try {
       const [clientsRes, itemsRes, monthsRes] = await Promise.all([
-        apiClient.api.clients.$get(),
+        apiClient.api.clients.$get({ query: { limit: '10000' } }),
         apiClient.api.items.$get(),
         apiClient.api.purchases.months.$get()
       ]);

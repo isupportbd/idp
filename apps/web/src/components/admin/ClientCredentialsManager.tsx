@@ -71,7 +71,9 @@ export default function ClientCredentialsManager() {
 
   const fetchClients = async () => {
     try {
-      const res = await apiClient.api.clients.$get();
+      const res = await apiClient.api.clients.$get({
+        query: { limit: '10000' }
+      });
       if (res.ok) {
         const data = await res.json() as any;
         setClients(data.data || data || []);

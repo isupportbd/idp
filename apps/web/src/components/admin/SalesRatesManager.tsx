@@ -115,7 +115,7 @@ export default function SalesRatesManager() {
   const fetchClientsAndItems = async () => {
     try {
       const [clientsRes, itemsRes, unitsRes] = await Promise.all([
-        apiClient.api.clients.$get(),
+        apiClient.api.clients.$get({ query: { limit: '10000' } }),
         apiClient.api.items.$get(),
         apiClient.api.settings['unit-conversions'].$get()
       ]);
