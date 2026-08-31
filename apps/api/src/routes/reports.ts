@@ -53,6 +53,7 @@ reportsApp.get('/sales', async (c) => {
         netWt: purchases.netWt,
         baseValueOfVat: purchases.baseValueOfVat,
         isFfs: purchases.isFfs,
+        isRebate: purchases.isRebate,
       })
       .from(purchases)
       .leftJoin(items, eq(purchases.itemId, items.id))
@@ -89,12 +90,12 @@ reportsApp.get('/sales', async (c) => {
     // Fetch VAT notes mapping
     const vatNotes = await db.select().from(vatNotesMapping);
 
-    // Group purchases by itemId and isFfs, calculating split values
+    // Group purchases by itemId, isFfs, and isRebate, calculating split values
     const itemGroups: Record<string, any> = {};
     for (const p of purchaseData) {
       if (!p.itemId) continue;
 
-      const groupKey = `${p.itemId}-${Boolean(p.isFfs)}`;
+      const groupKey = `${p.itemId}-${Boolean(p.isFfs)}-${Boolean(p.isRebate)}`;
       const pDate = new Date(p.beDate);
       
       // Find applicable rate: latest rate <= beDate
@@ -125,7 +126,8 @@ reportsApp.get('/sales', async (c) => {
           totalBaseValueOfVat: 0,
           totalSalesRateValue: 0,
           latestRateObj: applicableRate,
-          isFfs: Boolean(p.isFfs)
+          isFfs: Boolean(p.isFfs),
+          isRebate: Boolean(p.isRebate)
         };
       }
       itemGroups[groupKey].totalQty += pQty;
@@ -144,8 +146,7 @@ reportsApp.get('/sales', async (c) => {
       const avgSalesRate = group.totalQty > 0 ? group.totalSalesRateValue / group.totalQty : 0;
       const avgPurchaseUnitValue = group.totalQty > 0 ? group.totalBaseValueOfVat / group.totalQty : 0;
 
-      const vatRate = rateObj ? Number(rateObj.vatRate) : 0;
-      
+
       const factor = rateObj ? Number(rateObj.factor) || 1 : 1;
       const salesUnitValue = rateObj ? Number(rateObj.vatableValue) * factor : 0;
       let additionPercent = 0;
@@ -156,8 +157,17 @@ reportsApp.get('/sales', async (c) => {
       // Use awHsCode for item-level, then hsCode
       // Determine VAT note from vatNotesMapping by vatRate
       const hsToUse = group.awHsCode || group.hsCode;
-      const matchedNote = vatNotes.find(n => Math.abs(Number(n.vatRate) - vatRate) < 0.001);
-      const note = matchedNote ? matchedNote.noteName : (vatRate === 15 ? '22' : vatRate > 0 ? '15' : '13');
+      
+      let vatRate = rateObj ? Number(rateObj.vatRate) : 0;
+      let note = '';
+
+      if (group.isRebate) {
+        vatRate = 15;
+        note = '4'; // Force Note 4 for Rebate Sales
+      } else {
+        const matchedNote = vatNotes.find(n => Math.abs(Number(n.vatRate) - vatRate) < 0.001);
+        note = matchedNote ? matchedNote.noteName : (vatRate === 15 ? '22' : vatRate > 0 ? '15' : '13');
+      }
 
       reportItems.push({
         itemId: group.itemId,
