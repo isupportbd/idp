@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Users, Edit2, Trash2, Plus, Search, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../../stores/auth';
+import { apiClient } from '../../api/client';
 
 interface User {
   id: number;
@@ -49,11 +50,14 @@ export default function UsersManager() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || '';
-      const res = await fetch(`${baseUrl}/api/users?page=${currentPage}&limit=${itemsPerPage}&search=${encodeURIComponent(searchQuery)}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      const res = await apiClient.api.users.$get({
+        query: {
+          page: currentPage.toString(),
+          limit: itemsPerPage.toString(),
+          search: searchQuery
+        }
       });
-      const data = await res.json();
+      const data = await res.json() as any;
       if (data.success) {
         setUsers(data.data || []);
         setTotalCount(data.total || 0);

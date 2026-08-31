@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import * as xlsx from 'xlsx';
 import { db } from '../db';
 import { clients, items, purchases, columnMappings, notifications, clientCredentials, salesRates } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { authenticate, requireRole } from '../middlewares/auth';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
@@ -39,27 +39,19 @@ function parseDateValue(val: any): string {
 // POST /
 uploadApp.post('/', async (c) => {
   try {
-    console.log('[upload.ts] Received upload request');
     const body = await c.req.parseBody();
-    console.log('[upload.ts] Parsed body keys:', Object.keys(body));
     const file = body['file'];
-    
-    console.log('[upload.ts] File object type:', typeof file, 'is instanceof File?', file instanceof File, 'is string?', typeof file === 'string');
-    
+
     if (!file || !(file instanceof File)) {
-      console.log('[upload.ts] File validation failed!', file);
       return c.json({ success: false, message: 'No file uploaded.' }, 400);
     }
 
     const arrayBuffer = await file.arrayBuffer();
-    console.log('[upload.ts] Read arrayBuffer, length:', arrayBuffer.byteLength);
     const buffer = Buffer.from(arrayBuffer);
     const workbook = xlsx.read(buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     const rawData = xlsx.utils.sheet_to_json<any>(sheet, { defval: null });
-
-    console.log('[upload.ts] Parsed excel rows:', rawData?.length);
 
     if (!rawData || rawData.length === 0) {
       return c.json({ success: false, message: 'The uploaded file is empty.' }, 400);
@@ -192,189 +184,204 @@ uploadApp.post('/', async (c) => {
   }
 });
 
-// POST /save
+// POST /save — Batch-optimized: preloads clients/items, batch inserts purchases
 uploadApp.post('/save', async (c) => {
   try {
     const { data, month, isRebate, isFfs } = await c.req.json();
     const isRebateValue = Boolean(isRebate);
     const isFfsValue = Boolean(isFfs);
-    
+
     if (!data || !Array.isArray(data) || data.length === 0) {
       return c.json({ success: false, message: 'No data provided to save.' }, 400);
     }
-
     if (!month) {
       return c.json({ success: false, message: 'Month is required to save data.' }, 400);
     }
 
     const user = c.get('user');
-    let insertedRows = 0;
     const duplicatesList: any[] = [];
+
+    // ── Step 1: Preload all clients by BIN in ONE query ──────────────────
+    const uniqueBins = [...new Set(
+      data.map((r: any) => r.bin).filter((b: any) => b != null && String(b).trim() !== '')
+    )] as string[];
+    const existingClients = uniqueBins.length > 0
+      ? await db.select().from(clients).where(inArray(clients.bin, uniqueBins))
+      : [];
+    const clientByBin = new Map(existingClients.map(c => [c.bin as string, c]));
+
+    // ── Step 2: Preload all items by awHsCode in ONE query ───────────────
+    const uniqueHsCodes = [...new Set(
+      data
+        .map((r: any) => r.hsCode ? String(r.hsCode).trim().replace(/[.\s]/g, '') : null)
+        .filter(Boolean)
+    )] as string[];
+    const existingItems = uniqueHsCodes.length > 0
+      ? await db.select().from(items).where(inArray(items.awHsCode, uniqueHsCodes))
+      : [];
+    const itemByHsCode = new Map(existingItems.map(i => [i.awHsCode as string, i]));
+
+    // ── Step 3: Preload existing purchases for this month (duplicate check) ─
+    const existingPurchases = await db.select({
+      id: purchases.id,
+      beNo: purchases.beNo,
+      beDate: purchases.beDate,
+      itemId: purchases.itemId,
+      office: purchases.office,
+    }).from(purchases).where(
+      and(eq(purchases.adminId, user.adminId), eq(purchases.month, month))
+    );
+    const existingKeys = new Set(
+      existingPurchases.map(p =>
+        `${(p.beNo || '')}|${p.beDate}|${p.itemId}|${(p.office || '').trim()}`
+      )
+    );
+
+    // ── Step 4: Handle client admin transfers (still sequential, rare) ───
     const updatedClientAdmins = new Set<number>();
+    for (const mappedRow of data) {
+      const bin = mappedRow.bin ? String(mappedRow.bin).trim() : null;
+      if (!bin) continue;
+      const existingClient = clientByBin.get(bin);
+      if (
+        existingClient &&
+        user.role !== 'superadmin' &&
+        existingClient.adminId !== user.adminId &&
+        !updatedClientAdmins.has(existingClient.id)
+      ) {
+        const oldAdminId = existingClient.adminId;
+        await db.update(clients).set({ adminId: user.adminId }).where(eq(clients.id, existingClient.id));
+        await db.update(clientCredentials).set({ adminId: user.adminId }).where(eq(clientCredentials.clientId, existingClient.id));
+        await db.update(purchases).set({ adminId: user.adminId }).where(eq(purchases.clientId, existingClient.id));
+        await db.update(salesRates).set({ adminId: user.adminId }).where(eq(salesRates.clientId, existingClient.id));
+        await db.insert(notifications).values({
+          message: `Client "${existingClient.name}" (BIN: ${existingClient.bin || 'N/A'}) was automatically transferred to Admin ${user.adminId} upon new data upload.`,
+          clientId: existingClient.id,
+          oldAdminId,
+          newAdminId: user.adminId
+        });
+        updatedClientAdmins.add(existingClient.id);
+        // Update cache to reflect new admin
+        clientByBin.set(bin, { ...existingClient, adminId: user.adminId });
+      }
+    }
+
+    // ── Step 5: Process all rows in memory, build insert batch ───────────
+    const round2 = (val: number) => Math.round(val * 100) / 100;
+    const parseNumber = (val: any): number => {
+      if (val === undefined || val === null) return 0;
+      return parseFloat(String(val).replace(/,/g, '').trim()) || 0;
+    };
+
+    const toInsert: any[] = [];
 
     for (const mappedRow of data) {
       if (Object.keys(mappedRow).length === 0 || (Object.keys(mappedRow).length === 1 && mappedRow.tempId)) continue;
 
       let parsedDate = new Date();
-      if (mappedRow.beDate) {
-        parsedDate = new Date(mappedRow.beDate);
-      }
+      if (mappedRow.beDate) parsedDate = new Date(mappedRow.beDate);
 
-      // 1. Find or create Client
-      let clientId = null;
+      // Resolve client
+      let clientId: number | null = null;
       let targetAdminId = user.adminId;
-      if (mappedRow.bin || mappedRow.clientName) {
-        const clientQuery = await db.select().from(clients).where(eq(clients.bin, mappedRow.bin || '')).limit(1);
-        if (clientQuery.length > 0) {
-          clientId = clientQuery[0].id;
-          targetAdminId = clientQuery[0].adminId;
-          
-          if (user.role !== 'superadmin' && clientQuery[0].adminId !== user.adminId && !updatedClientAdmins.has(clientId)) {
-            const oldAdminId = clientQuery[0].adminId;
-            
-            // Transfer client and all associated data to the new admin
-            await db.update(clients).set({ adminId: user.adminId }).where(eq(clients.id, clientId));
-            await db.update(clientCredentials).set({ adminId: user.adminId }).where(eq(clientCredentials.clientId, clientId));
-            await db.update(purchases).set({ adminId: user.adminId }).where(eq(purchases.clientId, clientId));
-            await db.update(salesRates).set({ adminId: user.adminId }).where(eq(salesRates.clientId, clientId));
-            
-            updatedClientAdmins.add(clientId);
-            
-            // Insert notification for superadmin
-            await db.insert(notifications).values({
-              message: `Client "${clientQuery[0].name}" (BIN: ${clientQuery[0].bin || 'N/A'}) was automatically transferred to Admin ${user.name || user.email || user.adminId} upon new data upload.`,
-              clientId: clientId,
-              oldAdminId: oldAdminId,
-              newAdminId: user.adminId
-            });
-          }
+      const bin = mappedRow.bin ? String(mappedRow.bin).trim() : null;
+      if (bin || mappedRow.clientName) {
+        const cachedClient = bin ? clientByBin.get(bin) : undefined;
+        if (cachedClient) {
+          clientId = cachedClient.id;
+          targetAdminId = cachedClient.adminId;
         } else {
+          // Truly new client — insert and cache
           const newClient = await db.insert(clients).values({
             name: mappedRow.clientName || 'Unknown',
-            bin: mappedRow.bin || null,
+            bin: bin || null,
             adminId: targetAdminId
-          }).returning({ id: clients.id });
+          }).returning();
           clientId = newClient[0].id;
+          if (bin) clientByBin.set(bin, newClient[0]);
         }
       }
-      
-      // Store the targetAdminId in mappedRow so we can use it when inserting purchase later
-      mappedRow._targetAdminId = targetAdminId;
 
-      // 2. Find or create Item
-      let itemId = null;
+      // Resolve item
+      let itemId: number | null = null;
       if (mappedRow.hsCode || mappedRow.itemName) {
-        const normalizedAwHsCode = String(mappedRow.hsCode || '').trim().replace(/[\.\s]/g, '');
-        const itemQuery = await db.select().from(items).where(eq(items.awHsCode, normalizedAwHsCode)).limit(1);
-        if (itemQuery.length > 0) {
-          itemId = itemQuery[0].id;
+        const normalizedHsCode = String(mappedRow.hsCode || '').trim().replace(/[.\s]/g, '');
+        const cachedItem = itemByHsCode.get(normalizedHsCode);
+        if (cachedItem) {
+          itemId = cachedItem.id;
         } else {
+          // Truly new item — insert and cache
           const newItem = await db.insert(items).values({
             name: mappedRow.itemName || 'Unknown',
             hsCode: mappedRow.hsCode || null,
-            awHsCode: normalizedAwHsCode
-          }).returning({ id: items.id });
+            awHsCode: normalizedHsCode
+          }).returning();
           itemId = newItem[0].id;
+          itemByHsCode.set(normalizedHsCode, newItem[0]);
         }
       }
 
-      // 3. Insert Purchase
-      if (clientId && itemId) {
-        const round2 = (val: number): number => Math.round(val * 100) / 100;
-        const parseNumber = (val: any): number => {
-          if (val === undefined || val === null) return 0;
-          const cleanVal = String(val).replace(/,/g, '').trim();
-          return parseFloat(cleanVal) || 0;
-        };
+      if (!clientId || !itemId) continue;
 
-        const netWt = round2(parseNumber(mappedRow.netWt));
-        const excessQty = round2(parseNumber(mappedRow.excessQty));
-        const totalQty = round2(netWt + excessQty);
-        
-        const assValue = round2(parseNumber(mappedRow.assValue));
-        const cd = round2(parseNumber(mappedRow.cd));
-        const rd = round2(parseNumber(mappedRow.rd));
-        const sd = round2(parseNumber(mappedRow.sd));
-        const baseValueOfVat = round2(assValue + cd + rd + sd);
-        
-        const unitValue = round2(totalQty > 0 ? (baseValueOfVat / totalQty) : 0);
-        const vat = mappedRow.vat !== undefined ? round2(parseNumber(mappedRow.vat)) : undefined;
-        const at = mappedRow.at !== undefined ? round2(parseNumber(mappedRow.at)) : undefined;
+      // Calculate values
+      const netWt = round2(parseNumber(mappedRow.netWt));
+      const excessQty = round2(parseNumber(mappedRow.excessQty));
+      const totalQty = round2(netWt + excessQty);
+      const assValue = round2(parseNumber(mappedRow.assValue));
+      const cd = round2(parseNumber(mappedRow.cd));
+      const rd = round2(parseNumber(mappedRow.rd));
+      const sd = round2(parseNumber(mappedRow.sd));
+      const baseValueOfVat = round2(assValue + cd + rd + sd);
+      const unitValue = round2(totalQty > 0 ? baseValueOfVat / totalQty : 0);
+      const vat = mappedRow.vat !== undefined ? round2(parseNumber(mappedRow.vat)) : undefined;
+      const at = mappedRow.at !== undefined ? round2(parseNumber(mappedRow.at)) : undefined;
+      const formattedDate = parsedDate
+        ? `${parsedDate.getFullYear()}-${String(parsedDate.getMonth() + 1).padStart(2, '0')}-${String(parsedDate.getDate()).padStart(2, '0')}`
+        : null;
 
-        const formattedDate = parsedDate ? `${parsedDate.getFullYear()}-${String(parsedDate.getMonth() + 1).padStart(2, '0')}-${String(parsedDate.getDate()).padStart(2, '0')}` : null;
+      // Duplicate check in memory (O(1))
+      const office = (mappedRow.office?.toString() || '').trim();
+      const beNo = (mappedRow.beNo?.toString() || '').trim();
+      const dedupKey = `${beNo}|${formattedDate}|${itemId}|${office}`;
 
-        // Validation: Prevent duplicate data for the same admin
-        const duplicateCheck = await db.select().from(purchases).where(
-          and(
-            eq(purchases.adminId, user.adminId),
-            eq(purchases.itemId, itemId),
-            eq(purchases.office, (mappedRow.office?.toString() || '').trim()),
-            eq(purchases.beNo, (mappedRow.beNo?.toString() || '').trim()),
-            eq(purchases.beDate, formattedDate as any)
-          )
-        ).limit(1);
-
-        if (duplicateCheck.length > 0) {
-          duplicatesList.push({
-            existing: duplicateCheck[0],
-            newData: {
-              clientId,
-              itemId,
-              office: mappedRow.office?.toString() || '',
-              beNo: mappedRow.beNo?.toString() || '',
-              beDate: formattedDate,
-              month: month,
-              lcNumber: mappedRow.lcNumber?.toString() || '',
-              netWt,
-              excessQty,
-              totalQty,
-              assValue,
-              unitValue: round2(totalQty > 0 ? (baseValueOfVat / totalQty) : 0),
-              cd,
-              rd,
-              sd,
-              baseValueOfVat,
-              vat,
-              at,
-              isRebate: isRebateValue,
-              isFfs: isFfsValue,
-              tempId: mappedRow.tempId
-            }
-          });
-          continue; 
-        }
-
-        await db.insert(purchases).values({
-          adminId: user.adminId,
-          clientId,
-          itemId,
-          office: (mappedRow.office?.toString() || '').trim(),
-          beNo: (mappedRow.beNo?.toString() || '').trim(),
-          beDate: formattedDate as any,
-          month: month,
-          lcNumber: (mappedRow.lcNumber?.toString() || '').trim(),
-          netWt: netWt,
-          excessQty: excessQty,
-          totalQty: totalQty,
-          assValue: assValue,
-          unitValue: round2(totalQty > 0 ? (baseValueOfVat / totalQty) : 0),
-          cd: cd,
-          rd: rd,
-          sd: sd,
-          baseValueOfVat: baseValueOfVat,
-          vat: vat,
-          at: at,
-          isRebate: isRebateValue,
-          isFfs: isFfsValue,
+      if (existingKeys.has(dedupKey)) {
+        const existing = existingPurchases.find(p =>
+          p.beNo === beNo &&
+          String(p.beDate) === formattedDate &&
+          p.itemId === itemId &&
+          (p.office || '').trim() === office
+        );
+        duplicatesList.push({
+          existing,
+          newData: { clientId, itemId, office, beNo, beDate: formattedDate, month, lcNumber: (mappedRow.lcNumber?.toString() || '').trim(), netWt, excessQty, totalQty, assValue, unitValue, cd, rd, sd, baseValueOfVat, vat, at, isRebate: isRebateValue, isFfs: isFfsValue, tempId: mappedRow.tempId }
         });
-        insertedRows++;
+        continue;
       }
+
+      toInsert.push({
+        adminId: user.adminId,
+        clientId,
+        itemId,
+        office,
+        beNo,
+        beDate: formattedDate as any,
+        month,
+        lcNumber: (mappedRow.lcNumber?.toString() || '').trim(),
+        netWt, excessQty, totalQty, assValue, unitValue, cd, rd, sd, baseValueOfVat, vat, at,
+        isRebate: isRebateValue,
+        isFfs: isFfsValue,
+      });
     }
-    
+
+    // ── Step 6: Batch INSERT all valid rows in ONE query ─────────────────
+    if (toInsert.length > 0) {
+      await db.insert(purchases).values(toInsert);
+    }
+
     return c.json({
       success: true,
       message: 'Data saved to database successfully.',
-      totalRowsProcessed: insertedRows,
+      totalRowsProcessed: toInsert.length,
       duplicatesList: duplicatesList.length > 0 ? duplicatesList : undefined
     });
 

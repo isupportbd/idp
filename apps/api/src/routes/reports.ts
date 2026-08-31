@@ -336,27 +336,6 @@ reportsApp.get('/statement', async (c) => {
       for (let i = 0; i < ranges.length; i++) {
         const range = ranges[i];
         let totalQty = 0;
-        const parseDate = (dStr: string) => {
-          if (!dStr) return 0;
-          if (dStr.includes('/')) {
-            const parts = dStr.split('/');
-            if (parts.length === 3) {
-              return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
-            }
-          }
-          if (dStr.includes('-')) {
-            const parts = dStr.split('-');
-            if (parts.length === 3) {
-              // Usually YYYY-MM-DD
-              // If the first part is 4 digits, it's year
-              if (parts[0].length === 4) {
-                 return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2].substring(0,2))).getTime();
-              }
-            }
-          }
-          return new Date(dStr).getTime();
-        };
-
         const rangeStart = parseDate(range.startDate);
         const rangeEnd = parseDate(range.endDate);
 
