@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Copy, Trash2, Edit2, Upload, KeyRound, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Copy, Trash2, Edit2, Upload, KeyRound, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { apiClient } from '../../api/client';
 
 interface Credential {
@@ -18,6 +18,7 @@ export default function ClientCredentialsManager() {
   const [clients, setClients] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<number, boolean>>({});
   
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -28,6 +29,8 @@ export default function ClientCredentialsManager() {
     loginId: '',
     loginPassword: ''
   });
+  const [clientSearch, setClientSearch] = useState('');
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
@@ -415,7 +418,16 @@ export default function ClientCredentialsManager() {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2 bg-slate-900/50 px-3 py-1.5 rounded-lg w-fit border border-slate-700/50">
-                        <span className="text-slate-500 tracking-widest text-lg leading-none mt-1">••••••••</span>
+                        <span className="text-slate-500 tracking-widest text-lg leading-none mt-1">
+                          {visiblePasswords[cred.id] ? (
+                            <span className="text-sm font-mono tracking-normal text-slate-200">{cred.loginPassword}</span>
+                          ) : (
+                            '••••••••••••'
+                          )}
+                        </span>
+                        <button onClick={() => setVisiblePasswords(prev => ({...prev, [cred.id]: !prev[cred.id]}))} className="text-slate-500 hover:text-white transition-colors ml-2" title={visiblePasswords[cred.id] ? "Hide Password" : "Show Password"}>
+                          {visiblePasswords[cred.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
                         <button onClick={() => handleCopy(cred.loginPassword || '')} className="text-slate-500 hover:text-white transition-colors" title="Copy Password">
                           <Copy size={14} />
                         </button>
@@ -489,17 +501,47 @@ export default function ClientCredentialsManager() {
                       className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-400 cursor-not-allowed"
                     />
                   ) : (
-                    <select 
-                      value={formData.clientId} 
-                      onChange={e => setFormData({...formData, clientId: e.target.value})}
-                      required
-                      className="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-2.5 text-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="" disabled>Select a client...</option>
-                      {clients.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={clientSearch}
+                        onChange={e => {
+                          setClientSearch(e.target.value);
+                          setFormData(prev => ({ ...prev, clientId: '' }));
+                          setShowClientDropdown(true);
+                        }}
+                        onFocus={() => setShowClientDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowClientDropdown(false), 200)}
+                        placeholder="Type to search client..."
+                        className="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-2.5 text-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-8"
+                        required={!formData.clientId}
+                      />
+                      {clientSearch && (
+                        <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white" onClick={() => { setClientSearch(''); setFormData(prev => ({ ...prev, clientId: '' })); }}>✕</button>
+                      )}
+                      {showClientDropdown && (
+                        <div className="absolute top-full left-0 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-52 overflow-y-auto z-50">
+                          {clients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase()) || (c.bin && c.bin.includes(clientSearch))).length > 0 ? (
+                            clients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase()) || (c.bin && c.bin.includes(clientSearch))).map(c => (
+                              <div 
+                                key={c.id} 
+                                className="px-4 py-2 hover:bg-slate-700 cursor-pointer border-b border-slate-700/50 last:border-0"
+                                onMouseDown={() => {
+                                  setFormData(prev => ({ ...prev, clientId: c.id.toString() }));
+                                  setClientSearch(c.name);
+                                  setShowClientDropdown(false);
+                                }}
+                              >
+                                <div className="font-medium text-slate-200 text-sm">{c.name}</div>
+                                {c.bin && <div className="text-xs text-slate-400">BIN: {c.bin}</div>}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="px-4 py-3 text-slate-400 text-sm italic">No clients found</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
                 
