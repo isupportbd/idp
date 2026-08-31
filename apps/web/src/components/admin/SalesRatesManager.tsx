@@ -26,8 +26,7 @@ export default function SalesRatesManager() {
     vatRate: '',
     additionPercent: '',
     unitId: '',
-    activationDate: todayDate,
-    isFfs: false
+    activationDate: todayDate
   });
 
   const [clientSearchText, setClientSearchText] = useState('');
@@ -169,8 +168,7 @@ export default function SalesRatesManager() {
       vatRate: '',
       additionPercent: '',
       unitId: '',
-      activationDate: todayDate,
-      isFfs: false
+      activationDate: todayDate
     });
     setClientSearchText('');
     setShowClientDropdown(false);
