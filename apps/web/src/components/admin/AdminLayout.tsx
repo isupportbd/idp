@@ -176,19 +176,57 @@ export default function AdminLayout() {
                       notifications.map(notif => (
                         <div key={notif.id} className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mb-2 last:mb-0">
                           <p className="text-sm text-slate-200 mb-2 leading-snug">{notif.message}</p>
-                          <div className="flex justify-between items-center mt-3">
-                            <button 
-                              onClick={() => deleteNotification(notif.id)}
-                              className="text-xs text-slate-400 hover:text-slate-200 transition-colors"
-                            >
-                              Dismiss
-                            </button>
-                            <button 
-                              onClick={() => clearOldData(notif)}
-                              className="text-xs bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white px-2 py-1.5 rounded transition-colors font-medium border border-red-500/20"
-                            >
-                              Delete Old Data
-                            </button>
+                          <div className="flex justify-between items-center mt-3 gap-2">
+                            {notif.id < 0 ? (
+                              // Admin signup notification — show Approve / Reject
+                              <>
+                                <button
+                                  onClick={async () => {
+                                    const adminId = Math.abs(notif.id);
+                                    try {
+                                      const res = await apiClient.api.superadmin.tenants[':id'].approve.$put({ param: { id: adminId.toString() } });
+                                      const data = await res.json() as any;
+                                      if (data.success) setNotifications(prev => prev.filter(n => n.id !== notif.id));
+                                      else alert(data.message || 'Failed to approve');
+                                    } catch(e) { alert('Error approving admin'); }
+                                  }}
+                                  className="flex-1 text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white px-2 py-1.5 rounded transition-colors font-medium border border-emerald-500/20"
+                                >
+                                  ✓ Approve
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (!window.confirm('Reject and delete this admin account?')) return;
+                                    const adminId = Math.abs(notif.id);
+                                    try {
+                                      const res = await apiClient.api.superadmin.tenants[':id'].$delete({ param: { id: adminId.toString() } });
+                                      const data = await res.json() as any;
+                                      if (data.success) setNotifications(prev => prev.filter(n => n.id !== notif.id));
+                                      else alert(data.message || 'Failed to reject');
+                                    } catch(e) { alert('Error rejecting admin'); }
+                                  }}
+                                  className="flex-1 text-xs bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white px-2 py-1.5 rounded transition-colors font-medium border border-red-500/20"
+                                >
+                                  ✗ Reject
+                                </button>
+                              </>
+                            ) : (
+                              // Client transfer notification — show Dismiss and Delete Old Data
+                              <>
+                                <button
+                                  onClick={() => deleteNotification(notif.id)}
+                                  className="text-xs text-slate-400 hover:text-slate-200 transition-colors"
+                                >
+                                  Dismiss
+                                </button>
+                                <button
+                                  onClick={() => clearOldData(notif)}
+                                  className="text-xs bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white px-2 py-1.5 rounded transition-colors font-medium border border-red-500/20"
+                                >
+                                  Delete Old Data
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                       ))
@@ -198,6 +236,7 @@ export default function AdminLayout() {
                   </div>
                 </div>
               )}
+
             </div>
           )}
 
