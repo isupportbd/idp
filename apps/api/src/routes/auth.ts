@@ -184,7 +184,7 @@ authApp.post('/forgot-password-request', async (c) => {
     });
 
     await transporter.sendMail({
-      from: `"IDP System" <${process.env.SMTP_USER || 'noreply@oneassociatebd.com'}>`,
+      from: `"IDP System" <${process.env.SMTP_USER || 'noreply@isupportbd.com'}>`,
       to: dbUser.email,
       subject: 'Password Reset Code',
       text: `Your OTP for password reset is: ${otpCode}. It is valid for 10 minutes.`,

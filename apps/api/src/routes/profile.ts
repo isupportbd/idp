@@ -60,7 +60,7 @@ profile.post('/request-password-change', async (c) => {
 
   try {
     await transporter.sendMail({
-      from: `"IDP System" <${process.env.SMTP_USER || 'noreply@oneassociatebd.com'}>`,
+      from: `"IDP System" <${process.env.SMTP_USER || 'noreply@isupportbd.com'}>`,
       to: dbUser.email,
       subject: 'Password Change Verification Code',
       text: `Your OTP for password change is: ${otpCode}. It is valid for 10 minutes.`,
