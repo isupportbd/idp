@@ -35,10 +35,7 @@ purchasesApp.get('/', async (c) => {
     const adminId = user.adminId;
     const role = user.role;
     
-    const conditions = [];
-    if (role !== 'superadmin') {
-      conditions.push(eq(purchases.adminId, adminId));
-    }
+    const conditions = [eq(purchases.adminId, adminId)];
     if (month) conditions.push(eq(purchases.month, month));
     if (clientId) conditions.push(eq(purchases.clientId, parseInt(clientId)));
     if (itemId) conditions.push(eq(purchases.itemId, parseInt(itemId)));
@@ -124,22 +121,16 @@ purchasesApp.get('/reports', async (c) => {
     const user = c.get('user');
     const adminId = user.adminId;
 
-    const reportQuery = db.select({
+    const reportData = await db.select({
       clientId: purchases.clientId,
       clientName: clients.name,
       clientBin: clients.bin,
       totalQty: sql`sum(${purchases.totalQty})`.mapWith(Number),
     })
     .from(purchases)
-    .leftJoin(clients, eq(purchases.clientId, clients.id));
-
-    if (user.role === 'superadmin') {
-      reportQuery.where(eq(purchases.month, month));
-    } else {
-      reportQuery.where(and(eq(purchases.adminId, adminId), eq(purchases.month, month)));
-    }
-
-    const reportData = await reportQuery.groupBy(purchases.clientId, clients.name, clients.bin);
+    .leftJoin(clients, eq(purchases.clientId, clients.id))
+    .where(and(eq(purchases.adminId, adminId), eq(purchases.month, month)))
+    .groupBy(purchases.clientId, clients.name, clients.bin);
 
     const formattedData = reportData.map((item, index) => ({
       sl: index + 1,
