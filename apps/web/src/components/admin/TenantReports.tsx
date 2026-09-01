@@ -9,7 +9,8 @@ import StatementReport from './reports/StatementReport';
 import ReturnReport from './reports/ReturnReport';
 
 export default function TenantReports() {
-  const [clients, setClients] = useState<Client[]>([]);
+  const [clientSearchResults, setClientSearchResults] = useState<Client[]>([]);
+  const [isSearchingClients, setIsSearchingClients] = useState(false);
   const [unitConversions, setUnitConversions] = useState<UnitConversion[]>([]);
   const [clientSalesRates, setClientSalesRates] = useState<any[]>([]);
 
@@ -72,16 +73,10 @@ export default function TenantReports() {
     return c ? `${c.purchaseUnit} ➔ ${c.salesUnit}` : 'Unit';
   }, [selectedUnitId, unitConversions]);
 
-  const selectedClient = useMemo(() => clients.find(c => c.id === selectedClientId) || null, [clients, selectedClientId]);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
 
-  const filteredClients = useMemo(() => {
-    if (!clientSearchText) return [];
-    const l = clientSearchText.toLowerCase();
-    return clients
-      .filter(c => c.name.toLowerCase().includes(l) || (c.bin && c.bin.toLowerCase().includes(l)))
-      .slice(0, 50);
-  }, [clients, clientSearchText]);
+  const filteredClients = clientSearchResults;
 
   const filteredItems = useMemo(() => {
     if (!itemSearchText) return clientMonthItems;
@@ -108,20 +103,33 @@ export default function TenantReports() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [clientsRes, unitsRes] = await Promise.all([
-        apiClient.api.clients.$get({ query: { limit: '10000' } }),
-        apiClient.api.settings['unit-conversions'].$get(),
-      ]);
-      if (clientsRes.ok) {
-        const cData = await clientsRes.json() as any;
-        setClients(Array.isArray(cData) ? cData : cData.data || []);
-      }
+      const unitsRes = await apiClient.api.settings['unit-conversions'].$get();
       if (unitsRes.ok) {
         const uData = await unitsRes.json() as any;
         setUnitConversions(uData.data || []);
       }
     } catch (e) { console.error('Fetch error', e); }
   }, []);
+
+  // Debounced client search
+  useEffect(() => {
+    if (!clientSearchText || selectedClientId) {
+      setClientSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingClients(true);
+      try {
+        const res = await apiClient.api.clients.$get({ query: { search: clientSearchText, limit: '50' } });
+        if (res.ok) {
+          const data = await res.json() as any;
+          setClientSearchResults(Array.isArray(data) ? data : data.data || []);
+        }
+      } catch (e) { console.error(e); }
+      finally { setIsSearchingClients(false); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [clientSearchText, selectedClientId]);
 
   const fetchAvailableMonths = useCallback(async (clientId: number | '') => {
     if (!clientId) { setAvailableMonths([]); setSelectedMonthYear(''); return; }
@@ -142,23 +150,26 @@ export default function TenantReports() {
     if (!cId || !month) { setPurchases([]); return; }
     setIsLoadingPurchases(true);
     try {
-      const srRes = await fetch(
-        `${import.meta.env.VITE_API_URL || ''}/api/sales-rates/active/${cId}`,
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-      );
+      // Parallel fetch: sales rates + purchases at the same time
+      const [srRes, res] = await Promise.all([
+        fetch(
+          `${import.meta.env.VITE_API_URL || ''}/api/sales-rates/active/${cId}`,
+          { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+        ),
+        apiClient.api.purchases.$get({
+          query: {
+            clientId: cId.toString(),
+            month,
+            limit: '10000',
+            ...(itemId && { itemId: itemId.toString() })
+          }
+        })
+      ]);
+
       if (srRes.ok) {
         const allRates = await srRes.json() as any;
         setClientSalesRates(allRates.data || []);
       }
-
-      const res = await apiClient.api.purchases.$get({
-        query: {
-          clientId: cId.toString(),
-          month,
-          limit: '10000',
-          ...(itemId && { itemId: itemId.toString() })
-        }
-      });
       if (res.ok) {
         const dataRes = await res.json() as any;
         const data = dataRes.data || dataRes || [];
@@ -255,16 +266,20 @@ export default function TenantReports() {
   }, [selectedClientId, selectedMonthYear, currentTab, fetchPurchases, fetchSalesReport, fetchStatementReport]);
 
   const selectClient = async (client: Client) => {
+    setSelectedClient(client);
     setSelectedClientId(client.id);
     setClientSearchText(client.name);
     setShowClientDropdown(false);
+    setClientSearchResults([]);
     setSelectedItemId(''); setItemSearchText('');
     fetchAvailableMonths(client.id);
   };
 
   const clearClient = () => {
+    setSelectedClient(null);
     setSelectedClientId(''); setClientSearchText(''); setAvailableMonths([]);
     setSelectedMonthYear(''); setPurchases([]); setSalesReport([]); setClientMonthItems([]);
+    setClientSearchResults([]);
   };
 
   const selectItem = (item: Item) => {
@@ -365,6 +380,8 @@ export default function TenantReports() {
             <div className="absolute top-full left-0 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-52 overflow-y-auto z-50">
               {!clientSearchText ? (
                 <div className="px-4 py-3 text-slate-400 text-sm italic">Type to search for a client...</div>
+              ) : isSearchingClients ? (
+                <div className="px-4 py-3 text-slate-400 text-sm italic">Searching...</div>
               ) : filteredClients.length > 0 ? filteredClients.map(c => (
                 <div key={c.id} className="px-4 py-2 hover:bg-slate-700 cursor-pointer border-b border-slate-700/50 last:border-0" onMouseDown={() => selectClient(c)}>
                   <div className="font-medium text-slate-200 text-sm">{c.name}</div>
