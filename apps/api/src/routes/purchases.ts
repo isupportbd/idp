@@ -35,7 +35,10 @@ purchasesApp.get('/', async (c) => {
     const adminId = user.adminId;
     const role = user.role;
     
-    const conditions = [eq(purchases.adminId, adminId)];
+    const conditions = [];
+    if (role !== 'superadmin') {
+      conditions.push(eq(purchases.adminId, adminId));
+    }
     if (month) conditions.push(eq(purchases.month, month));
     if (clientId) conditions.push(eq(purchases.clientId, parseInt(clientId)));
     if (itemId) conditions.push(eq(purchases.itemId, parseInt(itemId)));
