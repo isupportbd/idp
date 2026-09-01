@@ -124,16 +124,22 @@ purchasesApp.get('/reports', async (c) => {
     const user = c.get('user');
     const adminId = user.adminId;
 
-    const reportData = await db.select({
+    const reportQuery = db.select({
       clientId: purchases.clientId,
       clientName: clients.name,
       clientBin: clients.bin,
       totalQty: sql`sum(${purchases.totalQty})`.mapWith(Number),
     })
     .from(purchases)
-    .leftJoin(clients, eq(purchases.clientId, clients.id))
-    .where(and(eq(purchases.adminId, adminId), eq(purchases.month, month)))
-    .groupBy(purchases.clientId, clients.name, clients.bin);
+    .leftJoin(clients, eq(purchases.clientId, clients.id));
+
+    if (user.role === 'superadmin') {
+      reportQuery.where(eq(purchases.month, month));
+    } else {
+      reportQuery.where(and(eq(purchases.adminId, adminId), eq(purchases.month, month)));
+    }
+
+    const reportData = await reportQuery.groupBy(purchases.clientId, clients.name, clients.bin);
 
     const formattedData = reportData.map((item, index) => ({
       sl: index + 1,

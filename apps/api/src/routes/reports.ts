@@ -32,10 +32,12 @@ reportsApp.get('/sales', async (c) => {
 
     // Build purchase query conditions
     const conditions = [
-      eq(purchases.adminId, adminId),
       eq(purchases.clientId, parseInt(clientId)),
       eq(purchases.month, month),
     ];
+    if (user.role !== 'superadmin') {
+      conditions.push(eq(purchases.adminId, adminId));
+    }
     if (itemId) {
       conditions.push(eq(purchases.itemId, parseInt(itemId)));
     }
@@ -63,6 +65,14 @@ reportsApp.get('/sales', async (c) => {
       return c.json({ success: true, data: [] });
     }
 
+    const rateConditions = [
+      eq(salesRates.clientId, parseInt(clientId)),
+      eq(salesRates.status, 'Active')
+    ];
+    if (user.role !== 'superadmin') {
+      rateConditions.push(eq(salesRates.adminId, adminId));
+    }
+
     // Fetch active sales rates for this client
     const activeRates = await db
       .select({
@@ -76,11 +86,7 @@ reportsApp.get('/sales', async (c) => {
       })
       .from(salesRates)
       .leftJoin(unitConversions, eq(salesRates.unitId, unitConversions.id))
-      .where(and(
-        eq(salesRates.adminId, adminId),
-        eq(salesRates.clientId, parseInt(clientId)),
-        eq(salesRates.status, 'Active')
-      ))
+      .where(and(...rateConditions))
       .orderBy(desc(salesRates.activationDate));
 
     // Calculate end of report month for fallback
