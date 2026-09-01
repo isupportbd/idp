@@ -87,7 +87,6 @@ export default function GlobalItems() {
   const items: Item[] = queryData?.data || [];
   const totalCount = queryData?.total || 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
-  const paginatedItems = items;
 
   const openModal = (item?: Item) => {
     if (item) {

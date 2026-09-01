@@ -2,10 +2,8 @@ import { Hono } from 'hono';
 import * as xlsx from 'xlsx';
 import { db } from '../db';
 import { clients, items, purchases, columnMappings, notifications, clientCredentials, salesRates } from '../db/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { authenticate, requireRole } from '../middlewares/auth';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
 
 const uploadApp = new Hono<{ Variables: { user: any } }>();
 

@@ -1,4 +1,4 @@
-import React from 'react';
+
 
 export default function UploadIcon3D({ size = 24 }: { size?: number | string }) {
   return (
