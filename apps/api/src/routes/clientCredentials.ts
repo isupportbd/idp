@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { db } from '../db';
 import { clientCredentials, clients } from '../db/schema';
-import { eq, and, inArray, ilike, or, sql } from 'drizzle-orm';
+import { eq, and, inArray, ilike, or, sql, desc } from 'drizzle-orm';
 import * as xlsx from 'xlsx';
 import { authenticate } from '../middlewares/auth';
 import { zValidator } from '@hono/zod-validator';
@@ -29,7 +29,7 @@ clientCredentialsApp.get('/', async (c) => {
     const filterClientId = c.req.query('clientId');
     const offset = (page - 1) * limit;
 
-    const conditions = [eq(clientCredentials.adminId, user.adminId)];
+    const conditions = user.role === 'superadmin' ? [] : [eq(clients.adminId, user.adminId)];
 
     // Fast single-client lookup (used by TenantReports)
     if (filterClientId) {
@@ -61,6 +61,7 @@ clientCredentialsApp.get('/', async (c) => {
       .where(whereClause);
 
     const dataQuery = baseQuery
+      .orderBy(desc(clientCredentials.createdAt))
       .limit(limit)
       .offset(offset);
 
@@ -91,7 +92,19 @@ const credSchema = z.object({
 clientCredentialsApp.post('/', zValidator('json', credSchema), async (c) => {
   try {
     const user = c.get('user');
+    
+    if (user.role === 'superadmin') {
+      return c.json({ success: false, error: 'Superadmin cannot create credentials' }, 403);
+    }
+
     const { clientId, loginId, loginPassword } = c.req.valid('json');
+
+    // Check if a credential already exists for this client
+    const existing = await db.select().from(clientCredentials).where(eq(clientCredentials.clientId, clientId));
+    if (existing.length > 0) {
+      return c.json({ success: false, error: 'Credential already exists for this client' }, 400);
+    }
+
     await db.insert(clientCredentials).values({
       adminId: user.adminId,
       clientId,

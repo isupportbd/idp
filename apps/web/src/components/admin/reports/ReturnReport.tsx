@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { KeyRound, CheckCircle2, Copy } from 'lucide-react';
 import { type Purchase, type SalesReportItem, fmt } from './types';
 
@@ -18,6 +18,13 @@ export default function ReturnReport({
   handleCopyCredential
 }: ReturnReportProps) {
   
+  const [hideEmptyNotes, setHideEmptyNotes] = useState(true);
+
+  const showRow = (v1: number, v2 = 0, v3 = 0) => {
+    if (!hideEmptyNotes) return true;
+    return Math.abs(v1) > 0.001 || Math.abs(v2) > 0.001 || Math.abs(v3) > 0.001;
+  };
+
   // Note 3: Exempted Sales
   const returnNote3Value = useMemo(() => {
     return salesReport
@@ -203,6 +210,22 @@ export default function ReturnReport({
         )}
       </div>
 
+      <div className="flex justify-end items-center mb-4 px-2">
+        <label className="flex items-center cursor-pointer gap-2 text-sm text-slate-300 hover:text-white transition-colors">
+          <div className="relative flex items-center">
+            <input 
+              type="checkbox" 
+              className="sr-only" 
+              checked={hideEmptyNotes} 
+              onChange={(e) => setHideEmptyNotes(e.target.checked)} 
+            />
+            <div className={`block w-10 h-5 rounded-full transition-colors ${hideEmptyNotes ? 'bg-red-500' : 'bg-slate-700'}`}></div>
+            <div className={`absolute left-1 bg-white w-3 h-3 rounded-full transition-transform ${hideEmptyNotes ? 'transform translate-x-5' : ''}`}></div>
+          </div>
+          Hide Empty Notes
+        </label>
+      </div>
+
       {/* PART 3 */}
       <div className="bg-slate-800/30 rounded-lg border border-slate-700">
         <div className="py-2 px-4 border-b border-slate-700 text-center">
@@ -220,10 +243,10 @@ export default function ReturnReport({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 text-slate-300">
-              <tr><td className="px-4 py-3 border border-slate-700">Exempted Goods/Service</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 3</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote3Value)}</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td></tr>
-              <tr><td className="px-4 py-3 border border-slate-700">Standard Rated Goods/Service</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 4</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote4.value)}</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote4.sd)}</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote4.vat)}</td></tr>
-              <tr><td className="px-4 py-3 border border-slate-700">Retail/Wholesale/Trade Based Supply</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 8</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote8.value)}</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote8.sd)}</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote8.vat)}</td></tr>
-              <tr className="bg-slate-700/30 font-bold text-blue-400"><td className="px-4 py-3 border border-slate-700">Total Sales Value & Total Payable Taxes</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 9</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote9.value)}</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote9.sd)}</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote9.vat)}</td></tr>
+              {showRow(returnNote3Value) && <tr><td className="px-4 py-3 border border-slate-700">Exempted Goods/Service</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 3</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote3Value)}</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td></tr>}
+              {showRow(returnNote4.value, returnNote4.sd, returnNote4.vat) && <tr><td className="px-4 py-3 border border-slate-700">Standard Rated Goods/Service</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 4</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote4.value)}</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote4.sd)}</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote4.vat)}</td></tr>}
+              {showRow(returnNote8.value, returnNote8.sd, returnNote8.vat) && <tr><td className="px-4 py-3 border border-slate-700">Retail/Wholesale/Trade Based Supply</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 8</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote8.value)}</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote8.sd)}</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote8.vat)}</td></tr>}
+              {showRow(returnNote9.value, returnNote9.sd, returnNote9.vat) && <tr className="bg-slate-700/30 font-bold text-blue-400"><td className="px-4 py-3 border border-slate-700">Total Sales Value & Total Payable Taxes</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 9</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote9.value)}</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote9.sd)}</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote9.vat)}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -245,10 +268,10 @@ export default function ReturnReport({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 text-slate-300">
-              <tr><td className="px-4 py-3 border border-slate-700">Exempted Goods/Service (Import)</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 13</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote13Value)}</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td></tr>
-              <tr><td className="px-4 py-3 border border-slate-700">Standard Rated Goods/Service (Import)</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 15</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote15.value)}</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote15.vat)}</td></tr>
-              <tr><td className="px-4 py-3 border border-slate-700">Goods/Service Not Admissible for Credit (Import)</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 22</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote22.value)}</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td></tr>
-              <tr className="bg-slate-700/30 font-bold text-blue-400"><td className="px-4 py-3 border border-slate-700">Total Input Tax Credit</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 23</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote23.value)}</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote23.vat)}</td></tr>
+              {showRow(returnNote13Value) && <tr><td className="px-4 py-3 border border-slate-700">Exempted Goods/Service (Import)</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 13</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote13Value)}</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td></tr>}
+              {showRow(returnNote15.value, returnNote15.vat) && <tr><td className="px-4 py-3 border border-slate-700">Standard Rated Goods/Service (Import)</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 15</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote15.value)}</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote15.vat)}</td></tr>}
+              {showRow(returnNote22.value) && <tr><td className="px-4 py-3 border border-slate-700">Goods/Service Not Admissible for Credit (Import)</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 22</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote22.value)}</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td></tr>}
+              {showRow(returnNote23.value, returnNote23.vat) && <tr className="bg-slate-700/30 font-bold text-blue-400"><td className="px-4 py-3 border border-slate-700">Total Input Tax Credit</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 23</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote23.value)}</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote23.vat)}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -271,7 +294,7 @@ export default function ReturnReport({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 text-slate-300">
-              <tr><td className="px-4 py-3 border border-slate-700">Any Other Adjustments</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 27</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote27VAT)}</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td></tr>
+              {showRow(returnNote27VAT) && <tr><td className="px-4 py-3 border border-slate-700">Any Other Adjustments</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 27</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote27VAT)}</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td></tr>}
             </tbody>
           </table>
         </div>
@@ -294,9 +317,9 @@ export default function ReturnReport({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 text-slate-300">
-              <tr><td className="px-4 py-3 border border-slate-700">Advance Tax Paid at Import Stage</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 30</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote30VAT)}</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td></tr>
-              <tr><td className="px-4 py-3 border border-slate-700">Any Other Adjustments</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 32</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote32VAT)}</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td></tr>
-              <tr className="bg-slate-700/30 font-bold text-blue-400"><td className="px-4 py-3 border border-slate-700">Total Decreasing Adjustment</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 33</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote33VAT)}</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td></tr>
+              {showRow(returnNote30VAT) && <tr><td className="px-4 py-3 border border-slate-700">Advance Tax Paid at Import Stage</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 30</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote30VAT)}</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td></tr>}
+              {showRow(returnNote32VAT) && <tr><td className="px-4 py-3 border border-slate-700">Any Other Adjustments</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 32</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote32VAT)}</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td></tr>}
+              {showRow(returnNote33VAT) && <tr className="bg-slate-700/30 font-bold text-blue-400"><td className="px-4 py-3 border border-slate-700">Total Decreasing Adjustment</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 33</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote33VAT)}</td><td className="px-4 py-3 text-right border border-slate-700">0.00</td></tr>}
             </tbody>
           </table>
         </div>
@@ -317,7 +340,7 @@ export default function ReturnReport({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 text-slate-300">
-              <tr className="bg-fuchsia-900/20 font-bold text-fuchsia-400"><td className="px-4 py-3 border border-slate-700">Net Payable VAT for the Tax Period</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 34</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote34VAT)}</td></tr>
+              {showRow(returnNote34VAT) && <tr className="bg-fuchsia-900/20 font-bold text-fuchsia-400"><td className="px-4 py-3 border border-slate-700">Net Payable VAT for the Tax Period</td><td className="px-4 py-3 text-center whitespace-nowrap border border-slate-700">Note: 34</td><td className="px-4 py-3 text-right border border-slate-700">{fmt(returnNote34VAT)}</td></tr>}
             </tbody>
           </table>
         </div>
