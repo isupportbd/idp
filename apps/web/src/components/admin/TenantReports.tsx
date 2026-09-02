@@ -153,8 +153,10 @@ export default function TenantReports() {
     if (!cId || !month) { setPurchases([]); return; }
     setIsLoadingPurchases(true);
     
-    // Add artificial 1-second loading delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Add artificial 1-second loading delay only if there is no data yet (first load)
+    if (purchases.length === 0) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
     
     try {
       // Parallel fetch: sales rates + purchases at the same time
@@ -198,8 +200,10 @@ export default function TenantReports() {
     if (!cId || !month) { setSalesReport([]); return; }
     setIsLoadingSales(true);
     
-    // Add artificial 1-second loading delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Add artificial 1-second loading delay only if there is no data yet (first load)
+    if (salesReport.length === 0) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
     
     try {
       const query = new URLSearchParams({ clientId: cId.toString(), month });
@@ -226,8 +230,10 @@ export default function TenantReports() {
     if (!cId || !month) { setStatementReport([]); return; }
     setIsLoadingStatement(true);
 
-    // Add artificial 1-second loading delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Add artificial 1-second loading delay only if there is no data yet (first load)
+    if (statementReport.length === 0) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
 
     try {
       const query = new URLSearchParams({ clientId: cId.toString(), month });
