@@ -468,8 +468,8 @@ export default function SubmissionsPage() {
       {/* Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center p-5 border-b border-slate-700 bg-slate-800/80">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-4xl overflow-visible animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-5 border-b border-slate-700 bg-slate-800/80 rounded-t-xl">
               <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
                 <span className="text-blue-500">{editMode ? '✏️' : '➕'}</span> 
                 {editMode ? 'Edit Submission' : 'Add New Submission'}
@@ -477,7 +477,7 @@ export default function SubmissionsPage() {
               <button onClick={closeModal} className="text-slate-400 hover:text-white transition-colors">✕</button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-6 bg-slate-900/50">
+            <form onSubmit={handleSubmit} className="p-6 bg-slate-900/50 rounded-b-xl">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {/* Client Search */}
               <div className="relative">
