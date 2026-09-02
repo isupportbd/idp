@@ -396,20 +396,10 @@ export default function TenantReports() {
     <div className="w-full max-w-screen-2xl mx-auto pb-10">
       
       {/* Header Actions */}
-      <div className="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+      <div className="mb-4">
         <h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
           <span className="text-blue-500">📊</span> Reports
         </h2>
-        
-        {user?.role === 'admin' && (
-          <button 
-            onClick={() => setShowSummaryModal(true)}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-          >
-            <Download size={16} className="text-blue-400" />
-            Monthly Summary (All Clients)
-          </button>
-        )}
       </div>
 
       {/* Filters */}
@@ -492,7 +482,7 @@ export default function TenantReports() {
         </div>
 
         {/* Item Filter */}
-        <div className="relative min-w-[200px] flex-1 max-w-xs">
+        <div className="relative w-40">
           <input
             type="text" value={itemSearchText}
             onChange={e => {
@@ -503,7 +493,7 @@ export default function TenantReports() {
             }}
             onFocus={() => { if (itemSearchText) setShowItemDropdown(true); }}
             onBlur={() => setTimeout(() => setShowItemDropdown(false), 200)}
-            placeholder="Filter by Item (Optional)..."
+            placeholder="Search Item"
             disabled={!selectedClientId || !selectedMonthYear}
             className="w-full px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed pr-8"
           />
@@ -521,6 +511,18 @@ export default function TenantReports() {
             </div>
           )}
         </div>
+
+        {/* Global Action */}
+        {user?.role === 'admin' && (
+          <button 
+            onClick={() => setShowSummaryModal(true)}
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 flex-shrink-0"
+            title="Download Monthly Summary for All Clients"
+          >
+            <Download size={16} className="text-blue-400" />
+            Monthly Summary (All Clients)
+          </button>
+        )}
 
         {/* Download button (purchase tab) */}
         {currentTab === 'purchases' && purchases.length > 0 && (
