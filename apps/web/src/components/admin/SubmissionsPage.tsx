@@ -324,9 +324,10 @@ export default function SubmissionsPage() {
                 onChange={e => setFilterMonth(e.target.value)}
                 className="w-full sm:w-auto px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500 text-sm h-10 min-w-[150px]"
                 lang="en-US" // Enforces YYYY-MM format visually in some browsers
+                style={{ colorScheme: 'dark' }}
               />
               {!filterMonth && (
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none bg-slate-800 pl-1 text-sm">
+                <span className="absolute left-[2px] top-[2px] bottom-[2px] right-10 bg-slate-800 flex items-center px-3.5 text-slate-400 pointer-events-none text-sm rounded-l-md z-10">
                   All Months
                 </span>
               )}
