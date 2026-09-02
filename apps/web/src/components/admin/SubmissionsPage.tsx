@@ -26,16 +26,18 @@ export default function SubmissionsPage() {
   // Selection State
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
-  // Modal State
+  // Modals & States
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const [currentId, setCurrentId] = useState<number | null>(null);
 
   // Form State
   const [clientSearchText, setClientSearchText] = useState('');
   const [clientSearchResults, setClientSearchResults] = useState<Client[]>([]);
   const [isSearchingClients, setIsSearchingClients] = useState(false);
-  const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
@@ -522,20 +524,43 @@ export default function SubmissionsPage() {
               </div>
 
               {/* Month Selector */}
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-medium text-slate-300 mb-2">Month</label>
-                <select
-                  value={selectedMonth}
-                  onChange={e => setSelectedMonth(e.target.value)}
-                  disabled={!selectedClient || editMode}
-                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500 disabled:opacity-50"
-                  required
+                
+                <div 
+                  onClick={() => { if (!editMode && selectedClient && availableMonths.length > 0) setShowMonthDropdown(!showMonthDropdown); }}
+                  className={`w-full px-4 py-2.5 bg-slate-800 border border-slate-600 rounded-lg text-slate-200 focus:outline-none flex justify-between items-center ${(!selectedClient || editMode || availableMonths.length === 0) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-blue-500'}`}
                 >
-                  <option value="" disabled>{editMode ? formatMonth(selectedMonth) : '-- Select Month --'}</option>
-                  {!editMode && availableMonths.map(m => (
-                    <option key={m} value={m}>{formatMonth(m)}</option>
-                  ))}
-                </select>
+                  <span className={!selectedMonth && !editMode ? 'text-slate-400' : ''}>
+                    {editMode 
+                      ? formatMonth(selectedMonth) 
+                      : selectedMonth 
+                        ? formatMonth(selectedMonth) 
+                        : '-- Select Month --'
+                    }
+                  </span>
+                  {!editMode && (
+                    <svg className={`w-4 h-4 transition-transform text-slate-400 ${showMonthDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                  )}
+                </div>
+                
+                {showMonthDropdown && !editMode && (
+                  <div className="absolute top-[80px] left-0 w-full bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-52 overflow-y-auto z-50">
+                    {availableMonths.map(m => (
+                      <div 
+                        key={m} 
+                        className="px-4 py-2.5 hover:bg-slate-700 cursor-pointer border-b border-slate-700/50 last:border-0 text-sm text-slate-200 transition-colors"
+                        onMouseDown={() => {
+                          setSelectedMonth(m);
+                          setShowMonthDropdown(false);
+                        }}
+                      >
+                        {formatMonth(m)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {/* Conditional warning/success message when adding */}
                 {!editMode && selectedClient && hasFetchedMonths && availableMonths.length === 0 && !isLoadingMonths && (
                   <p className="mt-2 text-xs text-emerald-400">✅ All purchases for this client already have submissions.</p>
