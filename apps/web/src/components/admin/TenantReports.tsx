@@ -395,13 +395,6 @@ export default function TenantReports() {
   return (
     <div className="w-full max-w-screen-2xl mx-auto pb-10">
       
-      {/* Header Actions */}
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
-          <span className="text-blue-500">📊</span> Reports
-        </h2>
-      </div>
-
       {/* Filters */}
       <div className="flex flex-wrap items-center justify-center gap-3 mb-6 pb-4 border-b border-slate-700">
         {/* Client Autocomplete */}
