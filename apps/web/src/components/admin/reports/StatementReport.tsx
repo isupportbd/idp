@@ -7,11 +7,13 @@ interface StatementReportProps {
 
 export default function StatementReport({ statementReport, currentConvFactor }: StatementReportProps) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-base">
-        <thead className="bg-slate-900 text-slate-400">
-          <tr>
-            <th className="px-4 py-3 text-center">Date</th>
+    <div className="mb-6">
+      <h4 className="text-lg font-bold text-emerald-400 mb-3 text-center">Statement Summary</h4>
+      <div className="overflow-x-auto overflow-y-auto max-h-96 rounded-lg border border-slate-700">
+        <table className="w-full text-sm whitespace-nowrap">
+          <thead className="sticky top-0 z-10 bg-slate-900 text-slate-400 uppercase tracking-wide">
+            <tr>
+              <th className="px-4 py-3 text-center">Date</th>
             <th className="px-4 py-3 text-left">Item</th>
             <th className="px-4 py-3 text-right">Qty</th>
             <th className="px-4 py-3 text-right">Rate</th>
@@ -40,6 +42,7 @@ export default function StatementReport({ statementReport, currentConvFactor }: 
           )}
         </tbody>
       </table>
+    </div>
     </div>
   );
 }

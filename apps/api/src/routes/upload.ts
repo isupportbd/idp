@@ -227,6 +227,10 @@ uploadApp.post('/save', async (c) => {
       beDate: purchases.beDate,
       itemId: purchases.itemId,
       office: purchases.office,
+      totalQty: purchases.totalQty,
+      baseValueOfVat: purchases.baseValueOfVat,
+      vat: purchases.vat,
+      at: purchases.at,
     }).from(purchases)
     .where(user.role === 'superadmin' ? undefined : eq(purchases.adminId, user.adminId));
     const existingKeys = new Set(

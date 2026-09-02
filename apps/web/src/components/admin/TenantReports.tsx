@@ -13,7 +13,6 @@ export default function TenantReports() {
   const [isSearchingClients, setIsSearchingClients] = useState(false);
   const [unitConversions, setUnitConversions] = useState<UnitConversion[]>([]);
   const [clientSalesRates, setClientSalesRates] = useState<any[]>([]);
-
   // Client autocomplete
   const [clientSearchText, setClientSearchText] = useState('');
   const [showClientDropdown, setShowClientDropdown] = useState(false);
@@ -131,7 +130,7 @@ export default function TenantReports() {
     return () => clearTimeout(timer);
   }, [clientSearchText, selectedClientId]);
 
-  const fetchAvailableMonths = useCallback(async (clientId: number | '') => {
+  const fetchAvailableMonths = useCallback(async (clientId: number | '', preserveMonth: boolean = false) => {
     if (!clientId) { setAvailableMonths([]); setSelectedMonthYear(''); return; }
     try {
       const res = await apiClient.api.purchases.months.$get({
@@ -141,7 +140,10 @@ export default function TenantReports() {
         const data = await res.json() as any;
         const months = data.data || [];
         setAvailableMonths(months);
-        setSelectedMonthYear(months[0] || '');
+        setSelectedMonthYear(prev => {
+          if (preserveMonth && prev && months.includes(prev)) return prev;
+          return months[0] || '';
+        });
       }
     } catch (e) { console.error(e); }
   }, []);
@@ -149,6 +151,10 @@ export default function TenantReports() {
   const fetchPurchases = useCallback(async (cId = selectedClientId, month = selectedMonthYear, itemId = selectedItemId) => {
     if (!cId || !month) { setPurchases([]); return; }
     setIsLoadingPurchases(true);
+    
+    // Add artificial 1-second loading delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     try {
       // Parallel fetch: sales rates + purchases at the same time
       const [srRes, res] = await Promise.all([
@@ -190,35 +196,53 @@ export default function TenantReports() {
   const fetchSalesReport = useCallback(async (cId = selectedClientId, month = selectedMonthYear, itemId = selectedItemId) => {
     if (!cId || !month) { setSalesReport([]); return; }
     setIsLoadingSales(true);
+    
+    // Add artificial 1-second loading delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     try {
-      const res = await apiClient.api.reports.sales.$get({
-        query: {
-          clientId: cId.toString(),
-          month,
-          ...(itemId && { itemId: itemId.toString() })
-        }
+      const query = new URLSearchParams({ clientId: cId.toString(), month });
+      if (itemId) query.append('itemId', itemId.toString());
+      
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/reports/sales?${query.toString()}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
+      
       if (res.ok) {
         const data = await res.json() as any;
         setSalesReport(data.data || []);
+      } else {
+        setSalesReport([]);
       }
-    } catch (e) { console.error(e); setSalesReport([]); }
+    } catch (e) { 
+      console.error(e); 
+      setSalesReport([]); 
+    }
     finally { setIsLoadingSales(false); }
   }, [selectedClientId, selectedMonthYear, selectedItemId]);
 
   const fetchStatementReport = useCallback(async (cId = selectedClientId, month = selectedMonthYear) => {
     if (!cId || !month) { setStatementReport([]); return; }
     setIsLoadingStatement(true);
+
+    // Add artificial 1-second loading delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || '';
-      const res = await fetch(`${baseUrl}/api/reports/statement?clientId=${cId}&month=${month}`, {
+      const query = new URLSearchParams({ clientId: cId.toString(), month });
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/reports/statement?${query.toString()}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       if (res.ok) {
         const data = await res.json() as any;
         setStatementReport(data.data || []);
+      } else {
+        setStatementReport([]);
       }
-    } catch (e) { console.error(e); setStatementReport([]); }
+    } catch (e) { 
+      console.error(e); 
+      setStatementReport([]); 
+    }
     finally { setIsLoadingStatement(false); }
   }, [selectedClientId, selectedMonthYear]);
 
@@ -313,8 +337,9 @@ export default function TenantReports() {
       if (res.ok) {
         const data = await res.json() as any;
         if (data.success) {
+          // Pass true to preserve the current month selection!
+          await fetchAvailableMonths(selectedClientId, true);
           await fetchPurchases();
-          await fetchAvailableMonths(selectedClientId);
           setShowChangeMonthModal(false);
         } else alert(data.message || 'Failed');
       } else {

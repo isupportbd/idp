@@ -15,7 +15,8 @@ interface Credential {
 export default function ClientCredentialsManager() {
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [clients, setClients] = useState<any[]>([]);
+  const [clientSearchResults, setClientSearchResults] = useState<any[]>([]);
+  const [isSearchingClients, setIsSearchingClients] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [visiblePasswords, setVisiblePasswords] = useState<Record<number, boolean>>({});
@@ -69,23 +70,25 @@ export default function ClientCredentialsManager() {
     }
   };
 
-  const fetchClients = async () => {
-    try {
-      const res = await apiClient.api.clients.$get({
-        query: { limit: '10000' }
-      });
-      if (res.ok) {
-        const data = await res.json() as any;
-        setClients(data.data || data || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch clients', error);
-    }
-  };
-
+  // Debounced client search
   useEffect(() => {
-    fetchClients();
-  }, []);
+    if (!clientSearch || formData.clientId) {
+      setClientSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingClients(true);
+      try {
+        const res = await apiClient.api.clients.$get({ query: { search: clientSearch, limit: '50' } });
+        if (res.ok) {
+          const data = await res.json() as any;
+          setClientSearchResults(Array.isArray(data) ? data : data.data || []);
+        }
+      } catch (e) { console.error(e); }
+      finally { setIsSearchingClients(false); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [clientSearch, formData.clientId]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -502,7 +505,7 @@ export default function ClientCredentialsManager() {
                   {editMode ? (
                     <input 
                       type="text" 
-                      value={clients.find(c => c.id.toString() === formData.clientId)?.name || ''} 
+                      value={credentials.find(c => c.clientId.toString() === formData.clientId)?.clientName || formData.clientId} 
                       disabled
                       className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-400 cursor-not-allowed"
                     />
@@ -529,8 +532,10 @@ export default function ClientCredentialsManager() {
                         <div className="absolute top-full left-0 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-52 overflow-y-auto z-50">
                           {!clientSearch.trim() ? (
                             <div className="px-4 py-3 text-slate-400 text-sm italic">Type to search for a client...</div>
-                          ) : clients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase()) || (c.bin && c.bin.includes(clientSearch))).length > 0 ? (
-                            clients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase()) || (c.bin && c.bin.includes(clientSearch))).slice(0, 50).map(c => (
+                          ) : isSearchingClients ? (
+                            <div className="px-4 py-3 text-slate-400 text-sm italic">Searching...</div>
+                          ) : clientSearchResults.length > 0 ? (
+                            clientSearchResults.map(c => (
                               <div 
                                 key={c.id} 
                                 className="px-4 py-2 hover:bg-slate-700 cursor-pointer border-b border-slate-700/50 last:border-0"
@@ -538,6 +543,7 @@ export default function ClientCredentialsManager() {
                                   setFormData(prev => ({ ...prev, clientId: c.id.toString() }));
                                   setClientSearch(c.name);
                                   setShowClientDropdown(false);
+                                  setClientSearchResults([]);
                                 }}
                               >
                                 <div className="font-medium text-slate-200 text-sm">{c.name}</div>

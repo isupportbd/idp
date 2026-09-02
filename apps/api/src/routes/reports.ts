@@ -30,160 +30,87 @@ reportsApp.get('/sales', async (c) => {
     const user = c.get('user');
     const adminId = user.adminId;
 
-    // Build purchase query conditions
-    const conditions = [
-      eq(purchases.adminId, adminId),
-      eq(purchases.clientId, parseInt(clientId)),
-      eq(purchases.month, month),
-    ];
-    if (itemId) {
-      conditions.push(eq(purchases.itemId, parseInt(itemId)));
-    }
-
-    // Fetch all purchases for client+month
-    const purchaseData = await db
-      .select({
-        id: purchases.id,
-        beDate: purchases.beDate,
-        itemId: purchases.itemId,
-        itemName: items.name,
-        hsCode: items.hsCode,
-        awHsCode: items.awHsCode,
-        totalQty: purchases.totalQty,
-        netWt: purchases.netWt,
-        baseValueOfVat: purchases.baseValueOfVat,
-        isFfs: purchases.isFfs,
-        isRebate: purchases.isRebate,
-      })
-      .from(purchases)
-      .leftJoin(items, eq(purchases.itemId, items.id))
-      .where(and(...conditions));
-
-    if (purchaseData.length === 0) {
-      return c.json({ success: true, data: [] });
-    }
-
-    // Fetch active sales rates for this client
-    const activeRates = await db
-      .select({
-        id: salesRates.id,
-        itemId: salesRates.itemId,
-        vatableValue: salesRates.vatableValue,
-        salesRate: salesRates.salesRate,
-        vatRate: salesRates.vatRate,
-        activationDate: salesRates.activationDate,
-        factor: unitConversions.factor
-      })
-      .from(salesRates)
-      .leftJoin(unitConversions, eq(salesRates.unitId, unitConversions.id))
-      .where(and(
-        eq(salesRates.adminId, adminId),
-        eq(salesRates.clientId, parseInt(clientId)),
-        eq(salesRates.status, 'Active')
-      ))
-      .orderBy(desc(salesRates.activationDate));
-
     // Calculate end of report month for fallback
     const [yearStr, monthStr] = month.split('-');
     const reportMonthEnd = new Date(parseInt(yearStr), parseInt(monthStr), 0); // last day of month
+    const reportMonthEndStr = `${reportMonthEnd.getFullYear()}-${String(reportMonthEnd.getMonth() + 1).padStart(2, '0')}-${String(reportMonthEnd.getDate()).padStart(2, '0')}`;
 
-    // Fetch VAT notes mapping
+    const rawSql = sql`
+      SELECT 
+        p.item_id as "itemId",
+        i.name as "itemName",
+        i.hs_code as "hsCode",
+        i.aw_hs_code as "awHsCode",
+        p.is_ffs as "isFfs",
+        p.is_rebate as "isRebate",
+        SUM(p.total_qty) as "totalQty",
+        SUM(p.net_wt) as "netWt",
+        SUM(p.base_value_of_vat) as "totalBaseValueOfVat",
+        SUM(p.total_qty * COALESCE(sr.sales_rate, 0) * COALESCE(uc.factor, 1)) as "totalSalesRateValue",
+        SUM(p.total_qty * COALESCE(sr.vatable_value, 0) * COALESCE(uc.factor, 1)) as "totalValue",
+        MAX(COALESCE(sr.vat_rate, 0)) as "vatRate"
+      FROM purchases p
+      LEFT JOIN items i ON p.item_id = i.id
+      LEFT JOIN LATERAL (
+        SELECT r.vatable_value, r.sales_rate, r.vat_rate, r.unit_id
+        FROM sales_rates r
+        WHERE r.item_id = p.item_id
+          AND r.client_id = p.client_id
+          AND r.status = 'Active'
+          AND (r.activation_date <= p.be_date OR r.activation_date <= ${reportMonthEndStr})
+        ORDER BY 
+          CASE WHEN r.activation_date <= p.be_date THEN 0 ELSE 1 END ASC,
+          r.activation_date DESC
+        LIMIT 1
+      ) sr ON true
+      LEFT JOIN unit_conversions uc ON sr.unit_id = uc.id
+      WHERE p.client_id = ${parseInt(clientId)}
+        AND p.month = ${month}
+        AND p.admin_id = ${adminId}
+        ${itemId ? sql`AND p.item_id = ${parseInt(itemId)}` : sql``}
+      GROUP BY p.item_id, i.name, i.hs_code, i.aw_hs_code, p.is_ffs, p.is_rebate
+    `;
+
+    const result = await db.execute(rawSql);
     const vatNotes = await db.select().from(vatNotesMapping);
 
-    // Group purchases by itemId, isFfs, and isRebate, calculating split values
-    const itemGroups: Record<string, any> = {};
-    for (const p of purchaseData) {
-      if (!p.itemId) continue;
+    const reportItems = result.map((row: any) => {
+      const avgVatableValue = row.totalQty > 0 ? row.totalValue / row.totalQty : 0;
+      const avgSalesRate = row.totalQty > 0 ? row.totalSalesRateValue / row.totalQty : 0;
+      const avgPurchaseUnitValue = row.totalQty > 0 ? row.totalBaseValueOfVat / row.totalQty : 0;
 
-      const groupKey = `${p.itemId}-${Boolean(p.isFfs)}-${Boolean(p.isRebate)}`;
-      const pDate = new Date(p.beDate);
-      
-      // Find applicable rate: latest rate <= beDate
-      let applicableRate = activeRates.find(r => r.itemId === p.itemId && new Date(r.activationDate) <= pDate);
-      
-      // Fallback: if no rate before beDate, use the rate applicable to the report month
-      if (!applicableRate) {
-        applicableRate = activeRates.find(r => r.itemId === p.itemId && new Date(r.activationDate) <= reportMonthEnd);
-      }
-      
-      const factor = applicableRate ? Number(applicableRate.factor) || 1 : 1;
-      const vatableValue = applicableRate ? Number(applicableRate.vatableValue) * factor : 0;
-      const salesRate = applicableRate ? Number(applicableRate.salesRate) * factor : 0;
-      
-      const pQty = Number(p.totalQty) || 0;
-      const pTotalValue = pQty * vatableValue;
-      const pTotalSalesRateValue = pQty * salesRate;
-
-      if (!itemGroups[groupKey]) {
-        itemGroups[groupKey] = {
-          itemId: p.itemId,
-          itemName: p.itemName || '-',
-          hsCode: p.hsCode || '',
-          awHsCode: p.awHsCode || '',
-          totalQty: 0,
-          netWt: 0,
-          totalValue: 0,
-          totalBaseValueOfVat: 0,
-          totalSalesRateValue: 0,
-          latestRateObj: applicableRate,
-          isFfs: Boolean(p.isFfs),
-          isRebate: Boolean(p.isRebate)
-        };
-      }
-      itemGroups[groupKey].totalQty += pQty;
-      itemGroups[groupKey].netWt += Number(p.netWt) || 0;
-      itemGroups[groupKey].totalValue += pTotalValue;
-      itemGroups[groupKey].totalBaseValueOfVat += Number(p.baseValueOfVat) || 0;
-      itemGroups[groupKey].totalSalesRateValue += pTotalSalesRateValue;
-    }
-
-    // Build sales report items
-    const reportItems: any[] = [];
-
-    for (const group of Object.values(itemGroups)) {
-      const rateObj = group.latestRateObj;
-      const avgVatableValue = group.totalQty > 0 ? group.totalValue / group.totalQty : 0;
-      const avgSalesRate = group.totalQty > 0 ? group.totalSalesRateValue / group.totalQty : 0;
-      const avgPurchaseUnitValue = group.totalQty > 0 ? group.totalBaseValueOfVat / group.totalQty : 0;
-
-
-      const factor = rateObj ? Number(rateObj.factor) || 1 : 1;
-      const salesUnitValue = rateObj ? Number(rateObj.vatableValue) * factor : 0;
+      const salesUnitValue = row.totalQty > 0 ? row.totalValue / row.totalQty : 0;
       let additionPercent = 0;
       if (avgPurchaseUnitValue > 0) {
         additionPercent = ((salesUnitValue - avgPurchaseUnitValue) / avgPurchaseUnitValue) * 100;
       }
 
-      // Use awHsCode for item-level, then hsCode
-      // Determine VAT note from vatNotesMapping by vatRate
-      const hsToUse = group.awHsCode || group.hsCode;
-      
-      let vatRate = rateObj ? Number(rateObj.vatRate) : 0;
+      let vatRate = Number(row.vatRate);
       let note = '';
 
-      if (group.isRebate) {
+      if (row.isRebate) {
         vatRate = 15;
-        note = '4'; // Force Note 4 for Rebate Sales
+        note = '4';
       } else {
         const matchedNote = vatNotes.find(n => Math.abs(Number(n.vatRate) - vatRate) < 0.001);
         note = matchedNote ? matchedNote.noteName : (vatRate === 15 ? '22' : vatRate > 0 ? '15' : '13');
       }
 
-      reportItems.push({
-        itemId: group.itemId,
-        itemName: group.itemName,
-        hsCode: group.hsCode,
-        awHsCode: group.awHsCode,
-        totalQty: group.totalQty,
+      return {
+        itemId: row.itemId,
+        itemName: row.itemName,
+        hsCode: row.hsCode,
+        awHsCode: row.awHsCode,
+        totalQty: Number(row.totalQty),
         rate: avgSalesRate,
         unitValue: avgVatableValue,
-        totalValue: group.totalValue,
+        totalValue: Number(row.totalValue),
         addition: additionPercent,
         vatRate,
         note,
-        isFfs: group.isFfs,
-      });
-    }
+        isFfs: Boolean(row.isFfs),
+      };
+    });
 
     return c.json({ success: true, data: reportItems });
   } catch (error) {

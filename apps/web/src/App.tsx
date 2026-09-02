@@ -15,12 +15,12 @@ import GlobalPurchases from './components/superadmin/GlobalPurchases';
 import GlobalReports from './components/superadmin/GlobalReports';
 import UsersManager from './components/admin/UsersManager';
 import ProfileSettings from './components/shared/ProfileSettings';
-
 import SettingsLayout from './components/superadmin/settings/SettingsLayout';
 import ColumnMappings from './components/superadmin/settings/ColumnMappings';
 import GlobalItems from './components/superadmin/settings/GlobalItems';
 import VatNotes from './components/superadmin/settings/VatNotes';
 import UnitConversions from './components/superadmin/settings/UnitConversions';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import TenantsManager from './components/superadmin/TenantsManager';
 import PlansManager from './components/superadmin/PlansManager';
 import StorageStats from './components/superadmin/StorageStats';
@@ -80,13 +80,17 @@ export default function App() {
       >
         <Route index element={<DashboardOverview />} />
         <Route path="upload" element={<UploadPurchases />} />
-        <Route path="clients" element={<ClientsManager />} />
-        <Route path="sales-rates" element={<SalesRatesManager />} />
-        <Route path="client-credentials" element={<ClientCredentialsManager />} />
         <Route path="purchases" element={<TenantPurchases />} />
         <Route path="reports" element={<TenantReports />} />
-        <Route path="users" element={<UsersManager />} />
         <Route path="profile" element={<ProfileSettings />} />
+
+        {/* Admin-only routes */}
+        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+          <Route path="clients" element={<ClientsManager />} />
+          <Route path="sales-rates" element={<SalesRatesManager />} />
+          <Route path="client-credentials" element={<ClientCredentialsManager />} />
+          <Route path="users" element={<UsersManager />} />
+        </Route>
       </Route>
 
       {/* Default Redirect */}

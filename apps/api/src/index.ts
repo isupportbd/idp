@@ -15,15 +15,40 @@ import notificationsApp from './routes/notifications';
 import profileApp from './routes/profile';
 import { db } from './db';
 import { users, purchases, salesRates, items, clients, clientCredentials, notifications } from './db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, count } from 'drizzle-orm';
 import * as bcrypt from 'bcryptjs';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
 
 (async () => {
   try {
-    const hash = await bcrypt.hash('Expw.17@', 10);
-    await db.update(users).set({ email: 'isupportbd.info@gmail.com', passwordHash: hash }).where(eq(users.email, 'test@test.com'));
+    // 1. Run automatic migrations safely
+    console.log('Checking for database migrations...');
+    await migrate(db, { migrationsFolder: './drizzle' });
+    console.log('Migrations up to date.');
+
+    // 2. Initialize superadmin if not exists
+    const adminCountResult = await db.select({ count: count() }).from(users).where(eq(users.role, 'superadmin'));
+    if (adminCountResult[0].count === 0) {
+      const initialEmail = process.env.SUPERADMIN_EMAIL;
+      const initialPassword = process.env.SUPERADMIN_PASSWORD;
+      
+      if (initialEmail && initialPassword) {
+        const hash = await bcrypt.hash(initialPassword, 10);
+        await db.insert(users).values({
+          name: 'Super Admin',
+          email: initialEmail,
+          mobile: '01000000000', // Default or placeholder
+          passwordHash: hash,
+          role: 'superadmin',
+          status: 'Active',
+        });
+        console.log('Superadmin user created from environment variables.');
+      } else {
+        console.warn('Notice: No superadmin exists and SUPERADMIN_EMAIL/SUPERADMIN_PASSWORD are not set in .env.');
+      }
+    }
   } catch(e) {
-    console.error(e);
+    console.error('Failed to initialize superadmin:', e);
   }
 })();
 type Variables = {
@@ -53,21 +78,7 @@ const api = app.basePath('/api')
   .route('/notifications', notificationsApp)
   .route('/profile', profileApp);
 
-app.get('/api/reset-data-now', async (c) => {
-  const secret = c.req.query('secret');
-  if (secret !== 'isupportbd123') return c.text('Unauthorized', 401);
-  try {
-    await db.delete(clientCredentials);
-    await db.delete(notifications);
-    await db.delete(purchases);
-    await db.delete(salesRates);
-    await db.delete(items);
-    await db.delete(clients);
-    return c.text('Data reset successful! All non-settings/users data has been deleted.');
-  } catch (error: any) {
-    return c.text('Error: ' + error.message, 500);
-  }
-});
+
 
 export type AppType = typeof api;
 

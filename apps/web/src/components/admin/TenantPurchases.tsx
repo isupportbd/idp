@@ -5,7 +5,8 @@ import { useAuthStore } from '../../stores/auth';
 export default function TenantPurchases() {
   const { user } = useAuthStore();
   const [purchases, setPurchases] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
+  const [clientSearchResults, setClientSearchResults] = useState<any[]>([]);
+  const [isSearchingClients, setIsSearchingClients] = useState(false);
   const [items, setItems] = useState<any[]>([]);
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
 
@@ -34,16 +35,11 @@ export default function TenantPurchases() {
 
   const loadBaseData = async () => {
     try {
-      const [clientsRes, itemsRes, monthsRes] = await Promise.all([
-        apiClient.api.clients.$get({ query: { limit: '10000' } }),
+      const [itemsRes, monthsRes] = await Promise.all([
         apiClient.api.items.$get(),
         apiClient.api.purchases.months.$get()
       ]);
       
-      if (clientsRes.ok) {
-        const cData = await clientsRes.json() as any;
-        setClients(cData.data || cData || []);
-      }
       if (itemsRes.ok) {
         const iData = await itemsRes.json() as any;
         if (iData.success) setItems(iData.data);
@@ -61,6 +57,26 @@ export default function TenantPurchases() {
       console.error('Failed to load base data', error);
     }
   };
+
+  // Debounced client search
+  useEffect(() => {
+    if (!clientSearchText || selectedClientId) {
+      setClientSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingClients(true);
+      try {
+        const res = await apiClient.api.clients.$get({ query: { search: clientSearchText, limit: '50' } });
+        if (res.ok) {
+          const data = await res.json() as any;
+          setClientSearchResults(Array.isArray(data) ? data : data.data || []);
+        }
+      } catch (e) { console.error(e); }
+      finally { setIsSearchingClients(false); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [clientSearchText, selectedClientId]);
 
   useEffect(() => {
     if (selectedMonth) {
@@ -134,16 +150,7 @@ export default function TenantPurchases() {
     }
   };
 
-  const filteredClients = useMemo(() => {
-    if (!clientSearchText) return [];
-    const lowerSearch = clientSearchText.toLowerCase();
-    return clients
-      .filter(c => 
-        c.name.toLowerCase().includes(lowerSearch) || 
-        (c.bin && c.bin.toLowerCase().includes(lowerSearch))
-      )
-      .slice(0, 50);
-  }, [clients, clientSearchText]);
+  const filteredClients = clientSearchResults;
 
   const filteredItems = useMemo(() => {
     if (!itemSearchText) return items;
@@ -206,12 +213,15 @@ export default function TenantPurchases() {
             <div className="absolute top-full left-0 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto z-50">
               {!clientSearchText ? (
                 <div className="px-4 py-3 text-slate-400 italic text-sm">Type to search for a client...</div>
+              ) : isSearchingClients ? (
+                <div className="px-4 py-3 text-slate-400 italic text-sm">Searching...</div>
               ) : filteredClients.length > 0 ? filteredClients.map(client => (
                 <div key={client.id} className="px-4 py-2 hover:bg-slate-700 cursor-pointer border-b border-slate-700/50 last:border-0" onMouseDown={() => {
                   setSelectedClientId(client.id);
                   setClientSearchText(client.name);
                   setShowClientDropdown(false);
                   setCurrentPage(1);
+                  setClientSearchResults([]);
                 }}>
                   <div className="font-medium text-slate-200">{client.name}</div>
                   <div className="text-xs text-slate-400">BIN: {client.bin || 'N/A'}</div>

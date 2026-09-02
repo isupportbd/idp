@@ -6,7 +6,7 @@
     "dev": "bun run --watch src/index.ts",
     "start": "bun run src/index.ts",
     "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push --force"
+    "db:migrate": "echo \"Migrations are run automatically when the server starts. Just run 'bun run dev' or 'bun run start'.\""
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",

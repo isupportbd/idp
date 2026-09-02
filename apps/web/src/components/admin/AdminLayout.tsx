@@ -64,7 +64,7 @@ export default function AdminLayout() {
 
     if (user?.role === 'admin' || user?.role === 'superadmin') {
       fetchStats();
-      interval = window.setInterval(fetchStats, 30000); // 30 seconds
+      interval = window.setInterval(fetchStats, 120000); // 120 seconds
     }
     
     return () => {
@@ -91,7 +91,7 @@ export default function AdminLayout() {
     };
 
     fetchNotifs();
-    const notifInterval = setInterval(fetchNotifs, 30000);
+    const notifInterval = setInterval(fetchNotifs, 120000);
     return () => clearInterval(notifInterval);
   }, [user]);
 

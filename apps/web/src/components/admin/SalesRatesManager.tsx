@@ -6,7 +6,13 @@ import { Search, ChevronDown } from 'lucide-react';
 export default function SalesRatesManager() {
   const [salesRates, setSalesRates] = useState<any[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [clients, setClients] = useState<any[]>([]);
+  
+  const [clientFormSearchResults, setClientFormSearchResults] = useState<any[]>([]);
+  const [isSearchingFormClients, setIsSearchingFormClients] = useState(false);
+  
+  const [clientFilterSearchResults, setClientFilterSearchResults] = useState<any[]>([]);
+  const [isSearchingFilterClients, setIsSearchingFilterClients] = useState(false);
+  
   const [items, setItems] = useState<any[]>([]);
   const [clientPurchasedItems, setClientPurchasedItems] = useState<any[]>([]);
   const [unitConversions, setUnitConversions] = useState<any[]>([]);
@@ -113,16 +119,10 @@ export default function SalesRatesManager() {
 
   const fetchClientsAndItems = async () => {
     try {
-      const [clientsRes, itemsRes, unitsRes] = await Promise.all([
-        apiClient.api.clients.$get({ query: { limit: '10000' } }),
+      const [itemsRes, unitsRes] = await Promise.all([
         apiClient.api.items.$get(),
         apiClient.api.settings['unit-conversions'].$get()
       ]);
-      
-      if (clientsRes.ok) {
-        const cData = await clientsRes.json() as any;
-        setClients(cData.data || cData || []);
-      }
       
       if (itemsRes.ok) {
         const iData = await itemsRes.json() as any;
@@ -134,9 +134,49 @@ export default function SalesRatesManager() {
         setUnitConversions(uData.data || uData || []);
       }
     } catch (error) {
-      console.error('Error fetching clients and items:', error);
+      console.error('Error fetching items:', error);
     }
   };
+
+  // Debounced client search for form
+  useEffect(() => {
+    if (!clientSearchText || formData.clientId) {
+      setClientFormSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingFormClients(true);
+      try {
+        const res = await apiClient.api.clients.$get({ query: { search: clientSearchText, limit: '50' } });
+        if (res.ok) {
+          const data = await res.json() as any;
+          setClientFormSearchResults(Array.isArray(data) ? data : data.data || []);
+        }
+      } catch (e) { console.error(e); }
+      finally { setIsSearchingFormClients(false); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [clientSearchText, formData.clientId]);
+
+  // Debounced client search for filters
+  useEffect(() => {
+    if (!filterClientText) {
+      setClientFilterSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingFilterClients(true);
+      try {
+        const res = await apiClient.api.clients.$get({ query: { search: filterClientText, limit: '50' } });
+        if (res.ok) {
+          const data = await res.json() as any;
+          setClientFilterSearchResults(Array.isArray(data) ? data : data.data || []);
+        }
+      } catch (e) { console.error(e); }
+      finally { setIsSearchingFilterClients(false); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [filterClientText]);
 
   const computedVatableValue = useMemo(() => {
     const sr = parseFloat(formData.salesRate);
@@ -253,12 +293,7 @@ export default function SalesRatesManager() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Autocomplete filtering
-  const filteredFormClients = !clientSearchText ? [] : clients
-    .filter(c => 
-      c.name.toLowerCase().includes(clientSearchText.toLowerCase()) || 
-      (c.bin && c.bin.toLowerCase().includes(clientSearchText.toLowerCase()))
-    ).slice(0, 50);
+  const filteredFormClients = clientFormSearchResults;
 
   const itemsToFilter = formData.clientId ? clientPurchasedItems : items;
   const filteredFormItems = !itemSearchText ? [] : itemsToFilter
@@ -267,11 +302,7 @@ export default function SalesRatesManager() {
       (i.hsCode && i.hsCode.toLowerCase().includes(itemSearchText.toLowerCase()))
     ).slice(0, 50);
 
-  const filterDropdownClients = !filterClientText ? [] : clients
-    .filter(c => 
-      c.name.toLowerCase().includes(filterClientText.toLowerCase()) || 
-      (c.bin && c.bin.toLowerCase().includes(filterClientText.toLowerCase()))
-    ).slice(0, 50);
+  const filterDropdownClients = clientFilterSearchResults;
 
   const filterDropdownItems = !filterItemText ? [] : items
     .filter(i => 
@@ -369,20 +400,25 @@ export default function SalesRatesManager() {
               className={`w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500 ${isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
               placeholder="Type to search..."
             />
-            {showClientDropdown && (
-              <div className="absolute top-full left-0 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto z-50">
-                {filteredFormClients.length > 0 ? filteredFormClients.map(client => (
-                  <div key={client.id} className="px-4 py-2 hover:bg-slate-700 cursor-pointer border-b border-slate-700/50 last:border-0" onMouseDown={() => {
-                    setFormData({...formData, clientId: client.id.toString()});
-                    setClientSearchText(client.name);
-                    setShowClientDropdown(false);
-                  }}>
-                    <div className="font-medium text-slate-200">{client.name}</div>
-                    <div className="text-xs text-slate-400">BIN: {client.bin || 'N/A'}</div>
-                  </div>
-                )) : <div className="px-4 py-3 text-slate-400 italic text-sm">No clients found</div>}
-              </div>
-            )}
+                        {showClientDropdown && (
+                          <div className="absolute top-full left-0 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-52 overflow-y-auto z-50">
+                            {!clientSearchText ? (
+                              <div className="px-4 py-3 text-slate-400 italic text-sm">Type to search for a client...</div>
+                            ) : isSearchingFormClients ? (
+                              <div className="px-4 py-3 text-slate-400 italic text-sm">Searching...</div>
+                            ) : filteredFormClients.length > 0 ? filteredFormClients.map(c => (
+                              <div key={c.id} className="px-4 py-2 hover:bg-slate-700 cursor-pointer border-b border-slate-700/50 last:border-0" onMouseDown={() => {
+                                setFormData(f => ({ ...f, clientId: c.id.toString() }));
+                                setClientSearchText(c.name);
+                                setShowClientDropdown(false);
+                                setClientFormSearchResults([]);
+                              }}>
+                                <div className="font-medium text-slate-200">{c.name}</div>
+                                {c.bin && <div className="text-xs text-slate-400">BIN: {c.bin}</div>}
+                              </div>
+                            )) : <div className="px-4 py-3 text-slate-400 italic text-sm">No clients found</div>}
+                          </div>
+                        )}
           </div>
 
           <div className="relative">
