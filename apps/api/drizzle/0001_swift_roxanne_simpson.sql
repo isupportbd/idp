@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS "submissions" (
 	CONSTRAINT "submissions_submission_id_unique" UNIQUE("submission_id")
 );
 --> statement-breakpoint
+UPDATE "users" SET "email" = 'user_' || id || '@example.com' WHERE "email" IS NULL;--> statement-breakpoint
+UPDATE "users" SET "mobile" = '017000000' || id WHERE "mobile" IS NULL;--> statement-breakpoint
 ALTER TABLE "users" ALTER COLUMN "email" SET NOT NULL;--> statement-breakpoint
 ALTER TABLE "users" ALTER COLUMN "mobile" SET NOT NULL;--> statement-breakpoint
 ALTER TABLE "purchases" ADD COLUMN "is_ffs" boolean DEFAULT false;--> statement-breakpoint
