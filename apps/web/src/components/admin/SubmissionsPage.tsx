@@ -168,7 +168,7 @@ export default function SubmissionsPage() {
   const openEditModal = (sub: Submission) => {
     setEditMode(true);
     setCurrentId(sub.id);
-    setSelectedClient({ id: sub.clientId, name: sub.clientName, bin: sub.clientBin, adminId: 0 });
+    setSelectedClient({ id: sub.clientId, name: sub.clientName, bin: sub.clientBin || undefined });
     setClientSearchText(sub.clientName);
     setSelectedMonth(sub.month);
     setSubmissionId(sub.submissionId);
