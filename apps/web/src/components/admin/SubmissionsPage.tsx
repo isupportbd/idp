@@ -29,6 +29,7 @@ export default function SubmissionsPage() {
   // Modals & States
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const [currentId, setCurrentId] = useState<number | null>(null);
 
