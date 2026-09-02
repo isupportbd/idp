@@ -22,7 +22,12 @@ UPDATE "users" SET "email" = 'user_' || id || '@example.com' WHERE "email" IS NU
 UPDATE "users" SET "mobile" = '017000000' || id WHERE "mobile" IS NULL;--> statement-breakpoint
 ALTER TABLE "users" ALTER COLUMN "email" SET NOT NULL;--> statement-breakpoint
 ALTER TABLE "users" ALTER COLUMN "mobile" SET NOT NULL;--> statement-breakpoint
-ALTER TABLE "purchases" ADD COLUMN "is_ffs" boolean DEFAULT false;--> statement-breakpoint
+DO $$ BEGIN
+  ALTER TABLE "purchases" ADD COLUMN "is_ffs" boolean DEFAULT false;
+EXCEPTION
+  WHEN duplicate_column THEN null;
+END $$;
+--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "otps" ADD CONSTRAINT "otps_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
