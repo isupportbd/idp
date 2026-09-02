@@ -146,9 +146,10 @@ export default function SubmissionsPage() {
   return (
     <>
       <div className="max-w-6xl mx-auto p-4 md:p-8 relative z-10">
-        <div className="bg-slate-800 rounded-xl shadow-xl border border-slate-700 p-6 md:p-8">
-          <h2 className="text-2xl font-bold text-slate-100 mb-6 flex items-center gap-3">
-            <span className="text-blue-500">📝</span> Add New Submission
+        {/* Submissions Card */}
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 mb-8 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-100 mb-6 flex items-center gap-2">
+            <span className="text-blue-500">✅</span> Submissions
           </h2>
 
           <form onSubmit={handleSubmit} className="flex flex-col md:flex-row items-end gap-4">
