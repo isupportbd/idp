@@ -167,51 +167,52 @@ export default function ReturnReport({
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      {/* eVAT Login Details */}
-      <div className="mb-6 flex flex-col items-center justify-center gap-3">
-        <div className="text-sm font-semibold text-emerald-400 tracking-wider flex items-center gap-2">
-          <KeyRound size={16} /> eVAT Login Details
-        </div>
-
-        {(!eVatCredentials?.loginId) ? (
-          <div className="text-slate-400 text-sm font-medium py-1 px-4 bg-slate-900/40 rounded-full border border-slate-700/50 flex items-center gap-2">
-            <span className="text-lg leading-none">📭</span> No Credential Found
+      {/* Top Controls Card */}
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+        
+        {/* Left Side: Title & Credentials */}
+        <div className="flex items-center gap-6">
+          <div className="text-sm font-bold text-emerald-400 flex items-center gap-2 tracking-wide">
+            <KeyRound size={16} /> eVAT Login Details
           </div>
-        ) : (
-          <div className="flex items-center gap-6 text-sm">
-            <div className="flex items-center gap-3">
-              <span className="text-slate-400 font-medium">User Name:</span>
-              <div className="flex items-center justify-between bg-slate-900/40 border border-slate-700/50 rounded-md px-3 py-1.5 w-44">
-                <span className="text-blue-400 font-mono font-semibold truncate">
-                  {eVatCredentials.loginId}
-                </span>
-                <button onClick={() => handleCopyCredential(eVatCredentials.loginId, 'username')} className={`${copiedField === 'username' ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-400'} transition-colors shrink-0`} title="Copy Login ID">
-                  {copiedField === 'username' ? <CheckCircle2 size={14} /> : <Copy size={14} />}
-                </button>
-              </div>
-            </div>
 
-            <div className="flex items-center gap-3">
-              <span className="text-slate-400 font-medium">Password:</span>
-              <div className="flex items-center justify-between bg-slate-900/40 border border-slate-700/50 rounded-md px-3 py-1.5 w-48">
-                <span className={`${eVatCredentials.loginPassword ? 'text-slate-200 tracking-widest' : 'text-slate-500 tracking-normal'} font-mono font-semibold truncate mt-0.5`}>
-                  {eVatCredentials.loginPassword ? '••••••••••••' : <span className="text-sm">N/A</span>}
-                </span>
-                {eVatCredentials.loginPassword && (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button onClick={() => handleCopyCredential(eVatCredentials.loginPassword || '', 'password')} className={`${copiedField === 'password' ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-400'} transition-colors`} title="Copy Password">
+          {(!eVatCredentials?.loginId) ? (
+            <div className="text-slate-400 text-sm font-medium flex items-center gap-2">
+              <span className="text-base">📭</span> No Credential Found
+            </div>
+          ) : (
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400 font-medium text-xs uppercase tracking-wider">User:</span>
+                <div className="flex items-center justify-between bg-slate-900/60 border border-slate-700/50 rounded px-2.5 py-1 w-40">
+                  <span className="text-blue-400 font-mono font-semibold truncate">
+                    {eVatCredentials.loginId}
+                  </span>
+                  <button onClick={() => handleCopyCredential(eVatCredentials.loginId, 'username')} className={`${copiedField === 'username' ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-400'} transition-colors shrink-0`} title="Copy Login ID">
+                    {copiedField === 'username' ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400 font-medium text-xs uppercase tracking-wider">Pass:</span>
+                <div className="flex items-center justify-between bg-slate-900/60 border border-slate-700/50 rounded px-2.5 py-1 w-40">
+                  <span className={`${eVatCredentials.loginPassword ? 'text-slate-200 tracking-widest' : 'text-slate-500 tracking-normal'} font-mono font-semibold truncate mt-0.5`}>
+                    {eVatCredentials.loginPassword ? '••••••••••••' : <span className="text-xs tracking-normal">N/A</span>}
+                  </span>
+                  {eVatCredentials.loginPassword && (
+                    <button onClick={() => handleCopyCredential(eVatCredentials.loginPassword || '', 'password')} className={`${copiedField === 'password' ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-400'} transition-colors shrink-0`} title="Copy Password">
                       {copiedField === 'password' ? <CheckCircle2 size={14} /> : <Copy size={14} />}
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      <div className="flex justify-end items-center mb-4 px-2">
-        <label className="flex items-center cursor-pointer gap-2 text-sm text-slate-300 hover:text-white transition-colors">
+        {/* Right Side: Toggle */}
+        <label className="flex items-center cursor-pointer gap-2.5 text-sm font-medium text-slate-300 hover:text-white transition-colors">
           <div className="relative flex items-center">
             <input 
               type="checkbox" 
@@ -220,7 +221,7 @@ export default function ReturnReport({
               onChange={(e) => setHideEmptyNotes(e.target.checked)} 
             />
             <div className={`block w-10 h-5 rounded-full transition-colors ${hideEmptyNotes ? 'bg-red-500' : 'bg-slate-700'}`}></div>
-            <div className={`absolute left-1 bg-white w-3 h-3 rounded-full transition-transform ${hideEmptyNotes ? 'transform translate-x-5' : ''}`}></div>
+            <div className={`absolute left-1 bg-white w-3 h-3 rounded-full transition-transform shadow-sm ${hideEmptyNotes ? 'transform translate-x-5' : ''}`}></div>
           </div>
           Hide Empty Notes
         </label>

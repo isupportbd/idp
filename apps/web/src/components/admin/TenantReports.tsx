@@ -598,6 +598,18 @@ export default function TenantReports() {
                     <button 
                       onClick={() => {
                         setStatementCountdown(5);
+                        
+                        // Trigger fetch immediately in the background
+                        if (selectedClientId && selectedMonthYear) {
+                          if (
+                            lastFetchedStatement.current.clientId !== selectedClientId.toString() ||
+                            lastFetchedStatement.current.month !== selectedMonthYear
+                          ) {
+                            lastFetchedStatement.current = { clientId: selectedClientId.toString(), month: selectedMonthYear };
+                            fetchStatementReport();
+                          }
+                        }
+
                         let count = 5;
                         const interval = setInterval(() => {
                           count--;
