@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { db } from '../db';
-import { submissions, purchases } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { submissions, purchases, clients } from '../db/schema';
+import { eq, and, sql, ilike, or, desc, inArray } from 'drizzle-orm';
 import { authenticate } from '../middlewares/auth';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
@@ -23,48 +23,32 @@ submissionsApp.use('*', authenticate);
 submissionsApp.get('/available-months', async (c) => {
   try {
     const user = c.get('user');
-    const clientIdStr = c.req.query('clientId');
+    const clientId = parseInt(c.req.query('clientId') || '0', 10);
+    if (!clientId) return c.json({ error: 'clientId is required' }, 400);
 
-    if (!clientIdStr) {
-      return c.json({ error: 'Client ID is required' }, 400);
-    }
-
-    const clientId = parseInt(clientIdStr, 10);
-    if (isNaN(clientId)) {
-      return c.json({ error: 'Invalid Client ID' }, 400);
-    }
-
-    const pConditions = [eq(purchases.clientId, clientId)];
+    const conditions = [eq(purchases.clientId, clientId)];
     if (user.role !== 'superadmin') {
-      pConditions.push(eq(purchases.adminId, user.adminId));
+      conditions.push(eq(purchases.adminId, user.adminId));
     }
 
-    // 1. Get all distinct months from purchases for this client
-    const purchaseRecords = await db
+    // Get all months with purchases for this client
+    const purchaseMonthsResult = await db
       .select({ month: purchases.month })
       .from(purchases)
-      .where(and(...pConditions));
-    
-    const uniquePurchaseMonths = Array.from(new Set(purchaseRecords.map(p => p.month)));
+      .where(and(...conditions));
 
-    const sConditions = [eq(submissions.clientId, clientId)];
-    if (user.role !== 'superadmin') {
-      sConditions.push(eq(submissions.adminId, user.adminId));
-    }
+    const purchaseMonths = [...new Set(purchaseMonthsResult.map(p => p.month))];
 
-    // 2. Get all months from submissions for this client
-    const submissionRecords = await db
+    // Get all months that already have a submission
+    const existingSubmissions = await db
       .select({ month: submissions.month })
       .from(submissions)
-      .where(and(...sConditions));
+      .where(eq(submissions.clientId, clientId));
 
-    const submittedMonths = new Set(submissionRecords.map(s => s.month));
+    const submittedMonths = new Set(existingSubmissions.map(s => s.month));
 
-    // 3. Filter out submitted months
-    const availableMonths = uniquePurchaseMonths.filter(m => !submittedMonths.has(m));
-
-    // Sort descending (latest month first)
-    availableMonths.sort((a, b) => b.localeCompare(a));
+    // Available months are those with purchases but NO submission
+    const availableMonths = purchaseMonths.filter(m => !submittedMonths.has(m)).sort((a, b) => b.localeCompare(a));
 
     return c.json({ data: availableMonths }, 200);
   } catch (error: any) {
@@ -73,18 +57,16 @@ submissionsApp.get('/available-months', async (c) => {
   }
 });
 
-// GET /submission?clientId={id}&month={month}
+// GET /submission - Get submission ID for a specific client and month
 submissionsApp.get('/submission', async (c) => {
   try {
     const user = c.get('user');
-    const clientIdStr = c.req.query('clientId');
+    const clientId = parseInt(c.req.query('clientId') || '0', 10);
     const month = c.req.query('month');
 
-    if (!clientIdStr || !month) {
+    if (!clientId || !month) {
       return c.json({ error: 'Client ID and Month are required' }, 400);
     }
-
-    const clientId = parseInt(clientIdStr, 10);
     
     const conditions = [
       eq(submissions.clientId, clientId),
@@ -182,8 +164,6 @@ submissionsApp.get('/', async (c) => {
 
     // Since we need to search by client name/bin, we do a join
     // We can't do ILIKE across joined tables easily without building the query manually or using sql
-    import { sql, ilike, or } from 'drizzle-orm';
-    import { clients } from '../db/schema';
     
     if (search) {
       conditions.push(

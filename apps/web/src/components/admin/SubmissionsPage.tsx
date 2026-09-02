@@ -317,20 +317,20 @@ export default function SubmissionsPage() {
 
           {/* Right: Search and Filter */}
           <div className="w-full lg:w-auto flex flex-col sm:flex-row gap-3">
-            {/* Month Filter */}
-            <select
-              value={filterMonth}
-              onChange={e => setFilterMonth(e.target.value)}
-              className="px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500 text-sm h-10 min-w-[140px]"
-            >
-              <option value="">All Months</option>
-              {Array.from({ length: 24 }).map((_, i) => {
-                const d = new Date();
-                d.setMonth(d.getMonth() - i);
-                const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                return <option key={val} value={val}>{formatMonth(val)}</option>;
-              })}
-            </select>
+            <div className="relative">
+              <input
+                type="month"
+                value={filterMonth}
+                onChange={e => setFilterMonth(e.target.value)}
+                className="w-full sm:w-auto px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500 text-sm h-10 min-w-[150px]"
+                lang="en-US" // Enforces YYYY-MM format visually in some browsers
+              />
+              {!filterMonth && (
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none bg-slate-800 pl-1 text-sm">
+                  All Months
+                </span>
+              )}
+            </div>
 
             <div className="relative flex-1">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
