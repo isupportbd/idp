@@ -467,7 +467,7 @@ export default function SubmissionsPage() {
       {/* Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center p-5 border-b border-slate-700 bg-slate-800/80">
               <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
                 <span className="text-blue-500">{editMode ? '✏️' : '➕'}</span> 
@@ -476,7 +476,8 @@ export default function SubmissionsPage() {
               <button onClick={closeModal} className="text-slate-400 hover:text-white transition-colors">✕</button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-6 space-y-5 bg-slate-900/50">
+            <form onSubmit={handleSubmit} className="p-6 bg-slate-900/50">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {/* Client Search */}
               <div className="relative">
                 <label className="block text-sm font-medium text-slate-300 mb-2">Client</label>
@@ -527,7 +528,7 @@ export default function SubmissionsPage() {
                   value={selectedMonth}
                   onChange={e => setSelectedMonth(e.target.value)}
                   disabled={!selectedClient || editMode}
-                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500 disabled:opacity-50 appearance-none"
+                  className="w-full px-4 py-2.5 bg-slate-800 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500 disabled:opacity-50"
                   required
                 >
                   <option value="" disabled>{editMode ? formatMonth(selectedMonth) : '-- Select Month --'}</option>
@@ -554,6 +555,7 @@ export default function SubmissionsPage() {
                   className="w-full px-4 py-2.5 bg-slate-800 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500 disabled:opacity-50 font-mono"
                   required
                 />
+              </div>
               </div>
 
               <div className="pt-4 flex justify-end gap-3 border-t border-slate-700 mt-6">
