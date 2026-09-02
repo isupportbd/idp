@@ -14,13 +14,12 @@ type Variables = {
   };
 };
 
-const submissionsApp = new Hono<{ Variables: Variables }>();
-
 // Apply auth middleware
-submissionsApp.use('*', authenticate);
+const submissionsApp = new Hono<{ Variables: Variables }>()
+  .use('*', authenticate)
 
-// GET /available-months?clientId={id}
-submissionsApp.get('/available-months', async (c) => {
+  // GET /available-months?clientId={id}
+  .get('/available-months', async (c) => {
   try {
     const user = c.get('user');
     const clientId = parseInt(c.req.query('clientId') || '0', 10);
@@ -55,10 +54,10 @@ submissionsApp.get('/available-months', async (c) => {
     console.error('Error fetching available months:', error);
     return c.json({ error: 'Failed to fetch available months' }, 500);
   }
-});
+  })
 
-// GET /submission - Get submission ID for a specific client and month
-submissionsApp.get('/submission', async (c) => {
+  // GET /submission - Get submission ID for a specific client and month
+  .get('/submission', async (c) => {
   try {
     const user = c.get('user');
     const clientId = parseInt(c.req.query('clientId') || '0', 10);
@@ -91,16 +90,14 @@ submissionsApp.get('/submission', async (c) => {
     console.error('Error fetching submission:', error);
     return c.json({ error: 'Failed to fetch submission' }, 500);
   }
-});
+  })
 
-const submissionSchema = z.object({
-  clientId: z.number().int().positive(),
-  month: z.string().length(7), // e.g., "2023-10"
-  submissionId: z.string().min(1).max(255),
-});
-
-// POST /
-submissionsApp.post('/', zValidator('json', submissionSchema), async (c) => {
+  // POST / - Create new submission
+  .post('/', zValidator('json', z.object({
+    clientId: z.number().int().positive(),
+    month: z.string().length(7), // e.g., "2023-10"
+    submissionId: z.string().min(1).max(255),
+  })), async (c) => {
   try {
     const user = c.get('user');
     const { clientId, month, submissionId } = c.req.valid('json');
@@ -141,10 +138,10 @@ submissionsApp.post('/', zValidator('json', submissionSchema), async (c) => {
     }
     return c.json({ error: 'Failed to save submission' }, 500);
   }
-});
+  })
 
-// GET / - List all submissions with pagination and search
-submissionsApp.get('/', async (c) => {
+  // GET / - List all submissions with pagination and search
+  .get('/', async (c) => {
   try {
     const user = c.get('user');
     const search = c.req.query('search') || '';
@@ -209,10 +206,10 @@ submissionsApp.get('/', async (c) => {
     console.error('Error fetching submissions:', error);
     return c.json({ error: 'Failed to fetch submissions' }, 500);
   }
-});
+  })
 
-// PUT /:id - Edit submission
-submissionsApp.put('/:id', zValidator('json', z.object({ submissionId: z.string().min(1).max(255) })), async (c) => {
+  // PUT /:id - Edit submission
+  .put('/:id', zValidator('json', z.object({ submissionId: z.string().min(1).max(255) })), async (c) => {
   try {
     const user = c.get('user');
     const id = parseInt(c.req.param('id'), 10);
@@ -241,10 +238,10 @@ submissionsApp.put('/:id', zValidator('json', z.object({ submissionId: z.string(
     }
     return c.json({ error: 'Failed to update submission' }, 500);
   }
-});
+  })
 
-// DELETE /:id
-submissionsApp.delete('/:id', async (c) => {
+  // DELETE /:id - Delete submission
+  .delete('/:id', async (c) => {
   try {
     const user = c.get('user');
     const id = parseInt(c.req.param('id'), 10);
@@ -265,10 +262,10 @@ submissionsApp.delete('/:id', async (c) => {
     console.error('Error deleting submission:', error);
     return c.json({ error: 'Failed to delete submission' }, 500);
   }
-});
+  })
 
-// POST /batch-delete
-submissionsApp.post('/batch-delete', zValidator('json', z.object({ ids: z.array(z.number()) })), async (c) => {
+  // POST /batch-delete - Delete multiple submissions
+  .post('/batch-delete', zValidator('json', z.object({ ids: z.array(z.number()) })), async (c) => {
   try {
     const user = c.get('user');
     const { ids } = c.req.valid('json');
