@@ -161,4 +161,146 @@ submissionsApp.post('/', zValidator('json', submissionSchema), async (c) => {
   }
 });
 
+// GET / - List all submissions with pagination and search
+submissionsApp.get('/', async (c) => {
+  try {
+    const user = c.get('user');
+    const search = c.req.query('search') || '';
+    const page = parseInt(c.req.query('page') || '1', 10);
+    const limit = parseInt(c.req.query('limit') || '50', 10);
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+    if (user.role !== 'superadmin') {
+      conditions.push(eq(submissions.adminId, user.adminId));
+    }
+
+    // Since we need to search by client name/bin, we do a join
+    // We can't do ILIKE across joined tables easily without building the query manually or using sql
+    import { sql, ilike, or } from 'drizzle-orm';
+    import { clients } from '../db/schema';
+    
+    if (search) {
+      conditions.push(
+        or(
+          ilike(clients.name, `%${search}%`),
+          ilike(clients.bin, `%${search}%`),
+          ilike(submissions.submissionId, `%${search}%`)
+        )
+      );
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Get total count
+    const totalResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(submissions)
+      .innerJoin(clients, eq(submissions.clientId, clients.id))
+      .where(whereClause);
+      
+    const totalCount = Number(totalResult[0]?.count || 0);
+
+    // Get paginated data
+    const data = await db
+      .select({
+        id: submissions.id,
+        clientId: submissions.clientId,
+        clientName: clients.name,
+        clientBin: clients.bin,
+        month: submissions.month,
+        submissionId: submissions.submissionId,
+        createdAt: submissions.createdAt
+      })
+      .from(submissions)
+      .innerJoin(clients, eq(submissions.clientId, clients.id))
+      .where(whereClause)
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(submissions.createdAt));
+
+    return c.json({ data, total: totalCount }, 200);
+  } catch (error: any) {
+    console.error('Error fetching submissions:', error);
+    return c.json({ error: 'Failed to fetch submissions' }, 500);
+  }
+});
+
+// PUT /:id - Edit submission
+submissionsApp.put('/:id', zValidator('json', z.object({ submissionId: z.string().min(1).max(255) })), async (c) => {
+  try {
+    const user = c.get('user');
+    const id = parseInt(c.req.param('id'), 10);
+    const { submissionId } = c.req.valid('json');
+
+    const conditions = [eq(submissions.id, id)];
+    if (user.role !== 'superadmin') {
+      conditions.push(eq(submissions.adminId, user.adminId));
+    }
+
+    const updated = await db
+      .update(submissions)
+      .set({ submissionId })
+      .where(and(...conditions))
+      .returning();
+
+    if (updated.length === 0) {
+      return c.json({ error: 'Submission not found or unauthorized' }, 404);
+    }
+
+    return c.json({ message: 'Submission updated successfully', data: updated[0] }, 200);
+  } catch (error: any) {
+    console.error('Error updating submission:', error);
+    if (error.code === '23505') {
+       return c.json({ error: 'This Submission ID is already in use.' }, 400);
+    }
+    return c.json({ error: 'Failed to update submission' }, 500);
+  }
+});
+
+// DELETE /:id
+submissionsApp.delete('/:id', async (c) => {
+  try {
+    const user = c.get('user');
+    const id = parseInt(c.req.param('id'), 10);
+
+    const conditions = [eq(submissions.id, id)];
+    if (user.role !== 'superadmin') {
+      conditions.push(eq(submissions.adminId, user.adminId));
+    }
+
+    const deleted = await db.delete(submissions).where(and(...conditions)).returning();
+
+    if (deleted.length === 0) {
+      return c.json({ error: 'Submission not found or unauthorized' }, 404);
+    }
+
+    return c.json({ message: 'Submission deleted successfully' }, 200);
+  } catch (error: any) {
+    console.error('Error deleting submission:', error);
+    return c.json({ error: 'Failed to delete submission' }, 500);
+  }
+});
+
+// POST /batch-delete
+submissionsApp.post('/batch-delete', zValidator('json', z.object({ ids: z.array(z.number()) })), async (c) => {
+  try {
+    const user = c.get('user');
+    const { ids } = c.req.valid('json');
+
+    if (ids.length === 0) return c.json({ message: 'No IDs provided' }, 200);
+
+    const conditions = [inArray(submissions.id, ids)];
+    if (user.role !== 'superadmin') {
+      conditions.push(eq(submissions.adminId, user.adminId));
+    }
+
+    await db.delete(submissions).where(and(...conditions));
+    return c.json({ message: 'Submissions deleted successfully' }, 200);
+  } catch (error: any) {
+    console.error('Error in batch delete submissions:', error);
+    return c.json({ error: 'Failed to delete submissions' }, 500);
+  }
+});
+
 export default submissionsApp;
