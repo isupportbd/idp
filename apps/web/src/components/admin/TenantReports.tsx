@@ -151,10 +151,9 @@ export default function TenantReports() {
 
   const fetchPurchases = useCallback(async (cId = selectedClientId, month = selectedMonthYear, itemId = selectedItemId) => {
     if (!cId || !month) { setPurchases([]); return; }
-    setIsLoadingPurchases(true);
-    
-    // Add artificial 1-second loading delay only if there is no data yet (first load)
-    if (purchases.length === 0) {
+    const isFirstLoad = purchases.length === 0;
+    if (isFirstLoad) {
+      setIsLoadingPurchases(true);
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
@@ -198,10 +197,9 @@ export default function TenantReports() {
 
   const fetchSalesReport = useCallback(async (cId = selectedClientId, month = selectedMonthYear, itemId = selectedItemId) => {
     if (!cId || !month) { setSalesReport([]); return; }
-    setIsLoadingSales(true);
-    
-    // Add artificial 1-second loading delay only if there is no data yet (first load)
-    if (salesReport.length === 0) {
+    const isFirstLoad = salesReport.length === 0;
+    if (isFirstLoad) {
+      setIsLoadingSales(true);
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
@@ -228,10 +226,9 @@ export default function TenantReports() {
 
   const fetchStatementReport = useCallback(async (cId = selectedClientId, month = selectedMonthYear) => {
     if (!cId || !month) { setStatementReport([]); return; }
-    setIsLoadingStatement(true);
-
-    // Add artificial 1-second loading delay only if there is no data yet (first load)
-    if (statementReport.length === 0) {
+    const isFirstLoad = statementReport.length === 0;
+    if (isFirstLoad) {
+      setIsLoadingStatement(true);
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
