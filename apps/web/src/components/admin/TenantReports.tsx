@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { apiClient } from '../../api/client';
 import { type Client, type Item, type UnitConversion, type Purchase, type SalesReportItem, formatMonth, formatDate } from './reports/types';
@@ -531,11 +532,14 @@ export default function TenantReports() {
             ))}
           </div>
 
-          <div className="p-4">
+          <div className="bg-slate-800 rounded-b-xl border-x border-b border-slate-700 p-6 min-h-[400px]">
             {/* Purchase Report Tab */}
             {currentTab === 'purchases' && (
               isLoadingPurchases ? (
-                <div className="text-center py-16 text-blue-400">Loading purchase data...</div>
+                <div className="flex flex-col items-center justify-center py-16 text-emerald-400 space-y-3">
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                  <p className="text-sm font-medium">Loading Purchase Report...</p>
+                </div>
               ) : purchases.length > 0 ? (
                 <PurchaseReport
                   purchases={purchases}
@@ -555,7 +559,10 @@ export default function TenantReports() {
             {/* Sales Report Tab */}
             {currentTab === 'sales' && (
               isLoadingSales ? (
-                <div className="text-center py-16 text-blue-400">Loading Sales Report...</div>
+                <div className="flex flex-col items-center justify-center py-16 text-blue-400 space-y-3">
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                  <p className="text-sm font-medium">Loading Sales Report...</p>
+                </div>
               ) : salesReport.length > 0 ? (
                 <SalesReport 
                   salesReport={salesReport} 
@@ -573,7 +580,10 @@ export default function TenantReports() {
             {/* Statement Report Tab */}
             {currentTab === 'statement' && (
               isLoadingStatement ? (
-                <div className="text-center py-16 text-blue-400">Loading Statement...</div>
+                <div className="flex flex-col items-center justify-center py-16 text-blue-400 space-y-3">
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                  <p className="text-sm font-medium">Loading Statement...</p>
+                </div>
               ) : statementReport.length > 0 ? (
                 <StatementReport statementReport={statementReport} currentConvFactor={currentConvFactor} />
               ) : (
