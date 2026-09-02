@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { db } from '../db';
-import { submissions, purchases, salesRates, clients } from '../db/schema';
+import { submissions, purchases, clients } from '../db/schema';
 import { eq, and, sql, ilike, or, desc, inArray } from 'drizzle-orm';
 import { authenticate } from '../middlewares/auth';
 import { zValidator } from '@hono/zod-validator';
@@ -36,22 +36,7 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
       .from(purchases)
       .where(and(...conditions));
 
-    // Get all months with sales rates for this client
-    const salesRatesConditions = [eq(salesRates.clientId, clientId)];
-    if (user.role !== 'superadmin') {
-      salesRatesConditions.push(eq(salesRates.adminId, user.adminId));
-    }
-    
-    const salesRatesMonthsResult = await db
-      .select({ month: salesRates.month })
-      .from(salesRates)
-      .where(and(...salesRatesConditions));
-
-    const purchaseMonths = purchaseMonthsResult.map(p => p.month);
-    const salesMonths = salesRatesMonthsResult.map(s => s.month);
-    
-    // Combine and remove duplicates
-    const allMonths = [...new Set([...purchaseMonths, ...salesMonths])];
+    const purchaseMonths = [...new Set(purchaseMonthsResult.map(p => p.month))];
 
     // Get all months that already have a submission
     const existingSubmissions = await db
@@ -61,8 +46,8 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
 
     const submittedMonths = new Set(existingSubmissions.map(s => s.month));
 
-    // Available months are those with purchases or sales but NO submission
-    const availableMonths = allMonths.filter(m => !submittedMonths.has(m)).sort((a, b) => b.localeCompare(a));
+    // Available months are those with purchases but NO submission
+    const availableMonths = purchaseMonths.filter(m => !submittedMonths.has(m)).sort((a, b) => b.localeCompare(a));
 
     return c.json({ data: availableMonths }, 200);
   } catch (error: any) {
