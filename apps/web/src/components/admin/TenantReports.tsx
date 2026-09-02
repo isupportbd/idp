@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { apiClient } from '../../api/client';
@@ -151,12 +151,8 @@ export default function TenantReports() {
 
   const fetchPurchases = useCallback(async (cId = selectedClientId, month = selectedMonthYear, itemId = selectedItemId) => {
     if (!cId || !month) { setPurchases([]); return; }
-    const isFirstLoad = purchases.length === 0;
-    if (isFirstLoad) {
-      setIsLoadingPurchases(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    
+    setIsLoadingPurchases(true);
+
     try {
       // Parallel fetch: sales rates + purchases at the same time
       const [srRes, res] = await Promise.all([
@@ -197,12 +193,8 @@ export default function TenantReports() {
 
   const fetchSalesReport = useCallback(async (cId = selectedClientId, month = selectedMonthYear, itemId = selectedItemId) => {
     if (!cId || !month) { setSalesReport([]); return; }
-    const isFirstLoad = salesReport.length === 0;
-    if (isFirstLoad) {
-      setIsLoadingSales(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    
+    setIsLoadingSales(true);
+
     try {
       const query = new URLSearchParams({ clientId: cId.toString(), month });
       if (itemId) query.append('itemId', itemId.toString());
@@ -226,11 +218,7 @@ export default function TenantReports() {
 
   const fetchStatementReport = useCallback(async (cId = selectedClientId, month = selectedMonthYear) => {
     if (!cId || !month) { setStatementReport([]); return; }
-    const isFirstLoad = statementReport.length === 0;
-    if (isFirstLoad) {
-      setIsLoadingStatement(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+    setIsLoadingStatement(true);
 
     try {
       const query = new URLSearchParams({ clientId: cId.toString(), month });
@@ -279,19 +267,29 @@ export default function TenantReports() {
   }, [selectedClientId]);
 
   useEffect(() => {
-    if (!selectedClientId) { setClientMonthItems([]); setItemSearchText(''); setSelectedItemId(''); }
-
-    if (currentTab === 'purchases') {
-      fetchPurchases();
-    } else if (currentTab === 'sales') {
-      fetchSalesReport();
-    } else if (currentTab === 'statement') {
-      fetchStatementReport();
-    } else if (currentTab === 'return') {
-      fetchPurchases();
-      fetchSalesReport();
+    if (!selectedClientId) { 
+      setClientMonthItems([]); setItemSearchText(''); setSelectedItemId(''); 
+      return; 
     }
-  }, [selectedClientId, selectedMonthYear, currentTab, fetchPurchases, fetchSalesReport, fetchStatementReport]);
+
+    // Fetch primary reports simultaneously when client or month changes
+    fetchPurchases();
+    fetchSalesReport();
+  }, [selectedClientId, selectedMonthYear, fetchPurchases, fetchSalesReport]);
+
+  // Lazy-load Statement Report
+  const lastFetchedStatement = useRef({ clientId: '', month: '' });
+  useEffect(() => {
+    if (currentTab === 'statement' && selectedClientId && selectedMonthYear) {
+      if (
+        lastFetchedStatement.current.clientId !== selectedClientId.toString() ||
+        lastFetchedStatement.current.month !== selectedMonthYear
+      ) {
+        lastFetchedStatement.current = { clientId: selectedClientId.toString(), month: selectedMonthYear };
+        fetchStatementReport();
+      }
+    }
+  }, [currentTab, selectedClientId, selectedMonthYear, fetchStatementReport]);
 
   const selectClient = async (client: Client) => {
     setSelectedClient(client);
