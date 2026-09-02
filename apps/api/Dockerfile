@@ -4,4 +4,4 @@ COPY package.json bun.lockb* ./
 RUN bun install
 COPY . .
 EXPOSE 3001
-CMD bun run db:push && bun run src/index.ts
+CMD bun run src/index.ts
