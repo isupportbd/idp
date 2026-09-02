@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useAuthStore } from './stores/auth';
 import LandingPage from './components/auth/LandingPage';
 import LoginForm from './components/auth/LoginForm';
@@ -26,8 +27,45 @@ import TenantsManager from './components/superadmin/TenantsManager';
 import PlansManager from './components/superadmin/PlansManager';
 import StorageStats from './components/superadmin/StorageStats';
 
+const routeTitles: Record<string, string> = {
+  '/landing': 'Welcome',
+  '/login': 'Login',
+  '/superadmin': 'Dashboard (Super Admin)',
+  '/superadmin/tenants': 'Tenants',
+  '/superadmin/plans': 'Plans',
+  '/superadmin/purchases': 'Global Purchases',
+  '/superadmin/reports': 'Global Reports',
+  '/superadmin/settings/mappings': 'Column Mappings',
+  '/superadmin/settings/items': 'Global Items',
+  '/superadmin/settings/vat-notes': 'VAT Notes',
+  '/superadmin/settings/unit-conversions': 'Unit Conversions',
+  '/superadmin/storage': 'Storage Stats',
+  '/superadmin/profile': 'Profile',
+  '/admin': 'Dashboard',
+  '/admin/upload': 'Upload Purchases',
+  '/admin/purchases': 'Purchases',
+  '/admin/reports': 'Reports',
+  '/admin/submissions': 'Submissions',
+  '/admin/clients': 'Clients',
+  '/admin/sales-rates': 'Sales Rates',
+  '/admin/client-credentials': 'Client Credentials',
+  '/admin/users': 'Users',
+  '/admin/profile': 'Profile',
+};
+
 export default function App() {
   const { user, token, logout } = useAuthStore();
+  const location = useLocation();
+
+  useEffect(() => {
+    const baseTitle = 'IDP';
+    const pageTitle = routeTitles[location.pathname];
+    if (pageTitle) {
+      document.title = `${pageTitle} - ${baseTitle}`;
+    } else {
+      document.title = baseTitle;
+    }
+  }, [location.pathname]);
 
   // If token exists but user is lost, force logout
   if (token && !user) {
