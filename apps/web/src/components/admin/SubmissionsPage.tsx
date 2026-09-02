@@ -56,7 +56,10 @@ export default function SubmissionsPage() {
 
   // Fetch Submissions
   const fetchSubmissions = async () => {
-    setIsLoading(true);
+    // Only show the loading spinner if we have no data yet (initial load)
+    if (submissions.length === 0) {
+      setIsLoading(true);
+    }
     try {
       // @ts-ignore
       const res = await apiClient.api.submissions.$get({
