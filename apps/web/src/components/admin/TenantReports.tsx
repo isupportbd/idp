@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { apiClient } from '../../api/client';
 import { type Client, type Item, type UnitConversion, type Purchase, type SalesReportItem, formatMonth, formatDate } from './reports/types';
+import { useAuthStore } from '../../stores/auth';
 
 import PurchaseReport from './reports/PurchaseReport';
 import SalesReport from './reports/SalesReport';
@@ -10,6 +11,7 @@ import StatementReport from './reports/StatementReport';
 import ReturnReport from './reports/ReturnReport';
 
 export default function TenantReports() {
+  const { user } = useAuthStore();
   const [clientSearchResults, setClientSearchResults] = useState<Client[]>([]);
   const [isSearchingClients, setIsSearchingClients] = useState(false);
   const [unitConversions, setUnitConversions] = useState<UnitConversion[]>([]);
@@ -44,6 +46,8 @@ export default function TenantReports() {
   const [isLoadingSales, setIsLoadingSales] = useState(false);
   const [statementReport, setStatementReport] = useState<any[]>([]);
   const [isLoadingStatement, setIsLoadingStatement] = useState(false);
+  const [isStatementUnlocked, setIsStatementUnlocked] = useState(false);
+  const [statementCountdown, setStatementCountdown] = useState(0);
 
   // eVAT Credentials
   const [eVatCredentials, setEVatCredentials] = useState<{ loginId: string, loginPassword?: string } | null>(null);
@@ -272,6 +276,9 @@ export default function TenantReports() {
       return; 
     }
 
+    setIsStatementUnlocked(false);
+    setStatementCountdown(0);
+
     // Fetch primary reports simultaneously when client or month changes
     fetchPurchases();
     fetchSalesReport();
@@ -280,7 +287,7 @@ export default function TenantReports() {
   // Lazy-load Statement Report
   const lastFetchedStatement = useRef({ clientId: '', month: '' });
   useEffect(() => {
-    if (currentTab === 'statement' && selectedClientId && selectedMonthYear) {
+    if (currentTab === 'statement' && selectedClientId && selectedMonthYear && isStatementUnlocked) {
       if (
         lastFetchedStatement.current.clientId !== selectedClientId.toString() ||
         lastFetchedStatement.current.month !== selectedMonthYear
@@ -289,7 +296,7 @@ export default function TenantReports() {
         fetchStatementReport();
       }
     }
-  }, [currentTab, selectedClientId, selectedMonthYear, fetchStatementReport]);
+  }, [currentTab, selectedClientId, selectedMonthYear, isStatementUnlocked, fetchStatementReport]);
 
   const selectClient = async (client: Client) => {
     setSelectedClient(client);
@@ -377,8 +384,8 @@ export default function TenantReports() {
   const TABS = [
     { id: 'purchases', label: 'Purchase Report' },
     { id: 'sales', label: 'Sales Report' },
-    { id: 'statement', label: 'Statement' },
     { id: 'return', label: 'Return Report' },
+    ...(user?.role === 'admin' ? [{ id: 'statement', label: 'Statement' }] : []),
   ] as const;
 
   return (
@@ -522,7 +529,7 @@ export default function TenantReports() {
             {TABS.map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setCurrentTab(tab.id)}
+                onClick={() => setCurrentTab(tab.id as any)}
                 className={`px-5 py-3 text-sm font-medium whitespace-nowrap transition-all border-b-2 ${currentTab === tab.id
                   ? 'border-blue-500 text-blue-400'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -580,7 +587,37 @@ export default function TenantReports() {
 
             {/* Statement Report Tab */}
             {currentTab === 'statement' && (
-              isLoadingStatement ? (
+              !isStatementUnlocked ? (
+                <div className="flex flex-col items-center justify-center py-24 space-y-4">
+                  {statementCountdown > 0 ? (
+                    <div className="flex flex-col items-center space-y-4">
+                      <div className="text-7xl font-black text-blue-500 animate-pulse">{statementCountdown}</div>
+                      <p className="text-slate-400 font-medium tracking-wide">Generating Statement...</p>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => {
+                        setStatementCountdown(5);
+                        let count = 5;
+                        const interval = setInterval(() => {
+                          count--;
+                          if (count <= 0) {
+                            clearInterval(interval);
+                            setIsStatementUnlocked(true);
+                            setStatementCountdown(0);
+                          } else {
+                            setStatementCountdown(count);
+                          }
+                        }, 1000);
+                      }}
+                      className="px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold shadow-[0_0_20px_rgba(37,99,235,0.3)] transition-all hover:scale-105 active:scale-95 flex flex-col items-center"
+                    >
+                      <span className="text-lg">View Statement Report</span>
+                    </button>
+                  )}
+                  <p className="text-sm text-slate-500 mt-4">Clicking this will generate the final statement for the month</p>
+                </div>
+              ) : isLoadingStatement ? (
                 <div className="flex flex-col items-center justify-center py-16 text-blue-400 space-y-3">
                   <Loader2 className="w-8 h-8 animate-spin" />
                   <p className="text-sm font-medium">Loading Statement...</p>
