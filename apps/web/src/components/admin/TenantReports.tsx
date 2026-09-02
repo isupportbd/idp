@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { apiClient } from '../../api/client';
 import { type Client, type Item, type UnitConversion, type Purchase, type SalesReportItem, formatMonth, formatDate } from './reports/types';
@@ -9,6 +9,7 @@ import PurchaseReport from './reports/PurchaseReport';
 import SalesReport from './reports/SalesReport';
 import StatementReport from './reports/StatementReport';
 import ReturnReport from './reports/ReturnReport';
+import MonthlySummaryModal from './reports/MonthlySummaryModal';
 
 export default function TenantReports() {
   const { user } = useAuthStore();
@@ -48,6 +49,9 @@ export default function TenantReports() {
   const [isLoadingStatement, setIsLoadingStatement] = useState(false);
   const [isStatementUnlocked, setIsStatementUnlocked] = useState(false);
   const [statementCountdown, setStatementCountdown] = useState(0);
+
+  // Monthly Summary Modal State
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
 
   // eVAT Credentials
   const [eVatCredentials, setEVatCredentials] = useState<{ loginId: string, loginPassword?: string } | null>(null);
@@ -390,6 +394,24 @@ export default function TenantReports() {
 
   return (
     <div className="w-full max-w-screen-2xl mx-auto pb-10">
+      
+      {/* Header Actions */}
+      <div className="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+        <h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
+          <span className="text-blue-500">📊</span> Reports
+        </h2>
+        
+        {user?.role === 'admin' && (
+          <button 
+            onClick={() => setShowSummaryModal(true)}
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+          >
+            <Download size={16} className="text-blue-400" />
+            Monthly Summary (All Clients)
+          </button>
+        )}
+      </div>
+
       {/* Filters */}
       <div className="flex flex-wrap items-center justify-center gap-3 mb-6 pb-4 border-b border-slate-700">
         {/* Client Autocomplete */}
@@ -652,6 +674,8 @@ export default function TenantReports() {
                 eVatCredentials={eVatCredentials}
                 copiedField={copiedField}
                 handleCopyCredential={handleCopyCredential}
+                clientId={selectedClientId}
+                month={selectedMonthYear}
               />
             )}
           </div>
@@ -685,6 +709,11 @@ export default function TenantReports() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Monthly Summary Modal */}
+      {showSummaryModal && (
+        <MonthlySummaryModal onClose={() => setShowSummaryModal(false)} />
       )}
     </div>
   );

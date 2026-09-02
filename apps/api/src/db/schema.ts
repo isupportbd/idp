@@ -151,3 +151,16 @@ export const notifications = pgTable('notifications', {
   isRead: boolean('is_read').default(false),
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+export const submissions = pgTable('submissions', {
+  id: serial('id').primaryKey(),
+  adminId: integer('admin_id').references(() => users.id).notNull(),
+  clientId: integer('client_id').references(() => clients.id).notNull(),
+  month: varchar('month', { length: 7 }).notNull(),
+  submissionId: varchar('submission_id', { length: 255 }).notNull().unique(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  adminIdIdx: index('submissions_admin_id_idx').on(table.adminId),
+  clientIdIdx: index('submissions_client_id_idx').on(table.clientId),
+  monthIdx: index('submissions_month_idx').on(table.month),
+}));

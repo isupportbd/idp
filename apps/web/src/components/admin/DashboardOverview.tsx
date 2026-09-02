@@ -20,6 +20,15 @@ export default function DashboardOverview() {
           <p className="m-0 text-sm text-slate-400">Manage client information and settings.</p>
         </Link>
 
+        <Link 
+          to="/admin/submissions" 
+          className="flex-1 min-w-[220px] max-w-[300px] glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
+        >
+          <div className="text-4xl mb-4">📝</div>
+          <h3 className="text-lg font-semibold m-0 mb-2 text-slate-100">Add New Submission</h3>
+          <p className="m-0 text-sm text-slate-400">Record submission IDs for clients.</p>
+        </Link>
+
         {isAdmin && (
           <Link 
             to="/admin/client-credentials" 

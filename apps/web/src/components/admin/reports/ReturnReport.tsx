@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { KeyRound, CheckCircle2, Copy } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
+import { KeyRound, CheckCircle2, Copy, FileText, Loader2 } from 'lucide-react';
 import { type Purchase, type SalesReportItem, fmt } from './types';
 
 interface ReturnReportProps {
@@ -8,6 +8,8 @@ interface ReturnReportProps {
   eVatCredentials: { loginId: string; loginPassword?: string } | null;
   copiedField: 'username' | 'password' | null;
   handleCopyCredential: (text: string, field: 'username' | 'password') => void;
+  clientId?: string | number;
+  month?: string;
 }
 
 export default function ReturnReport({
@@ -15,10 +17,44 @@ export default function ReturnReport({
   salesReport,
   eVatCredentials,
   copiedField,
-  handleCopyCredential
+  handleCopyCredential,
+  clientId,
+  month
 }: ReturnReportProps) {
   
   const [hideEmptyNotes, setHideEmptyNotes] = useState(true);
+  const [submissionId, setSubmissionId] = useState<string | null>(null);
+  const [isLoadingSubmissionId, setIsLoadingSubmissionId] = useState(false);
+
+  useEffect(() => {
+    if (!clientId || !month) {
+      setSubmissionId(null);
+      return;
+    }
+    
+    const fetchSubmissionId = async () => {
+      setIsLoadingSubmissionId(true);
+      try {
+        const baseUrl = import.meta.env.VITE_API_URL || '';
+        const res = await fetch(`${baseUrl}/api/submissions/submission?clientId=${clientId}&month=${month}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        if (res.ok) {
+          const data = await res.json() as any;
+          setSubmissionId(data.data);
+        } else {
+          setSubmissionId(null);
+        }
+      } catch (err) {
+        console.error(err);
+        setSubmissionId(null);
+      } finally {
+        setIsLoadingSubmissionId(false);
+      }
+    };
+    
+    fetchSubmissionId();
+  }, [clientId, month]);
 
   const showRow = (v1: number, v2 = 0, v3 = 0) => {
     if (!hideEmptyNotes) return true;
@@ -168,12 +204,12 @@ export default function ReturnReport({
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Top Controls Card */}
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+      <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4 shadow-sm">
         
-        {/* Left Side: Title & Credentials */}
-        <div className="flex items-center gap-6">
-          <div className="text-sm font-bold text-emerald-400 flex items-center gap-2 tracking-wide">
-            <KeyRound size={16} /> eVAT Login Details
+        {/* Left Side: Credentials */}
+        <div className="flex items-center gap-4">
+          <div className="text-emerald-400 bg-emerald-400/10 p-2 rounded-lg">
+            <KeyRound size={18} />
           </div>
 
           {(!eVatCredentials?.loginId) ? (
@@ -184,7 +220,7 @@ export default function ReturnReport({
             <div className="flex items-center gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <span className="text-slate-400 font-medium text-xs uppercase tracking-wider">User:</span>
-                <div className="flex items-center justify-between bg-slate-900/60 border border-slate-700/50 rounded px-2.5 py-1 w-40">
+                <div className="flex items-center justify-between bg-slate-900/60 border border-slate-700/50 rounded px-2.5 py-1.5 w-36">
                   <span className="text-blue-400 font-mono font-semibold truncate">
                     {eVatCredentials.loginId}
                   </span>
@@ -196,7 +232,7 @@ export default function ReturnReport({
 
               <div className="flex items-center gap-2">
                 <span className="text-slate-400 font-medium text-xs uppercase tracking-wider">Pass:</span>
-                <div className="flex items-center justify-between bg-slate-900/60 border border-slate-700/50 rounded px-2.5 py-1 w-40">
+                <div className="flex items-center justify-between bg-slate-900/60 border border-slate-700/50 rounded px-2.5 py-1.5 w-36">
                   <span className={`${eVatCredentials.loginPassword ? 'text-slate-200 tracking-widest' : 'text-slate-500 tracking-normal'} font-mono font-semibold truncate mt-0.5`}>
                     {eVatCredentials.loginPassword ? '••••••••••••' : <span className="text-xs tracking-normal">N/A</span>}
                   </span>
@@ -211,20 +247,41 @@ export default function ReturnReport({
           )}
         </div>
 
-        {/* Right Side: Toggle */}
-        <label className="flex items-center cursor-pointer gap-2.5 text-sm font-medium text-slate-300 hover:text-white transition-colors">
-          <div className="relative flex items-center">
-            <input 
-              type="checkbox" 
-              className="sr-only" 
-              checked={hideEmptyNotes} 
-              onChange={(e) => setHideEmptyNotes(e.target.checked)} 
-            />
-            <div className={`block w-10 h-5 rounded-full transition-colors ${hideEmptyNotes ? 'bg-red-500' : 'bg-slate-700'}`}></div>
-            <div className={`absolute left-1 bg-white w-3 h-3 rounded-full transition-transform shadow-sm ${hideEmptyNotes ? 'transform translate-x-5' : ''}`}></div>
+        {/* Right Side: Sub ID & Toggle */}
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-slate-400 font-medium text-xs uppercase tracking-wider flex items-center gap-1.5">
+              <FileText size={14} /> Sub ID:
+            </span>
+            {isLoadingSubmissionId ? (
+              <div className="flex items-center justify-center min-w-[120px] bg-slate-900/60 border border-slate-700/50 rounded py-1.5">
+                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+              </div>
+            ) : submissionId ? (
+              <span className="text-blue-400 font-mono font-semibold bg-slate-900/60 border border-slate-700/50 px-3 py-1.5 rounded min-w-[120px] inline-block text-center">
+                {submissionId}
+              </span>
+            ) : (
+              <span className="text-slate-500 font-mono text-xs bg-slate-900/60 border border-slate-700/50 px-3 py-1.5 rounded min-w-[120px] inline-block text-center italic mt-0.5">
+                Not Found
+              </span>
+            )}
           </div>
-          Hide Empty Notes
-        </label>
+          
+          <label className="flex items-center cursor-pointer gap-2.5 text-sm font-medium text-slate-300 hover:text-white transition-colors">
+            <div className="relative flex items-center">
+              <input 
+                type="checkbox" 
+                className="sr-only" 
+                checked={hideEmptyNotes} 
+                onChange={(e) => setHideEmptyNotes(e.target.checked)} 
+              />
+              <div className={`block w-10 h-5 rounded-full transition-colors ${hideEmptyNotes ? 'bg-red-500' : 'bg-slate-700'}`}></div>
+              <div className={`absolute left-1 bg-white w-3 h-3 rounded-full transition-transform shadow-sm ${hideEmptyNotes ? 'transform translate-x-5' : ''}`}></div>
+            </div>
+            Hide Empty Notes
+          </label>
+        </div>
       </div>
 
       {/* PART 3 */}

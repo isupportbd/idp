@@ -8,6 +8,7 @@ import UploadPurchases from './components/admin/UploadPurchases';
 import ClientsManager from './components/admin/ClientsManager';
 import TenantPurchases from './components/admin/TenantPurchases';
 import TenantReports from './components/admin/TenantReports';
+import SubmissionsPage from './components/admin/SubmissionsPage';
 import SalesRatesManager from './components/admin/SalesRatesManager';
 import ClientCredentialsManager from './components/admin/ClientCredentialsManager';
 import SuperAdminDashboard from './components/superadmin/SuperAdminDashboard';
@@ -82,6 +83,7 @@ export default function App() {
         <Route path="upload" element={<UploadPurchases />} />
         <Route path="purchases" element={<TenantPurchases />} />
         <Route path="reports" element={<TenantReports />} />
+        <Route path="submissions" element={<SubmissionsPage />} />
         <Route path="profile" element={<ProfileSettings />} />
 
         {/* Admin-only routes */}

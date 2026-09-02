@@ -16,6 +16,47 @@ const reportsApp = new Hono<{ Variables: Variables }>();
 
 reportsApp.use('*', authenticate);
 
+// GET /monthly-summary - Summary of total metric tons per client for a given month
+reportsApp.get('/monthly-summary', async (c) => {
+  try {
+    const month = c.req.query('month');
+    if (!month) {
+      return c.json({ success: false, message: 'month is required' }, 400);
+    }
+
+    const user = c.get('user');
+    const adminId = user.adminId;
+
+    const rawSql = sql`
+      SELECT 
+        c.id as "clientId",
+        c.name as "clientName",
+        c.bin as "clientBin",
+        SUM(p.net_wt) as "totalNetWt"
+      FROM clients c
+      INNER JOIN purchases p ON c.id = p.client_id
+      WHERE p.month = ${month}
+        AND p.admin_id = ${adminId}
+      GROUP BY c.id, c.name, c.bin
+      ORDER BY c.name ASC
+    `;
+
+    const result = await db.execute(rawSql);
+
+    const data = result.map((row: any) => ({
+      clientId: row.clientId,
+      clientName: row.clientName,
+      clientBin: row.clientBin || '',
+      totalNetWt: row.totalNetWt || 0
+    }));
+
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    console.error('Error fetching monthly summary:', error);
+    return c.json({ success: false, message: 'Failed to fetch monthly summary' }, 500);
+  }
+});
+
 // GET /sales - Sales report: aggregates purchases by item with sales rate calculations
 reportsApp.get('/sales', async (c) => {
   try {

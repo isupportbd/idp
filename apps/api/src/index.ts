@@ -13,6 +13,7 @@ import clientCredentialsApp from './routes/clientCredentials';
 import usersApp from './routes/users';
 import notificationsApp from './routes/notifications';
 import profileApp from './routes/profile';
+import submissionsApp from './routes/submissions';
 import { db } from './db';
 import { users, purchases, salesRates, items, clients, clientCredentials, notifications } from './db/schema';
 import { eq, count } from 'drizzle-orm';
@@ -76,7 +77,8 @@ const api = app.basePath('/api')
   .route('/client-credentials', clientCredentialsApp)
   .route('/users', usersApp)
   .route('/notifications', notificationsApp)
-  .route('/profile', profileApp);
+  .route('/profile', profileApp)
+  .route('/submissions', submissionsApp);
 
 
 
