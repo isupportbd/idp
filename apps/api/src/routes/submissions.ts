@@ -166,6 +166,7 @@ submissionsApp.get('/', async (c) => {
   try {
     const user = c.get('user');
     const search = c.req.query('search') || '';
+    const filterMonth = c.req.query('month');
     const page = parseInt(c.req.query('page') || '1', 10);
     const limit = parseInt(c.req.query('limit') || '50', 10);
     const offset = (page - 1) * limit;
@@ -173,6 +174,10 @@ submissionsApp.get('/', async (c) => {
     const conditions = [];
     if (user.role !== 'superadmin') {
       conditions.push(eq(submissions.adminId, user.adminId));
+    }
+
+    if (filterMonth) {
+      conditions.push(eq(submissions.month, filterMonth));
     }
 
     // Since we need to search by client name/bin, we do a join

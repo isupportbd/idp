@@ -19,6 +19,7 @@ export default function SubmissionsPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterMonth, setFilterMonth] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 50;
 
@@ -60,6 +61,7 @@ export default function SubmissionsPage() {
       const res = await apiClient.api.submissions.$get({
         query: {
           search: searchQuery,
+          month: filterMonth,
           page: currentPage.toString(),
           limit: itemsPerPage.toString()
         }
@@ -81,11 +83,11 @@ export default function SubmissionsPage() {
       fetchSubmissions();
     }, 300);
     return () => clearTimeout(timer);
-  }, [currentPage, searchQuery]);
+  }, [currentPage, searchQuery, filterMonth]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, filterMonth]);
 
   // Debounced client search
   useEffect(() => {
@@ -313,20 +315,37 @@ export default function SubmissionsPage() {
             )}
           </div>
 
-          {/* Right: Search */}
-          <div className="w-full lg:w-auto relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-              </svg>
+          {/* Right: Search and Filter */}
+          <div className="w-full lg:w-auto flex flex-col sm:flex-row gap-3">
+            {/* Month Filter */}
+            <select
+              value={filterMonth}
+              onChange={e => setFilterMonth(e.target.value)}
+              className="px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500 text-sm h-10 min-w-[140px]"
+            >
+              <option value="">All Months</option>
+              {Array.from({ length: 24 }).map((_, i) => {
+                const d = new Date();
+                d.setMonth(d.getMonth() - i);
+                const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                return <option key={val} value={val}>{formatMonth(val)}</option>;
+              })}
+            </select>
+
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <input 
+                type="text" 
+                value={searchQuery} 
+                onChange={e => setSearchQuery(e.target.value)} 
+                placeholder="Search by Client Name, BIN, ID..." 
+                className="w-full sm:w-64 pl-10 pr-4 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm h-10"
+              />
             </div>
-            <input 
-              type="text" 
-              value={searchQuery} 
-              onChange={e => setSearchQuery(e.target.value)} 
-              placeholder="Search by Client Name, BIN, ID..." 
-              className="w-full lg:w-72 pl-10 pr-4 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm h-10"
-            />
           </div>
         </div>
 
