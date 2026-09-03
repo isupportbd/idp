@@ -193,26 +193,27 @@ export default function GlobalPurchases() {
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-900/50 border-b border-slate-700 text-slate-400">
               <tr>
-                <th className="px-4 py-3 font-medium w-[26%]">Client</th>
-                <th className="px-4 py-3 font-medium whitespace-nowrap w-[16%]">BE No & Date</th>
-                <th className="px-4 py-3 font-medium w-[14%]">Item</th>
-                <th className="px-4 py-3 font-medium whitespace-nowrap text-right w-[11%]">Total Qty</th>
-                <th className="px-4 py-3 font-medium whitespace-nowrap text-right w-[11%]">Base Value</th>
-                <th className="px-4 py-3 font-medium whitespace-nowrap text-right w-[11%]">VAT</th>
-                <th className="px-4 py-3 font-medium whitespace-nowrap text-right w-[11%]">AT</th>
+                <th className="px-4 py-3 font-medium w-[22%]">Client</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap w-[14%]">BE No & Date</th>
+                <th className="px-4 py-3 font-medium w-[12%]">Item</th>
+                <th className="px-4 py-3 font-medium w-[12%]">Type</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap text-right w-[10%]">Total Qty</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap text-right w-[10%]">Base Value</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap text-right w-[10%]">VAT</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap text-right w-[10%]">AT</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/50">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center">
+                  <td colSpan={8} className="px-4 py-12 text-center">
                     <div className="inline-block w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-2"></div>
                     <p className="text-slate-400">Loading purchases...</p>
                   </td>
                 </tr>
               ) : purchases.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center">
+                  <td colSpan={8} className="px-4 py-12 text-center">
                     <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
                       <ShoppingCart className="w-6 h-6 text-slate-500" />
                     </div>
@@ -236,6 +237,18 @@ export default function GlobalPurchases() {
                     <td className="px-4 py-3">
                       <div className="text-slate-300">{purchase.itemName || '-'}</div>
                       {purchase.hsCode && <div className="text-xs text-slate-500 mt-0.5">[{purchase.hsCode}]</div>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        {(purchase.isRebate === true || purchase.isRebate === 1 || String(purchase.isRebate) === 'true') ? (
+                          <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded text-[11px] font-medium whitespace-nowrap">Rebate (15)</span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-slate-500/10 text-slate-400 border border-slate-500/20 rounded text-[11px] font-medium whitespace-nowrap">Non-Rebate (22)</span>
+                        )}
+                        {(purchase.isFfs === true || purchase.isFfs === 1 || String(purchase.isFfs) === 'true') ? (
+                          <span className="px-2 py-0.5 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded text-[11px] font-medium whitespace-nowrap">FFS</span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-right font-medium text-slate-200">
                       {purchase.totalQty?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
