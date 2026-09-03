@@ -133,7 +133,6 @@ reportsApp.get('/sales', async (c) => {
         vatRate = 15;
         note = '4';
       } else {
-        vatRate = 5;
         note = '8';
       }
 
