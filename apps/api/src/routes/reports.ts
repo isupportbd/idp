@@ -133,8 +133,7 @@ reportsApp.get('/sales', async (c) => {
         vatRate = 15;
         note = '4';
       } else {
-        const matchedNote = vatNotes.find(n => Math.abs(Number(n.vatRate) - vatRate) < 0.001);
-        note = matchedNote ? matchedNote.noteName : (vatRate === 15 ? '22' : vatRate > 0 ? '15' : '13');
+        note = '8';
       }
 
       return {
