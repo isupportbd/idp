@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { streamSSE } from 'hono/stream';
+import { streamSSE } from 'hono/streaming';
 import { appEvents } from '../events';
 
 const streamApp = new Hono();
