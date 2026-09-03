@@ -129,7 +129,7 @@ reportsApp.get('/sales', async (c) => {
       let vatRate = Number(row.vatRate);
       let note = '';
 
-      if (row.isRebate) {
+      if (row.isRebate && !row.isFfs) {
         vatRate = 15;
         note = '4';
       } else {
