@@ -427,6 +427,8 @@ superAdminApp.get('/global-purchases', async (c) => {
       unitValue: purchases.unitValue,
       vat: purchases.vat,
       at: purchases.at,
+      isRebate: purchases.isRebate,
+      isFfs: purchases.isFfs,
       clientName: clients.name,
       clientBin: clients.bin,
       itemName: items.name,
