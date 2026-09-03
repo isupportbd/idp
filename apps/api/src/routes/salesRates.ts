@@ -5,6 +5,7 @@ import { eq, and, desc, ilike, or, sql } from 'drizzle-orm';
 import { authenticate, requireRole } from '../middlewares/auth';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import { appEvents } from '../events';
 
 type Variables = {
   user: {
@@ -171,6 +172,8 @@ salesRatesApp.post('/', requireRole(['admin']), zValidator('json', salesRateSche
       status: 'Active',
     });
 
+    appEvents.emit('data_changed', JSON.stringify({ type: 'sales_rate_updated', clientId }));
+
     return c.json({ message: 'Sales rate created successfully' }, 201);
   } catch (error) {
     console.error('Error creating sales rate:', error);
@@ -204,6 +207,8 @@ salesRatesApp.put('/:id', requireRole(['admin']), zValidator('json', salesRateSc
         activationDate: parsedActivationDate.toISOString(),
       })
       .where(and(eq(salesRates.id, id), eq(salesRates.adminId, user.adminId)));
+
+    appEvents.emit('data_changed', JSON.stringify({ type: 'sales_rate_updated', clientId }));
 
     return c.json({ message: 'Sales rate updated successfully' });
   } catch (error) {
@@ -247,6 +252,8 @@ salesRatesApp.delete('/:id', requireRole(['admin']), async (c) => {
         .set({ status: 'Active' })
         .where(eq(salesRates.id, lastFrozenRate[0].id));
     }
+
+    appEvents.emit('data_changed', JSON.stringify({ type: 'sales_rate_updated', clientId }));
 
     return c.json({ message: 'Sales rate deleted successfully' });
   } catch (error) {

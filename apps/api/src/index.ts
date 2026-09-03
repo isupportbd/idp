@@ -14,6 +14,7 @@ import usersApp from './routes/users';
 import notificationsApp from './routes/notifications';
 import profileApp from './routes/profile';
 import submissionsApp from './routes/submissions';
+import streamApp from './routes/stream';
 import { db } from './db';
 import { users, purchases, salesRates, items, clients, clientCredentials, notifications } from './db/schema';
 import { eq, count } from 'drizzle-orm';
@@ -78,8 +79,8 @@ const api = app.basePath('/api')
   .route('/users', usersApp)
   .route('/notifications', notificationsApp)
   .route('/profile', profileApp)
-  .route('/submissions', submissionsApp);
-
+  .route('/submissions', submissionsApp)
+  .route('/stream', streamApp);
 
 
 export type AppType = typeof api;

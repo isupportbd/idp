@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import * as xlsx from 'xlsx';
+import { appEvents } from '../events';
 import { db } from '../db';
 import { clients, items, purchases, columnMappings, notifications, clientCredentials, salesRates } from '../db/schema';
 import { eq, inArray } from 'drizzle-orm';
@@ -392,13 +393,20 @@ uploadApp.post('/save', async (c) => {
       await db.insert(purchases).values(toInsert);
     }
 
+    if (toInsert.length > 0) {
+      appEvents.emit('data_changed', JSON.stringify({ type: 'purchases_updated' }));
+    }
+
     return c.json({
       success: true,
       message: 'Data saved to database successfully.',
       totalRowsProcessed: toInsert.length,
       duplicatesList: duplicatesList.length > 0 ? duplicatesList : undefined,
+      duplicates: duplicatesList.length > 0 ? duplicatesList : undefined,
       ffsPendingList: ffsPendingList.length > 0 ? ffsPendingList : undefined
     });
+
+
 
   } catch (error: any) {
     console.error('Error saving data:', error);
@@ -441,11 +449,16 @@ uploadApp.post('/replace', async (c) => {
       replacedRows++;
     }
 
+    if (replacedRows > 0) {
+      appEvents.emit('data_changed', JSON.stringify({ type: 'purchases_updated' }));
+    }
+
     return c.json({
       success: true,
       message: 'Duplicates replaced successfully.',
       totalRowsReplaced: replacedRows,
     });
+
   } catch (error: any) {
     console.error('Error replacing duplicates:', error);
     return c.json({ success: false, message: 'Failed to replace duplicates.' }, 500);
@@ -490,11 +503,16 @@ uploadApp.post('/save-pending-ffs', async (c) => {
       await db.insert(purchases).values(toInsert);
     }
 
+    if (toInsert.length > 0) {
+      appEvents.emit('data_changed', JSON.stringify({ type: 'purchases_updated' }));
+    }
+
     return c.json({
       success: true,
       message: 'Pending FFS items saved successfully.',
       totalRowsProcessed: toInsert.length,
     });
+
   } catch (error: any) {
     console.error('Error saving pending FFS:', error);
     return c.json({ success: false, message: 'Failed to save pending FFS.' }, 500);

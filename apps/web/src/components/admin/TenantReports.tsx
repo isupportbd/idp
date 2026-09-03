@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import { apiClient } from '../../api/client';
 import { type Client, type Item, type UnitConversion, type Purchase, type SalesReportItem, formatMonth, formatDate } from './reports/types';
 import { useAuthStore } from '../../stores/auth';
+import { useRealtime } from '../../hooks/useRealtime';
 
 import PurchaseReport from './reports/PurchaseReport';
 import SalesReport from './reports/SalesReport';
@@ -247,6 +248,25 @@ export default function TenantReports() {
   }, [selectedClientId, selectedMonthYear]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // Handle Real-Time SSE updates
+  useRealtime(
+    useCallback((event) => {
+      if (event.clientId && selectedClientId && event.clientId !== selectedClientId) {
+        return; // Ignore events for other clients
+      }
+      
+      if (event.type === 'purchases_updated' || event.type === 'sales_rate_updated') {
+        if (currentTab === 'purchases') fetchPurchases();
+        if (currentTab === 'sales') fetchSalesReport();
+        if (currentTab === 'statement') fetchStatementReport();
+        
+        if (event.type === 'purchases_updated') {
+          fetchMonths(selectedClientId, true);
+        }
+      }
+    }, [selectedClientId, currentTab, fetchPurchases, fetchSalesReport, fetchStatementReport, fetchMonths])
+  );
 
   useEffect(() => {
     const fetchCreds = async () => {
