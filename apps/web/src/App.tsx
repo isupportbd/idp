@@ -123,10 +123,10 @@ export default function App() {
         <Route path="reports" element={<TenantReports />} />
         <Route path="submissions" element={<SubmissionsPage />} />
         <Route path="profile" element={<ProfileSettings />} />
+        <Route path="clients" element={<ClientsManager />} />
 
         {/* Admin-only routes */}
         <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-          <Route path="clients" element={<ClientsManager />} />
           <Route path="sales-rates" element={<SalesRatesManager />} />
           <Route path="client-credentials" element={<ClientCredentialsManager />} />
           <Route path="users" element={<UsersManager />} />
