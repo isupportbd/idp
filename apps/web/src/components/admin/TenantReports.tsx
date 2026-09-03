@@ -262,10 +262,10 @@ export default function TenantReports() {
         if (currentTab === 'statement') fetchStatementReport();
         
         if (event.type === 'purchases_updated') {
-          fetchMonths(selectedClientId, true);
+          fetchAvailableMonths(selectedClientId, true);
         }
       }
-    }, [selectedClientId, currentTab, fetchPurchases, fetchSalesReport, fetchStatementReport, fetchMonths])
+    }, [selectedClientId, currentTab, fetchPurchases, fetchSalesReport, fetchStatementReport, fetchAvailableMonths])
   );
 
   useEffect(() => {
