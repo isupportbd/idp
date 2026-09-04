@@ -75,6 +75,5 @@ export default function StorageStats() {
         </div>
       </div>
     </div>
-    {/* Note: Overall Server RAM and CPU usage cards have been removed as they are now displayed in the Portal app. */}
   );
 }
