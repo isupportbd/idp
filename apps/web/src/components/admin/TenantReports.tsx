@@ -273,13 +273,11 @@ export default function TenantReports() {
       }
       
       if (event.type === 'purchases_updated' || event.type === 'sales_rate_updated') {
-        if (currentTab === 'purchases') fetchPurchases();
-        if (currentTab === 'sales') fetchSalesReport();
+        // Always fetch both primary reports on any data change to prevent stale data across tabs
+        fetchPurchases();
+        fetchSalesReport();
+        
         if (currentTab === 'statement') fetchStatementReport();
-        if (currentTab === 'return') {
-          fetchPurchases();
-          fetchSalesReport();
-        }
         
         if (event.type === 'purchases_updated') {
           fetchAvailableMonths(selectedClientId, true);
