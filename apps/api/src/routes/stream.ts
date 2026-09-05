@@ -1,49 +1,59 @@
 import { Hono } from 'hono';
-import { streamSSE } from 'hono/streaming';
 import { appEvents } from '../events';
 
 const streamApp = new Hono();
 
-// Handle preflight requests for this route explicitly
 streamApp.options('/', (c) => {
-  c.header('Access-Control-Allow-Origin', '*');
-  c.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  c.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-  return new Response(null, { status: 204, headers: {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-  }});
+  return new Response(null, { 
+    status: 204, 
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    }
+  });
 });
 
 streamApp.get('/', (c) => {
-  c.header('Access-Control-Allow-Origin', '*');
-  c.header('X-Accel-Buffering', 'no');
-  c.header('Cache-Control', 'no-cache, no-transform');
+  let pingTimer: ReturnType<typeof setInterval> | null = null;
+  let onDataChanged: ((data: string) => void) | null = null;
 
-  return streamSSE(c, (stream) => {
-    return new Promise<void>((resolve) => {
-      let pingTimer: ReturnType<typeof setInterval> | null = null;
-
-      const cleanup = () => {
-        if (pingTimer) clearInterval(pingTimer);
-        appEvents.off('data_changed', onDataChanged);
-        resolve();
+  const stream = new ReadableStream({
+    start(controller) {
+      // Helper to enqueue SSE formatted data
+      const sendEvent = (event: string, data: string) => {
+        try {
+          controller.enqueue(`event: ${event}\ndata: ${data}\n\n`);
+        } catch (e) {
+          // Controller might be closed
+        }
       };
 
-      // Ping every 15 seconds to keep connection alive
+      // Keep alive ping
       pingTimer = setInterval(() => {
-        stream.writeSSE({ data: 'ping', event: 'ping' }).catch(cleanup);
+        sendEvent('ping', 'ping');
       }, 15000);
 
-      const onDataChanged = (eventData: string) => {
-        stream.writeSSE({ data: eventData, event: 'data_changed' }).catch(cleanup);
+      onDataChanged = (eventData: string) => {
+        sendEvent('data_changed', eventData);
       };
 
       appEvents.on('data_changed', onDataChanged);
+    },
+    cancel() {
+      if (pingTimer) clearInterval(pingTimer);
+      if (onDataChanged) appEvents.off('data_changed', onDataChanged);
+    }
+  });
 
-      stream.onAbort(cleanup);
-    });
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'X-Accel-Buffering': 'no'
+    }
   });
 });
 
