@@ -265,6 +265,10 @@ export default function TenantReports() {
         if (currentTab === 'purchases') fetchPurchases();
         if (currentTab === 'sales') fetchSalesReport();
         if (currentTab === 'statement') fetchStatementReport();
+        if (currentTab === 'return') {
+          fetchPurchases();
+          fetchSalesReport();
+        }
         
         if (event.type === 'purchases_updated') {
           fetchAvailableMonths(selectedClientId, true);
