@@ -36,7 +36,7 @@ export function useRealtime(onDataChanged: (event: SSEEvent) => void) {
       // Keep-alive ping, do nothing
     });
 
-    es.onerror = (e) => {
+    es.onerror = () => {
       console.error('SSE connection error, it will reconnect automatically');
     };
 
