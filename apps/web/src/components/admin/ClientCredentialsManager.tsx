@@ -170,8 +170,8 @@ export default function ClientCredentialsManager() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.clientId || !formData.loginId || !formData.loginPassword) {
-      alert('Please fill out all fields');
+    if (!formData.clientId || !formData.loginId || (!editMode && !formData.loginPassword)) {
+      alert('Please fill out all required fields');
       return;
     }
 

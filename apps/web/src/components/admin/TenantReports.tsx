@@ -274,14 +274,40 @@ export default function TenantReports() {
     };
   }, []);
 
+  const fetchCreds = useCallback(async () => {
+    if (!selectedClientId) {
+      setEVatCredentials(null);
+      return;
+    }
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/api/client-credentials?clientId=${selectedClientId}&limit=1`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (res.ok) {
+        const data = await res.json() as any;
+        if (data.success && data.data && data.data.length > 0) {
+          setEVatCredentials(data.data[0]);
+        } else {
+          setEVatCredentials(null);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [selectedClientId]);
+
+  useEffect(() => {
+    fetchCreds();
+  }, [fetchCreds]);
+
   // Handle Real-Time SSE updates
   useRealtime(
-    useCallback((event) => {
-      if (event.clientId && selectedClientId && event.clientId !== selectedClientId) {
-        return; // Ignore events for other clients
-      }
+    useCallback((event: any) => {
+      if (!selectedClientId) return;
+      if (event.clientId && event.clientId !== selectedClientId) return;
       
-      if (event.type === 'purchases_updated' || event.type === 'sales_rate_updated') {
+      if (event.type === 'purchases_updated' || event.type === 'sales_rate_updated' || event.type === 'client_credentials_updated') {
         // Clear previous timeout to debounce multiple rapid events
         if (sseTimeoutRef.current) {
           clearTimeout(sseTimeoutRef.current);
@@ -291,45 +317,23 @@ export default function TenantReports() {
         const jitterMs = 500 + Math.floor(Math.random() * 1000);
         
         sseTimeoutRef.current = setTimeout(() => {
-          // Always fetch both primary reports on any data change to prevent stale data across tabs
-          fetchPurchases();
-          fetchSalesReport();
-          
-          if (currentTab === 'statement') fetchStatementReport();
-          
-          if (event.type === 'purchases_updated') {
-            fetchAvailableMonths(selectedClientId, true);
+          if (event.type === 'client_credentials_updated') {
+            fetchCreds();
+          } else {
+            // Always fetch both primary reports on any data change to prevent stale data across tabs
+            fetchPurchases();
+            fetchSalesReport();
+            
+            if (currentTab === 'statement') fetchStatementReport();
+            
+            if (event.type === 'purchases_updated') {
+              fetchAvailableMonths(selectedClientId, true);
+            }
           }
         }, jitterMs);
       }
-    }, [selectedClientId, currentTab, fetchPurchases, fetchSalesReport, fetchStatementReport, fetchAvailableMonths])
+    }, [selectedClientId, currentTab, fetchPurchases, fetchSalesReport, fetchStatementReport, fetchAvailableMonths, fetchCreds])
   );
-
-  useEffect(() => {
-    const fetchCreds = async () => {
-      if (!selectedClientId) {
-        setEVatCredentials(null);
-        return;
-      }
-      try {
-        const baseUrl = import.meta.env.VITE_API_URL || '';
-        const res = await fetch(`${baseUrl}/api/client-credentials?clientId=${selectedClientId}&limit=1`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        if (res.ok) {
-          const data = await res.json() as any;
-          if (data.success && data.data && data.data.length > 0) {
-            setEVatCredentials(data.data[0]);
-          } else {
-            setEVatCredentials(null);
-          }
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    fetchCreds();
-  }, [selectedClientId]);
 
   useEffect(() => {
     if (!selectedClientId) {

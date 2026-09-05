@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { db } from '../db';
-import { submissions, purchases, clients } from '../db/schema';
+import { submissions, purchases, clients, users } from '../db/schema';
 import { eq, and, sql, ilike, or, desc, inArray } from 'drizzle-orm';
 import { authenticate } from '../middlewares/auth';
 import { zValidator } from '@hono/zod-validator';
@@ -146,6 +146,7 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
     const user = c.get('user');
     const search = c.req.query('search') || '';
     const filterMonth = c.req.query('month');
+    const filterUserId = c.req.query('userId');
     const page = parseInt(c.req.query('page') || '1', 10);
     const limit = parseInt(c.req.query('limit') || '50', 10);
     const offset = (page - 1) * limit;
@@ -153,6 +154,8 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
     const conditions = [];
     if (user.role !== 'superadmin') {
       conditions.push(eq(submissions.adminId, user.adminId));
+    } else if (filterUserId) {
+      conditions.push(eq(submissions.adminId, parseInt(filterUserId, 10)));
     }
 
     if (filterMonth) {
@@ -167,7 +170,8 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
         or(
           ilike(clients.name, `%${search}%`),
           ilike(clients.bin, `%${search}%`),
-          ilike(submissions.submissionId, `%${search}%`)
+          ilike(submissions.submissionId, `%${search}%`),
+          ilike(users.name, `%${search}%`)
         )
       );
     }
@@ -179,6 +183,7 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
       .select({ count: sql<number>`count(*)` })
       .from(submissions)
       .innerJoin(clients, eq(submissions.clientId, clients.id))
+      .leftJoin(users, eq(submissions.adminId, users.id))
       .where(whereClause);
       
     const totalCount = Number(totalResult[0]?.count || 0);
@@ -192,10 +197,13 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
         clientBin: clients.bin,
         month: submissions.month,
         submissionId: submissions.submissionId,
+        adminId: submissions.adminId,
+        adminName: users.name,
         createdAt: submissions.createdAt
       })
       .from(submissions)
       .innerJoin(clients, eq(submissions.clientId, clients.id))
+      .leftJoin(users, eq(submissions.adminId, users.id))
       .where(whereClause)
       .limit(limit)
       .offset(offset)
@@ -206,6 +214,66 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
     console.error('Error fetching submissions:', error);
     return c.json({ error: 'Failed to fetch submissions' }, 500);
   }
+  })
+
+  // GET /export - Export submissions with purchase quantity
+  .get('/export', async (c) => {
+    try {
+      const user = c.get('user');
+      const filterMonth = c.req.query('month');
+      const filterUserId = c.req.query('userId');
+      const search = c.req.query('search') || '';
+  
+      const conditions = [];
+      if (user.role !== 'superadmin') {
+        conditions.push(eq(submissions.adminId, user.adminId));
+      } else if (filterUserId) {
+        conditions.push(eq(submissions.adminId, parseInt(filterUserId, 10)));
+      }
+  
+      if (filterMonth) {
+        conditions.push(eq(submissions.month, filterMonth));
+      }
+
+      if (search) {
+        conditions.push(
+          or(
+            ilike(clients.name, `%${search}%`),
+            ilike(clients.bin, `%${search}%`),
+            ilike(submissions.submissionId, `%${search}%`),
+            ilike(users.name, `%${search}%`)
+          )
+        );
+      }
+  
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+  
+      const data = await db
+        .select({
+          clientName: clients.name,
+          clientBin: clients.bin,
+          month: submissions.month,
+          submissionId: submissions.submissionId,
+          adminName: users.name,
+          totalQty: sql<number>`COALESCE((
+            SELECT SUM(total_qty)
+            FROM purchases p
+            WHERE p.client_id = ${submissions.clientId}
+              AND p.month = ${submissions.month}
+              AND p.admin_id = ${submissions.adminId}
+          ), 0)`.mapWith(Number)
+        })
+        .from(submissions)
+        .innerJoin(clients, eq(submissions.clientId, clients.id))
+        .leftJoin(users, eq(submissions.adminId, users.id))
+        .where(whereClause)
+        .orderBy(desc(submissions.createdAt));
+  
+      return c.json({ data }, 200);
+    } catch (error: any) {
+      console.error('Error exporting submissions:', error);
+      return c.json({ error: 'Failed to export submissions' }, 500);
+    }
   })
 
   // PUT /:id - Edit submission

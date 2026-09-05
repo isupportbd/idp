@@ -98,9 +98,9 @@ reportsApp.get('/sales', async (c) => {
         WHERE r.item_id = p.item_id
           AND r.client_id = p.client_id
           AND r.status = 'Active'
-          AND (r.activation_date <= p.be_date OR r.activation_date <= ${reportMonthEndStr})
+          AND (r.activation_date <= GREATEST(p.be_date, TO_DATE(p.month || '-01', 'YYYY-MM-DD')) OR r.activation_date <= ${reportMonthEndStr})
         ORDER BY 
-          CASE WHEN r.activation_date <= p.be_date THEN 0 ELSE 1 END ASC,
+          CASE WHEN r.activation_date <= GREATEST(p.be_date, TO_DATE(p.month || '-01', 'YYYY-MM-DD')) THEN 0 ELSE 1 END ASC,
           r.activation_date DESC
         LIMIT 1
       ) sr ON true

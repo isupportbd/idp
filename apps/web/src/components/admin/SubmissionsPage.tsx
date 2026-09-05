@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Loader2, CheckCircle2, AlertCircle, Edit, Trash2 } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, Edit, Trash2, Download } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { type Client, formatMonth } from './reports/types';
+import { useAuth } from '../../stores/auth';
+import * as XLSX from 'xlsx';
 
 type Submission = {
   id: number;
@@ -10,18 +12,25 @@ type Submission = {
   clientBin: string | null;
   month: string;
   submissionId: string;
+  adminId: number;
+  adminName: string | null;
   createdAt: string | null;
 };
 
 export default function SubmissionsPage() {
+  const { user } = useAuth();
+  
   // Data Table State
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
+  const [filterUserId, setFilterUserId] = useState('');
+  const [usersList, setUsersList] = useState<{id: number, name: string}[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 50;
+  const [isExporting, setIsExporting] = useState(false);
 
   // Selection State
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -66,6 +75,7 @@ export default function SubmissionsPage() {
         query: {
           search: searchQuery,
           month: filterMonth,
+          userId: filterUserId,
           page: currentPage.toString(),
           limit: itemsPerPage.toString()
         }
@@ -91,6 +101,7 @@ export default function SubmissionsPage() {
           query: {
             search: searchQuery,
             month: filterMonth,
+            userId: filterUserId,
             page: currentPage.toString(),
             limit: itemsPerPage.toString()
           }
@@ -112,11 +123,81 @@ export default function SubmissionsPage() {
       ignore = true;
       clearTimeout(timer);
     };
-  }, [currentPage, searchQuery, filterMonth]);
+  }, [currentPage, searchQuery, filterMonth, filterUserId]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, filterMonth]);
+  }, [searchQuery, filterMonth, filterUserId]);
+
+  // Fetch Users for Filter (Superadmin only)
+  useEffect(() => {
+    if (user?.role === 'superadmin') {
+      const fetchUsers = async () => {
+        try {
+          const res = await apiClient.api.users.$get({ query: { limit: '100' } });
+          if (res.ok) {
+            const data = await res.json() as any;
+            setUsersList(data.data || []);
+          }
+        } catch (e) { console.error(e); }
+      };
+      fetchUsers();
+    }
+  }, [user]);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const res = await apiClient.api.submissions.export.$get({
+        query: {
+          search: searchQuery,
+          month: filterMonth,
+          userId: filterUserId,
+        }
+      });
+      if (res.ok) {
+        const { data } = await res.json() as any;
+        
+        let targetUserName = 'All Users';
+        if (filterUserId && usersList.length > 0) {
+          const u = usersList.find(u => u.id.toString() === filterUserId);
+          if (u) targetUserName = u.name;
+        } else if (user?.role !== 'superadmin') {
+          targetUserName = user?.name || 'User';
+        }
+
+        const wb = XLSX.utils.book_new();
+        
+        const excelData = [
+          [`Username: ${targetUserName}`],
+          [],
+          ['Sl No.', 'Client Name', 'BIN', 'Month', 'Purchase Qty', 'Sub ID']
+        ];
+        
+        data.forEach((row: any, index: number) => {
+          excelData.push([
+            index + 1,
+            row.clientName,
+            row.clientBin || '',
+            formatMonth(row.month),
+            row.totalQty || 0,
+            row.submissionId
+          ]);
+        });
+        
+        const ws = XLSX.utils.aoa_to_sheet(excelData);
+        XLSX.utils.book_append_sheet(wb, ws, "Submissions");
+        XLSX.writeFile(wb, `Submissions_${formatMonth(filterMonth) || 'All'}.xlsx`);
+      } else {
+        showToast('error', 'Failed to export data');
+      }
+    } catch (e) {
+      console.error(e);
+      showToast('error', 'Error exporting data');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // Debounced client search
   useEffect(() => {
@@ -344,17 +425,39 @@ export default function SubmissionsPage() {
                 </button>
               </div>
             ) : (
-              <button 
-                onClick={openAddModal}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold transition-all flex items-center gap-2 h-10"
-              >
-                <span className="text-xl leading-none">+</span> Add New
-              </button>
+              <>
+                <button 
+                  onClick={openAddModal}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold transition-all flex items-center gap-2 h-10"
+                >
+                  <span className="text-xl leading-none">+</span> Add New
+                </button>
+                <button
+                  onClick={handleExport}
+                  disabled={isExporting}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold transition-all flex items-center gap-2 h-10 disabled:opacity-50"
+                >
+                  {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download size={18} />}
+                  Export Excel
+                </button>
+              </>
             )}
           </div>
 
           {/* Right: Search and Filter */}
           <div className="w-full lg:w-auto flex flex-col sm:flex-row gap-3">
+            {user?.role === 'superadmin' && (
+              <select
+                value={filterUserId}
+                onChange={(e) => setFilterUserId(e.target.value)}
+                className="w-full sm:w-auto px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500 text-sm h-10 min-w-[150px]"
+              >
+                <option value="">All Users</option>
+                {usersList.map(u => (
+                  <option key={u.id} value={u.id.toString()}>{u.name}</option>
+                ))}
+              </select>
+            )}
             <div className="relative">
               <input
                 type="month"
@@ -406,6 +509,7 @@ export default function SubmissionsPage() {
                   <th className="p-4 font-semibold text-center">BIN</th>
                   <th className="p-4 font-semibold text-center">Month</th>
                   <th className="p-4 font-semibold text-center">Submission ID</th>
+                  <th className="p-4 font-semibold text-center">Submitted By</th>
                   <th className="p-4 font-semibold text-center">Created At</th>
                   <th className="p-4 font-semibold text-right w-24">Actions</th>
                 </tr>
@@ -446,6 +550,9 @@ export default function SubmissionsPage() {
                       </td>
                       <td className="p-4 text-center font-mono text-emerald-400 font-medium">
                         {sub.submissionId}
+                      </td>
+                      <td className="p-4 text-center text-sm text-slate-300">
+                        {sub.adminName || 'Unknown'}
                       </td>
                       <td className="p-4 text-center text-sm text-slate-500">
                         {sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : '-'}
