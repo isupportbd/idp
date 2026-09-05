@@ -18,8 +18,9 @@ export function useRealtime(onDataChanged: (event: SSEEvent) => void) {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    // Connect to the SSE endpoint
-    const url = import.meta.env.VITE_API_URL + '/api/stream';
+    // Connect to the SSE endpoint — EventSource cannot send custom headers,
+    // so we pass the JWT token as a query parameter
+    const url = `${import.meta.env.VITE_API_URL}/api/stream?token=${encodeURIComponent(token)}`;
     const es = new EventSource(url);
     eventSourceRef.current = es;
 

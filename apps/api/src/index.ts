@@ -64,7 +64,13 @@ type Variables = {
 
 const app = new Hono<{ Variables: Variables }>();
 
-app.use('*', cors());
+app.use('*', cors({
+  origin: (origin) => origin || '*',
+  allowHeaders: ['Content-Type', 'Authorization'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  exposeHeaders: ['Content-Type'],
+  credentials: false,
+}));
 
 const api = app.basePath('/api')
   .route('/auth', authApp)
