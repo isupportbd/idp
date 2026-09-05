@@ -6,6 +6,7 @@ const streamApp = new Hono();
 
 streamApp.get('/', (c) => {
   c.header('X-Accel-Buffering', 'no');
+  c.header('Access-Control-Allow-Origin', '*');
   return streamSSE(c, async (stream) => {
     // Ping to keep connection alive
     const interval = setInterval(async () => {
