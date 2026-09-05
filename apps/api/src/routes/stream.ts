@@ -5,6 +5,7 @@ import { appEvents } from '../events';
 const streamApp = new Hono();
 
 streamApp.get('/', (c) => {
+  c.header('X-Accel-Buffering', 'no');
   return streamSSE(c, async (stream) => {
     // Ping to keep connection alive
     const interval = setInterval(async () => {

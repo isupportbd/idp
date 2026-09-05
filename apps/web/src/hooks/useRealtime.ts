@@ -26,6 +26,7 @@ export function useRealtime(onDataChanged: (event: SSEEvent) => void) {
     es.addEventListener('data_changed', (e) => {
       try {
         const data = JSON.parse(e.data) as SSEEvent;
+        console.log('[SSE] Received event:', data);
         callbackRef.current(data);
       } catch (err) {
         console.error('Failed to parse SSE data', err);
