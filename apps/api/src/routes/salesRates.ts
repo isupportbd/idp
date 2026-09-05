@@ -25,7 +25,7 @@ salesRatesApp.get('/', async (c) => {
     const user = c.get('user');
 
     const page = parseInt(c.req.query('page') || '1');
-    const limit = parseInt(c.req.query('limit') || '15');
+    const limit = parseInt(c.req.query('limit') || '10');
     const clientFilter = c.req.query('clientFilter');
     const itemFilter = c.req.query('itemFilter');
     const rateFilter = c.req.query('rateFilter');
@@ -83,11 +83,16 @@ salesRatesApp.get('/', async (c) => {
       .limit(limit)
       .offset(offset);
 
-    const countQuery = db.select({ count: sql<number>`count(*)` })
-      .from(salesRates)
-      .leftJoin(clients, eq(salesRates.clientId, clients.id))
-      .leftJoin(items, eq(salesRates.itemId, items.id))
-      .where(whereClause);
+    let countQueryBuilder = db.select({ count: sql<number>`count(*)` }).from(salesRates);
+    
+    // Only join if we are filtering by client or item name
+    if (clientFilter || itemFilter || search) {
+      countQueryBuilder = countQueryBuilder
+        .leftJoin(clients, eq(salesRates.clientId, clients.id))
+        .leftJoin(items, eq(salesRates.itemId, items.id)) as any;
+    }
+    
+    const countQuery = countQueryBuilder.where(whereClause);
 
     const [data, [{ count }]] = await Promise.all([
       dataQuery,

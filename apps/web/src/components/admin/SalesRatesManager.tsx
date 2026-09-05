@@ -55,7 +55,7 @@ export default function SalesRatesManager() {
   const [globalSearch, setGlobalSearch] = useState('');
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 15;
+  const itemsPerPage = 10;
 
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
