@@ -18,14 +18,17 @@ streamApp.get('/', (c) => {
   let pingTimer: ReturnType<typeof setInterval> | null = null;
   let onDataChanged: ((data: string) => void) | null = null;
 
+  const encoder = new TextEncoder();
+
   const stream = new ReadableStream({
     start(controller) {
-      // Helper to enqueue SSE formatted data
+      // Helper to enqueue SSE formatted data as Uint8Array
       const sendEvent = (event: string, data: string) => {
         try {
-          controller.enqueue(`event: ${event}\ndata: ${data}\n\n`);
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${data}\n\n`));
         } catch (e) {
           // Controller might be closed
+          console.error("SSE enqueue error", e);
         }
       };
 
