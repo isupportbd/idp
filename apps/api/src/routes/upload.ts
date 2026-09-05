@@ -394,7 +394,10 @@ uploadApp.post('/save', async (c) => {
     }
 
     if (toInsert.length > 0) {
-      appEvents.emit('data_changed', JSON.stringify({ type: 'purchases_updated' }));
+      const uniqueClientIds = [...new Set(toInsert.map(row => row.clientId))];
+      uniqueClientIds.forEach(clientId => {
+        appEvents.emit('data_changed', JSON.stringify({ type: 'purchases_updated', clientId }));
+      });
     }
 
     return c.json({
@@ -450,7 +453,14 @@ uploadApp.post('/replace', async (c) => {
     }
 
     if (replacedRows > 0) {
-      appEvents.emit('data_changed', JSON.stringify({ type: 'purchases_updated' }));
+      const uniqueClientIds = [...new Set(itemsToReplace.map((item: any) => item.existing?.clientId).filter(Boolean))];
+      if (uniqueClientIds.length > 0) {
+        uniqueClientIds.forEach(clientId => {
+          appEvents.emit('data_changed', JSON.stringify({ type: 'purchases_updated', clientId }));
+        });
+      } else {
+        appEvents.emit('data_changed', JSON.stringify({ type: 'purchases_updated' }));
+      }
     }
 
     return c.json({
@@ -504,7 +514,10 @@ uploadApp.post('/save-pending-ffs', async (c) => {
     }
 
     if (toInsert.length > 0) {
-      appEvents.emit('data_changed', JSON.stringify({ type: 'purchases_updated' }));
+      const uniqueClientIds = [...new Set(toInsert.map((row: any) => row.clientId))];
+      uniqueClientIds.forEach(clientId => {
+        appEvents.emit('data_changed', JSON.stringify({ type: 'purchases_updated', clientId }));
+      });
     }
 
     return c.json({
