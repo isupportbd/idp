@@ -66,16 +66,16 @@ clientsApp.get('/', async (c) => {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const baseQuery = db.select({
+    let baseQuery = db.select({
       id: clients.id,
       name: clients.name,
       bin: clients.bin,
       ...(role === 'superadmin' ? { adminName: users.name } : {})
     })
-    .from(clients);
+    .from(clients) as any;
 
     if (role === 'superadmin') {
-      baseQuery.leftJoin(users, eq(clients.adminId, users.id));
+      baseQuery = baseQuery.leftJoin(users, eq(clients.adminId, users.id));
     }
 
     const dataQuery = baseQuery
