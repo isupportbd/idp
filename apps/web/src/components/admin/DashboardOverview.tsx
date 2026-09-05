@@ -8,11 +8,11 @@ export default function DashboardOverview() {
   const isSuperAdmin = user?.role === 'superadmin';
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-8">
-      <div className="flex flex-wrap justify-center gap-6">
+    <div className="max-w-7xl mx-auto p-4 md:p-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <Link 
           to="/admin/clients" 
-          className="w-72 glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
+          className="w-full glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
         >
           <div className="text-4xl mb-4">💼</div>
           <h3 className="text-lg font-semibold m-0 mb-2 text-slate-100">Clients</h3>
@@ -22,7 +22,7 @@ export default function DashboardOverview() {
         {isAdmin && (
           <Link 
             to="/admin/bin-formatter" 
-            className="w-72 glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
+            className="w-full glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
           >
             <div className="text-4xl mb-4">📋</div>
             <h3 className="text-lg font-semibold m-0 mb-2 text-slate-100">BIN Formatter</h3>
@@ -32,7 +32,7 @@ export default function DashboardOverview() {
 
         <Link 
           to="/admin/submissions" 
-          className="w-72 glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
+          className="w-full glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
         >
           <div className="text-4xl mb-4">📝</div>
           <h3 className="text-lg font-semibold m-0 mb-2 text-slate-100">Submissions</h3>
@@ -42,7 +42,7 @@ export default function DashboardOverview() {
         {isAdmin && (
           <Link 
             to="/admin/client-credentials" 
-            className="w-72 glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
+            className="w-full glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
           >
             <div className="text-4xl mb-4">🔑</div>
             <h3 className="text-lg font-semibold m-0 mb-2 text-slate-100">User Name & Password</h3>
@@ -53,7 +53,7 @@ export default function DashboardOverview() {
         {user?.role === 'admin' && (
           <Link 
             to="/admin/users" 
-            className="w-72 glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
+            className="w-full glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
           >
             <div className="text-4xl mb-4">👥</div>
             <h3 className="text-lg font-semibold m-0 mb-2 text-slate-100">Users</h3>
@@ -64,7 +64,7 @@ export default function DashboardOverview() {
         {user?.role === 'admin' && (
           <Link 
             to="/admin/sales-rates" 
-            className="w-72 glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
+            className="w-full glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
           >
             <div className="text-4xl mb-4">💰</div>
             <h3 className="text-lg font-semibold m-0 mb-2 text-slate-100">Sales Rates</h3>
@@ -75,7 +75,7 @@ export default function DashboardOverview() {
         {user?.role === 'admin' && (
           <Link 
             to="/admin/upload" 
-            className="w-72 glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
+            className="w-full glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
           >
             <div className="mb-4"><UploadIcon3D size={64} /></div>
             <h3 className="text-lg font-semibold m-0 mb-2 text-slate-100">Upload File</h3>
@@ -86,7 +86,7 @@ export default function DashboardOverview() {
         {isSuperAdmin && (
           <Link 
             to="/admin/purchases" 
-            className="w-72 glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
+            className="w-full glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
           >
             <div className="text-4xl mb-4">🛒</div>
             <h3 className="text-lg font-semibold m-0 mb-2 text-slate-100">Purchases</h3>
@@ -96,7 +96,7 @@ export default function DashboardOverview() {
 
         <Link 
           to="/admin/reports" 
-          className="w-72 glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
+          className="w-full glass-panel p-6 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-1 hover:shadow-2xl hover:border-blue-500/50 hover:bg-slate-700/50"
         >
           <div className="text-4xl mb-4">📈</div>
           <h3 className="text-lg font-semibold m-0 mb-2 text-slate-100">Reports</h3>
