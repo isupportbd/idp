@@ -1,19 +1,10 @@
 import { Hono } from 'hono';
-import { appEvents } from '../events';
+import { EventEmitter } from 'events';
+
+class AppEventEmitter extends EventEmitter {}
+const appEvents = new AppEventEmitter();
 
 const streamApp = new Hono();
-
-streamApp.options('/', (c) => {
-  return new Response(null, { 
-    status: 204, 
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-    }
-  });
-});
-
 streamApp.get('/', (c) => {
   let pingTimer: ReturnType<typeof setInterval> | null = null;
   let onDataChanged: ((data: string) => void) | null = null;
@@ -22,20 +13,17 @@ streamApp.get('/', (c) => {
 
   const stream = new ReadableStream({
     start(controller) {
-      // Helper to enqueue SSE formatted data as Uint8Array
       const sendEvent = (event: string, data: string) => {
         try {
           controller.enqueue(encoder.encode(`event: ${event}\ndata: ${data}\n\n`));
         } catch (e) {
-          // Controller might be closed
           console.error("SSE enqueue error", e);
         }
       };
 
-      // Keep alive ping every 9s to bypass Bun's strict timeout
       pingTimer = setInterval(() => {
         sendEvent('ping', 'ping');
-      }, 9000);
+      }, 15000);
 
       onDataChanged = (eventData: string) => {
         sendEvent('data_changed', eventData);
@@ -60,4 +48,7 @@ streamApp.get('/', (c) => {
   });
 });
 
-export default streamApp;
+export default {
+  port: 3333,
+  fetch: streamApp.fetch,
+};

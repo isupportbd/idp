@@ -96,4 +96,5 @@ export type AppType = typeof api;
 export default {
   port: process.env.PORT ? parseInt(process.env.PORT) : 3001,
   fetch: app.fetch,
+  idleTimeout: 255, // Prevent Bun from killing SSE connections prematurely
 };
