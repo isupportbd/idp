@@ -7,7 +7,7 @@ export default function BinFormatter() {
   const [mode, setMode] = useState<'db' | 'manual'>('db');
   const [manualInput, setManualInput] = useState('');
   const [startIndex, setStartIndex] = useState(1);
-  const [endIndex, setEndIndex] = useState(10);
+  const [batchSize, setBatchSize] = useState(10);
   const [copied, setCopied] = useState(false);
 
   // Fetch clients from DB
@@ -42,10 +42,10 @@ export default function BinFormatter() {
     if (allBins.length === 0) return '';
     // Arrays are 0-indexed, but user input is 1-indexed
     const start = Math.max(0, startIndex - 1);
-    const end = Math.max(start, endIndex);
+    const end = start + batchSize;
     const selectedBins = allBins.slice(start, end);
     return selectedBins.join(';');
-  }, [allBins, startIndex, endIndex]);
+  }, [allBins, startIndex, batchSize]);
 
   const handleCopy = () => {
     if (!formattedOutput) return;
@@ -127,21 +127,24 @@ export default function BinFormatter() {
                   min={1}
                   value={startIndex}
                   onChange={(e) => setStartIndex(parseInt(e.target.value) || 1)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
               <ArrowRight className="text-slate-600 mt-5" />
               <div className="flex-1">
-                <span className="text-xs text-slate-500 block mb-1">End No.</span>
+                <span className="text-xs text-slate-500 block mb-1">Batch Size</span>
                 <input
                   type="number"
-                  min={startIndex}
-                  value={endIndex}
-                  onChange={(e) => setEndIndex(parseInt(e.target.value) || startIndex)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                  min={1}
+                  value={batchSize}
+                  onChange={(e) => setBatchSize(parseInt(e.target.value) || 1)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
             </div>
+            <p className="text-xs text-slate-500 mt-2">
+              Will generate BINs from index {startIndex} to {startIndex + batchSize - 1}
+            </p>
           </div>
         </div>
 
