@@ -83,10 +83,35 @@ export default function SubmissionsPage() {
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchSubmissions();
+    let ignore = false;
+    const timer = setTimeout(async () => {
+      setIsLoading(true);
+      try {
+        const res = await apiClient.api.submissions.$get({
+          query: {
+            search: searchQuery,
+            month: filterMonth,
+            page: currentPage.toString(),
+            limit: itemsPerPage.toString()
+          }
+        });
+        if (res.ok) {
+          const result = await res.json() as any;
+          if (!ignore) {
+            setSubmissions(result.data || []);
+            setTotalCount(result.total || 0);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (!ignore) setIsLoading(false);
+      }
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
   }, [currentPage, searchQuery, filterMonth]);
 
   useEffect(() => {
@@ -95,6 +120,7 @@ export default function SubmissionsPage() {
 
   // Debounced client search
   useEffect(() => {
+    let ignore = false;
     if (!clientSearchText || selectedClient) {
       setClientSearchResults([]);
       return;
@@ -105,12 +131,20 @@ export default function SubmissionsPage() {
         const res = await apiClient.api.clients.$get({ query: { search: clientSearchText, limit: '50' } });
         if (res.ok) {
           const data = await res.json() as any;
-          setClientSearchResults(Array.isArray(data) ? data : data.data || []);
+          if (!ignore) {
+            setClientSearchResults(Array.isArray(data) ? data : data.data || []);
+          }
         }
-      } catch (e) { console.error(e); }
-      finally { setIsSearchingClients(false); }
+      } catch (e) { 
+        console.error(e); 
+      } finally { 
+        if (!ignore) setIsSearchingClients(false); 
+      }
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
   }, [clientSearchText, selectedClient]);
 
   // Fetch Available Months

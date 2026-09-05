@@ -37,13 +37,39 @@ export default function ClientsManager() {
   const itemsPerPage = 10;
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchClients();
-      if (user?.role === 'superadmin') {
+    let ignore = false;
+    const timer = setTimeout(async () => {
+      setIsLoading(true);
+      try {
+        const res = await apiClient.api.clients.$get({
+          query: { 
+            month: selectedMonth,
+            page: currentPage.toString(),
+            limit: itemsPerPage.toString(),
+            search: searchQuery
+          }
+        });
+        if (res.ok) {
+          const data = await res.json() as { data: any[], total: number };
+          if (!ignore) {
+            setClients(data.data || []);
+            setTotalCount(data.total || 0);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching clients:', error);
+      } finally {
+        if (!ignore) setIsLoading(false);
+      }
+
+      if (user?.role === 'superadmin' && !ignore) {
         fetchAdmins();
       }
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
   }, [user, selectedMonth, currentPage, searchQuery]);
 
   const fetchClients = async () => {

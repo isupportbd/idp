@@ -60,6 +60,7 @@ export default function TenantPurchases() {
 
   // Debounced client search
   useEffect(() => {
+    let ignore = false;
     if (!clientSearchText || selectedClientId) {
       setClientSearchResults([]);
       return;
@@ -70,23 +71,62 @@ export default function TenantPurchases() {
         const res = await apiClient.api.clients.$get({ query: { search: clientSearchText, limit: '50' } });
         if (res.ok) {
           const data = await res.json() as any;
-          setClientSearchResults(Array.isArray(data) ? data : data.data || []);
+          if (!ignore) {
+            setClientSearchResults(Array.isArray(data) ? data : data.data || []);
+          }
         }
-      } catch (e) { console.error(e); }
-      finally { setIsSearchingClients(false); }
+      } catch (e) { 
+        console.error(e); 
+      } finally { 
+        if (!ignore) setIsSearchingClients(false); 
+      }
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
   }, [clientSearchText, selectedClientId]);
 
   useEffect(() => {
+    let ignore = false;
+    
     if (selectedMonth) {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-      searchTimeoutRef.current = setTimeout(() => {
-        fetchPurchases();
+      searchTimeoutRef.current = setTimeout(async () => {
+        setIsLoading(true);
+        try {
+          const response = await apiClient.api.purchases.$get({
+            query: {
+              page: currentPage.toString(),
+              limit: pageSize.toString(),
+              month: selectedMonth,
+              ...(selectedClientId && { clientId: selectedClientId.toString() }),
+              ...(selectedItemId && { itemId: selectedItemId.toString() }),
+              ...(lcNumberSearch && { lcNumber: lcNumberSearch })
+            }
+          });
+          if (response.ok) {
+            const data = await response.json() as any;
+            if (data.success && !ignore) {
+              setPurchases(data.data);
+              setTotalPages(data.pagination.totalPages);
+              setCurrentPage(data.pagination.page);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching purchases:', error);
+        } finally {
+          if (!ignore) setIsLoading(false);
+        }
       }, 500);
     } else {
       setPurchases([]);
     }
+    
+    return () => {
+      ignore = true;
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
   }, [selectedMonth, currentPage, selectedClientId, selectedItemId, lcNumberSearch]);
 
   const fetchPurchases = async () => {

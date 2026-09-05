@@ -41,10 +41,32 @@ export default function UsersManager() {
   const itemsPerPage = 10;
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchUsers();
+    let ignore = false;
+    const timer = setTimeout(async () => {
+      setIsLoading(true);
+      try {
+        const res = await apiClient.api.users.$get({
+          query: {
+            page: currentPage.toString(),
+            limit: itemsPerPage.toString(),
+            search: searchQuery
+          }
+        });
+        const data = await res.json() as any;
+        if (data.success && !ignore) {
+          setUsers(data.data || []);
+          setTotalCount(data.total || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      } finally {
+        if (!ignore) setIsLoading(false);
+      }
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
   }, [currentPage, searchQuery]);
 
   const fetchUsers = async () => {

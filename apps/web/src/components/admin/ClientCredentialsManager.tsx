@@ -72,6 +72,7 @@ export default function ClientCredentialsManager() {
 
   // Debounced client search
   useEffect(() => {
+    let ignore = false;
     if (!clientSearch || formData.clientId) {
       setClientSearchResults([]);
       return;
@@ -82,19 +83,51 @@ export default function ClientCredentialsManager() {
         const res = await apiClient.api.clients.$get({ query: { search: clientSearch, limit: '50' } });
         if (res.ok) {
           const data = await res.json() as any;
-          setClientSearchResults(Array.isArray(data) ? data : data.data || []);
+          if (!ignore) {
+            setClientSearchResults(Array.isArray(data) ? data : data.data || []);
+          }
         }
-      } catch (e) { console.error(e); }
-      finally { setIsSearchingClients(false); }
+      } catch (e) { 
+        console.error(e); 
+      } finally { 
+        if (!ignore) setIsSearchingClients(false); 
+      }
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
   }, [clientSearch, formData.clientId]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchCredentials();
+    let ignore = false;
+    const timer = setTimeout(async () => {
+      setIsLoading(true);
+      try {
+        const res = await apiClient.api['client-credentials'].$get({
+          query: {
+            page: currentPage.toString(),
+            limit: itemsPerPage.toString(),
+            search: searchQuery
+          }
+        });
+        if (res.ok) {
+          const data = await res.json() as { success: boolean; data: any[]; total: number };
+          if (data.success && !ignore) {
+            setCredentials(data.data || []);
+            setTotalCount(data.total || 0);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch credentials', error);
+      } finally {
+        if (!ignore) setIsLoading(false);
+      }
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
   }, [currentPage, searchQuery]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
