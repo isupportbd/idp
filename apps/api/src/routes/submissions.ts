@@ -168,7 +168,7 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
           ilike(clients.bin, `%${search}%`),
           ilike(submissions.submissionId, `%${search}%`),
           ilike(users.name, `%${search}%`)
-        )
+        )!
       );
     }
 
@@ -237,7 +237,7 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
             ilike(clients.bin, `%${search}%`),
             ilike(submissions.submissionId, `%${search}%`),
             ilike(users.name, `%${search}%`)
-          )
+          )!
         );
       }
   
