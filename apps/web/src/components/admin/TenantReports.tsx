@@ -123,7 +123,7 @@ export default function TenantReports() {
   // Debounced client search
   useEffect(() => {
     let ignore = false;
-    
+
     if (!clientSearchText || selectedClientId) {
       setClientSearchResults([]);
       return;
@@ -138,13 +138,13 @@ export default function TenantReports() {
             setClientSearchResults(Array.isArray(data) ? data : data.data || []);
           }
         }
-      } catch (e) { 
-        console.error(e); 
-      } finally { 
-        if (!ignore) setIsSearchingClients(false); 
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (!ignore) setIsSearchingClients(false);
       }
     }, 300);
-    
+
     return () => {
       ignore = true;
       clearTimeout(timer);
@@ -178,7 +178,7 @@ export default function TenantReports() {
       const [srRes, res] = await Promise.all([
         fetch(
           `${import.meta.env.VITE_API_URL || ''}/api/sales-rates/active/${cId}`,
-          { 
+          {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             cache: 'no-store'
           }
@@ -221,21 +221,21 @@ export default function TenantReports() {
     try {
       const query = new URLSearchParams({ clientId: cId.toString(), month });
       if (itemId) query.append('itemId', itemId.toString());
-      
+
       const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/reports/sales?${query.toString()}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         cache: 'no-store'
       });
-      
+
       if (res.ok) {
         const data = await res.json() as any;
         setSalesReport(data.data || []);
       } else {
         setSalesReport([]);
       }
-    } catch (e) { 
-      console.error(e); 
-      setSalesReport([]); 
+    } catch (e) {
+      console.error(e);
+      setSalesReport([]);
     }
     finally { setIsLoadingSales(false); }
   }, [selectedClientId, selectedMonthYear, selectedItemId]);
@@ -256,14 +256,23 @@ export default function TenantReports() {
       } else {
         setStatementReport([]);
       }
-    } catch (e) { 
-      console.error(e); 
-      setStatementReport([]); 
+    } catch (e) {
+      console.error(e);
+      setStatementReport([]);
     }
     finally { setIsLoadingStatement(false); }
   }, [selectedClientId, selectedMonthYear]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const sseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (sseTimeoutRef.current) clearTimeout(sseTimeoutRef.current);
+    };
+  }, []);
 
   // Handle Real-Time SSE updates
   useRealtime(
@@ -273,15 +282,25 @@ export default function TenantReports() {
       }
       
       if (event.type === 'purchases_updated' || event.type === 'sales_rate_updated') {
-        // Always fetch both primary reports on any data change to prevent stale data across tabs
-        fetchPurchases();
-        fetchSalesReport();
-        
-        if (currentTab === 'statement') fetchStatementReport();
-        
-        if (event.type === 'purchases_updated') {
-          fetchAvailableMonths(selectedClientId, true);
+        // Clear previous timeout to debounce multiple rapid events
+        if (sseTimeoutRef.current) {
+          clearTimeout(sseTimeoutRef.current);
         }
+        
+        // Add random jitter between 500ms and 1500ms to prevent thundering herd
+        const jitterMs = 500 + Math.floor(Math.random() * 1000);
+        
+        sseTimeoutRef.current = setTimeout(() => {
+          // Always fetch both primary reports on any data change to prevent stale data across tabs
+          fetchPurchases();
+          fetchSalesReport();
+          
+          if (currentTab === 'statement') fetchStatementReport();
+          
+          if (event.type === 'purchases_updated') {
+            fetchAvailableMonths(selectedClientId, true);
+          }
+        }, jitterMs);
       }
     }, [selectedClientId, currentTab, fetchPurchases, fetchSalesReport, fetchStatementReport, fetchAvailableMonths])
   );
@@ -313,9 +332,9 @@ export default function TenantReports() {
   }, [selectedClientId]);
 
   useEffect(() => {
-    if (!selectedClientId) { 
-      setClientMonthItems([]); setItemSearchText(''); setSelectedItemId(''); 
-      return; 
+    if (!selectedClientId) {
+      setClientMonthItems([]); setItemSearchText(''); setSelectedItemId('');
+      return;
     }
 
     setIsStatementUnlocked(false);
@@ -432,7 +451,7 @@ export default function TenantReports() {
 
   return (
     <div className="w-full max-w-screen-2xl mx-auto pb-10">
-      
+
       {/* Filters */}
       <div className="flex flex-wrap items-center justify-center gap-3 mb-6 pb-4 border-b border-slate-700">
         {/* Client Autocomplete */}
@@ -545,7 +564,7 @@ export default function TenantReports() {
 
         {/* Global Action */}
         {user?.role === 'admin' && (
-          <button 
+          <button
             onClick={() => setShowSummaryModal(true)}
             className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 flex-shrink-0"
             title="Download Monthly Summary for All Clients"
@@ -627,10 +646,10 @@ export default function TenantReports() {
                   <p className="text-sm font-medium">Loading Sales Report...</p>
                 </div>
               ) : salesReport.length > 0 ? (
-                <SalesReport 
-                  salesReport={salesReport} 
-                  currentConvFactor={currentConvFactor} 
-                  hasMissingRates={hasMissingRates} 
+                <SalesReport
+                  salesReport={salesReport}
+                  currentConvFactor={currentConvFactor}
+                  hasMissingRates={hasMissingRates}
                 />
               ) : (
                 <div className="text-center py-16 text-slate-400">
@@ -650,10 +669,10 @@ export default function TenantReports() {
                       <p className="text-slate-400 font-medium tracking-wide">Generating Statement...</p>
                     </div>
                   ) : (
-                    <button 
+                    <button
                       onClick={() => {
                         setStatementCountdown(5);
-                        
+
                         // Trigger fetch immediately in the background
                         if (selectedClientId && selectedMonthYear) {
                           if (
@@ -701,7 +720,7 @@ export default function TenantReports() {
 
             {/* Return Report Tab */}
             {currentTab === 'return' && (
-              <ReturnReport 
+              <ReturnReport
                 purchases={purchases}
                 salesReport={salesReport}
                 eVatCredentials={eVatCredentials}
