@@ -97,6 +97,7 @@ export default function SubmissionsPage() {
     const timer = setTimeout(async () => {
       setIsLoading(true);
       try {
+        // @ts-ignore
         const res = await apiClient.api.submissions.$get({
           query: {
             search: searchQuery,
@@ -425,22 +426,12 @@ export default function SubmissionsPage() {
                 </button>
               </div>
             ) : (
-              <>
-                <button 
-                  onClick={openAddModal}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold transition-all flex items-center gap-2 h-10"
-                >
-                  <span className="text-xl leading-none">+</span> Add New
-                </button>
-                <button
-                  onClick={handleExport}
-                  disabled={isExporting}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold transition-all flex items-center gap-2 h-10 disabled:opacity-50"
-                >
-                  {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download size={18} />}
-                  Export Excel
-                </button>
-              </>
+              <button 
+                onClick={openAddModal}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold transition-all flex items-center gap-2 h-10"
+              >
+                <span className="text-xl leading-none">+</span> Add New
+              </button>
             )}
           </div>
 
@@ -488,6 +479,15 @@ export default function SubmissionsPage() {
                 className="w-full sm:w-64 pl-10 pr-4 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm h-10"
               />
             </div>
+            
+            <button
+              onClick={handleExport}
+              disabled={isExporting}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold transition-all flex items-center justify-center gap-2 h-10 disabled:opacity-50 shrink-0"
+            >
+              {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download size={18} />}
+              Export Excel
+            </button>
           </div>
         </div>
 
