@@ -25,10 +25,10 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
     const clientId = parseInt(c.req.query('clientId') || '0', 10);
     if (!clientId) return c.json({ error: 'clientId is required' }, 400);
 
-    const conditions = [eq(purchases.clientId, clientId)];
-    if (user.role !== 'superadmin') {
-      conditions.push(eq(purchases.adminId, user.adminId));
-    }
+    const conditions = [
+      eq(purchases.clientId, clientId),
+      eq(purchases.adminId, user.adminId)
+    ];
 
     // Get all months with purchases for this client
     const purchaseMonthsResult = await db
@@ -69,11 +69,9 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
     
     const conditions = [
       eq(submissions.clientId, clientId),
-      eq(submissions.month, month)
+      eq(submissions.month, month),
+      eq(submissions.adminId, user.adminId)
     ];
-    if (user.role !== 'superadmin') {
-      conditions.push(eq(submissions.adminId, user.adminId));
-    }
 
     const existing = await db
       .select({ submissionId: submissions.submissionId })
@@ -104,11 +102,9 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
 
     const existingConditions = [
       eq(submissions.clientId, clientId),
-      eq(submissions.month, month)
+      eq(submissions.month, month),
+      eq(submissions.adminId, user.adminId)
     ];
-    if (user.role !== 'superadmin') {
-      existingConditions.push(eq(submissions.adminId, user.adminId));
-    }
 
     // 1. Verify if submission already exists for this client and month
     const existing = await db
@@ -152,10 +148,7 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
     const limit = parseInt(c.req.query('limit') || '50', 10);
     const offset = (page - 1) * limit;
 
-    const conditions = [];
-    if (user.role !== 'superadmin') {
-      conditions.push(eq(submissions.adminId, user.adminId));
-    } 
+    const conditions = [eq(submissions.adminId, user.adminId)];
     
     if (filterUserId) {
       conditions.push(eq(sql`COALESCE(${submissions.userId}, ${submissions.adminId})`, parseInt(filterUserId, 10)));
@@ -227,10 +220,7 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
       const filterUserId = c.req.query('userId');
       const search = c.req.query('search') || '';
   
-      const conditions = [];
-      if (user.role !== 'superadmin') {
-        conditions.push(eq(submissions.adminId, user.adminId));
-      } 
+      const conditions = [eq(submissions.adminId, user.adminId)];
       
       if (filterUserId) {
         conditions.push(eq(sql`COALESCE(${submissions.userId}, ${submissions.adminId})`, parseInt(filterUserId, 10)));
@@ -345,10 +335,10 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
 
     if (ids.length === 0) return c.json({ message: 'No IDs provided' }, 200);
 
-    const conditions = [inArray(submissions.id, ids)];
-    if (user.role !== 'superadmin') {
-      conditions.push(eq(submissions.adminId, user.adminId));
-    }
+    const conditions = [
+      inArray(submissions.id, ids),
+      eq(submissions.adminId, user.adminId)
+    ];
 
     await db.delete(submissions).where(and(...conditions));
     return c.json({ message: 'Submissions deleted successfully' }, 200);

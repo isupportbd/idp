@@ -130,9 +130,9 @@ export default function SubmissionsPage() {
     setCurrentPage(1);
   }, [searchQuery, filterMonth, filterUserId]);
 
-  // Fetch Users for Filter (Superadmin only)
+  // Fetch Users for Filter
   useEffect(() => {
-    if (user?.role === 'superadmin' || user?.role === 'admin') {
+    if (user?.role === 'admin') {
       const fetchUsers = async () => {
         try {
           const res = await apiClient.api.users.$get({ query: { limit: '100', includeSelf: 'true' } as any });
@@ -163,7 +163,7 @@ export default function SubmissionsPage() {
         if (filterUserId && usersList.length > 0) {
           const u = usersList.find(u => u.id.toString() === filterUserId);
           if (u) targetUserName = u.name;
-        } else if (user?.role !== 'superadmin') {
+        } else {
           targetUserName = user?.name || 'User';
         }
 
@@ -437,7 +437,7 @@ export default function SubmissionsPage() {
 
           {/* Right: Search and Filter */}
           <div className="w-full lg:w-auto flex flex-col sm:flex-row gap-3">
-            {(user?.role === 'superadmin' || user?.role === 'admin') && (
+            {user?.role === 'admin' && (
               <select
                 value={filterUserId}
                 onChange={(e) => setFilterUserId(e.target.value)}
