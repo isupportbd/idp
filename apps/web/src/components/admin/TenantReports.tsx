@@ -122,6 +122,8 @@ export default function TenantReports() {
 
   // Debounced client search
   useEffect(() => {
+    let ignore = false;
+    
     if (!clientSearchText || selectedClientId) {
       setClientSearchResults([]);
       return;
@@ -132,12 +134,21 @@ export default function TenantReports() {
         const res = await apiClient.api.clients.$get({ query: { search: clientSearchText, limit: '50' } });
         if (res.ok) {
           const data = await res.json() as any;
-          setClientSearchResults(Array.isArray(data) ? data : data.data || []);
+          if (!ignore) {
+            setClientSearchResults(Array.isArray(data) ? data : data.data || []);
+          }
         }
-      } catch (e) { console.error(e); }
-      finally { setIsSearchingClients(false); }
+      } catch (e) { 
+        console.error(e); 
+      } finally { 
+        if (!ignore) setIsSearchingClients(false); 
+      }
     }, 300);
-    return () => clearTimeout(timer);
+    
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
   }, [clientSearchText, selectedClientId]);
 
   const fetchAvailableMonths = useCallback(async (clientId: number | '', preserveMonth: boolean = false) => {

@@ -159,6 +159,8 @@ export default function SalesRatesManager() {
 
   // Debounced client search for filters
   useEffect(() => {
+    let ignore = false;
+    
     if (!filterClientText) {
       setClientFilterSearchResults([]);
       return;
@@ -168,11 +170,17 @@ export default function SalesRatesManager() {
         const res = await apiClient.api.clients.$get({ query: { search: filterClientText, limit: '50' } });
         if (res.ok) {
           const data = await res.json() as any;
-          setClientFilterSearchResults(Array.isArray(data) ? data : data.data || []);
+          if (!ignore) {
+            setClientFilterSearchResults(Array.isArray(data) ? data : data.data || []);
+          }
         }
       } catch (e) { console.error(e); }
     }, 300);
-    return () => clearTimeout(timer);
+    
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
   }, [filterClientText]);
 
   const computedVatableValue = useMemo(() => {
