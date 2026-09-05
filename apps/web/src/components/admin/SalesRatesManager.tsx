@@ -11,7 +11,6 @@ export default function SalesRatesManager() {
   const [isSearchingFormClients, setIsSearchingFormClients] = useState(false);
   
   const [clientFilterSearchResults, setClientFilterSearchResults] = useState<any[]>([]);
-  const [isSearchingFilterClients, setIsSearchingFilterClients] = useState(false);
   
   const [items, setItems] = useState<any[]>([]);
   const [clientPurchasedItems, setClientPurchasedItems] = useState<any[]>([]);
@@ -165,7 +164,6 @@ export default function SalesRatesManager() {
       return;
     }
     const timer = setTimeout(async () => {
-      setIsSearchingFilterClients(true);
       try {
         const res = await apiClient.api.clients.$get({ query: { search: filterClientText, limit: '50' } });
         if (res.ok) {
@@ -173,7 +171,6 @@ export default function SalesRatesManager() {
           setClientFilterSearchResults(Array.isArray(data) ? data : data.data || []);
         }
       } catch (e) { console.error(e); }
-      finally { setIsSearchingFilterClients(false); }
     }, 300);
     return () => clearTimeout(timer);
   }, [filterClientText]);
