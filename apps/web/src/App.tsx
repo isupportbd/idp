@@ -12,6 +12,7 @@ import TenantReports from './components/admin/TenantReports';
 import SubmissionsPage from './components/admin/SubmissionsPage';
 import SalesRatesManager from './components/admin/SalesRatesManager';
 import ClientCredentialsManager from './components/admin/ClientCredentialsManager';
+import BinFormatter from './components/admin/BinFormatter';
 import SuperAdminDashboard from './components/superadmin/SuperAdminDashboard';
 import GlobalPurchases from './components/superadmin/GlobalPurchases';
 import GlobalReports from './components/superadmin/GlobalReports';
@@ -49,6 +50,7 @@ const routeTitles: Record<string, string> = {
   '/admin/clients': 'Clients',
   '/admin/sales-rates': 'Sales Rates',
   '/admin/client-credentials': 'Client Credentials',
+  '/admin/bin-formatter': 'BIN Formatter',
   '/admin/users': 'Users',
   '/admin/profile': 'Profile',
 };
@@ -129,6 +131,7 @@ export default function App() {
         <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
           <Route path="sales-rates" element={<SalesRatesManager />} />
           <Route path="client-credentials" element={<ClientCredentialsManager />} />
+          <Route path="bin-formatter" element={<BinFormatter />} />
           <Route path="users" element={<UsersManager />} />
         </Route>
       </Route>
