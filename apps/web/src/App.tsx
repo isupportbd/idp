@@ -100,6 +100,7 @@ export default function App() {
         <Route path="plans" element={<PlansManager />} />
         <Route path="purchases" element={<GlobalPurchases />} />
         <Route path="reports" element={<GlobalReports />} />
+        <Route path="submissions" element={<SubmissionsPage />} />
         <Route path="settings" element={<SettingsLayout />}>
           <Route path="mappings" element={<ColumnMappings />} />
           <Route path="items" element={<GlobalItems />} />

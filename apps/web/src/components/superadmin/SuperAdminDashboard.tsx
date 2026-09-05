@@ -80,6 +80,17 @@ export default function SuperAdminDashboard() {
         </Link>
 
         <Link 
+          to="/superadmin/submissions" 
+          className="flex-1 min-w-[240px] max-w-[320px] glass-panel p-8 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-2 hover:shadow-xl hover:shadow-emerald-900/20 hover:border-emerald-500/50 group backdrop-blur-sm"
+        >
+          <div className="p-4 bg-emerald-500/10 rounded-2xl mb-5 group-hover:scale-110 transition-transform duration-300">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          </div>
+          <h3 className="text-xl font-bold m-0 mb-3 text-slate-100 tracking-wide">Submissions</h3>
+          <p className="m-0 text-sm text-slate-400 leading-relaxed">View and manage all VAT submissions.</p>
+        </Link>
+
+        <Link 
           to="/superadmin/storage" 
           className="flex-1 min-w-[240px] max-w-[320px] glass-panel p-8 text-slate-200 no-underline transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-2 hover:shadow-xl hover:shadow-cyan-900/20 hover:border-cyan-500/50 group backdrop-blur-sm"
         >
