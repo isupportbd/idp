@@ -4,7 +4,7 @@ import { clientCredentials, clients } from '../db/schema';
 import { eq, and, inArray, ilike, or, sql, desc } from 'drizzle-orm';
 import * as xlsx from 'xlsx';
 import { authenticate } from '../middlewares/auth';
-import { broadcastEvent } from '../sse';
+import { appEvents } from '../events';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 
@@ -112,7 +112,7 @@ clientCredentialsApp.post('/', zValidator('json', credSchema), async (c) => {
       loginId,
       loginPassword,
     });
-    broadcastEvent('client_credentials_updated', { clientId });
+    appEvents.emit('data_changed', JSON.stringify({ type: 'client_credentials_updated', clientId }));
     return c.json({ success: true });
   } catch (error) {
     console.error('Error creating credential:', error);
@@ -129,7 +129,7 @@ clientCredentialsApp.put('/:id', zValidator('json', credSchema), async (c) => {
     await db.update(clientCredentials)
       .set({ clientId, loginId, loginPassword })
       .where(and(eq(clientCredentials.id, id), eq(clientCredentials.adminId, user.adminId)));
-    broadcastEvent('client_credentials_updated', { clientId });
+    appEvents.emit('data_changed', JSON.stringify({ type: 'client_credentials_updated', clientId }));
     return c.json({ success: true });
   } catch (error) {
     console.error('Error updating credential:', error);
