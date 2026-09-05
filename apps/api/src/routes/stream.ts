@@ -1,57 +1,49 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { appEvents } from '../events';
-import jwt from 'jsonwebtoken';
 
 const streamApp = new Hono();
 
-streamApp.get('/', async (c) => {
-  // EventSource cannot send Authorization headers, so we accept token via query param
-  const token = c.req.query('token') || c.req.header('Authorization')?.replace('Bearer ', '');
-
-  if (!token) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-
-  try {
-    jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-  } catch (e) {
-    return c.json({ error: 'Invalid token' }, 401);
-  }
-
-  c.header('X-Accel-Buffering', 'no');
+// Handle preflight requests for this route explicitly
+streamApp.options('/', (c) => {
   c.header('Access-Control-Allow-Origin', '*');
+  c.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  c.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  return new Response(null, { status: 204, headers: {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+  }});
+});
+
+streamApp.get('/', (c) => {
+  c.header('Access-Control-Allow-Origin', '*');
+  c.header('X-Accel-Buffering', 'no');
   c.header('Cache-Control', 'no-cache, no-transform');
 
-  return streamSSE(c, async (stream) => {
-    // Ping to keep connection alive
-    const interval = setInterval(async () => {
-      try {
-        await stream.writeSSE({ data: 'ping', event: 'ping' });
-      } catch (e) {
-        clearInterval(interval);
-      }
-    }, 15000);
+  return streamSSE(c, (stream) => {
+    return new Promise<void>((resolve) => {
+      let pingTimer: ReturnType<typeof setInterval> | null = null;
 
-    const onDataChanged = async (eventData: string) => {
-      try {
-        await stream.writeSSE({ data: eventData, event: 'data_changed' });
-      } catch (e) {
-        // Handle disconnected client
-      }
-    };
+      const cleanup = () => {
+        if (pingTimer) clearInterval(pingTimer);
+        appEvents.off('data_changed', onDataChanged);
+        resolve();
+      };
 
-    appEvents.on('data_changed', onDataChanged);
+      // Ping every 15 seconds to keep connection alive
+      pingTimer = setInterval(() => {
+        stream.writeSSE({ data: 'ping', event: 'ping' }).catch(cleanup);
+      }, 15000);
 
-    stream.onAbort(() => {
-      clearInterval(interval);
-      appEvents.off('data_changed', onDataChanged);
+      const onDataChanged = (eventData: string) => {
+        stream.writeSSE({ data: eventData, event: 'data_changed' }).catch(cleanup);
+      };
+
+      appEvents.on('data_changed', onDataChanged);
+
+      stream.onAbort(cleanup);
     });
-
-    // Keep the stream open indefinitely
-    while (true) {
-      await stream.sleep(10000);
-    }
   });
 });
 
