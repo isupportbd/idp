@@ -7,6 +7,11 @@ type SSEEvent = {
 
 export function useRealtime(onDataChanged: (event: SSEEvent) => void) {
   const eventSourceRef = useRef<EventSource | null>(null);
+  const callbackRef = useRef(onDataChanged);
+
+  useEffect(() => {
+    callbackRef.current = onDataChanged;
+  }, [onDataChanged]);
 
   useEffect(() => {
     // Only connect if we have a token (authenticated)
@@ -21,7 +26,7 @@ export function useRealtime(onDataChanged: (event: SSEEvent) => void) {
     es.addEventListener('data_changed', (e) => {
       try {
         const data = JSON.parse(e.data) as SSEEvent;
-        onDataChanged(data);
+        callbackRef.current(data);
       } catch (err) {
         console.error('Failed to parse SSE data', err);
       }
@@ -40,5 +45,5 @@ export function useRealtime(onDataChanged: (event: SSEEvent) => void) {
         eventSourceRef.current.close();
       }
     };
-  }, [onDataChanged]);
+  }, []);
 }

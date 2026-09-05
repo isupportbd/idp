@@ -167,7 +167,10 @@ export default function TenantReports() {
       const [srRes, res] = await Promise.all([
         fetch(
           `${import.meta.env.VITE_API_URL || ''}/api/sales-rates/active/${cId}`,
-          { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+          { 
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+            cache: 'no-store'
+          }
         ),
         apiClient.api.purchases.$get({
           query: {
@@ -209,7 +212,8 @@ export default function TenantReports() {
       if (itemId) query.append('itemId', itemId.toString());
       
       const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/reports/sales?${query.toString()}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        cache: 'no-store'
       });
       
       if (res.ok) {
@@ -232,7 +236,8 @@ export default function TenantReports() {
     try {
       const query = new URLSearchParams({ clientId: cId.toString(), month });
       const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/reports/statement?${query.toString()}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        cache: 'no-store'
       });
       if (res.ok) {
         const data = await res.json() as any;
