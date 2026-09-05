@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Loader2, CheckCircle2, AlertCircle, Edit, Trash2, Download } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { type Client, formatMonth } from './reports/types';
-import { useAuth } from '../../stores/auth';
+import { useAuthStore } from '../../stores/auth';
 import * as XLSX from 'xlsx';
 
 type Submission = {
@@ -18,7 +18,7 @@ type Submission = {
 };
 
 export default function SubmissionsPage() {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   
   // Data Table State
   const [submissions, setSubmissions] = useState<Submission[]>([]);
