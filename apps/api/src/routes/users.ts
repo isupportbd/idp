@@ -117,7 +117,16 @@ usersApp.get('/', async (c) => {
     const search = c.req.query('search') || '';
     const offset = (page - 1) * limit;
 
-    const conditions = [eq(users.adminId, currentUser.userId)];
+    const includeSelf = c.req.query('includeSelf') === 'true';
+
+    const conditions = [];
+    if (currentUser.role !== 'superadmin') {
+      if (includeSelf) {
+        conditions.push(or(eq(users.adminId, currentUser.userId), eq(users.id, currentUser.userId))!);
+      } else {
+        conditions.push(eq(users.adminId, currentUser.userId));
+      }
+    }
     
     if (search) {
       conditions.push(
@@ -129,7 +138,7 @@ usersApp.get('/', async (c) => {
       );
     }
 
-    const whereClause = and(...conditions);
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const dataQuery = db.select({
       id: users.id,

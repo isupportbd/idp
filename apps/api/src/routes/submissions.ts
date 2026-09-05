@@ -124,6 +124,7 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
     // 2. Insert new submission
     const newSubmission = await db.insert(submissions).values({
       adminId: user.adminId,
+      userId: user.userId, // Save actual submitter
       clientId,
       month,
       submissionId,
@@ -154,8 +155,10 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
     const conditions = [];
     if (user.role !== 'superadmin') {
       conditions.push(eq(submissions.adminId, user.adminId));
-    } else if (filterUserId) {
-      conditions.push(eq(submissions.adminId, parseInt(filterUserId, 10)));
+    } 
+    
+    if (filterUserId) {
+      conditions.push(eq(sql`COALESCE(${submissions.userId}, ${submissions.adminId})`, parseInt(filterUserId, 10)));
     }
 
     if (filterMonth) {
@@ -183,7 +186,7 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
       .select({ count: sql<number>`count(*)` })
       .from(submissions)
       .innerJoin(clients, eq(submissions.clientId, clients.id))
-      .leftJoin(users, eq(submissions.adminId, users.id))
+      .leftJoin(users, eq(sql`COALESCE(${submissions.userId}, ${submissions.adminId})`, users.id))
       .where(whereClause);
       
     const totalCount = Number(totalResult[0]?.count || 0);
@@ -203,7 +206,7 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
       })
       .from(submissions)
       .innerJoin(clients, eq(submissions.clientId, clients.id))
-      .leftJoin(users, eq(submissions.adminId, users.id))
+      .leftJoin(users, eq(sql`COALESCE(${submissions.userId}, ${submissions.adminId})`, users.id))
       .where(whereClause)
       .limit(limit)
       .offset(offset)
@@ -227,8 +230,10 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
       const conditions = [];
       if (user.role !== 'superadmin') {
         conditions.push(eq(submissions.adminId, user.adminId));
-      } else if (filterUserId) {
-        conditions.push(eq(submissions.adminId, parseInt(filterUserId, 10)));
+      } 
+      
+      if (filterUserId) {
+        conditions.push(eq(sql`COALESCE(${submissions.userId}, ${submissions.adminId})`, parseInt(filterUserId, 10)));
       }
   
       if (filterMonth) {
@@ -265,7 +270,7 @@ const submissionsApp = new Hono<{ Variables: Variables }>()
         })
         .from(submissions)
         .innerJoin(clients, eq(submissions.clientId, clients.id))
-        .leftJoin(users, eq(submissions.adminId, users.id))
+        .leftJoin(users, eq(sql`COALESCE(${submissions.userId}, ${submissions.adminId})`, users.id))
         .where(whereClause)
         .orderBy(desc(submissions.createdAt));
   

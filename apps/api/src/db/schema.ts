@@ -155,6 +155,7 @@ export const notifications = pgTable('notifications', {
 export const submissions = pgTable('submissions', {
   id: serial('id').primaryKey(),
   adminId: integer('admin_id').references(() => users.id).notNull(),
+  userId: integer('user_id').references(() => users.id), // Actual submitter
   clientId: integer('client_id').references(() => clients.id).notNull(),
   month: varchar('month', { length: 7 }).notNull(),
   submissionId: varchar('submission_id', { length: 255 }).notNull().unique(),

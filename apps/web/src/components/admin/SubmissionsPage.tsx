@@ -132,10 +132,10 @@ export default function SubmissionsPage() {
 
   // Fetch Users for Filter (Superadmin only)
   useEffect(() => {
-    if (user?.role === 'superadmin') {
+    if (user?.role === 'superadmin' || user?.role === 'admin') {
       const fetchUsers = async () => {
         try {
-          const res = await apiClient.api.users.$get({ query: { limit: '100' } });
+          const res = await apiClient.api.users.$get({ query: { limit: '100', includeSelf: 'true' } as any });
           if (res.ok) {
             const data = await res.json() as any;
             setUsersList(data.data || []);
@@ -437,7 +437,7 @@ export default function SubmissionsPage() {
 
           {/* Right: Search and Filter */}
           <div className="w-full lg:w-auto flex flex-col sm:flex-row gap-3">
-            {user?.role === 'superadmin' && (
+            {(user?.role === 'superadmin' || user?.role === 'admin') && (
               <select
                 value={filterUserId}
                 onChange={(e) => setFilterUserId(e.target.value)}
@@ -554,8 +554,8 @@ export default function SubmissionsPage() {
                       <td className="p-4 text-center text-sm text-slate-300">
                         {sub.adminName || 'Unknown'}
                       </td>
-                      <td className="p-4 text-center text-sm text-slate-500">
-                        {sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : '-'}
+                      <td className="p-4 text-center text-sm text-slate-500 whitespace-nowrap">
+                        {sub.createdAt ? new Date(sub.createdAt).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-2">

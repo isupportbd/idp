@@ -15,6 +15,13 @@
       "when": 1788352020753,
       "tag": "0001_swift_roxanne_simpson",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788631310576,
+      "tag": "0002_moaning_swordsman",
+      "breakpoints": true
     }
   ]
 }
