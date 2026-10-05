@@ -25,6 +25,19 @@ const cleanBin = (raw: string): string => {
   return raw.replace(/\D/g, "");
 };
 
+// Format raw BIN into standard NBR xxxxxxxxx-xxxx format
+const formatBin = (raw: string): string => {
+  if (!raw) return "";
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length >= 13) {
+    return `${digits.slice(0, 9)}-${digits.slice(9, 13)}`;
+  }
+  if (digits.length > 9) {
+    return `${digits.slice(0, 9)}-${digits.slice(9)}`;
+  }
+  return digits;
+};
+
 // Client Master Dataset from Database
 const clients = ref<ClientRecord[]>([]);
 
@@ -81,12 +94,12 @@ const allAvailableBins = computed<string[]>(() => {
   if (mode.value === "db") {
     return filteredDbClients.value
       .filter((c) => c.bin && cleanBin(c.bin).length >= 9)
-      .map((c) => cleanBin(c.bin));
+      .map((c) => formatBin(c.bin));
   } else {
     return manualInput.value
       .split(/[\r\n,;]+/)
-      .map((t) => cleanBin(t.trim()))
-      .filter((t) => t.length >= 9);
+      .map((t) => formatBin(t.trim()))
+      .filter((t) => cleanBin(t).length >= 9);
   }
 });
 
@@ -276,7 +289,7 @@ const clearManualInput = () => {
               v-model="manualInput"
               class="form-control idp-input font-monospace"
               rows="4"
-              placeholder="e.g.&#10;0012345670101&#10;002345678-0202, 0034567890303&#10;0045678900404; 0056789010505"
+              placeholder="e.g.&#10;001234567-0101&#10;002345678-0202, 003456789-0303&#10;004567890-0404; 005678901-0505"
             ></textarea>
             <div class="d-flex justify-content-between align-items-center text-muted small mt-1">
               <span>Detected valid BINs: <strong class="text-info">{{ totalBinsCount }}</strong></span>
