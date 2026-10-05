@@ -410,8 +410,8 @@ const printReport = () => {
         <option v-for="u in assignableUsers" :key="u.id" :value="u.id">{{ u.name }}</option>
       </select>
 
-      <!-- 5. Month Navigator Component -->
-      <div class="month-nav-container" style="width: 200px; flex-shrink: 0;">
+      <!-- 5. Month Navigator Component (Right Aligned) -->
+      <div class="month-nav-container ms-auto" style="width: 180px; flex-shrink: 0;">
         <MonthNavigator v-model="selectedMonth" />
       </div>
     </div>
