@@ -6,7 +6,10 @@ import { vatSubmissions } from "@/modules/clients/database/models/vat_submission
 import { users } from "@/modules/auth/database/models/user.js";
 import { and, eq } from "drizzle-orm";
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { zValidator } from "@hono/zod-validator";
 import activityFilterRouter from "../routes/api.js";
+import { getActivityMatrix } from "../controllers/activity-filter.controller.js";
+import { QueryActivityFilterSchema } from "../controllers/activity-filter.schema.js";
 
 describe("Activity Filter Module Integration Tests", () => {
   let app: OpenAPIHono;
@@ -19,7 +22,6 @@ describe("Activity Filter Module Integration Tests", () => {
     await initDatabase();
 
     app = new OpenAPIHono();
-    app.route("/api/activity-filter", activityFilterRouter);
 
     // Ensure user
     const existingUser = (await db.select().from(users).limit(1))[0];
@@ -38,6 +40,17 @@ describe("Activity Filter Module Integration Tests", () => {
       )[0];
       testUserId = u.id;
     }
+
+    // Simulate an authenticated request for the controller (the real route uses authMiddleware)
+    app.get(
+      "/api/activity-filter",
+      async (c: any, next: any) => {
+        c.set("auth", { id: testUserId });
+        await next();
+      },
+      zValidator("query", QueryActivityFilterSchema),
+      getActivityMatrix
+    );
 
     // Create client 1 (Submitted)
     const c1 = (
@@ -84,6 +97,13 @@ describe("Activity Filter Module Integration Tests", () => {
     if (testClientId2) {
       await db.delete(clients).where(eq(clients.id, testClientId2));
     }
+  });
+
+  it("rejects unauthenticated requests on the real route", async () => {
+    const publicApp = new OpenAPIHono();
+    publicApp.route("/api/activity-filter", activityFilterRouter);
+    const res = await publicApp.request(`/api/activity-filter?month=${testMonth}`);
+    expect(res.status).toBe(401);
   });
 
   it("GET /api/activity-filter returns matrix data with statistics", async () => {

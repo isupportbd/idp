@@ -44,7 +44,7 @@ export const getActivityMatrix: Handler = async (c: any) => {
       .leftJoin(customerTypes, eq(clients.customerTypeId, customerTypes.id))
       .leftJoin(clientReferences, eq(clients.referenceId, clientReferences.id))
       .where(
-        isSuperAdmin || !auth?.id
+        isSuperAdmin
           ? eq(clients.isActive, true)
           : and(
               eq(clients.isActive, true),
