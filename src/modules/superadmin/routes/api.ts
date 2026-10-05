@@ -65,6 +65,7 @@ import {
   updateUnitConversion,
   deleteUnitConversion,
   getPlatformPublicStats,
+  getGlobalMetrics,
   getNotifications,
   getPendingRecharges,
   approveRecharge,
@@ -80,19 +81,22 @@ import {
 
 export const superAdminRouter = new Hono();
 
-// Public / Shared endpoints
+// Public endpoints (used by the Landing / registration page before login)
 superAdminRouter.get("/public-stats", getPlatformPublicStats);
 superAdminRouter.get("/plans", getPlans);
 superAdminRouter.get("/payment-settings", getPaymentSettings);
-superAdminRouter.get("/client-types", getClientTypes);
-superAdminRouter.get("/locations", getLocations);
-superAdminRouter.get("/commercial-areas", getCommercialAreas);
-superAdminRouter.get("/references", getClientReferences);
-superAdminRouter.get("/column-mappings", getColumnMappings);
-superAdminRouter.get("/global-items", getGlobalItems);
-superAdminRouter.get("/measurement-units", getMeasurementUnits);
-superAdminRouter.get("/service-units", getServiceUnits);
-superAdminRouter.get("/vat-notes", getVatNotes);
+
+// Shared master data (any logged-in user: tenants read it, superadmin manages it)
+superAdminRouter.get("/client-types", authMiddleware, getClientTypes);
+superAdminRouter.get("/locations", authMiddleware, getLocations);
+superAdminRouter.get("/commercial-areas", authMiddleware, getCommercialAreas);
+superAdminRouter.get("/references", authMiddleware, getClientReferences);
+superAdminRouter.get("/column-mappings", authMiddleware, getColumnMappings);
+superAdminRouter.get("/global-items", authMiddleware, getGlobalItems);
+superAdminRouter.get("/measurement-units", authMiddleware, getMeasurementUnits);
+superAdminRouter.get("/service-units", authMiddleware, getServiceUnits);
+superAdminRouter.get("/vat-notes", authMiddleware, getVatNotes);
+superAdminRouter.get("/unit-conversions", authMiddleware, getUnitConversions);
 
 // Guard all subsequent SuperAdmin management endpoints
 superAdminRouter.use("/notifications*", authMiddleware, requireRole("superadmin"));
@@ -104,9 +108,14 @@ superAdminRouter.use("/reject-signup*", authMiddleware, requireRole("superadmin"
 superAdminRouter.use("/approve-recharge*", authMiddleware, requireRole("superadmin"));
 superAdminRouter.use("/reject-recharge*", authMiddleware, requireRole("superadmin"));
 superAdminRouter.use("/storage-stats*", authMiddleware, requireRole("superadmin"));
+superAdminRouter.use("/transactions*", authMiddleware, requireRole("superadmin"));
+superAdminRouter.use("/metrics*", authMiddleware, requireRole("superadmin"));
 
 // Notifications (Protected)
 superAdminRouter.get("/notifications", getNotifications);
+
+// Global Reports metrics (Protected)
+superAdminRouter.get("/metrics", getGlobalMetrics);
 
 // Tenants & Approvals (Protected)
 superAdminRouter.get("/tenants", getTenants);
@@ -182,7 +191,6 @@ superAdminRouter.patch("/vat-notes/:id/toggle", authMiddleware, requireRole("sup
 superAdminRouter.delete("/vat-notes/:id", authMiddleware, requireRole("superadmin"), deleteVatNote);
 
 // Unit Conversions Management (Protected for write operations)
-superAdminRouter.get("/unit-conversions", getUnitConversions);
 superAdminRouter.post("/unit-conversions", authMiddleware, requireRole("superadmin"), createUnitConversion);
 superAdminRouter.put("/unit-conversions/:id", authMiddleware, requireRole("superadmin"), updateUnitConversion);
 superAdminRouter.delete("/unit-conversions/:id", authMiddleware, requireRole("superadmin"), deleteUnitConversion);

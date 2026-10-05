@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
+import { denyRole } from "@/middlewares/role-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
   listPurchases,
@@ -11,7 +12,7 @@ import {
 
 const purchasesRouter = new Hono();
 
-purchasesRouter.use("*", authMiddleware, subscriptionMiddleware);
+purchasesRouter.use("*", authMiddleware, denyRole("superadmin"), subscriptionMiddleware);
 
 purchasesRouter.get("/months", getPurchasesMonths);
 purchasesRouter.get("/", listPurchases);

@@ -15,7 +15,7 @@ export async function subscriptionMiddleware(c: Context, next: Next) {
   }
 
   // SuperAdmin is exempt from subscription restrictions
-  if (auth.role === "superadmin" || auth.roleId === 1) {
+  if (String(auth.role ?? "").toLowerCase() === "superadmin") {
     return await next();
   }
 

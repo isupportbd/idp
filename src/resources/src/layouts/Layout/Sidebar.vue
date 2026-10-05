@@ -227,12 +227,31 @@
                 <router-link to="/superadmin/settings/mappings">Column Mappings</router-link>
               </li>
               <li class="list-group-item">
+                <router-link to="/superadmin/settings/items">Global Items</router-link>
+              </li>
+              <li class="list-group-item">
+                <router-link to="/superadmin/settings/units">Global Units</router-link>
+              </li>
+              <li class="list-group-item">
+                <router-link to="/superadmin/settings/service-units">Service Units</router-link>
+              </li>
+              <li class="list-group-item">
                 <router-link to="/superadmin/settings/vat-notes">VAT Notes</router-link>
               </li>
               <li class="list-group-item">
                 <router-link to="/superadmin/settings/unit-conversions">Unit Conversions</router-link>
               </li>
             </ul>
+          </li>
+
+          <!-- Master SMS Templates -->
+          <li class="list-group-item" :class="{ active: isActive('/superadmin/sms-templates') }">
+            <router-link to="/superadmin/sms-templates">
+              <div class="menu-icon">
+                <i class="bi bi-chat-square-text"></i>
+              </div>
+              <span>SMS Templates</span>
+            </router-link>
           </li>
 
           <!-- Storage Stats -->

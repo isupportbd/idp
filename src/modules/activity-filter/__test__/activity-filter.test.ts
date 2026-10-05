@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeAll, afterAll } from "bun:test";
 import { initDatabase } from "@/framework/database/connection.js";
-import { db } from "@/framework/facade.js";
+import { db, jwt } from "@/framework/facade.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { vatSubmissions } from "@/modules/clients/database/models/vat_submissions.js";
 import { users } from "@/modules/auth/database/models/user.js";
@@ -104,6 +104,19 @@ describe("Activity Filter Module Integration Tests", () => {
     publicApp.route("/api/activity-filter", activityFilterRouter);
     const res = await publicApp.request(`/api/activity-filter?month=${testMonth}`);
     expect(res.status).toBe(401);
+  });
+
+  it("rejects superadmin on the real route (tenant-only API)", async () => {
+    const publicApp = new OpenAPIHono();
+    publicApp.route("/api/activity-filter", activityFilterRouter);
+    const { token } = await jwt.generateToken(
+      { id: testUserId, email: "sa@test.com", adminId: null, roleId: null, role: "superadmin" },
+      "access"
+    );
+    const res = await publicApp.request(`/api/activity-filter?month=${testMonth}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    expect(res.status).toBe(403);
   });
 
   it("GET /api/activity-filter returns matrix data with statistics", async () => {

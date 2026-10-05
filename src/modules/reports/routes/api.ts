@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
+import { denyRole } from "@/middlewares/role-middleware.js";
 import {
   getMonthlySummary,
   getSalesReport,
@@ -8,7 +9,7 @@ import {
 
 const reportsRouter = new Hono();
 
-reportsRouter.use("*", authMiddleware);
+reportsRouter.use("*", authMiddleware, denyRole("superadmin"));
 
 reportsRouter.get("/monthly-summary", getMonthlySummary);
 reportsRouter.get("/sales", getSalesReport);

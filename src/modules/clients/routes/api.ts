@@ -1,5 +1,6 @@
 import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
+import { denyRole } from "@/middlewares/role-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
   listClients,
@@ -284,7 +285,7 @@ const deleteSubmissionRoute = createRoute({
 // ── ROUTER EXPORT ────────────────────────────────────────────────────
 
 export default createRouter()
-  .group(authMiddleware, subscriptionMiddleware)
+  .group(authMiddleware, denyRole("superadmin"), subscriptionMiddleware)
   .api(getUsersRoute, [], listAssignableUsers)
   .api(getAssignmentsRoute, [], listAssignments)
   .api(postAssignmentsRoute, [], assignManagers)

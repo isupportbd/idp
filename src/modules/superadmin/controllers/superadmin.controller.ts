@@ -2092,6 +2092,57 @@ export async function getPlatformPublicStats(c: Context) {
   }
 }
 
+// 16b. System-wide metrics for the SuperAdmin Global Reports page
+export async function getGlobalMetrics(c: Context) {
+  try {
+    const superadminRole = await db.query.roles.findFirst({ where: eq(roles.name, "superadmin") });
+    const superadminRoleId = superadminRole?.id ?? -1;
+    const adminRole = await db.query.roles.findFirst({ where: eq(roles.name, "admin") });
+    const adminRoleId = adminRole?.id ?? -1;
+
+    // Same tenant definition as getPlatformPublicStats
+    const [tenantCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .where(
+        and(
+          eq(users.status, "active"),
+          or(
+            eq(users.roleId, adminRoleId),
+            eq(users.adminId, users.id),
+            and(isNull(users.adminId), ne(users.roleId, superadminRoleId))
+          )
+        )
+      );
+
+    const [clientsCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(clients)
+      .where(eq(clients.isActive, true));
+
+    const [purchaseTotals] = await db
+      .select({
+        count: sql<number>`count(*)`,
+        taxVolume: sql<number>`coalesce(sum(coalesce(${purchases.cd}, 0) + coalesce(${purchases.rd}, 0) + coalesce(${purchases.sd}, 0) + coalesce(${purchases.vat}, 0) + coalesce(${purchases.at}, 0)), 0)`,
+        vatVolume: sql<number>`coalesce(sum(coalesce(${purchases.vat}, 0)), 0)`
+      })
+      .from(purchases);
+
+    return c.json({
+      success: true,
+      summary: {
+        totalTenants: Number(tenantCount?.count || 0),
+        totalClients: Number(clientsCount?.count || 0),
+        totalPurchases: Number(purchaseTotals?.count || 0),
+        totalTaxVolume: Number(purchaseTotals?.taxVolume || 0),
+        totalVatVolume: Number(purchaseTotals?.vatVolume || 0)
+      }
+    });
+  } catch (error: any) {
+    return c.json({ success: false, message: error?.message || "Failed to load metrics" }, 500);
+  }
+}
+
 // 17. Live Notifications for SuperAdmin (Pending signups, wallet recharges & alerts)
 export async function getNotifications(c: Context) {
   try {

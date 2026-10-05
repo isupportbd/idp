@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
+import { denyRole } from "@/middlewares/role-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
   listBills,
@@ -29,7 +30,7 @@ export const billingRouter = new Hono();
 
 // Auth + Subscription + Billing Feature Gate (via subscriptionMiddleware)
 // hasAccounts plan check is handled inside subscriptionMiddleware for /billing routes
-billingRouter.use("*", authMiddleware, subscriptionMiddleware);
+billingRouter.use("*", authMiddleware, denyRole("superadmin"), subscriptionMiddleware);
 
 // ── COLLECTIONS ENDPOINTS (Register before /:id wildcard) ─────────────
 billingRouter.get("/collections", zValidator("query", listCollectionsQuerySchema), listCollections);
