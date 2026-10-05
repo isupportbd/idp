@@ -14,7 +14,7 @@ const displayMonthName = computed(() => {
   const parts = model.value.split("-").map(Number);
   if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) return model.value;
   const d = new Date(parts[0], parts[1] - 1, 1);
-  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 });
 
 const triggerMonthPicker = () => {
@@ -165,6 +165,7 @@ const onInputChange = (e: Event) => {
   font-size: 0.9rem;
   letter-spacing: 0.3px;
   pointer-events: none;
+  white-space: nowrap;
 }
 
 .hidden-month-input {
