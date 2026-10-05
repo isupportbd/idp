@@ -60,7 +60,7 @@ const DEFAULT_SYSTEM_COLUMN_MAPPINGS = [
   { dbColumn: "be_no", label: "be_no", excelHeader: "BE_NO", isCalculated: false, isFromDb: false, isRegexExtracted: false },
   { dbColumn: "be_date", label: "be_date", excelHeader: "BE_DATE", isCalculated: false, isFromDb: false, isRegexExtracted: false },
   { dbColumn: "hs_code", label: "hs_code", excelHeader: "HSCode", isCalculated: false, isFromDb: false, isRegexExtracted: false },
-  { dbColumn: "item_name", label: "item_name", excelHeader: "Description", isCalculated: false, isFromDb: true, isRegexExtracted: false },
+  { dbColumn: "item_name", label: "item_name", excelHeader: "", isCalculated: false, isFromDb: true, isRegexExtracted: false },
   { dbColumn: "lc_number", label: "lc_number", excelHeader: "LC Number", isCalculated: false, isFromDb: false, isRegexExtracted: false },
   { dbColumn: "net_wt", label: "net_wt", excelHeader: "Net_WT", isCalculated: false, isFromDb: false, isRegexExtracted: false },
   { dbColumn: "excess_qty", label: "excess_qty", excelHeader: "Description", isCalculated: false, isFromDb: false, isRegexExtracted: true },
@@ -77,24 +77,6 @@ const DEFAULT_SYSTEM_COLUMN_MAPPINGS = [
 ];
 
 const toCamel = (str: string) => str.replace(/_([a-z])/g, (_, g) => g.toUpperCase());
-
-const BUILTIN_HEADER_ALIASES: Record<string, string[]> = {
-  office: ["office", "customsoffice", "customs_office", "port", "customoffice"],
-  beNo: ["beno", "be_no", "be", "billofentry", "billofentryno", "benumber", "cnumber", "customsno", "bill_of_entry", "entryno"],
-  beDate: ["bedate", "be_date", "date", "billofentrydate", "entrydate", "submissiondate", "bill_of_entry_date"],
-  hsCode: ["hscode", "hs_code", "hs", "awhscode", "tariffcode", "commoditycode", "item_hs_code", "itemhscode"],
-  itemName: ["itemname", "item_name", "description", "goodsdesc", "goods_description", "itemdesc", "commodity", "commercialdesc", "goods", "desc"],
-  lcNumber: ["lcnumber", "lc_number", "lcno", "lc_no", "lc"],
-  netWt: ["netwt", "net_wt", "netweight", "net_weight", "quantity", "qty", "weight", "netqty", "net_qty"],
-  excessQty: ["excessqty", "excess_qty", "excess", "exqty"],
-  assValue: ["assvalue", "ass_value", "assessablevalue", "assessable_value", "assessedvalue", "cifvalue", "customsvalue", "assval"],
-  cd: ["cd", "customsduty", "customs_duty"],
-  rd: ["rd", "regulatoryduty", "regulatory_duty"],
-  sd: ["sd", "supplementaryduty", "supplementary_duty"],
-  vat: ["vat", "valueaddedtax"],
-  at: ["at", "advancetax", "advance_tax", "ait"],
-  bin: ["bin", "binnumber", "bin_number", "importerbin", "buyerbin"]
-};
 
 // ── 1. PROCESS UPLOADED EXCEL/CSV FILE ────────────────────────────────
 
@@ -116,12 +98,12 @@ export const processUpload: Handler = async (c: any) => {
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
 
-    // Load active column mappings from DB (or fallback to defaults if table is empty)
+    // Load active column mappings strictly from database
     const rawDbMappings = await db.select().from(columnMappings);
     const dbMappings = rawDbMappings.length > 0 ? rawDbMappings : DEFAULT_SYSTEM_COLUMN_MAPPINGS;
 
     // ── Smart Header Detection ──────────────────────────────────────────
-    // Extracts headers even if top rows contain logos, dates, or titles
+    // Identifies the row matching configured Excel headers in database column mappings
     const rawGrid = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: "" });
 
     if (!rawGrid || rawGrid.length === 0) {
@@ -147,20 +129,6 @@ export const processUpload: Handler = async (c: any) => {
         if (!cleanCell) continue;
 
         if (mappingHeaderAliases.includes(cleanCell)) {
-          matchCount += 2;
-        } else if (
-          cleanCell.includes("beno") ||
-          cleanCell === "be" ||
-          cleanCell.includes("hscode") ||
-          cleanCell.includes("netwt") ||
-          cleanCell.includes("assessable") ||
-          cleanCell.includes("assvalue") ||
-          cleanCell.includes("itemname") ||
-          cleanCell.includes("commodity") ||
-          cleanCell.includes("description") ||
-          cleanCell.includes("desc") ||
-          cleanCell.includes("lcnumber")
-        ) {
           matchCount += 1;
         }
       }
@@ -201,7 +169,7 @@ export const processUpload: Handler = async (c: any) => {
       const mappedRow: any = {};
       const rowKeys = Object.keys(row);
 
-      // 1. Map via active DB column mappings
+      // Map strictly using database column mappings
       for (const mapping of dbMappings) {
         if (!mapping.excelHeader || !mapping.excelHeader.trim()) continue;
         const cleanExcelHeader = mapping.excelHeader.trim().toLowerCase().replace(/[\s\.\_\-\/]+/g, "");
@@ -214,7 +182,7 @@ export const processUpload: Handler = async (c: any) => {
           const camelKey = toCamel(mapping.dbColumn);
 
           // Smart regex extraction for excess_qty
-          if (camelKey === "excessQty" || mapping.isRegexExtracted) {
+          if (camelKey === "excessQty" || mapping.dbColumn === "excess_qty" || mapping.isRegexExtracted) {
             const cleanVal = String(val).replace(/,/g, "");
             const keywordMatch = cleanVal.match(/(?:ex(?:ceess|cess)?|qty)[\s:]*(\d+(\.\d+)?)/i);
             if (keywordMatch && keywordMatch[1]) {
@@ -229,38 +197,12 @@ export const processUpload: Handler = async (c: any) => {
             }
           }
 
-          if (camelKey === "beDate") {
+          if (camelKey === "beDate" || mapping.dbColumn === "be_date") {
             val = parseDateValue(val);
           }
 
           mappedRow[camelKey] = val;
           mappedRow[mapping.dbColumn] = val;
-        }
-      }
-
-      // 2. Builtin Fallback Aliases (in case any field wasn't mapped in DB)
-      for (const [targetKey, aliases] of Object.entries(BUILTIN_HEADER_ALIASES)) {
-        if (mappedRow[targetKey] === undefined || mappedRow[targetKey] === null || String(mappedRow[targetKey]).trim() === "") {
-          const matchKey = rowKeys.find((k) => {
-            const cleanK = k.trim().toLowerCase().replace(/[\s\.\_\-\/]+/g, "");
-            return aliases.includes(cleanK);
-          });
-          if (matchKey && row[matchKey] !== undefined && row[matchKey] !== null && String(row[matchKey]).trim() !== "") {
-            let val = row[matchKey];
-            if (targetKey === "excessQty") {
-              const cleanVal = String(val).replace(/,/g, "");
-              const keywordMatch = cleanVal.match(/(?:ex(?:ceess|cess)?|qty)[\s:]*(\d+(\.\d+)?)/i);
-              if (keywordMatch && keywordMatch[1]) {
-                val = parseNumber(keywordMatch[1]);
-              } else {
-                const numbers = cleanVal.match(/\d+(\.\d+)?/g);
-                val = numbers && numbers.length > 0 ? parseNumber(numbers[numbers.length - 1]) : 0;
-              }
-            } else if (targetKey === "beDate") {
-              val = parseDateValue(val);
-            }
-            mappedRow[targetKey] = val;
-          }
         }
       }
 
