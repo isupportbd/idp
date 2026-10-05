@@ -62,6 +62,31 @@ export async function syncDatabaseSchemaAndSuperAdmin() {
     // Auto-clean stale column mapping entries
     await executeSingleSql(`DELETE FROM column_mappings WHERE db_column IN ('client_name', 'clientName') OR label = 'client_name'`);
     
+    // Auto-seed default system column mappings if table is empty
+    await executeSingleSql(`
+      INSERT INTO column_mappings (db_column, label, excel_header, is_calculated, is_from_db, is_regex_extracted)
+      VALUES
+        ('office', 'office', 'Office', false, false, false),
+        ('be_no', 'be_no', 'BE_NO', false, false, false),
+        ('be_date', 'be_date', 'BE_DATE', false, false, false),
+        ('hs_code', 'hs_code', 'HSCode', false, false, false),
+        ('item_name', 'item_name', '', false, true, false),
+        ('lc_number', 'lc_number', 'LC Number', false, false, false),
+        ('net_wt', 'net_wt', 'Net_WT', false, false, false),
+        ('excess_qty', 'excess_qty', 'Description', false, false, true),
+        ('total_qty', 'total_qty', '', true, false, false),
+        ('ass_value', 'ass_value', 'Ass. Value', false, false, false),
+        ('cd', 'cd', 'CD', false, false, false),
+        ('rd', 'rd', 'RD', false, false, false),
+        ('sd', 'sd', 'SD', false, false, false),
+        ('base_value_of_vat', 'base_value_of_vat', '', true, false, false),
+        ('vat', 'vat', 'VAT', false, false, false),
+        ('unit_value', 'unit_value', '', true, false, false),
+        ('at', 'at', 'AT', false, false, false),
+        ('bin', 'bin', 'BIN', false, false, false)
+      ON CONFLICT (db_column) DO NOTHING
+    `);
+    
     // Ensure all plan columns exist
     await executeSingleSql(`ALTER TABLE plans ADD COLUMN IF NOT EXISTS max_clients INTEGER NOT NULL DEFAULT 50`);
     await executeSingleSql(`ALTER TABLE plans ADD COLUMN IF NOT EXISTS max_storage_mb INTEGER NOT NULL DEFAULT 1024`);
