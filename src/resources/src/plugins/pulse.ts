@@ -49,8 +49,12 @@ function createPulse(): PulseClient {
   const ensureConnected = () => {
     if (socket) return socket;
 
+    const token = localStorage.getItem("idp_access_token") || localStorage.getItem("auth_token") || "";
+
     socket = io(socketUrl(), {
       withCredentials: true,
+      auth: token ? { token } : undefined,
+      extraHeaders: token ? { Authorization: `Bearer ${token}` } : undefined,
       transports: ["websocket", "polling"]
     });
 

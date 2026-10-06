@@ -42,15 +42,35 @@ function rolesFromPayload(payload: Record<string, unknown>) {
  * How: Parses access cookie, verifies JWT, then normalizes user/role claims.
  */
 export async function authFromSocketHandshake(socket: Socket): Promise<RealtimeAuthContext> {
-  const cookies = parseCookieHeader(socket.handshake.headers.cookie);
-  const rawToken = cookies[`${cookieConfig.name}_access`];
+  let token: string | undefined = undefined;
 
-  if (!rawToken) {
-    return unauthenticatedRealtimeAuth();
+  // 1. Check socket handshake auth payload
+  if (socket.handshake.auth?.token) {
+    token = String(socket.handshake.auth.token);
   }
 
-  // Strip Hono's signed-cookie HMAC signature (last .<base64> part appended by setSignedCookie)
-  const token = rawToken.lastIndexOf(".") > 0 ? rawToken.substring(0, rawToken.lastIndexOf(".")) : rawToken;
+  // 2. Check Authorization header
+  if (!token && socket.handshake.headers.authorization) {
+    const authHeader = socket.handshake.headers.authorization;
+    if (authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7).trim();
+    } else {
+      token = authHeader.trim();
+    }
+  }
+
+  // 3. Fallback to signed cookie
+  if (!token) {
+    const cookies = parseCookieHeader(socket.handshake.headers.cookie);
+    const rawToken = cookies[`${cookieConfig.name}_access`];
+    if (rawToken) {
+      token = rawToken.lastIndexOf(".") > 0 ? rawToken.substring(0, rawToken.lastIndexOf(".")) : rawToken;
+    }
+  }
+
+  if (!token) {
+    return unauthenticatedRealtimeAuth();
+  }
 
   const payload = await jwt.verifyToken(token, "access");
   if (!payload) {

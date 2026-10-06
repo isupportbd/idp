@@ -1483,9 +1483,9 @@ onUnmounted(() => {
           </div>
 
           <!-- Submission ID Indicator (if available) -->
-          <div v-if="submissionId" class="d-flex align-items-center gap-2">
-            <span class="badge bg-success bg-opacity-20 text-success border border-success border-opacity-30 rounded-pill px-2.5 py-1 font-monospace" style="font-size: 0.75rem;">
-              <i class="bi bi-check-circle me-1"></i> Sub: {{ submissionId }}
+          <div v-if="submissionId" class="d-flex align-items-center">
+            <span class="badge bg-success text-white border border-success rounded-pill px-3 py-1 font-monospace fw-semibold shadow-sm d-inline-flex align-items-center gap-1.5" style="font-size: 0.8rem; letter-spacing: 0.5px;">
+              <i class="bi bi-check-circle-fill"></i> Sub: {{ submissionId }}
             </span>
           </div>
         </div>

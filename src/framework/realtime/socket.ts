@@ -76,6 +76,7 @@ function registerAuthAndRooms() {
       socket.join("auth");
       if (auth.userId) socket.join(`user:${auth.userId}`);
       for (const role of auth.roles) socket.join(`role:${role}`);
+      if (auth.payload?.adminId) socket.join(`tenant:${auth.payload.adminId}`);
     } else {
       socket.join("guest");
     }
