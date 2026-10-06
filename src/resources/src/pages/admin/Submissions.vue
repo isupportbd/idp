@@ -162,12 +162,20 @@ const openRecordModal = (item?: SubmissionItem) => {
   showModal.value = true;
 };
 
+const handleSubmissionIdInput = (e: Event) => {
+  const target = e.target as HTMLInputElement;
+  const cleaned = target.value.replace(/\D/g, "");
+  form.value.submissionId = cleaned;
+  target.value = cleaned;
+};
+
 const handleSaveSubmission = async () => {
   if (!form.value.clientId) {
     toast.error("Please select an active client");
     return;
   }
-  if (!form.value.submissionId.trim()) {
+  const subId = form.value.submissionId.replace(/\D/g, "").trim();
+  if (!subId) {
     toast.error("Submission ID is required");
     return;
   }
@@ -177,7 +185,7 @@ const handleSaveSubmission = async () => {
     await recordSubmission({
       clientId: form.value.clientId,
       taxPeriod: form.value.taxPeriod || selectedMonth.value,
-      submissionId: form.value.submissionId.trim(),
+      submissionId: subId,
       remarks: form.value.remarks?.trim() || undefined
     });
     toast.success("Submission ID recorded successfully");
@@ -689,13 +697,14 @@ const printReport = () => {
                   Submission ID <span class="text-danger">*</span>
                 </label>
                 <input
-                  v-model="form.submissionId"
+                  :value="form.submissionId"
                   type="text"
                   class="form-control form-control-lg idp-modal-input font-monospace"
                   placeholder="e.g. 202608001"
                   required
                   autofocus
                   style="font-size: 1rem; height: 42px;"
+                  @input="handleSubmissionIdInput"
                 />
               </div>
 

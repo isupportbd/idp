@@ -137,14 +137,21 @@ const subIdInput = ref("");
 const isSavingSubId = ref(false);
 
 const openSubIdModal = () => {
-  subIdInput.value = submissionId.value || "";
+  subIdInput.value = (submissionId.value || "").replace(/\D/g, "");
   showSubIdModal.value = true;
+};
+
+const handleSubIdInput = (e: Event) => {
+  const target = e.target as HTMLInputElement;
+  const cleaned = target.value.replace(/\D/g, "");
+  subIdInput.value = cleaned;
+  target.value = cleaned;
 };
 
 const saveSubmissionId = async () => {
   if (!selectedClientId.value || !selectedMonthYear.value) return;
   isSavingSubId.value = true;
-  const subVal = subIdInput.value.trim();
+  const subVal = subIdInput.value.replace(/\D/g, "").trim();
   try {
     await axios.post("/api/submissions", {
       clientId: selectedClientId.value,
@@ -2167,10 +2174,11 @@ onMounted(async () => {
             <div class="mb-3">
               <label class="form-label text-white small fw-semibold">NBR Submission ID / Reference</label>
               <input
-                v-model="subIdInput"
+                :value="subIdInput"
                 type="text"
                 class="form-control idp-input font-monospace text-emerald-400 fw-bold fs-5"
                 placeholder="e.g. 84920194"
+                @input="handleSubIdInput"
                 @keyup.enter="saveSubmissionId"
               />
               <div class="text-muted small mt-1.5" style="font-size: 0.75rem;">
