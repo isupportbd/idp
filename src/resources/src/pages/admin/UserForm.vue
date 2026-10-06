@@ -259,9 +259,9 @@ onMounted(async () => {
 
     <!-- Main Form Grid -->
     <div v-else class="row g-4">
-      <!-- Left Column: User Profile & Credentials -->
-      <div class="col-lg-5">
-        <div class="card idp-form-card h-100 shadow-sm">
+      <!-- Top: User Profile & Credentials -->
+      <div class="col-12">
+        <div class="card idp-form-card shadow-sm">
           <div class="card-header bg-transparent border-secondary border-opacity-25 py-3">
             <h5 class="card-title text-white mb-0 d-flex align-items-center gap-2 fs-6 fw-bold">
               <i class="bi bi-person-badge text-primary"></i> Account & Profile Information
@@ -269,8 +269,9 @@ onMounted(async () => {
           </div>
 
           <div class="card-body p-4">
+            <div class="row g-3">
             <!-- Full Name -->
-            <div class="mb-3">
+            <div class="col-md-6 col-xl-4">
               <label class="form-label text-muted small fw-semibold mb-1">
                 FULL NAME <span class="text-danger">*</span>
               </label>
@@ -289,7 +290,7 @@ onMounted(async () => {
             </div>
 
             <!-- Email Address -->
-            <div class="mb-3">
+            <div class="col-md-6 col-xl-4">
               <label class="form-label text-muted small fw-semibold mb-1">
                 EMAIL ADDRESS <span class="text-danger">*</span>
               </label>
@@ -308,7 +309,7 @@ onMounted(async () => {
             </div>
 
             <!-- Mobile Number -->
-            <div class="mb-3">
+            <div class="col-md-6 col-xl-4">
               <label class="form-label text-muted small fw-semibold mb-1">
                 MOBILE NUMBER <span class="text-danger">*</span>
               </label>
@@ -327,7 +328,7 @@ onMounted(async () => {
             </div>
 
             <!-- Password -->
-            <div class="mb-3">
+            <div class="col-md-6 col-xl-4">
               <label class="form-label text-muted small fw-semibold mb-1 d-flex justify-content-between">
                 <span>PASSWORD {{ isEditMode ? '(Leave blank to keep unchanged)' : '*' }}</span>
                 <span v-if="!isEditMode" class="text-muted fw-normal">Min 6 chars</span>
@@ -355,34 +356,35 @@ onMounted(async () => {
             </div>
 
             <!-- Role Selection -->
-            <div class="mb-3">
+            <div class="col-md-6 col-xl-4">
               <label class="form-label text-muted small fw-semibold mb-1">ACCOUNT ROLE</label>
-              <div class="role-badge-card p-3 rounded d-flex align-items-center gap-3">
+              <div class="role-badge-card px-3 rounded d-flex align-items-center gap-3">
                 <div class="role-icon-box">
-                  <i class="bi bi-person-gear text-primary fs-4"></i>
+                  <i class="bi bi-person-gear text-primary fs-5"></i>
                 </div>
-                <div>
-                  <div class="text-white fw-bold">Staff / Sub-User</div>
-                  <div class="text-muted small">Custom granular module permissions assigned below</div>
+                <div class="lh-sm">
+                  <div class="text-white fw-bold small">Staff / Sub-User</div>
+                  <div class="text-muted" style="font-size: 0.75rem;">Permissions are assigned below</div>
                 </div>
               </div>
             </div>
 
             <!-- Account Status -->
-            <div class="mb-2">
+            <div class="col-md-6 col-xl-4">
               <label class="form-label text-muted small fw-semibold mb-1">ACCOUNT STATUS</label>
               <select v-model="form.status" class="form-select idp-select">
                 <option value="active">Active (Can log in immediately)</option>
                 <option value="inactive">Inactive / Suspended (Access disabled)</option>
               </select>
             </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Right Column: Granular Module Permissions -->
-      <div class="col-lg-7">
-        <div class="card idp-form-card h-100 shadow-sm">
+      <!-- Bottom: Granular Module Permissions -->
+      <div class="col-12">
+        <div class="card idp-form-card shadow-sm">
           <div class="card-header bg-transparent border-secondary border-opacity-25 py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
               <h5 class="card-title text-white mb-0 d-flex align-items-center gap-2 fs-6 fw-bold">
@@ -410,7 +412,7 @@ onMounted(async () => {
           </div>
 
           <div class="card-body p-4">
-            <div class="d-flex flex-column gap-3">
+            <div class="module-grid">
               <div
                 v-for="mod in availableModules"
                 :key="mod.id"
@@ -442,19 +444,23 @@ onMounted(async () => {
                     <div class="text-muted small lh-sm">{{ mod.description }}</div>
 
                     <div v-if="isModuleEnabled(mod) && mod.actions.length > 1" class="action-grid mt-3">
-                      <div v-for="action in mod.actions" :key="action.key" class="form-check m-0">
+                      <label
+                        v-for="action in mod.actions"
+                        :key="action.key"
+                        :for="'perm-' + action.key"
+                        class="action-check"
+                        :class="{ 'action-check-disabled': isActionDisabled(mod, action.key) }"
+                      >
                         <input
                           :id="'perm-' + action.key"
                           type="checkbox"
-                          class="form-check-input cursor-pointer"
+                          class="action-check-input"
                           :checked="hasKey(action.key)"
                           :disabled="isActionDisabled(mod, action.key)"
                           @change="toggleAction(mod, action.key)"
                         />
-                        <label :for="'perm-' + action.key" class="form-check-label small text-light cursor-pointer">
-                          {{ action.label }}
-                        </label>
-                      </div>
+                        <span class="action-check-label">{{ action.label }}</span>
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -569,14 +575,15 @@ onMounted(async () => {
 
 /* Role Card */
 .role-badge-card {
+  height: 40px;
   background: rgba(59, 130, 246, 0.08);
   border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
 .role-icon-box {
-  width: 42px;
-  height: 42px;
-  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
   background: rgba(59, 130, 246, 0.15);
   display: flex;
   align-items: center;
@@ -601,11 +608,78 @@ onMounted(async () => {
   border-color: rgba(59, 130, 246, 0.45) !important;
 }
 
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 575px) {
+  .module-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .action-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 0.5rem 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.6rem 1rem;
   padding-top: 0.75rem;
   border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+/* Action checkbox: square box, fixed gap to the label, vertically centred */
+.action-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  cursor: pointer;
+  user-select: none;
+  color: #e2e8f0;
+  font-size: 0.85rem;
+  line-height: 1.2;
+}
+
+.action-check-input {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-radius: 4px;
+  background-color: #14181e;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 11px 11px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.action-check-input:hover {
+  border-color: #3b82f6;
+}
+
+.action-check-input:checked {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M3.5 8.5l3 3 6-6.5'/%3e%3c/svg%3e");
+}
+
+.action-check-input:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.5);
+  outline-offset: 2px;
+}
+
+.action-check-disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.action-check-disabled .action-check-input {
+  cursor: not-allowed;
 }
 </style>
