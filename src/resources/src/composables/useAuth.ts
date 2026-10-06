@@ -71,6 +71,7 @@ export function hasAccountsAccess(): boolean {
 /**
  * Why: Action-level permission check for sub-users (mirrors backend requirePermission).
  * How: Passes when the user holds ANY of the given keys (e.g. "clients.delete").
+ *      Supports both granular keys ("purchases.view") and legacy module keys ("purchases").
  *      Tenant admins pass everything; superadmin never operates tenant modules.
  */
 export function can(...keys: string[]): boolean {
@@ -79,7 +80,11 @@ export function can(...keys: string[]): boolean {
   if (hasRole("superadmin")) return false;
   if (isTenantAdmin()) return true;
   const granted: string[] = Array.isArray(subject.permissions) ? subject.permissions : [];
-  return keys.some((key) => granted.includes(key));
+  if (!granted.length) return false;
+  return keys.some((key) => {
+    const mod = key.split(".")[0];
+    return granted.includes(key) || granted.includes(mod) || granted.some((g) => key.startsWith(`${g}.`));
+  });
 }
 
 // View permission(s) that unlock each module's menu entry and pages
@@ -94,11 +99,13 @@ export function canAccessModule(moduleId: string): boolean {
 
   // Superadmin is platform owner and does not operate tenant firm business modules
   if (hasRole("superadmin")) return false;
+  if (isTenantAdmin()) return true;
 
   // Billing module strictly requires tenant plan accounts capability
   if ((moduleId === "billing" || moduleId === "accounts") && !hasAccountsAccess()) {
     return false;
   }
 
-  return can(...(MODULE_VIEW_KEYS[moduleId] ?? [`${moduleId}.view`]));
+  const views = MODULE_VIEW_KEYS[moduleId] ?? [`${moduleId}.view`];
+  return can(...views, moduleId);
 }
