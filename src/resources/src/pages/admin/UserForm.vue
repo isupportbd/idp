@@ -437,7 +437,7 @@ onMounted(async () => {
                     >
                       <i :class="mod.icon" class="text-primary"></i>
                       {{ mod.name }}
-                      <span v-if="isModuleEnabled(mod)" class="badge bg-primary bg-opacity-25 text-primary fw-normal ms-auto">
+                      <span v-if="isModuleEnabled(mod)" class="badge action-count fw-normal ms-auto">
                         {{ grantedCount(mod) }} / {{ mod.actions.length }}
                       </span>
                     </label>
@@ -495,9 +495,9 @@ onMounted(async () => {
 }
 
 .idp-form-card {
-  background: #1e242d;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
+  background: var(--idp-card);
+  border: 1px solid var(--idp-border);
+  border-radius: var(--idp-radius);
 }
 
 /* Unified Input Wrapper to Eliminate Broken Borders */
@@ -513,7 +513,7 @@ onMounted(async () => {
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: #6c757d;
+  color: var(--idp-text-dim);
   font-size: 1rem;
   pointer-events: none;
   z-index: 5;
@@ -523,22 +523,21 @@ onMounted(async () => {
   width: 100%;
   height: 40px;
   padding: 8px 12px 8px 38px;
-  background-color: #14181e !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background-color: var(--idp-bg) !important;
+  border: 1px solid var(--idp-border) !important;
   border-radius: 6px !important;
-  color: #f8fafc !important;
+  color: var(--idp-text-main) !important;
   font-size: 0.88rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .idp-field:focus {
-  border-color: #3b82f6 !important;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+  border-color: var(--idp-primary) !important;
+  box-shadow: none !important;
   outline: none;
 }
 
 .idp-field::placeholder {
-  color: #64748b;
+  color: var(--idp-text-dim);
 }
 
 .btn-eye-toggle {
@@ -548,43 +547,42 @@ onMounted(async () => {
   transform: translateY(-50%);
   background: transparent;
   border: none;
-  color: #64748b;
+  color: var(--idp-text-dim);
   padding: 4px 6px;
   cursor: pointer;
   z-index: 5;
-  transition: color 0.2s ease;
 }
 
 .btn-eye-toggle:hover {
-  color: #f8fafc;
+  color: var(--idp-text-main);
 }
 
 .idp-select {
   height: 40px;
-  background-color: #14181e !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background-color: var(--idp-bg) !important;
+  border: 1px solid var(--idp-border) !important;
   border-radius: 6px !important;
-  color: #f8fafc !important;
+  color: var(--idp-text-main) !important;
   font-size: 0.88rem;
 }
 
 .idp-select:focus {
-  border-color: #3b82f6 !important;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+  border-color: var(--idp-primary) !important;
+  box-shadow: none !important;
 }
 
 /* Role Card */
 .role-badge-card {
   height: 40px;
-  background: rgba(59, 130, 246, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: var(--idp-bg);
+  border: 1px solid var(--idp-border);
 }
 
 .role-icon-box {
   width: 28px;
   height: 28px;
   border-radius: 6px;
-  background: rgba(59, 130, 246, 0.15);
+  background: var(--idp-bg-surface);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -593,19 +591,23 @@ onMounted(async () => {
 
 /* Permission Cards */
 .permission-card {
-  background: #14181e;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: all 0.2s ease-in-out;
+  background: var(--idp-bg);
+  border: 1px solid var(--idp-border);
 }
 
 .permission-card:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(59, 130, 246, 0.4);
+  border-color: var(--idp-border-light);
 }
 
 .permission-card-active {
-  background: rgba(59, 130, 246, 0.1) !important;
-  border-color: rgba(59, 130, 246, 0.45) !important;
+  background: var(--idp-card-hover);
+  border-color: var(--idp-border-light);
+}
+
+.action-count {
+  background: var(--idp-bg-surface);
+  border: 1px solid var(--idp-border);
+  color: var(--idp-text-muted);
 }
 
 .module-grid {
@@ -626,7 +628,7 @@ onMounted(async () => {
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 0.6rem 1rem;
   padding-top: 0.75rem;
-  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  border-top: 1px dashed var(--idp-border);
 }
 
 /* Action checkbox: keeps the IDP theme colours (idp-dark.scss .form-check-input),
@@ -638,7 +640,7 @@ onMounted(async () => {
   margin: 0;
   cursor: pointer;
   user-select: none;
-  color: #e2e8f0;
+  color: var(--idp-text-main);
   font-size: 0.85rem;
   line-height: 1.2;
 }
