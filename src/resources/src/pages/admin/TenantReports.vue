@@ -83,7 +83,15 @@ const availableMonths = ref<string[]>([]);
 const purchaseMonths = ref<string[]>([]);
 const submissionMonths = ref<string[]>([]);
 const submissionsMap = ref<Record<string, string>>({});
-const selectedMonthYear = ref("");
+
+const getDefaultPreviousMonth = () => {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+};
+
+const selectedMonthYear = ref(getDefaultPreviousMonth());
 
 const unitConversions = ref<UnitConversion[]>([]);
 const selectedUnitId = ref<number | null>(null);
@@ -589,13 +597,7 @@ const fetchAvailableMonths = async (cId: number, preserveMonth = false) => {
       availableMonths.value = overview.allMonths || res.data.data || [];
 
       if (!preserveMonth || !selectedMonthYear.value) {
-        if (availableMonths.value.length > 0) {
-          selectedMonthYear.value = availableMonths.value[0];
-        } else {
-          // Default to current year-month (e.g. 2026-08)
-          const d = new Date();
-          selectedMonthYear.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-        }
+        selectedMonthYear.value = getDefaultPreviousMonth();
       }
     } else {
       purchaseMonths.value = [];
@@ -603,8 +605,7 @@ const fetchAvailableMonths = async (cId: number, preserveMonth = false) => {
       submissionsMap.value = {};
       availableMonths.value = [];
       if (!preserveMonth || !selectedMonthYear.value) {
-        const d = new Date();
-        selectedMonthYear.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        selectedMonthYear.value = getDefaultPreviousMonth();
       }
     }
   } catch (e) {
@@ -959,7 +960,7 @@ const clearClient = () => {
   selectedClientId.value = null;
   clientSearchText.value = "";
   availableMonths.value = [];
-  selectedMonthYear.value = "";
+  selectedMonthYear.value = getDefaultPreviousMonth();
   selectedUnitId.value = null;
   selectedItemId.value = null;
   itemSearchText.value = "";
@@ -1111,7 +1112,7 @@ const exportActiveReport = async () => {
 };
 
 // Monthly Summary Modal Handlers
-const summaryModalMonth = ref(selectedMonthYear.value || "2026-08");
+const summaryModalMonth = ref(selectedMonthYear.value || getDefaultPreviousMonth());
 const isDownloadingSummary = ref(false);
 const summaryErrorMsg = ref("");
 
