@@ -62,16 +62,6 @@ const moduleKeys = (mod: PermissionModule) => mod.actions.map((a) => a.key);
 
 const hasKey = (key: string) => form.value.permissions.includes(key);
 const isModuleEnabled = (mod: PermissionModule) => viewKeys(mod).some(hasKey);
-const grantedCount = (mod: PermissionModule) => moduleKeys(mod).filter(hasKey).length;
-
-const toggleModule = (mod: PermissionModule) => {
-  const keys = moduleKeys(mod);
-  if (isModuleEnabled(mod)) {
-    form.value.permissions = form.value.permissions.filter((k) => !keys.includes(k));
-  } else {
-    form.value.permissions = [...new Set([...form.value.permissions, ...viewKeys(mod)])];
-  }
-};
 
 const toggleAction = (mod: PermissionModule, key: string) => {
   if (hasKey(key)) {
@@ -102,6 +92,67 @@ const clearAllModules = () => {
 };
 
 const enabledModuleCount = computed(() => availableModules.value.filter(isModuleEnabled).length);
+
+// ── Permission matrix ───────────────────────────────────────────────
+// One row per section ("clients", "billing", "collections"...), fixed action columns,
+// so every row has the same height regardless of what is ticked.
+const STANDARD_COLUMNS = [
+  { suffix: "view", label: "View" },
+  { suffix: "create", label: "Create" },
+  { suffix: "edit", label: "Edit" },
+  { suffix: "delete", label: "Delete" }
+] as const;
+
+type MatrixRow = {
+  key: string;
+  mod: PermissionModule;
+  title: string;
+  subtitle: string;
+  keys: string[];
+  cells: Record<string, PermissionAction | undefined>;
+  extras: PermissionAction[];
+};
+
+const matrixRows = computed<MatrixRow[]>(() =>
+  availableModules.value.flatMap((mod) => {
+    const prefixes = [...new Set(mod.actions.map((a) => a.key.split(".")[0]))];
+    return prefixes.map((prefix) => {
+      const actions = mod.actions.filter((a) => a.key.startsWith(`${prefix}.`));
+      const cells: Record<string, PermissionAction | undefined> = {};
+      STANDARD_COLUMNS.forEach((col) => {
+        cells[col.suffix] = actions.find((a) => a.key === `${prefix}.${col.suffix}`);
+      });
+      const standardKeys = STANDARD_COLUMNS.map((col) => `${prefix}.${col.suffix}`);
+      const isSubSection = prefix !== mod.id;
+      const prefixLabel = prefix.charAt(0).toUpperCase() + prefix.slice(1);
+      return {
+        key: prefix,
+        mod,
+        title: isSubSection ? prefixLabel : mod.name,
+        subtitle: isSubSection ? `Part of ${mod.name}` : mod.description,
+        keys: actions.map((a) => a.key),
+        cells,
+        extras: actions.filter((a) => !standardKeys.includes(a.key))
+      };
+    });
+  })
+);
+
+const rowGrantedCount = (row: MatrixRow) => row.keys.filter(hasKey).length;
+const isRowFull = (row: MatrixRow) => row.keys.length > 0 && row.keys.every(hasKey);
+const isRowPartial = (row: MatrixRow) => !isRowFull(row) && row.keys.some(hasKey);
+
+const toggleRow = (row: MatrixRow) => {
+  if (isRowFull(row)) {
+    form.value.permissions = form.value.permissions.filter((k) => !row.keys.includes(k));
+  } else {
+    form.value.permissions = [...new Set([...form.value.permissions, ...row.keys])];
+  }
+};
+
+// Show the catalog label under the checkbox only when it adds meaning (e.g. "Upload" under Create)
+const cellCaption = (action: PermissionAction | undefined, columnLabel: string) =>
+  action && !action.label.toLowerCase().startsWith(columnLabel.toLowerCase()) ? action.label : "";
 
 const fetchCatalog = async () => {
   try {
@@ -390,7 +441,7 @@ onMounted(async () => {
               <h5 class="card-title text-white mb-0 d-flex align-items-center gap-2 fs-6 fw-bold">
                 <i class="bi bi-shield-lock text-primary"></i> Module Access & Permissions
               </h5>
-              <span class="text-muted small">Enable a module, then choose which actions this sub-user can perform</span>
+              <span class="text-muted small">Tick the actions this sub-user can perform in each module</span>
             </div>
 
             <div class="d-flex align-items-center gap-2">
@@ -411,60 +462,98 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div class="card-body p-4">
-            <div class="module-grid">
-              <div
-                v-for="mod in availableModules"
-                :key="mod.id"
-                class="permission-card p-3 rounded"
-                :class="{ 'permission-card-active': isModuleEnabled(mod) }"
-              >
-                <div class="d-flex align-items-start gap-3">
-                  <div class="form-check form-switch pt-1 m-0">
-                    <input
-                      :id="'perm-' + mod.id"
-                      type="checkbox"
-                      role="switch"
-                      class="form-check-input cursor-pointer"
-                      :checked="isModuleEnabled(mod)"
-                      @change="toggleModule(mod)"
-                    />
-                  </div>
-                  <div class="flex-grow-1">
-                    <label
-                      :for="'perm-' + mod.id"
-                      class="text-white fw-semibold mb-1 d-flex align-items-center gap-2 cursor-pointer"
-                    >
-                      <i :class="mod.icon" class="text-primary"></i>
-                      {{ mod.name }}
-                      <span v-if="isModuleEnabled(mod)" class="badge action-count fw-normal ms-auto">
-                        {{ grantedCount(mod) }} / {{ mod.actions.length }}
-                      </span>
-                    </label>
-                    <div class="text-muted small lh-sm">{{ mod.description }}</div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table-custom permission-matrix">
+                <thead>
+                  <tr>
+                    <th class="col-module">Module</th>
+                    <th class="col-action text-center">All</th>
+                    <th v-for="col in STANDARD_COLUMNS" :key="col.suffix" class="col-action text-center">
+                      {{ col.label }}
+                    </th>
+                    <th class="col-other">Other</th>
+                    <th class="col-count text-end">Granted</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in matrixRows" :key="row.key" :class="{ 'row-granted': rowGrantedCount(row) > 0 }">
+                    <!-- Module -->
+                    <td class="col-module">
+                      <div class="d-flex align-items-center gap-2">
+                        <i :class="row.mod.icon" class="text-primary module-icon"></i>
+                        <div class="lh-sm">
+                          <div class="text-white fw-semibold">{{ row.title }}</div>
+                          <div class="text-muted module-desc">{{ row.subtitle }}</div>
+                        </div>
+                      </div>
+                    </td>
 
-                    <div v-if="isModuleEnabled(mod) && mod.actions.length > 1" class="action-grid mt-3">
-                      <label
-                        v-for="action in mod.actions"
-                        :key="action.key"
-                        :for="'perm-' + action.key"
-                        class="action-check"
-                        :class="{ 'action-check-disabled': isActionDisabled(mod, action.key) }"
-                      >
+                    <!-- Row: select all -->
+                    <td class="col-action text-center">
+                      <input
+                        :id="'perm-row-' + row.key"
+                        type="checkbox"
+                        class="form-check-input matrix-check"
+                        :checked="isRowFull(row)"
+                        :indeterminate="isRowPartial(row)"
+                        :title="isRowFull(row) ? 'Remove all' : 'Grant all'"
+                        @change="toggleRow(row)"
+                      />
+                    </td>
+
+                    <!-- Standard actions -->
+                    <td v-for="col in STANDARD_COLUMNS" :key="col.suffix" class="col-action text-center">
+                      <template v-if="row.cells[col.suffix]">
                         <input
-                          :id="'perm-' + action.key"
+                          :id="'perm-' + row.cells[col.suffix]!.key"
                           type="checkbox"
-                          class="form-check-input action-check-input"
-                          :checked="hasKey(action.key)"
-                          :disabled="isActionDisabled(mod, action.key)"
-                          @change="toggleAction(mod, action.key)"
+                          class="form-check-input matrix-check"
+                          :checked="hasKey(row.cells[col.suffix]!.key)"
+                          :disabled="isActionDisabled(row.mod, row.cells[col.suffix]!.key)"
+                          :title="row.cells[col.suffix]!.label"
+                          @change="toggleAction(row.mod, row.cells[col.suffix]!.key)"
                         />
-                        <span class="action-check-label">{{ action.label }}</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                        <div v-if="cellCaption(row.cells[col.suffix], col.label)" class="cell-caption">
+                          {{ cellCaption(row.cells[col.suffix], col.label) }}
+                        </div>
+                      </template>
+                      <span v-else class="text-muted cell-empty">—</span>
+                    </td>
+
+                    <!-- Special actions -->
+                    <td class="col-other">
+                      <div v-if="row.extras.length" class="d-flex flex-wrap gap-3">
+                        <label
+                          v-for="extra in row.extras"
+                          :key="extra.key"
+                          :for="'perm-' + extra.key"
+                          class="extra-check"
+                        >
+                          <input
+                            :id="'perm-' + extra.key"
+                            type="checkbox"
+                            class="form-check-input matrix-check"
+                            :checked="hasKey(extra.key)"
+                            @change="toggleAction(row.mod, extra.key)"
+                          />
+                          <span>{{ extra.label }}</span>
+                        </label>
+                      </div>
+                      <span v-else class="text-muted cell-empty">—</span>
+                    </td>
+
+                    <!-- Count -->
+                    <td class="col-count text-end">
+                      <span class="badge action-count fw-normal">{{ rowGrantedCount(row) }} / {{ row.keys.length }}</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="px-4 py-2 text-muted matrix-hint">
+              <i class="bi bi-info-circle me-1"></i>
+              Granting any action also grants <strong>View</strong> for that row. View cannot be removed while other actions are granted.
             </div>
           </div>
 
@@ -589,77 +678,112 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-/* Permission Cards */
-.permission-card {
+/* Permission matrix (same look as the IDP data tables, theme variables only) */
+.table-custom {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-custom thead tr {
   background: var(--idp-bg);
-  border: 1px solid var(--idp-border);
+  border-bottom: 1px solid var(--idp-border);
 }
 
-.permission-card:hover {
-  border-color: var(--idp-border-light);
-}
-
-.permission-card-active {
-  background: var(--idp-card-hover);
-  border-color: var(--idp-border-light);
-}
-
-.action-count {
-  background: var(--idp-bg-surface);
-  border: 1px solid var(--idp-border);
+.table-custom th {
+  padding: 12px 16px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   color: var(--idp-text-muted);
+  white-space: nowrap;
 }
 
-.module-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-  gap: 1rem;
-  align-items: start;
+.table-custom td {
+  height: 64px;
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--idp-border);
+  vertical-align: middle;
+  color: var(--idp-text-main);
 }
 
-@media (max-width: 575px) {
-  .module-grid {
-    grid-template-columns: 1fr;
-  }
+.table-custom tbody tr:last-child td {
+  border-bottom: none;
 }
 
-.action-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 0.6rem 1rem;
-  padding-top: 0.75rem;
-  border-top: 1px dashed var(--idp-border);
+.table-custom tbody tr:hover td {
+  background: var(--idp-card-hover);
 }
 
-/* Action checkbox: keeps the IDP theme colours (idp-dark.scss .form-check-input),
-   only fixes size, spacing to the label and vertical alignment */
-.action-check {
+.permission-matrix .col-module {
+  min-width: 260px;
+}
+
+.permission-matrix .col-action {
+  width: 84px;
+}
+
+.permission-matrix .col-other {
+  min-width: 180px;
+}
+
+.permission-matrix .col-count {
+  width: 96px;
+}
+
+.module-icon {
+  font-size: 1.05rem;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.module-desc {
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
+.matrix-check {
+  float: none;
+  margin: 0;
+  vertical-align: middle;
+}
+
+.cell-caption {
+  margin-top: 3px;
+  font-size: 0.68rem;
+  color: var(--idp-text-dim);
+  white-space: nowrap;
+}
+
+.cell-empty {
+  font-size: 0.85rem;
+  opacity: 0.6;
+}
+
+.extra-check {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   margin: 0;
   cursor: pointer;
-  user-select: none;
+  white-space: nowrap;
+}
+
+.action-count {
+  background: var(--idp-bg);
+  border: 1px solid var(--idp-border);
+  color: var(--idp-text-muted);
+}
+
+.row-granted .action-count {
   color: var(--idp-text-main);
-  font-size: 0.85rem;
-  line-height: 1.2;
+  border-color: var(--idp-border-light);
 }
 
-.action-check .action-check-input {
-  float: none;
-  flex: 0 0 auto;
-  width: 1.05em;
-  height: 1.05em;
-  margin: 0;
-  border-radius: 0.25em;
-}
-
-.action-check-disabled {
-  cursor: not-allowed;
-  opacity: 0.75;
-}
-
-.action-check-disabled .action-check-input {
-  cursor: not-allowed;
+.matrix-hint {
+  font-size: 0.75rem;
+  border-top: 1px solid var(--idp-border);
 }
 </style>
