@@ -7,7 +7,7 @@ ARG UI=true
 ENV UI=${UI}
 
 COPY package.json bun.lock* ./
-RUN bun install
+RUN bun install --frozen-lockfile
 
 COPY . .
 
@@ -23,8 +23,8 @@ ENV NODE_ENV=production
 ENV APP_PORT=3000
 
 # Production dependencies
-COPY package.json ./
-RUN bun install --production
+COPY package.json bun.lock* ./
+RUN bun install --production --frozen-lockfile
 
 # Backend source
 COPY src ./src
