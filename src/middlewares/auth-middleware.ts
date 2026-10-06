@@ -100,6 +100,7 @@ export async function authMiddleware(c: Context, next: Next) {
   c.set("auth", {
     id: user.id,
     email: user.email,
+    name: user.name,
     adminId: user.adminId ?? null,
     roleId: user.role?.id ?? null,
     role: user.role?.name ?? null,

@@ -247,25 +247,33 @@ onMounted(() => {
 
   pulse.channel("auth").listen("submission:updated", (data: any) => {
     if (!data) return;
-    const client = matrixData.value.find((c) => c.id === data.clientId);
-    if (client && data.taxPeriod === selectedMonth.value) {
-      client.isSubmitted = Boolean(data.submissionId);
-      client.submission = {
-        submissionId: data.submissionId,
-        status: data.status,
-        submittedAt: data.submittedAt,
-        submittedBy: data.submittedByName || (data.submittedBy ? `User #${data.submittedBy}` : "—"),
-        remarks: data.remarks
-      };
+    const idx = matrixData.value.findIndex((c) => c.id === data.clientId);
+    if (idx !== -1 && data.taxPeriod === selectedMonth.value) {
+      const updatedClient = { ...matrixData.value[idx] };
+      updatedClient.isSubmitted = Boolean(data.submissionId);
+      updatedClient.submission = data.submissionId
+        ? {
+            submissionId: data.submissionId,
+            status: data.status,
+            submittedAt: data.submittedAt,
+            submittedBy: data.submittedByName || (data.submittedBy ? `User #${data.submittedBy}` : "System Staff"),
+            remarks: data.remarks
+          }
+        : null;
+      matrixData.value[idx] = updatedClient;
+      matrixData.value = [...matrixData.value];
     }
   });
 
   pulse.channel("auth").listen("submission:deleted", (data: any) => {
     if (!data) return;
-    const client = matrixData.value.find((c) => c.id === data.clientId);
-    if (client && data.taxPeriod === selectedMonth.value) {
-      client.isSubmitted = false;
-      client.submission = null;
+    const idx = matrixData.value.findIndex((c) => c.id === data.clientId);
+    if (idx !== -1 && data.taxPeriod === selectedMonth.value) {
+      const updatedClient = { ...matrixData.value[idx] };
+      updatedClient.isSubmitted = false;
+      updatedClient.submission = null;
+      matrixData.value[idx] = updatedClient;
+      matrixData.value = [...matrixData.value];
     }
   });
 });

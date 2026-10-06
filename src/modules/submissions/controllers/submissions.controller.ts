@@ -313,18 +313,36 @@ export const recordSubmission: Handler = async (c: any) => {
     }
 
     // Resolve submitter name for real-time dispatch
-    let submitterName = user?.name || null;
-    if (managerId && managerId !== currentUserId) {
-      const submitterUser = (
+    let submitterName: string | null = user?.name || null;
+    const targetUserId = managerId || currentUserId;
+    if (targetUserId) {
+      if (!submitterName || targetUserId !== currentUserId) {
+        const submitterUser = (
+          await db
+            .select({ name: users.name })
+            .from(users)
+            .where(eq(users.id, targetUserId))
+            .limit(1)
+        )[0];
+        if (submitterUser?.name) {
+          submitterName = submitterUser.name;
+        }
+      }
+    }
+    if (!submitterName && currentUserId) {
+      const currentUserObj = (
         await db
           .select({ name: users.name })
           .from(users)
-          .where(eq(users.id, managerId))
+          .where(eq(users.id, currentUserId))
           .limit(1)
       )[0];
-      if (submitterUser) {
-        submitterName = submitterUser.name;
+      if (currentUserObj?.name) {
+        submitterName = currentUserObj.name;
       }
+    }
+    if (!submitterName) {
+      submitterName = "System Staff";
     }
 
     const targetAdminId = client.createdBy || tenantAdminId || (user?.adminId ? Number(user.adminId) : null);
