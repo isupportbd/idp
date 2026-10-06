@@ -5,6 +5,15 @@ import { db } from "@/framework/database/connection.js";
 import { refreshTokens, users } from "@/modules/auth/database/models/user.js";
 import { roles } from "@/modules/auth/database/models/role.js";
 import { plans } from "@/modules/superadmin/database/models/plans.js";
+import { DEFAULT_SUB_USER_PERMISSIONS, PERMISSION_MODULES, normalizePermissions } from "./permissions.js";
+
+// 0. Permission catalog (modules and their actions) for the sub-user form
+export const getPermissionCatalog: Handler = async (c: any) => {
+  return c.json(
+    { success: true, data: PERMISSION_MODULES, defaults: DEFAULT_SUB_USER_PERMISSIONS },
+    HttpStatusCodes.OK
+  );
+};
 
 // Helper: Resolve tenant admin ID
 async function resolveTenantAdmin(c: any) {
@@ -104,7 +113,7 @@ export const listUsers: Handler = async (c: any) => {
         mobile: u.mobile || "",
         role: normalizedRole,
         status: u.status || "active",
-        permissions: Array.isArray(u.permissions) ? u.permissions : [],
+        permissions: normalizePermissions(u.permissions),
         createdAt: u.createdAt ? new Date(u.createdAt).toISOString().slice(0, 10) : "—",
         lastActive,
         lastPage: "—"
@@ -135,7 +144,9 @@ export const createUser: Handler = async (c: any) => {
     const rawPassword = String(body.password || "");
     const requestedRole = body.role === "admin" ? "admin" : "user";
     const status = body.status === "inactive" ? "inactive" : "active";
-    const permissionsList = Array.isArray(body.permissions) ? body.permissions : ["activity_filter", "submissions", "sales_rates", "reports"];
+    const permissionsList = Array.isArray(body.permissions)
+      ? normalizePermissions(body.permissions)
+      : [...DEFAULT_SUB_USER_PERMISSIONS];
 
     if (!name) return c.json({ message: "Full name is required." }, HttpStatusCodes.BAD_REQUEST);
     if (!email || !email.includes("@")) return c.json({ message: "Valid email is required." }, HttpStatusCodes.BAD_REQUEST);
@@ -257,7 +268,7 @@ export const updateUser: Handler = async (c: any) => {
     if (body.name) updateData.name = String(body.name).trim();
     if (body.mobile !== undefined) updateData.mobile = String(body.mobile).trim();
     if (body.status) updateData.status = body.status;
-    if (body.permissions !== undefined) updateData.permissions = body.permissions;
+    if (body.permissions !== undefined) updateData.permissions = normalizePermissions(body.permissions);
     if (body.password && String(body.password).trim().length >= 6) {
       updateData.password = await password.hashPassword(String(body.password).trim());
     }

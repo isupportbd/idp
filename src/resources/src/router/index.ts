@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory, type RouteLocationNormalized } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { hasRole, isTenantAdmin, canAccessModule } from "@/composables/useAuth";
+import { hasRole, isTenantAdmin, canAccessModule, can } from "@/composables/useAuth";
 
 export const routes = [
   {
@@ -37,13 +37,13 @@ export const routes = [
         path: "admin/clients/create",
         name: "clients-create",
         component: () => import("@/pages/admin/ClientForm.vue"),
-        meta: { title: "Add Client Organization" }
+        meta: { title: "Add Client Organization", permission: ["clients.create"] }
       },
       {
         path: "admin/clients/upload",
         name: "clients-upload",
         component: () => import("@/pages/admin/UploadClients.vue"),
-        meta: { title: "Bulk Upload Clients" }
+        meta: { title: "Bulk Upload Clients", permission: ["clients.create"] }
       },
       {
         path: "admin/clients/:id",
@@ -55,7 +55,7 @@ export const routes = [
         path: "admin/clients/:id/edit",
         name: "clients-edit",
         component: () => import("@/pages/admin/ClientForm.vue"),
-        meta: { title: "Edit Client Organization" }
+        meta: { title: "Edit Client Organization", permission: ["clients.edit"] }
       },
       {
         path: "admin/assignments",
@@ -91,7 +91,7 @@ export const routes = [
         path: "admin/upload",
         name: "upload-purchases",
         component: () => import("@/pages/admin/UploadPurchases.vue"),
-        meta: { title: "Upload Purchases" }
+        meta: { title: "Upload Purchases", permission: ["purchases.create"] }
       },
       {
         path: "admin/purchases",
@@ -115,13 +115,13 @@ export const routes = [
         path: "admin/billing/create",
         name: "billing-create",
         component: () => import("@/pages/admin/BillCreate.vue"),
-        meta: { title: "Create Invoice" }
+        meta: { title: "Create Invoice", permission: ["billing.create"] }
       },
       {
         path: "admin/billing/collections/create",
         name: "collection-create",
         component: () => import("@/pages/admin/CollectionCreate.vue"),
-        meta: { title: "Record Payment" }
+        meta: { title: "Record Payment", permission: ["collections.create"] }
       },
       {
         path: "admin/settings",
@@ -333,6 +333,12 @@ router.beforeEach(async (to: RouteLocationNormalized) => {
       }
       break;
     }
+  }
+
+  // 7. Action-level permission for create / edit / upload pages
+  const requiredPermissions = to.meta.permission as string[] | undefined;
+  if (requiredPermissions?.length && !can(...requiredPermissions)) {
+    return { path: "/" };
   }
 
   return true;

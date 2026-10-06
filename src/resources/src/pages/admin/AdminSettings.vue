@@ -7,6 +7,10 @@ import { useFirmApi, type CompanySettings, type BankAccount, type ExpenseHead } 
 import { useServicesApi, type ServiceItem, type ServiceRate, type ClientReference } from "@/composables/useServicesApi";
 import { useToast } from "@/composables/useToast";
 import SearchInput from "@/components/common/SearchInput.vue";
+import { can } from "@/composables/useAuth";
+
+// Sub-users without settings.edit see every tab in read-only mode
+const canEditSettings = computed(() => can("settings.edit"));
 
 const route = useRoute();
 const router = useRouter();
@@ -813,6 +817,12 @@ onMounted(async () => {
       </ul>
     </div>
 
+    <div v-if="!canEditSettings" class="alert alert-dark border border-secondary border-opacity-25 text-muted small py-2 mb-3">
+      <i class="bi bi-eye me-1 text-info"></i>
+      Read-only access: you can view firm settings but cannot change them.
+    </div>
+
+    <fieldset :disabled="!canEditSettings">
     <!-- Tab 1: Firm Profile -->
     <div v-if="activeTab === 'profile'" class="row g-4">
       <div class="col-lg-8">
@@ -1808,6 +1818,7 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+    </fieldset>
 
     <!-- 1. Add / Edit Service Item Modal -->
     <!-- 1. Edit Service Item Modal -->

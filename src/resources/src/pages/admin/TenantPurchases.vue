@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from "vue";
 import axios from "axios";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import { useToast } from "@/composables/useToast";
+import { can } from "@/composables/useAuth";
 import SearchInput from "@/components/common/SearchInput.vue";
 
 const toast = useToast();
@@ -286,6 +287,7 @@ onMounted(async () => {
 
         <!-- Right Action: Delete Filtered Data Button -->
         <button
+          v-if="can('purchases.delete')"
           class="btn btn-outline-danger btn-sm px-3 d-flex align-items-center gap-1 flex-shrink-0 fw-semibold"
           style="height: 38px;"
           :disabled="purchases.length === 0 || isLoading"
@@ -438,6 +440,7 @@ onMounted(async () => {
               <!-- 10. Action -->
               <td class="text-center">
                 <button
+                  v-if="can('purchases.delete')"
                   class="btn btn-sm btn-outline-danger p-1 border-0"
                   title="Delete purchase record"
                   @click="confirmSingleDelete(p.id)"

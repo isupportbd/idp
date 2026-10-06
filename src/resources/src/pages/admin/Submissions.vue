@@ -6,6 +6,7 @@ import { useSubmissionsApi, type SubmissionItem } from "@/composables/useSubmiss
 import { useServicesApi } from "@/composables/useServicesApi";
 import { useClientsApi } from "@/composables/useClientsApi";
 import { useToast } from "@/composables/useToast";
+import { can } from "@/composables/useAuth";
 import SearchInput from "@/components/common/SearchInput.vue";
 
 const toast = useToast();
@@ -302,6 +303,7 @@ const printReport = () => {
 
         <!-- Record Submission ID Button -->
         <button
+          v-if="can('submissions.create')"
           type="button"
           class="btn btn-primary btn-sm d-flex align-items-center gap-2 px-3 fw-semibold shadow-sm"
           @click="openRecordModal()"
@@ -312,7 +314,7 @@ const printReport = () => {
 
         <!-- Batch Clear Button -->
         <button
-          v-if="selectedIds.length > 0"
+          v-if="selectedIds.length > 0 && can('submissions.delete')"
           type="button"
           class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1 px-3 fw-semibold"
           @click="handleBatchClear"
@@ -524,6 +526,7 @@ const printReport = () => {
             <td style="text-align: right;" class="d-print-none">
               <div class="d-inline-flex align-items-center gap-1">
                 <button
+                  v-if="can('submissions.create')"
                   type="button"
                   class="btn btn-sm btn-action-icon"
                   :class="item.submissionRecordId ? 'btn-outline-primary' : 'btn-primary shadow-sm'"
@@ -534,7 +537,7 @@ const printReport = () => {
                 </button>
 
                 <button
-                  v-if="item.submissionRecordId"
+                  v-if="item.submissionRecordId && can('submissions.delete')"
                   type="button"
                   class="btn btn-sm btn-action-icon btn-outline-danger"
                   title="Clear submission"

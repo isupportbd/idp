@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
-import { hasRole, isTenantAdmin, canAccessModule } from "@/composables/useAuth";
+import { hasRole, isTenantAdmin, canAccessModule, can } from "@/composables/useAuth";
 
 const authStore = useAuthStore();
 
@@ -161,7 +161,7 @@ const hasAnyAdminTools = computed(() => {
           </router-link>
 
           <!-- 5. Upload Purchase -->
-          <router-link v-if="canAccessModule('purchases')" to="/admin/upload" class="dash-card">
+          <router-link v-if="can('purchases.create')" to="/admin/upload" class="dash-card">
             <div class="dash-card-icon text-warning">
               <i class="bi bi-cloud-arrow-up"></i>
             </div>

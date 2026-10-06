@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import axios from "axios";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import { useToast } from "@/composables/useToast";
+import { can } from "@/composables/useAuth";
 
 const router = useRouter();
 const toast = useToast();
@@ -910,6 +911,7 @@ const resetUpload = () => {
                 <span>Skip All</span>
               </button>
               <button
+                v-if="can('purchases.edit')"
                 type="button"
                 class="btn btn-idp-primary btn-sm px-3 fw-semibold d-flex align-items-center"
                 :disabled="isSaving"
@@ -974,6 +976,7 @@ const resetUpload = () => {
                     Skip
                   </button>
                   <button
+                    v-if="can('purchases.edit')"
                     class="btn btn-sm btn-idp-primary px-3 py-1 fw-semibold"
                     :disabled="isSaving"
                     @click="handleReplaceDuplicate(item, index)"

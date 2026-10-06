@@ -92,7 +92,7 @@
               <span>Purchases & Sales</span>
             </a>
             <ul id="collapsePurchases" class="list-group accordion-collapse collapse" data-bs-parent="#accordion-sidebar">
-              <li v-if="canAccessModule('purchases')" class="list-group-item" :class="{ active: isActive('/admin/upload') }">
+              <li v-if="can('purchases.create')" class="list-group-item" :class="{ active: isActive('/admin/upload') }">
                 <router-link to="/admin/upload">Upload Purchase</router-link>
               </li>
               <li v-if="canAccessModule('purchases')" class="list-group-item" :class="{ active: isActive('/admin/purchases') }">
@@ -275,7 +275,7 @@ import { computed, onBeforeUnmount, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useAdminUiStore } from "@/stores/admin-ui";
 import { useAuthStore } from "@/stores/auth";
-import { hasRole, isTenantAdmin, canAccessModule, hasAccountsAccess } from "@/composables/useAuth";
+import { hasRole, isTenantAdmin, canAccessModule, hasAccountsAccess, can } from "@/composables/useAuth";
 
 const props = defineProps<{ onToggleSidebar: () => void; }>();
 

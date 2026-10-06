@@ -11,6 +11,7 @@ import { purchases } from "@/modules/clients/database/models/purchases.js";
 import { vatSubmissions } from "@/modules/clients/database/models/vat_submissions.js";
 import { bills } from "@/modules/billing/database/models/bills.js";
 import { subscriptionTransactions } from "@/modules/superadmin/database/models/subscription_transactions.js";
+import { normalizePermissions } from "@/modules/users/controllers/permissions.js";
 
 const storageCache = new Map<number, { records: number; expiresAt: number }>();
 
@@ -185,7 +186,7 @@ export async function sanitizeUser(user: any) {
     emailVerifiedAt: user.emailVerifiedAt ? String(user.emailVerifiedAt) : null,
     roleId: user.roleId ?? null,
     role: user.role || null,
-    permissions: user.permissions || null,
+    permissions: normalizePermissions(user.permissions),
     createdAt: user.createdAt ? String(user.createdAt) : null,
     updatedAt: user.updatedAt ? String(user.updatedAt) : null
   };

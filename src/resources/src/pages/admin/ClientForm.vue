@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import { useClientsApi, type ClientItem, type AssignableUser } from "@/composables/useClientsApi";
 import { useServicesApi } from "@/composables/useServicesApi";
 import { useToast } from "@/composables/useToast";
+import { can } from "@/composables/useAuth";
 
 const route = useRoute();
 const router = useRouter();
@@ -630,7 +631,7 @@ const handleSubmit = async () => {
               />
             </div>
 
-            <div class="col-md-6">
+            <div v-if="can('clients.vat_password')" class="col-md-6">
               <label class="form-label text-light small fw-medium mb-1">VAT Portal Password</label>
               <div class="position-relative">
                 <input

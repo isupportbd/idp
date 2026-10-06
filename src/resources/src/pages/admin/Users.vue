@@ -171,6 +171,13 @@ const fetchUsers = async () => {
 // Open Add Modal
 const DEFAULT_USER_PERMISSIONS = ["activity_filter", "submissions", "sales_rates", "reports"];
 
+// Summarise action-level keys (e.g. "clients.edit") as "N Modules · M Actions"
+const permissionSummary = (perms?: string[]) => {
+  const keys = (perms || []).filter((k) => k.includes("."));
+  const modules = new Set(keys.map((k) => (k.startsWith("collections.") ? "billing" : k.split(".")[0])));
+  return `${modules.size} Modules · ${keys.length} Actions`;
+};
+
 // Open Add Modal
 const openAddModal = () => {
   isEditing.value = false;
@@ -525,7 +532,7 @@ onMounted(async () => {
                 </span>
                 <div class="text-muted small" style="font-size: 0.73rem;">
                   <i class="bi bi-shield-lock me-1 text-primary"></i>
-                  {{ u.role === 'admin' ? 'All Modules' : `${(u.permissions || []).length} Modules` }}
+                  {{ u.role === 'admin' ? 'All Modules' : permissionSummary(u.permissions) }}
                 </div>
               </div>
             </td>

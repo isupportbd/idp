@@ -8,6 +8,7 @@ import { useServicesApi, type CustomerType, type ClientReference } from "@/compo
 import { useToast } from "@/composables/useToast";
 import { useSubscriptionGuard } from "@/composables/useSubscriptionGuard";
 import SearchInput from "@/components/common/SearchInput.vue";
+import { can, isTenantAdmin } from "@/composables/useAuth";
 
 const router = useRouter();
 const toast = useToast();
@@ -159,6 +160,7 @@ const handleConfirmDelete = async () => {
 
       <div class="d-flex align-items-center gap-2">
         <button
+          v-if="can('clients.create')"
           type="button"
           class="btn btn-outline-success btn-sm px-3 d-flex align-items-center gap-1 shadow-sm"
           @click="navigateWithGuard('/admin/clients/upload')"
@@ -167,6 +169,7 @@ const handleConfirmDelete = async () => {
           <span>Bulk Upload</span>
         </button>
         <button
+          v-if="isTenantAdmin()"
           type="button"
           class="btn btn-outline-info btn-sm px-3 d-flex align-items-center gap-1"
           @click="navigateWithGuard('/admin/assignments')"
@@ -175,6 +178,7 @@ const handleConfirmDelete = async () => {
           <span>Assignments</span>
         </button>
         <button
+          v-if="can('clients.create')"
           type="button"
           class="btn btn-primary btn-sm px-3 fw-semibold d-flex align-items-center gap-1 shadow-sm"
           @click="navigateWithGuard('/admin/clients/create')"
@@ -337,6 +341,7 @@ const handleConfirmDelete = async () => {
                 class="badge-btn"
                 :class="client.isActive ? 'badge-active' : 'badge-inactive'"
                 :title="client.isActive ? 'Active under your firm (Click to Release client)' : 'Released (Click to Re-activate / Restore)'"
+                :disabled="!can('clients.edit')"
                 @click="handleToggleActive(client)"
               >
                 <span class="dot"></span>
@@ -356,6 +361,7 @@ const handleConfirmDelete = async () => {
                   <i class="bi bi-eye"></i>
                 </router-link>
                 <router-link
+                  v-if="can('clients.edit')"
                   :to="`/admin/clients/${client.id}/edit`"
                   class="action-btn btn-edit text-decoration-none"
                   title="Edit Client"
@@ -363,6 +369,7 @@ const handleConfirmDelete = async () => {
                   <i class="bi bi-pencil"></i>
                 </router-link>
                 <button
+                  v-if="can('clients.delete')"
                   type="button"
                   class="action-btn btn-del"
                   title="Delete Client"

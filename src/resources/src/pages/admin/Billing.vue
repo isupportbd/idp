@@ -8,6 +8,7 @@ import { useBillingApi, type Bill, type Collection } from "@/composables/useBill
 import { useServicesApi } from "@/composables/useServicesApi";
 import { useClientsApi } from "@/composables/useClientsApi";
 import { useToast } from "@/composables/useToast";
+import { can } from "@/composables/useAuth";
 
 const router = useRouter();
 const toast = useToast();
@@ -291,6 +292,7 @@ const printReport = () => {
 
         <!-- Receive Payment (Full Page) -->
         <button
+          v-if="can('collections.create')"
           type="button"
           class="btn btn-outline-success btn-sm d-flex align-items-center gap-1 px-3 fw-semibold shadow-sm"
           @click="goToCreateCollection()"
@@ -301,6 +303,7 @@ const printReport = () => {
 
         <!-- Create Invoice (Full Page) -->
         <button
+          v-if="can('billing.create')"
           type="button"
           class="btn btn-primary btn-sm d-flex align-items-center gap-2 px-3 fw-semibold shadow-sm"
           @click="goToCreateBill()"
@@ -532,7 +535,7 @@ const printReport = () => {
               <div class="d-inline-flex align-items-center gap-1">
                 <!-- Collect Payment Button (If due exists) -->
                 <button
-                  v-if="bill.dueAmount > 0"
+                  v-if="bill.dueAmount > 0 && can('collections.create')"
                   type="button"
                   class="btn btn-sm btn-outline-success p-1"
                   title="Receive Payment"
@@ -543,6 +546,7 @@ const printReport = () => {
 
                 <!-- Delete Button -->
                 <button
+                  v-if="can('billing.delete')"
                   type="button"
                   class="btn btn-sm btn-outline-danger p-1"
                   title="Delete Invoice"
@@ -621,6 +625,7 @@ const printReport = () => {
             <!-- Actions -->
             <td style="text-align: right;" class="d-print-none">
               <button
+                v-if="can('collections.delete')"
                 type="button"
                 class="btn btn-sm btn-outline-danger p-1"
                 title="Cancel Receipt"
@@ -649,6 +654,7 @@ const printReport = () => {
         </div>
 
         <button
+          v-if="can('billing.create')"
           type="button"
           class="btn btn-sm btn-warning text-dark fw-bold px-3 shadow-sm d-flex align-items-center gap-1.5"
           style="height: 32px; font-size: 0.82rem;"
@@ -734,6 +740,7 @@ const printReport = () => {
             <!-- Action -->
             <td style="text-align: right;" class="d-print-none">
               <button
+                v-if="can('billing.create')"
                 type="button"
                 class="btn btn-sm btn-primary px-3 fw-semibold shadow-sm d-flex align-items-center gap-1 ms-auto"
                 :disabled="!item.isSubmitted"

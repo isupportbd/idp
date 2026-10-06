@@ -15,6 +15,7 @@ import { vatSubmissions } from "../database/models/vat_submissions.js";
 import { bills } from "@/modules/billing/database/models/bills.js";
 import { collections } from "@/modules/billing/database/models/collections.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
+import { hasPermission } from "@/middlewares/permission-middleware.js";
 
 // ── 1. LIST CLIENTS WITH FILTERS & PAGINATION ────────────────────────
 
@@ -141,8 +142,10 @@ export const listClients: Handler = async (c: any) => {
       }
     }
 
+    const canSeeVatPassword = await hasPermission(c, "clients.vat_password");
     const data = rows.map((r) => ({
       ...r,
+      vatPassword: canSeeVatPassword ? r.vatPassword : null,
       managers: managerMap[r.id] || []
     }));
 
@@ -236,11 +239,14 @@ export const getClientById: Handler = async (c: any) => {
       .innerJoin(users, eq(clientManagers.managerId, users.id))
       .where(eq(clientManagers.clientId, id));
 
+    const canSeeVatPassword = await hasPermission(c, "clients.vat_password");
+
     return c.json(
       {
         message: "Client retrieved successfully",
         data: {
           ...row,
+          vatPassword: canSeeVatPassword ? row.vatPassword : null,
           managers: assignedManagers
         }
       },
@@ -487,7 +493,8 @@ export const updateClient: Handler = async (c: any) => {
           customerTypeId: body.customerTypeId !== undefined ? body.customerTypeId : undefined,
           referenceId: body.referenceId !== undefined ? body.referenceId : undefined,
           vatUserId: body.vatUserId !== undefined ? (body.vatUserId ? body.vatUserId.trim() : null) : undefined,
-          vatPassword: body.vatPassword !== undefined ? body.vatPassword : undefined,
+          vatPassword:
+            body.vatPassword !== undefined && (await hasPermission(c, "clients.vat_password")) ? body.vatPassword : undefined,
           vatServiceType: body.vatServiceType !== undefined ? body.vatServiceType : undefined,
           openingBalance: body.openingBalance !== undefined ? Number(body.openingBalance) : undefined,
           isActive: body.isActive !== undefined ? body.isActive : undefined,

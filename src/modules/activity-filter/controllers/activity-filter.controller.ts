@@ -7,6 +7,7 @@ import { vatSubmissions } from "@/modules/clients/database/models/vat_submission
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
 import { users } from "@/modules/auth/database/models/user.js";
+import { hasPermission } from "@/middlewares/permission-middleware.js";
 
 /**
  * Get Activity Matrix & Client Data for the Activity Filter Module
@@ -111,6 +112,7 @@ export const getActivityMatrix: Handler = async (c: any) => {
     }
 
     // 4. Build Client Matrix Records
+    const canSeeVatPassword = await hasPermission(c, "clients.vat_password");
     const matrixClients = activeClients.map((client) => {
       const submission = submissionsMap[client.id] || null;
       const isSubmitted = Boolean(submission?.submissionId);
@@ -128,7 +130,7 @@ export const getActivityMatrix: Handler = async (c: any) => {
         tinNumber: client.tinNumber,
         mobile: client.mobile,
         username: client.vatUserId,
-        password: client.vatPassword,
+        password: canSeeVatPassword ? client.vatPassword : null,
         clientTypeId: client.customerTypeId,
         clientType: client.customerTypeName || "Standard",
         referenceId: client.referenceId,

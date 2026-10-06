@@ -1,6 +1,7 @@
 import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
 import { denyRole } from "@/middlewares/role-middleware.js";
+import { requirePermission } from "@/middlewares/permission-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
   getCompanySettings,
@@ -168,16 +169,19 @@ const deleteExpenseHeadRoute = createRoute({
 
 // ── ROUTER EXPORT ────────────────────────────────────────────────────
 
+const FIRM_READERS = ["settings.view", "billing.view", "collections.view"];
+const FIRM_EDITORS = ["settings.edit"];
+
 export default createRouter()
   .group(authMiddleware, denyRole("superadmin"), subscriptionMiddleware)
-  .api(getCompanySettingsRoute, [], getCompanySettings)
-  .api(putCompanySettingsRoute, [], updateCompanySettings)
-  .api(getBankAccountsRoute, [], listBankAccounts)
-  .api(postBankAccountRoute, [], createBankAccount)
-  .api(patchBankAccountRoute, [], updateBankAccount)
-  .api(deleteBankAccountRoute, [], deleteBankAccount)
-  .api(getExpenseHeadsRoute, [], listExpenseHeads)
-  .api(postExpenseHeadRoute, [], createExpenseHead)
-  .api(patchExpenseHeadRoute, [], updateExpenseHead)
-  .api(toggleExpenseHeadRoute, [], toggleExpenseHead)
-  .api(deleteExpenseHeadRoute, [], deleteExpenseHead);
+  .api(getCompanySettingsRoute, [requirePermission(...FIRM_READERS)], getCompanySettings)
+  .api(putCompanySettingsRoute, [requirePermission(...FIRM_EDITORS)], updateCompanySettings)
+  .api(getBankAccountsRoute, [requirePermission(...FIRM_READERS)], listBankAccounts)
+  .api(postBankAccountRoute, [requirePermission(...FIRM_EDITORS)], createBankAccount)
+  .api(patchBankAccountRoute, [requirePermission(...FIRM_EDITORS)], updateBankAccount)
+  .api(deleteBankAccountRoute, [requirePermission(...FIRM_EDITORS)], deleteBankAccount)
+  .api(getExpenseHeadsRoute, [requirePermission(...FIRM_READERS)], listExpenseHeads)
+  .api(postExpenseHeadRoute, [requirePermission(...FIRM_EDITORS)], createExpenseHead)
+  .api(patchExpenseHeadRoute, [requirePermission(...FIRM_EDITORS)], updateExpenseHead)
+  .api(toggleExpenseHeadRoute, [requirePermission(...FIRM_EDITORS)], toggleExpenseHead)
+  .api(deleteExpenseHeadRoute, [requirePermission(...FIRM_EDITORS)], deleteExpenseHead);

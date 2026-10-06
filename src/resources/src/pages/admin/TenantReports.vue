@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted } from "vue";
 import axios from "axios";
 import MonthMatrix from "@/components/MonthMatrix.vue";
-import { canAccessModule } from "@/composables/useAuth";
+import { can, canAccessModule } from "@/composables/useAuth";
 
 // Types
 interface Client {
@@ -1033,6 +1033,7 @@ const saveNewMonth = async () => {
 
 // Export to Excel for Current Tab
 const exportActiveReport = async () => {
+  if (!can("reports.export")) return;
   if (!selectedClient.value) return;
   const XLSX = await import("xlsx");
   const wb = XLSX.utils.book_new();
@@ -1350,7 +1351,7 @@ onMounted(async () => {
         </div>
 
         <!-- 5. Excel Download Button (Active Client Report) -->
-        <div class="col-lg-1 col-md-4">
+        <div v-if="can('reports.export')" class="col-lg-1 col-md-4">
           <button
             type="button"
             class="btn btn-success w-100 d-flex align-items-center justify-content-center gap-1 fw-semibold px-2"

@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import axios from "axios";
 import SearchInput from "@/components/common/SearchInput.vue";
+import { can } from "@/composables/useAuth";
 
 interface SalesRate {
   id: number;
@@ -495,7 +496,7 @@ onMounted(async () => {
         <h4 class="text-white fw-bold mb-0">Sales & VAT Rates</h4>
       </div>
 
-      <button class="btn btn-idp-primary btn-sm d-flex align-items-center gap-2" @click="openAddModal">
+      <button v-if="can('sales_rates.create')" class="btn btn-idp-primary btn-sm d-flex align-items-center gap-2" @click="openAddModal">
         <i class="bi bi-plus-lg"></i> Add Sales Rate
       </button>
     </div>
@@ -640,7 +641,7 @@ onMounted(async () => {
               <td class="text-end">
                 <div class="d-inline-flex align-items-center justify-content-end gap-1">
                   <button
-                    v-if="r.status === 'Active'"
+                    v-if="r.status === 'Active' && can('sales_rates.edit')"
                     class="btn btn-sm btn-outline-info"
                     title="Edit Rate"
                     @click="openEditModal(r)"
@@ -657,7 +658,7 @@ onMounted(async () => {
                   </button>
 
                   <button
-                    v-if="r.status === 'Active'"
+                    v-if="r.status === 'Active' && can('sales_rates.delete')"
                     class="btn btn-sm btn-outline-danger"
                     title="Delete Rate"
                     @click="handleDeleteRate(r)"
@@ -665,7 +666,7 @@ onMounted(async () => {
                     <i class="bi bi-trash"></i>
                   </button>
                   <button
-                    v-else
+                    v-else-if="r.status !== 'Active'"
                     class="btn btn-sm btn-outline-secondary"
                     disabled
                     title="Frozen Archive"

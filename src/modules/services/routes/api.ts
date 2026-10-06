@@ -1,5 +1,6 @@
 import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
+import { requirePermission } from "@/middlewares/permission-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
   listCustomerTypes,
@@ -256,19 +257,19 @@ const deleteServiceRateRoute = createRoute({
 export default createRouter()
   .group(authMiddleware, subscriptionMiddleware)
   .api(getCustomerTypesRoute, [], listCustomerTypes)
-  .api(postCustomerTypeRoute, [], createCustomerType)
-  .api(toggleCustomerTypeRoute, [], toggleCustomerType)
+  .api(postCustomerTypeRoute, [requirePermission("settings.edit")], createCustomerType)
+  .api(toggleCustomerTypeRoute, [requirePermission("settings.edit")], toggleCustomerType)
   .api(getReferencesRoute, [], listReferences)
-  .api(postReferenceRoute, [], createReference)
-  .api(patchReferenceRoute, [], updateReference)
-  .api(toggleReferenceRoute, [], toggleReference)
-  .api(deleteReferenceRoute, [], deleteReference)
+  .api(postReferenceRoute, [requirePermission("settings.edit")], createReference)
+  .api(patchReferenceRoute, [requirePermission("settings.edit")], updateReference)
+  .api(toggleReferenceRoute, [requirePermission("settings.edit")], toggleReference)
+  .api(deleteReferenceRoute, [requirePermission("settings.edit")], deleteReference)
   .api(getServiceItemsRoute, [], listServiceItems)
-  .api(postServiceItemRoute, [], createServiceItem)
-  .api(patchServiceItemRoute, [], updateServiceItem)
-  .api(toggleServiceItemRoute, [], toggleServiceItem)
-  .api(deleteServiceItemRoute, [], deleteServiceItem)
+  .api(postServiceItemRoute, [requirePermission("settings.edit")], createServiceItem)
+  .api(patchServiceItemRoute, [requirePermission("settings.edit")], updateServiceItem)
+  .api(toggleServiceItemRoute, [requirePermission("settings.edit")], toggleServiceItem)
+  .api(deleteServiceItemRoute, [requirePermission("settings.edit")], deleteServiceItem)
   .api(getServiceRatesRoute, [], listServiceRates)
-  .api(postServiceRateRoute, [], createServiceRate)
-  .api(patchServiceRateRoute, [], updateServiceRate)
-  .api(deleteServiceRateRoute, [], deleteServiceRate);
+  .api(postServiceRateRoute, [requirePermission("settings.edit")], createServiceRate)
+  .api(patchServiceRateRoute, [requirePermission("settings.edit")], updateServiceRate)
+  .api(deleteServiceRateRoute, [requirePermission("settings.edit")], deleteServiceRate);

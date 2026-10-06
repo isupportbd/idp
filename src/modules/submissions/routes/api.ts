@@ -1,6 +1,7 @@
 import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
 import { denyRole } from "@/middlewares/role-middleware.js";
+import { requirePermission } from "@/middlewares/permission-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
   listSubmissions,
@@ -105,7 +106,7 @@ const batchDeleteSubmissionsRoute = createRoute({
 
 export default createRouter()
   .group(authMiddleware, denyRole("superadmin"), subscriptionMiddleware)
-  .api(getSubmissionsRoute, [], listSubmissions)
-  .api(postSubmissionRoute, [], recordSubmission)
-  .api(batchDeleteSubmissionsRoute, [], batchDeleteSubmissions)
-  .api(deleteSubmissionRoute, [], deleteSubmission);
+  .api(getSubmissionsRoute, [requirePermission("submissions.view", "activity_filter.view", "reports.view")], listSubmissions)
+  .api(postSubmissionRoute, [requirePermission("submissions.create")], recordSubmission)
+  .api(batchDeleteSubmissionsRoute, [requirePermission("submissions.delete")], batchDeleteSubmissions)
+  .api(deleteSubmissionRoute, [requirePermission("submissions.delete")], deleteSubmission);

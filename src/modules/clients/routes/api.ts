@@ -1,6 +1,7 @@
 import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
 import { denyRole } from "@/middlewares/role-middleware.js";
+import { requirePermission, requireTenantAdmin } from "@/middlewares/permission-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
   listClients,
@@ -284,23 +285,38 @@ const deleteSubmissionRoute = createRoute({
 
 // ── ROUTER EXPORT ────────────────────────────────────────────────────
 
+// Client list/details are needed as lookups by several modules (billing, purchases, rates, reports...).
+// VAT passwords are stripped in the controller unless the user holds clients.vat_password.
+const CLIENT_READERS = [
+  "clients.view",
+  "activity_filter.view",
+  "submissions.view",
+  "bin_formatter.view",
+  "purchases.view",
+  "sales_rates.view",
+  "reports.view",
+  "billing.view",
+  "collections.view"
+];
+const SUBMISSION_READERS = ["submissions.view", "activity_filter.view", "reports.view"];
+
 export default createRouter()
   .group(authMiddleware, denyRole("superadmin"), subscriptionMiddleware)
-  .api(getUsersRoute, [], listAssignableUsers)
-  .api(getAssignmentsRoute, [], listAssignments)
-  .api(postAssignmentsRoute, [], assignManagers)
-  .api(getSubmissionsRoute, [], listSubmissions)
-  .api(postSubmissionRoute, [], recordSubmission)
-  .api(batchDeleteSubmissionsRoute, [], batchDeleteSubmissions)
-  .api(deleteSubmissionRoute, [], deleteSubmission)
-  .api(checkBinRoute, [], checkBinUnique)
-  .api(checkMobileRoute, [], checkMobileExists)
-  .api(getClientsRoute, [], listClients)
-  .api(getClientByIdRoute, [], getClientById)
-  .api(getClientItemsRoute, [], getClientPurchasedItems)
-  .api(postBulkClientsRoute, [], bulkCreateClients)
-  .api(postClientRoute, [], createClient)
-  .api(patchClientRoute, [], updateClient)
-  .api(patchToggleClientRoute, [], toggleClientStatus)
-  .api(deleteClientRoute, [], deleteClient);
+  .api(getUsersRoute, [requirePermission("clients.view", "clients.create", "clients.edit", "billing.view")], listAssignableUsers)
+  .api(getAssignmentsRoute, [requireTenantAdmin], listAssignments)
+  .api(postAssignmentsRoute, [requireTenantAdmin], assignManagers)
+  .api(getSubmissionsRoute, [requirePermission(...SUBMISSION_READERS)], listSubmissions)
+  .api(postSubmissionRoute, [requirePermission("submissions.create")], recordSubmission)
+  .api(batchDeleteSubmissionsRoute, [requirePermission("submissions.delete")], batchDeleteSubmissions)
+  .api(deleteSubmissionRoute, [requirePermission("submissions.delete")], deleteSubmission)
+  .api(checkBinRoute, [requirePermission("clients.create", "clients.edit")], checkBinUnique)
+  .api(checkMobileRoute, [requirePermission("clients.create", "clients.edit")], checkMobileExists)
+  .api(getClientsRoute, [requirePermission(...CLIENT_READERS)], listClients)
+  .api(getClientByIdRoute, [requirePermission(...CLIENT_READERS)], getClientById)
+  .api(getClientItemsRoute, [requirePermission("clients.view", "sales_rates.view")], getClientPurchasedItems)
+  .api(postBulkClientsRoute, [requirePermission("clients.create", "purchases.create")], bulkCreateClients)
+  .api(postClientRoute, [requirePermission("clients.create")], createClient)
+  .api(patchClientRoute, [requirePermission("clients.edit")], updateClient)
+  .api(patchToggleClientRoute, [requirePermission("clients.edit")], toggleClientStatus)
+  .api(deleteClientRoute, [requirePermission("clients.delete")], deleteClient);
 

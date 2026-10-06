@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
 import { useActivityFilterApi, type ActivityClient } from "@/composables/useActivityFilterApi";
+import { can } from "@/composables/useAuth";
 
 const router = useRouter();
 const { loading, matrixData, stats, clientTypes, references, loadActivityMatrix } = useActivityFilterApi();
@@ -575,6 +576,9 @@ onMounted(() => {
                   <i class="bi" :class="copiedField === 'pass-' + client.id ? 'bi-check2 text-success' : 'bi-copy'"></i>
                 </button>
               </div>
+              <span v-else-if="!can('clients.vat_password')" class="text-muted small" title="You do not have permission to view VAT passwords">
+                <i class="bi bi-lock"></i>
+              </span>
               <span v-else class="text-muted small">—</span>
             </td>
 

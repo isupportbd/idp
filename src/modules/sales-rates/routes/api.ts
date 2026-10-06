@@ -1,6 +1,7 @@
 import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
 import { denyRole } from "@/middlewares/role-middleware.js";
+import { requirePermission } from "@/middlewares/permission-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
   listSalesRates,
@@ -128,8 +129,8 @@ const deleteSalesRateRoute = createRoute({
 // ── ROUTER EXPORT ─────────────────────────────────────────────────────
 export default createRouter()
   .group(authMiddleware, denyRole("superadmin"), subscriptionMiddleware)
-  .api(getSalesRatesRoute, [], listSalesRates)
-  .api(getRateHistoryRoute, [], getRateHistory)
-  .api(postSalesRateRoute, [], createSalesRate)
-  .api(putSalesRateRoute, [], updateSalesRate)
-  .api(deleteSalesRateRoute, [], deleteSalesRate);
+  .api(getSalesRatesRoute, [requirePermission("sales_rates.view", "reports.view")], listSalesRates)
+  .api(getRateHistoryRoute, [requirePermission("sales_rates.view", "reports.view")], getRateHistory)
+  .api(postSalesRateRoute, [requirePermission("sales_rates.create")], createSalesRate)
+  .api(putSalesRateRoute, [requirePermission("sales_rates.edit")], updateSalesRate)
+  .api(deleteSalesRateRoute, [requirePermission("sales_rates.delete")], deleteSalesRate);

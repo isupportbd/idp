@@ -23,32 +23,24 @@ const hasAccountsAccess = computed(() => {
   return false;
 });
 
-const allModulesList = [
-  { id: "clients", name: "Clients Organization", icon: "bi-briefcase", desc: "Manage client profiles, TIN/BIN and details" },
-  { id: "activity_filter", name: "Activity Filter", icon: "bi-funnel", desc: "Filter client activities and monthly operations" },
-  { id: "submissions", name: "Submissions & Filing", icon: "bi-journal-text", desc: "Monthly VAT submissions and filing records" },
-  { id: "bin_formatter", name: "BIN Formatter", icon: "bi-card-checklist", desc: "Batch validate and format 9-13 digit BIN numbers" },
-  { id: "purchases", name: "Upload Purchases", icon: "bi-cart3", desc: "Upload and reconcile purchase registers" },
-  { id: "sales_rates", name: "Sales Rates", icon: "bi-currency-dollar", desc: "Maintain product sales rates and VAT vatable value" },
-  {
-    id: "reports",
-    name: "Audit & Analytics Reports",
-    icon: "bi-file-earmark-bar-graph",
-    desc: "Generate tenant audit reports and summaries"
-  },
-  {
-    id: "billing",
-    name: "Billing & Invoices",
-    icon: "bi-receipt-cutoff",
-    desc: "Create bills, track payments and ledger",
-    requiresAccounts: true
-  },
-  { id: "settings", name: "Firm Settings", icon: "bi-sliders", desc: "Configure organization profile and preferences" }
-];
+type PermissionAction = { key: string; label: string };
+type PermissionModule = {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  requiresAccounts?: boolean;
+  actions: PermissionAction[];
+};
 
-const availableModules = computed(() => {
-  return allModulesList.filter((m) => !m.requiresAccounts || hasAccountsAccess.value);
-});
+const catalog = ref<PermissionModule[]>([]);
+const defaultPermissions = ref<string[]>([]);
+
+const availableModules = computed(() =>
+  catalog.value.filter((m) => !m.requiresAccounts || hasAccountsAccess.value)
+);
+
+const availableKeys = computed(() => availableModules.value.flatMap((m) => m.actions.map((a) => a.key)));
 
 const isSubmitting = ref(false);
 const isLoading = ref(false);
@@ -64,32 +56,68 @@ const form = ref({
   permissions: [] as string[]
 });
 
+// The first action(s) ending in ".view" grant entry to the module (billing has two: bills and collections)
+const viewKeys = (mod: PermissionModule) => mod.actions.filter((a) => a.key.endsWith(".view")).map((a) => a.key);
+const moduleKeys = (mod: PermissionModule) => mod.actions.map((a) => a.key);
+
+const hasKey = (key: string) => form.value.permissions.includes(key);
+const isModuleEnabled = (mod: PermissionModule) => viewKeys(mod).some(hasKey);
+const grantedCount = (mod: PermissionModule) => moduleKeys(mod).filter(hasKey).length;
+
+const toggleModule = (mod: PermissionModule) => {
+  const keys = moduleKeys(mod);
+  if (isModuleEnabled(mod)) {
+    form.value.permissions = form.value.permissions.filter((k) => !keys.includes(k));
+  } else {
+    form.value.permissions = [...new Set([...form.value.permissions, ...viewKeys(mod)])];
+  }
+};
+
+const toggleAction = (mod: PermissionModule, key: string) => {
+  if (hasKey(key)) {
+    form.value.permissions = form.value.permissions.filter((k) => k !== key);
+    return;
+  }
+  const next = new Set([...form.value.permissions, key]);
+  // Any action implies view access to its section (e.g. collections.create needs collections.view)
+  const prefix = key.split(".")[0];
+  const sectionView = `${prefix}.view`;
+  if (moduleKeys(mod).includes(sectionView)) next.add(sectionView);
+  form.value.permissions = [...next];
+};
+
+const isActionDisabled = (mod: PermissionModule, key: string) => {
+  // A view key cannot be removed while other actions of the same section are granted
+  if (!key.endsWith(".view")) return false;
+  const prefix = key.split(".")[0];
+  return moduleKeys(mod).some((k) => k !== key && k.startsWith(`${prefix}.`) && hasKey(k));
+};
+
 const selectAllModules = () => {
-  form.value.permissions = availableModules.value.map((m) => m.id);
+  form.value.permissions = [...availableKeys.value];
 };
 
 const clearAllModules = () => {
   form.value.permissions = [];
 };
 
-const toggleModule = (modId: string) => {
-  if (form.value.permissions.includes(modId)) {
-    form.value.permissions = form.value.permissions.filter((id) => id !== modId);
-  } else {
-    form.value.permissions.push(modId);
+const enabledModuleCount = computed(() => availableModules.value.filter(isModuleEnabled).length);
+
+const fetchCatalog = async () => {
+  try {
+    const res = await axios.get("/api/users/permissions");
+    catalog.value = res.data?.data || [];
+    defaultPermissions.value = res.data?.defaults || [];
+  } catch (err: any) {
+    toast.error("Failed to load the permission list.");
   }
 };
-
-const isModuleSelected = (modId: string) => form.value.permissions.includes(modId);
-
-// Default sub-user checked modules (Clients, BIN Formatter, Purchases, Settings are unchecked by default)
-const DEFAULT_USER_PERMISSIONS = ["activity_filter", "submissions", "sales_rates", "reports"];
 
 // Fetch user data if in edit mode
 const fetchUserData = async () => {
   if (!isEditMode.value) {
-    // Default create mode: check only designated routine modules
-    form.value.permissions = [...DEFAULT_USER_PERMISSIONS];
+    // Default create mode: view-only access to routine modules
+    form.value.permissions = [...defaultPermissions.value];
     return;
   }
 
@@ -106,7 +134,7 @@ const fetchUserData = async () => {
         password: "",
         role: "user",
         status: target.status || "active",
-        permissions: Array.isArray(target.permissions) ? [...target.permissions] : [...DEFAULT_USER_PERMISSIONS]
+        permissions: Array.isArray(target.permissions) ? [...target.permissions] : [...defaultPermissions.value]
       };
     } else {
       toast.error("User record not found.");
@@ -145,7 +173,7 @@ const handleSubmit = async () => {
     mobile: form.value.mobile.trim(),
     role: "user",
     status: form.value.status,
-    permissions: form.value.permissions
+    permissions: form.value.permissions.filter((k) => availableKeys.value.includes(k))
   };
 
   if (form.value.password) {
@@ -177,7 +205,10 @@ const handleSubmit = async () => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
+  isLoading.value = true;
+  await fetchCatalog();
+  isLoading.value = false;
   fetchUserData();
 });
 </script>
@@ -357,7 +388,7 @@ onMounted(() => {
               <h5 class="card-title text-white mb-0 d-flex align-items-center gap-2 fs-6 fw-bold">
                 <i class="bi bi-shield-lock text-primary"></i> Module Access & Permissions
               </h5>
-              <span class="text-muted small">Select which features this sub-user can access (All selected by default)</span>
+              <span class="text-muted small">Enable a module, then choose which actions this sub-user can perform</span>
             </div>
 
             <div class="d-flex align-items-center gap-2">
@@ -379,33 +410,51 @@ onMounted(() => {
           </div>
 
           <div class="card-body p-4">
-            <div class="row g-3">
+            <div class="d-flex flex-column gap-3">
               <div
                 v-for="mod in availableModules"
                 :key="mod.id"
-                class="col-md-6"
+                class="permission-card p-3 rounded"
+                :class="{ 'permission-card-active': isModuleEnabled(mod) }"
               >
-                <div
-                  class="permission-card p-3 rounded d-flex align-items-start gap-3 cursor-pointer"
-                  :class="{ 'permission-card-active': isModuleSelected(mod.id) }"
-                  @click="toggleModule(mod.id)"
-                >
-                  <div class="form-check pt-1 m-0">
+                <div class="d-flex align-items-start gap-3">
+                  <div class="form-check form-switch pt-1 m-0">
                     <input
                       :id="'perm-' + mod.id"
                       type="checkbox"
+                      role="switch"
                       class="form-check-input cursor-pointer"
-                      :checked="isModuleSelected(mod.id)"
-                      @click.stop="toggleModule(mod.id)"
+                      :checked="isModuleEnabled(mod)"
+                      @change="toggleModule(mod)"
                     />
                   </div>
                   <div class="flex-grow-1">
-                    <label :for="'perm-' + mod.id" class="text-white fw-semibold mb-1 d-flex align-items-center gap-2 cursor-pointer">
+                    <label
+                      :for="'perm-' + mod.id"
+                      class="text-white fw-semibold mb-1 d-flex align-items-center gap-2 cursor-pointer"
+                    >
                       <i :class="mod.icon" class="text-primary"></i>
                       {{ mod.name }}
+                      <span v-if="isModuleEnabled(mod)" class="badge bg-primary bg-opacity-25 text-primary fw-normal ms-auto">
+                        {{ grantedCount(mod) }} / {{ mod.actions.length }}
+                      </span>
                     </label>
-                    <div class="text-muted small lh-sm">
-                      {{ mod.desc }}
+                    <div class="text-muted small lh-sm">{{ mod.description }}</div>
+
+                    <div v-if="isModuleEnabled(mod) && mod.actions.length > 1" class="action-grid mt-3">
+                      <div v-for="action in mod.actions" :key="action.key" class="form-check m-0">
+                        <input
+                          :id="'perm-' + action.key"
+                          type="checkbox"
+                          class="form-check-input cursor-pointer"
+                          :checked="hasKey(action.key)"
+                          :disabled="isActionDisabled(mod, action.key)"
+                          @change="toggleAction(mod, action.key)"
+                        />
+                        <label :for="'perm-' + action.key" class="form-check-label small text-light cursor-pointer">
+                          {{ action.label }}
+                        </label>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -415,7 +464,7 @@ onMounted(() => {
 
           <div class="card-footer bg-transparent border-secondary border-opacity-25 py-3 d-flex justify-content-between align-items-center">
             <span class="text-muted small">
-              Selected Modules: <strong class="text-white">{{ form.permissions.length }} / {{ availableModules.length }}</strong>
+              Enabled Modules: <strong class="text-white">{{ enabledModuleCount }} / {{ availableModules.length }}</strong>
             </span>
             <button
               type="button"
@@ -550,5 +599,13 @@ onMounted(() => {
 .permission-card-active {
   background: rgba(59, 130, 246, 0.1) !important;
   border-color: rgba(59, 130, 246, 0.45) !important;
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.5rem 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
 }
 </style>

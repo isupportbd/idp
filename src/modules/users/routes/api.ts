@@ -1,5 +1,6 @@
 import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
+import { requireTenantAdmin } from "@/middlewares/permission-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
   listUsers,
@@ -7,7 +8,8 @@ import {
   updateUser,
   resetUserPassword,
   updateUserStatus,
-  deleteUser
+  deleteUser,
+  getPermissionCatalog
 } from "../controllers/users.controller.js";
 import {
   CreateUserSchema,
@@ -97,8 +99,20 @@ const deleteUserRoute = createRoute({
   }
 });
 
+const permissionCatalogRoute = createRoute({
+  path: "/permissions",
+  method: "get",
+  tags: ["Users"],
+  description: "List assignable sub-user permissions grouped by module",
+  responses: {
+    [HttpStatusCodes.OK]: jsonContent(z.any(), "Permission catalog")
+  }
+});
+
+// Team management is limited to the firm admin so sub-users cannot grant themselves permissions.
 export default createRouter()
-  .group(authMiddleware, subscriptionMiddleware)
+  .group(authMiddleware, subscriptionMiddleware, requireTenantAdmin)
+  .api(permissionCatalogRoute, [], getPermissionCatalog)
   .api(listUsersRoute, [], listUsers)
   .api(createUserRoute, [], createUser)
   .api(updateUserRoute, [], updateUser)
