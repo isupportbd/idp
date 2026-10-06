@@ -454,7 +454,7 @@ onMounted(async () => {
                         <input
                           :id="'perm-' + action.key"
                           type="checkbox"
-                          class="action-check-input"
+                          class="form-check-input action-check-input"
                           :checked="hasKey(action.key)"
                           :disabled="isActionDisabled(mod, action.key)"
                           @change="toggleAction(mod, action.key)"
@@ -629,7 +629,8 @@ onMounted(async () => {
   border-top: 1px dashed rgba(255, 255, 255, 0.1);
 }
 
-/* Action checkbox: square box, fixed gap to the label, vertically centred */
+/* Action checkbox: keeps the IDP theme colours (idp-dark.scss .form-check-input),
+   only fixes size, spacing to the label and vertical alignment */
 .action-check {
   display: inline-flex;
   align-items: center;
@@ -642,36 +643,13 @@ onMounted(async () => {
   line-height: 1.2;
 }
 
-.action-check-input {
-  appearance: none;
-  -webkit-appearance: none;
-  flex: 0 0 16px;
-  width: 16px;
-  height: 16px;
+.action-check .action-check-input {
+  float: none;
+  flex: 0 0 auto;
+  width: 1.05em;
+  height: 1.05em;
   margin: 0;
-  border: 1.5px solid rgba(255, 255, 255, 0.35);
-  border-radius: 4px;
-  background-color: #14181e;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 11px 11px;
-  cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
-}
-
-.action-check-input:hover {
-  border-color: #3b82f6;
-}
-
-.action-check-input:checked {
-  background-color: #3b82f6;
-  border-color: #3b82f6;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M3.5 8.5l3 3 6-6.5'/%3e%3c/svg%3e");
-}
-
-.action-check-input:focus-visible {
-  outline: 2px solid rgba(59, 130, 246, 0.5);
-  outline-offset: 2px;
+  border-radius: 0.25em;
 }
 
 .action-check-disabled {
