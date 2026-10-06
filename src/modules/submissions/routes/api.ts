@@ -7,12 +7,14 @@ import {
   listSubmissions,
   recordSubmission,
   deleteSubmission,
-  batchDeleteSubmissions
+  batchDeleteSubmissions,
+  getSingleSubmission
 } from "../controllers/submissions.controller.js";
 import {
   RecordSubmissionSchema,
   QuerySubmissionsSchema,
   BatchDeleteSubmissionsSchema,
+  SingleSubmissionQuerySchema,
   IdParamSchema
 } from "../controllers/submissions.schema.js";
 
@@ -104,8 +106,31 @@ const batchDeleteSubmissionsRoute = createRoute({
   }
 });
 
+// ── 5. GET SINGLE SUBMISSION RECORD ──────────────────────────────────
+
+const getSubmissionRoute = createRoute({
+  path: "/submission",
+  method: "get",
+  tags: ["Submissions"],
+  description: "Get single client return submission for a tax period",
+  request: {
+    query: SingleSubmissionQuerySchema
+  },
+  responses: {
+    [HttpStatusCodes.OK]: jsonContent(
+      z.object({
+        message: z.string(),
+        data: z.string().nullable(),
+        record: z.any().nullable()
+      }),
+      "Single submission response"
+    )
+  }
+});
+
 export default createRouter()
   .group(authMiddleware, denyRole("superadmin"), subscriptionMiddleware)
+  .api(getSubmissionRoute, [requirePermission("submissions.view", "reports.view", "activity_filter.view")], getSingleSubmission)
   .api(getSubmissionsRoute, [requirePermission("submissions.view", "activity_filter.view", "reports.view")], listSubmissions)
   .api(postSubmissionRoute, [requirePermission("submissions.create")], recordSubmission)
   .api(batchDeleteSubmissionsRoute, [requirePermission("submissions.delete")], batchDeleteSubmissions)

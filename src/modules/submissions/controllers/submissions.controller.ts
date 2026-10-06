@@ -478,3 +478,58 @@ export const batchDeleteSubmissions: Handler = async (c: any) => {
     );
   }
 };
+
+// ── 5. GET SINGLE SUBMISSION RECORD ──────────────────────────────────
+
+export const getSingleSubmission: Handler = async (c: any) => {
+  try {
+    const query = c.req.valid ? c.req.valid("query") : c.req.query();
+    const clientId = Number(query.clientId);
+    const taxPeriod = getDefaultTaxPeriod(query.month || query.taxPeriod);
+    if (!clientId) {
+      return c.json({ message: "Client ID is required", data: null }, HttpStatusCodes.BAD_REQUEST);
+    }
+
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+
+    const sub = (
+      await db
+        .select({
+          id: vatSubmissions.id,
+          clientId: vatSubmissions.clientId,
+          taxPeriod: vatSubmissions.taxPeriod,
+          submissionId: vatSubmissions.submissionId,
+          status: vatSubmissions.status,
+          submittedBy: vatSubmissions.submittedBy,
+          submittedByName: users.name,
+          submittedAt: vatSubmissions.submittedAt,
+          remarks: vatSubmissions.remarks
+        })
+        .from(vatSubmissions)
+        .leftJoin(users, eq(vatSubmissions.submittedBy, users.id))
+        .leftJoin(clients, eq(vatSubmissions.clientId, clients.id))
+        .where(
+          and(
+            eq(vatSubmissions.clientId, clientId),
+            eq(vatSubmissions.taxPeriod, taxPeriod),
+            !isSuperAdmin && tenantAdminId ? eq(clients.createdBy, tenantAdminId) : undefined
+          )
+        )
+        .limit(1)
+    )[0];
+
+    return c.json(
+      {
+        message: "Submission fetched successfully",
+        data: sub?.submissionId || null,
+        record: sub || null
+      },
+      HttpStatusCodes.OK
+    );
+  } catch (err: any) {
+    return c.json(
+      { message: err.message || "Failed to fetch submission", data: null },
+      HttpStatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+};

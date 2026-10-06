@@ -23,6 +23,12 @@ export const BatchDeleteSubmissionsSchema = z.object({
   ids: z.array(z.number().int().positive()).min(1, "At least one ID is required")
 });
 
+export const SingleSubmissionQuerySchema = z.object({
+  clientId: z.coerce.number().int().positive("Client ID is required"),
+  month: z.string().optional(),
+  taxPeriod: z.string().optional()
+});
+
 export const IdParamSchema = z.object({
   id: z.coerce.number().int().positive("Invalid ID parameter")
 });

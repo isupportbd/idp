@@ -737,6 +737,9 @@ const fetchReportsData = async () => {
     // Submission ID
     if (subRes.status === "fulfilled" && subRes.value.data?.data) {
       submissionId.value = subRes.value.data.data;
+      submissionsMap.value[selectedMonthYear.value] = subRes.value.data.data;
+    } else if (submissionsMap.value[selectedMonthYear.value]) {
+      submissionId.value = submissionsMap.value[selectedMonthYear.value];
     } else {
       submissionId.value = null;
     }
@@ -960,6 +963,7 @@ const selectClient = async (c: Client) => {
   }
 
   await fetchAvailableMonths(c.id);
+  submissionId.value = submissionsMap.value[selectedMonthYear.value] || null;
   await fetchReportsData();
 };
 
@@ -1178,6 +1182,7 @@ const hideItemDropdown = () => {
 
 watch(selectedMonthYear, () => {
   if (selectedClientId.value) {
+    submissionId.value = submissionsMap.value[selectedMonthYear.value] || null;
     fetchReportsData();
   }
 });
