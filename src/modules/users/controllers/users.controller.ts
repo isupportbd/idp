@@ -142,7 +142,8 @@ export const createUser: Handler = async (c: any) => {
     const name = String(body.name || "").trim();
     const mobile = String(body.mobile || "").trim();
     const rawPassword = String(body.password || "");
-    const requestedRole = body.role === "admin" ? "admin" : "user";
+    // Team members are always staff sub-users; admin rights cannot be granted through this API
+    const requestedRole = "user";
     const status = body.status === "inactive" ? "inactive" : "active";
     const permissionsList = Array.isArray(body.permissions)
       ? normalizePermissions(body.permissions)
@@ -224,7 +225,7 @@ export const createUser: Handler = async (c: any) => {
           mobile: created.mobile,
           role: requestedRole,
           status: created.status,
-          permissions: created.permissions,
+          permissions: normalizePermissions(created.permissions),
           createdAt: created.createdAt ? new Date(created.createdAt).toISOString().slice(0, 10) : "—",
           lastActive: "Never",
           lastPage: "—"
@@ -264,11 +265,13 @@ export const updateUser: Handler = async (c: any) => {
 
     const body = await c.req.json();
     const updateData: any = { updatedAt: new Date() };
+    const isPrimaryAdmin = targetUser.id === tenantAdminId;
 
     if (body.name) updateData.name = String(body.name).trim();
     if (body.mobile !== undefined) updateData.mobile = String(body.mobile).trim();
-    if (body.status) updateData.status = body.status;
-    if (body.permissions !== undefined) updateData.permissions = normalizePermissions(body.permissions);
+    // The firm owner cannot suspend or restrict their own account from this screen
+    if (body.status && !isPrimaryAdmin) updateData.status = body.status === "inactive" ? "inactive" : "active";
+    if (body.permissions !== undefined && !isPrimaryAdmin) updateData.permissions = normalizePermissions(body.permissions);
     if (body.password && String(body.password).trim().length >= 6) {
       updateData.password = await password.hashPassword(String(body.password).trim());
     }
@@ -284,17 +287,21 @@ export const updateUser: Handler = async (c: any) => {
       }
     }
 
-    if (body.role) {
-      const allRoles = await db.select().from(roles);
-      const targetRole = allRoles.find((r) => r.name === body.role);
-      if (targetRole) {
-        updateData.roleId = targetRole.id;
-      }
-    }
+    // Role changes are not accepted here: sub-users stay "user", the firm owner stays "admin"
 
     const [updated] = await db.update(users).set(updateData).where(eq(users.id, userId)).returning();
 
-    return c.json({ success: true, message: "User updated successfully", data: updated }, HttpStatusCodes.OK);
+    // Never send the password hash or other internal columns back to the client
+    const data = {
+      id: updated.id,
+      name: updated.name,
+      email: updated.email,
+      mobile: updated.mobile || "",
+      status: updated.status,
+      permissions: normalizePermissions(updated.permissions)
+    };
+
+    return c.json({ success: true, message: "User updated successfully", data }, HttpStatusCodes.OK);
   } catch (err: any) {
     console.error("Failed to update user:", err);
     return c.json({ message: err.message || "Failed to update user" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);

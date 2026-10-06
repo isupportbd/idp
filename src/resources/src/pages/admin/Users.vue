@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
@@ -25,35 +25,11 @@ interface OrgUser {
 const users = ref<OrgUser[]>([]);
 
 const route = useRoute();
+const router = useRouter();
 const authStore = useAuthStore();
 const maxPlanUsers = computed(() => {
   const user = authStore.user as any;
   return user?.plan?.maxUsers || 5;
-});
-
-const hasAccountsAccess = computed(() => {
-  const user = authStore.user as any;
-  if (!user) return true;
-  if (user.plan) {
-    return user.plan.hasAccounts !== false;
-  }
-  return true;
-});
-
-const allModulesList = [
-  { id: "clients", name: "Clients", icon: "bi-briefcase" },
-  { id: "activity_filter", name: "Activity Filter", icon: "bi-funnel" },
-  { id: "submissions", name: "Submissions", icon: "bi-journal-text" },
-  { id: "bin_formatter", name: "BIN Formatter", icon: "bi-card-checklist" },
-  { id: "purchases", name: "Upload Purchases", icon: "bi-cart3" },
-  { id: "sales_rates", name: "Sales Rates", icon: "bi-currency-dollar" },
-  { id: "reports", name: "Reports", icon: "bi-file-earmark-bar-graph" },
-  { id: "billing", name: "Billing & Invoices", icon: "bi-receipt-cutoff", requiresAccounts: true },
-  { id: "settings", name: "Firm Settings", icon: "bi-sliders" }
-];
-
-const availableModules = computed(() => {
-  return allModulesList.filter(m => !m.requiresAccounts || hasAccountsAccess.value);
 });
 
 const searchQuery = ref("");
@@ -63,40 +39,11 @@ const currentPage = ref(1);
 const itemsPerPage = ref(10);
 const isLoading = ref(false);
 
-// Modal state
-const showModal = ref(false);
-const isEditing = ref(false);
+// Modal state (password reset only; create/edit use the full UserForm page)
 const showPasswordModal = ref(false);
 const passwordForm = ref({ userId: 0, userName: "", newPassword: "" });
 const formError = ref("");
 const isSubmitting = ref(false);
-
-const form = ref({
-  id: 0,
-  name: "",
-  email: "",
-  mobile: "",
-  password: "",
-  role: "user" as "admin" | "user",
-  status: "active" as "active" | "inactive",
-  permissions: [] as string[]
-});
-
-const toggleModulePermission = (modId: string) => {
-  if (form.value.permissions.includes(modId)) {
-    form.value.permissions = form.value.permissions.filter(id => id !== modId);
-  } else {
-    form.value.permissions.push(modId);
-  }
-};
-
-const selectAllModules = () => {
-  form.value.permissions = availableModules.value.map(m => m.id);
-};
-
-const clearAllModules = () => {
-  form.value.permissions = [];
-};
 
 // Summary Stats
 const totalUsersCount = computed(() => users.value.length);
@@ -168,48 +115,11 @@ const fetchUsers = async () => {
   }
 };
 
-// Open Add Modal
-const DEFAULT_USER_PERMISSIONS = ["activity_filter", "submissions", "sales_rates", "reports"];
-
 // Summarise action-level keys (e.g. "clients.edit") as "N Modules · M Actions"
 const permissionSummary = (perms?: string[]) => {
   const keys = (perms || []).filter((k) => k.includes("."));
   const modules = new Set(keys.map((k) => (k.startsWith("collections.") ? "billing" : k.split(".")[0])));
   return `${modules.size} Modules · ${keys.length} Actions`;
-};
-
-// Open Add Modal
-const openAddModal = () => {
-  isEditing.value = false;
-  formError.value = "";
-  form.value = {
-    id: 0,
-    name: "",
-    email: "",
-    mobile: "",
-    password: "",
-    role: "user",
-    status: "active",
-    permissions: [...DEFAULT_USER_PERMISSIONS]
-  };
-  showModal.value = true;
-};
-
-// Open Edit Modal
-const openEditModal = (u: OrgUser) => {
-  isEditing.value = true;
-  formError.value = "";
-  form.value = {
-    id: u.id,
-    name: u.name,
-    email: u.email,
-    mobile: u.mobile || "",
-    password: "",
-    role: u.role,
-    status: u.status,
-    permissions: Array.isArray(u.permissions) ? [...u.permissions] : [...DEFAULT_USER_PERMISSIONS]
-  };
-  showModal.value = true;
 };
 
 // Open Password Reset Modal
@@ -221,58 +131,6 @@ const openPasswordModal = (u: OrgUser) => {
   };
   formError.value = "";
   showPasswordModal.value = true;
-};
-
-// Save User (Create or Update)
-const handleSaveUser = async () => {
-  // 1. Validation
-  if (!form.value.name.trim()) {
-    formError.value = "Full name is required.";
-    return;
-  }
-  if (!form.value.email.trim() || !form.value.email.includes("@")) {
-    formError.value = "A valid email address is required.";
-    return;
-  }
-  if (!form.value.mobile.trim()) {
-    formError.value = "Mobile number is required.";
-    return;
-  }
-  if (!isEditing.value && (!form.value.password || form.value.password.length < 6)) {
-    formError.value = "Initial password must be at least 6 characters long.";
-    return;
-  }
-
-  isSubmitting.value = true;
-  formError.value = "";
-
-  const assignedPermissions = form.value.role === "admin"
-    ? availableModules.value.map(m => m.id)
-    : form.value.permissions;
-
-  const payload = {
-    name: form.value.name.trim(),
-    email: form.value.email.trim(),
-    mobile: form.value.mobile.trim(),
-    password: form.value.password,
-    role: form.value.role,
-    status: form.value.status,
-    permissions: assignedPermissions
-  };
-
-  try {
-    if (isEditing.value) {
-      await axios.put(`/api/users/${form.value.id}`, payload);
-    } else {
-      await axios.post("/api/users", payload);
-    }
-    await fetchUsers();
-    showModal.value = false;
-  } catch (e: any) {
-    formError.value = e.response?.data?.message || "Failed to save user.";
-  } finally {
-    isSubmitting.value = false;
-  }
 };
 
 // Quick Reset Password
@@ -326,7 +184,7 @@ const handleDeleteUser = async (u: OrgUser) => {
 onMounted(async () => {
   await fetchUsers();
   if (route.query.action === "create" || route.query.create === "true" || route.query.new === "true") {
-    openAddModal();
+    router.replace("/admin/users/create");
   }
 });
 </script>
@@ -638,120 +496,6 @@ onMounted(async () => {
         >
           Next <i class="bi bi-chevron-right"></i>
         </button>
-      </div>
-    </div>
-
-    <!-- Add / Edit User Modal -->
-    <div v-if="showModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0, 0, 0, 0.7);">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content idp-card">
-          <div class="modal-header border-secondary">
-            <h5 class="modal-title text-white fw-bold">
-              <i class="bi bi-person-fill text-primary me-1"></i>
-              {{ isEditing ? 'Edit Team Member' : 'Add New Sub-User' }}
-            </h5>
-            <button type="button" class="btn-close btn-close-white" @click="showModal = false"></button>
-          </div>
-          <div class="modal-body p-4">
-            <div v-if="formError" class="alert alert-danger py-2 small mb-3">
-              <i class="bi bi-exclamation-triangle-fill me-1"></i>
-              {{ formError }}
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label text-muted small fw-semibold">Full Name *</label>
-              <input v-model="form.name" type="text" class="form-control idp-input" placeholder="e.g. Tanvir Ahmed" />
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label text-muted small fw-semibold">Email Address *</label>
-              <input v-model="form.email" type="email" class="form-control idp-input" placeholder="user@company.com" />
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label text-muted small fw-semibold">Mobile Number *</label>
-              <input v-model="form.mobile" type="text" class="form-control idp-input font-monospace" placeholder="01711XXXXXX" />
-            </div>
-
-            <div v-if="!isEditing" class="mb-3">
-              <label class="form-label text-muted small fw-semibold">Initial Password * (Min 6 chars)</label>
-              <input v-model="form.password" type="password" class="form-control idp-input font-monospace" placeholder="••••••••" />
-            </div>
-
-            <div class="row g-2 mb-3">
-              <div class="col-6">
-                <label class="form-label text-muted small fw-semibold">Role</label>
-                <select v-model="form.role" class="form-select idp-input">
-                  <option value="user">Sub-User (Standard Operator)</option>
-                  <option value="admin">Admin (Full Control)</option>
-                </select>
-              </div>
-              <div class="col-6">
-                <label class="form-label text-muted small fw-semibold">Account Status</label>
-                <select v-model="form.status" class="form-select idp-input">
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Module Permissions Selection (Granular Control) -->
-            <div v-if="form.role === 'user'" class="mb-3">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <label class="form-label text-light small fw-bold mb-0">
-                  <i class="bi bi-shield-lock-fill text-primary me-1"></i> Module Access & Permissions
-                </label>
-                <div class="d-flex gap-2">
-                  <button type="button" class="btn btn-link p-0 text-primary text-decoration-none small" @click="selectAllModules">
-                    Select All
-                  </button>
-                  <span class="text-muted small">|</span>
-                  <button type="button" class="btn btn-link p-0 text-muted text-decoration-none small" @click="clearAllModules">
-                    Clear
-                  </button>
-                </div>
-              </div>
-
-              <div class="p-2.5 rounded bg-dark border border-secondary border-opacity-50">
-                <div class="row g-2">
-                  <div v-for="mod in availableModules" :key="mod.id" class="col-6">
-                    <div
-                      class="p-2 rounded border transition-all cursor-pointer d-flex align-items-center gap-2 user-select-none"
-                      :class="form.permissions.includes(mod.id) ? 'border-primary bg-primary bg-opacity-10 text-white' : 'border-secondary border-opacity-50 text-muted'"
-                      style="font-size: 0.82rem;"
-                      @click="toggleModulePermission(mod.id)"
-                    >
-                      <input
-                        type="checkbox"
-                        class="form-check-input mt-0 cursor-pointer"
-                        :checked="form.permissions.includes(mod.id)"
-                        @click.stop="toggleModulePermission(mod.id)"
-                      />
-                      <i :class="`bi ${mod.icon} ${form.permissions.includes(mod.id) ? 'text-primary' : 'text-muted'}`"></i>
-                      <span class="fw-semibold text-truncate">{{ mod.name }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="text-muted small mt-1.5" style="font-size: 0.76rem;">
-                <i class="bi bi-info-circle me-1"></i>
-                This staff member will only be able to view and operate the checked modules.
-              </div>
-            </div>
-
-            <div v-else class="p-3 mb-3 rounded bg-primary bg-opacity-10 border border-primary border-opacity-25 d-flex align-items-center gap-2 small text-primary">
-              <i class="bi bi-shield-check fs-5"></i>
-              <span>Admins have full unrestricted access to all organization modules and settings.</span>
-            </div>
-          </div>
-          <div class="modal-footer border-secondary">
-            <button type="button" class="btn btn-idp-secondary btn-sm" @click="showModal = false">Cancel</button>
-            <button type="button" class="btn btn-idp-primary btn-sm" :disabled="isSubmitting" @click="handleSaveUser">
-              <i class="bi bi-check-lg me-1"></i>
-              {{ isSubmitting ? 'Saving...' : isEditing ? 'Update User' : 'Register Sub-User' }}
-            </button>
-          </div>
-        </div>
       </div>
     </div>
 

@@ -607,7 +607,7 @@ onUnmounted(() => {
             </button>
             <router-link
               v-if="isTenantAdmin"
-              to="/admin/users?action=create"
+              to="/admin/users/create"
               target="_blank"
               class="btn btn-sm btn-idp-primary w-100 py-1 small text-center text-decoration-none d-flex align-items-center justify-content-center gap-1"
               @click="showStatsDropdown = false"
