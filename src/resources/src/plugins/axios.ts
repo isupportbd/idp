@@ -30,7 +30,7 @@ axios.interceptors.response.use(
       window.location.pathname === "/register" ||
       window.location.pathname === "/login" ||
       window.location.pathname === "/landing" ||
-      window.location.pathname === "/" ||
+      window.location.pathname === "/forgot-password" ||
       window.location.pathname === "/forget-password" ||
       window.location.pathname === "/reset-password" ||
       window.location.pathname === "/verify-email";

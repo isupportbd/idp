@@ -122,7 +122,7 @@
 
             <!-- 1. User & Staff (Tenant Admin only) -->
             <li v-if="isTenantAdmin()" class="list-group-item" :class="{ active: isActive('/admin/users') }">
-              <router-link to="/admin/users" target="_blank">
+              <router-link to="/admin/users">
                 <div class="menu-icon">
                   <i class="bi bi-people"></i>
                 </div>
@@ -290,7 +290,8 @@ const hasAnyAdminPlatformItem = computed(() => {
 });
 
 function isActive(path: string) {
-  return route.path === path;
+  if (path === "/") return route.path === "/";
+  return route.path === path || route.path.startsWith(path + "/");
 }
 
 onMounted(() => ui.initSidebarCollapsePersistence());

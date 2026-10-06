@@ -20,7 +20,7 @@ export const getMonthlySummary = async (c: Context) => {
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
     const tenantFilter = !isSuperAdmin && tenantAdminId
-      ? sql`AND (c.created_by = ${tenantAdminId} OR p.admin_id = ${tenantAdminId})`
+      ? sql`AND c.created_by = ${tenantAdminId} AND p.admin_id = ${tenantAdminId}`
       : sql``;
 
     const rawSql = sql`
@@ -77,7 +77,7 @@ export const getSalesReport = async (c: Context) => {
           .where(
             and(
               eq(clients.id, parsedClientId),
-              or(eq(clients.createdBy, tenantAdminId), sql`${clients.createdBy} IS NULL`)
+              eq(clients.createdBy, tenantAdminId)
             )
           )
           .limit(1)
@@ -207,7 +207,7 @@ export const getStatementReport = async (c: Context) => {
           .where(
             and(
               eq(clients.id, parsedClientId),
-              or(eq(clients.createdBy, tenantAdminId), sql`${clients.createdBy} IS NULL`)
+              eq(clients.createdBy, tenantAdminId)
             )
           )
           .limit(1)

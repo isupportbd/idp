@@ -755,7 +755,12 @@ export const checkBinUnique: Handler = async (c: any) => {
         {
           unique: true,
           status: "RELEASED_AVAILABLE_TO_BIND",
-          existingClient: existing,
+          existingClient: {
+            companyName: existing.companyName,
+            proprietorName: existing.proprietorName,
+            binNumber: existing.binNumber,
+            tinNumber: existing.tinNumber
+          },
           message: `এই ক্লায়েন্টটি পূর্ববর্তী অ্যাডমিন কর্তৃক রিলিজ (Released) করা হয়েছে। আপনি তথ্য পূরণ করে ক্লায়েন্টটিকে আপনার ফার্মের সাথে Bind করতে পারবেন।`
         },
         HttpStatusCodes.OK
@@ -771,9 +776,13 @@ export const checkBinUnique: Handler = async (c: any) => {
 export const checkMobileExists: Handler = async (c: any) => {
   try {
     const { mobile, excludeId } = c.req.valid("json");
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
     const conditions = [eq(clients.mobile, mobile.trim())];
     if (excludeId) {
       conditions.push(ne(clients.id, excludeId));
+    }
+    if (!isSuperAdmin && tenantAdminId) {
+      conditions.push(eq(clients.createdBy, tenantAdminId));
     }
 
     const matches = await db
@@ -794,6 +803,12 @@ export const listAssignments: Handler = async (c: any) => {
   try {
     const query = c.req.valid("query");
     const filter = query.filter || "all";
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+
+    const clientConditions: any[] = [];
+    if (!isSuperAdmin && tenantAdminId) {
+      clientConditions.push(eq(clients.createdBy, tenantAdminId));
+    }
 
     const allClients = await db
       .select({
@@ -810,6 +825,7 @@ export const listAssignments: Handler = async (c: any) => {
       .from(clients)
       .leftJoin(customerTypes, eq(clients.customerTypeId, customerTypes.id))
       .leftJoin(clientReferences, eq(clients.referenceId, clientReferences.id))
+      .where(clientConditions.length > 0 ? and(...clientConditions) : undefined)
       .orderBy(asc(clients.companyName));
 
     const allManagers = await db
@@ -872,10 +888,14 @@ export const listAssignments: Handler = async (c: any) => {
 export const assignManagers: Handler = async (c: any) => {
   try {
     const { clientId, managerIds } = c.req.valid("json");
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
-    const existingClient = (await db.select({ id: clients.id }).from(clients).where(eq(clients.id, clientId)).limit(1))[0];
+    const existingClient = (await db.select({ id: clients.id, createdBy: clients.createdBy }).from(clients).where(eq(clients.id, clientId)).limit(1))[0];
     if (!existingClient) {
       return c.json({ message: "Client not found" }, HttpStatusCodes.NOT_FOUND);
+    }
+    if (!isSuperAdmin && tenantAdminId && existingClient.createdBy !== tenantAdminId) {
+      return c.json({ message: "Unauthorized access to client" }, HttpStatusCodes.FORBIDDEN);
     }
 
     await db.delete(clientManagers).where(eq(clientManagers.clientId, clientId));

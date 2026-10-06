@@ -31,16 +31,6 @@ export const register: Handler = async (c: any) => {
     const body = c.req.valid("json");
     const email = String(body.email || "").trim().toLowerCase();
 
-    // Check if a superadmin exists in system
-    const superadminRole = await db.query.roles.findFirst({
-      where: eq(roles.name, "superadmin")
-    });
-    const superadminUser = superadminRole
-      ? await db.query.users.findFirst({
-        where: eq(users.roleId, superadminRole.id)
-      })
-      : null;
-
     const defaultRole = (await db.query.roles.findFirst({
       where: eq(roles.name, "admin")
     })) || (await db.query.roles.findFirst({
@@ -55,9 +45,8 @@ export const register: Handler = async (c: any) => {
       return c.json({ message: "Email already exists" }, HttpStatusCodes.UNPROCESSABLE_ENTITY);
     }
 
-    const isFirstSuperAdmin = !superadminUser;
-    const targetRoleId = isFirstSuperAdmin && superadminRole ? superadminRole.id : (defaultRole?.id ?? null);
-    const targetStatus = isFirstSuperAdmin ? "active" : "pending";
+    const targetRoleId = defaultRole?.id ?? null;
+    const targetStatus = "pending";
 
     // Validate Plan & Payment for Tenants
     let tenantPlanId = null;
@@ -67,44 +56,42 @@ export const register: Handler = async (c: any) => {
     let baseFee = 0;
     let chargePercent = 1.8;
 
-    if (!isFirstSuperAdmin) {
-      if (!body.planId) {
-        return c.json({ success: false, message: "Please select a plan to sign up." }, HttpStatusCodes.UNPROCESSABLE_ENTITY);
-      }
-
-      const [selectedPlan] = await db.select().from(plans).where(eq(plans.id, Number(body.planId)));
-      if (!selectedPlan) {
-        return c.json({ success: false, message: "Selected plan does not exist." }, HttpStatusCodes.UNPROCESSABLE_ENTITY);
-      }
-
-      tenantPlanId = selectedPlan.id;
-      tenantBillingCycle = body.billingCycle === "yearly" ? "yearly" : "monthly";
-
-      const [paymentConfig] = await db.select().from(paymentSettings).limit(1);
-      chargePercent = paymentConfig?.bkashCharge ?? 1.8;
-      baseFee = tenantBillingCycle === "yearly" ? selectedPlan.rateYearly : selectedPlan.rateMonthly;
-
-      const rawPaidAmount = Number(body.paidAmount || 0);
-      if (rawPaidAmount < 1) {
-        return c.json(
-          {
-            success: false,
-            message: `Please enter the amount paid via bKash.`
-          },
-          HttpStatusCodes.UNPROCESSABLE_ENTITY
-        );
-      }
-
-      if (!body.trxId || !body.trxId.trim()) {
-        return c.json(
-          { success: false, message: "bKash TrxID is required to complete registration." },
-          HttpStatusCodes.UNPROCESSABLE_ENTITY
-        );
-      }
-
-      tenantPaidAmount = rawPaidAmount;
-      tenantTrxId = body.trxId.replace(/\s*\((monthly|yearly|m|y)\)/gi, "").trim();
+    if (!body.planId) {
+      return c.json({ success: false, message: "Please select a plan to sign up." }, HttpStatusCodes.UNPROCESSABLE_ENTITY);
     }
+
+    const [selectedPlan] = await db.select().from(plans).where(eq(plans.id, Number(body.planId)));
+    if (!selectedPlan) {
+      return c.json({ success: false, message: "Selected plan does not exist." }, HttpStatusCodes.UNPROCESSABLE_ENTITY);
+    }
+
+    tenantPlanId = selectedPlan.id;
+    tenantBillingCycle = body.billingCycle === "yearly" ? "yearly" : "monthly";
+
+    const [paymentConfig] = await db.select().from(paymentSettings).limit(1);
+    chargePercent = paymentConfig?.bkashCharge ?? 1.8;
+    baseFee = tenantBillingCycle === "yearly" ? selectedPlan.rateYearly : selectedPlan.rateMonthly;
+
+    const rawPaidAmount = Number(body.paidAmount || 0);
+    if (rawPaidAmount < 1) {
+      return c.json(
+        {
+          success: false,
+          message: `Please enter the amount paid via bKash.`
+        },
+        HttpStatusCodes.UNPROCESSABLE_ENTITY
+      );
+    }
+
+    if (!body.trxId || !body.trxId.trim()) {
+      return c.json(
+        { success: false, message: "bKash TrxID is required to complete registration." },
+        HttpStatusCodes.UNPROCESSABLE_ENTITY
+      );
+    }
+
+    tenantPaidAmount = rawPaidAmount;
+    tenantTrxId = body.trxId.replace(/\s*\((monthly|yearly|m|y)\)/gi, "").trim();
 
     const insertedRows = await db
       .insert(users)
@@ -116,7 +103,7 @@ export const register: Handler = async (c: any) => {
         roleId: targetRoleId,
         status: targetStatus,
         planId: tenantPlanId,
-        billingCycle: isFirstSuperAdmin ? null : tenantBillingCycle,
+        billingCycle: tenantBillingCycle,
         trxId: tenantTrxId,
         paidAmount: tenantPaidAmount,
         advanceBalance: 0
@@ -189,7 +176,7 @@ export const register: Handler = async (c: any) => {
             paidAmount: user.paidAmount,
             createdAt: user.createdAt
           },
-          { roles: ["superadmin"], all: true }
+          { roles: ["superadmin"], auth: true }
         );
       } catch (broadcastErr) {
         console.error("Broadcast tenant:signup error:", broadcastErr);
@@ -278,8 +265,21 @@ export const login: Handler = async (c: any) => {
       return c.json({ message: "Your account is suspended. Please contact administrator." }, HttpStatusCodes.FORBIDDEN);
     }
 
+    if (user.status === "inactive") {
+      return c.json({ message: "Your account is inactive. Please contact administrator." }, HttpStatusCodes.FORBIDDEN);
+    }
+
     if (user.status === "pending") {
       return c.json({ message: "Your registration is pending verification and approval." }, HttpStatusCodes.FORBIDDEN);
+    }
+
+    if (user.adminId) {
+      const tenantAdmin = await db.query.users.findFirst({
+        where: eq(users.id, user.adminId)
+      });
+      if (tenantAdmin && (tenantAdmin.status === "suspended" || tenantAdmin.status === "inactive" || tenantAdmin.status === "pending")) {
+        return c.json({ message: "Your firm account is inactive or suspended. Please contact firm administrator." }, HttpStatusCodes.FORBIDDEN);
+      }
     }
 
     if (authConfig.requireEmailVerification && !user.emailVerifiedAt) {
@@ -611,14 +611,29 @@ export const refreshToken: Handler = async (c: any) => {
     });
     if (!user) return c.json({ message: "User not found" }, HttpStatusCodes.UNAUTHORIZED);
 
+    if (user.status === "suspended" || user.status === "inactive" || user.status === "pending") {
+      return c.json({ message: "Account is not active" }, HttpStatusCodes.UNAUTHORIZED);
+    }
+
+    if (user.adminId) {
+      const tenantAdmin = await db.query.users.findFirst({
+        where: eq(users.id, user.adminId)
+      });
+      if (tenantAdmin && (tenantAdmin.status === "suspended" || tenantAdmin.status === "inactive" || tenantAdmin.status === "pending")) {
+        return c.json({ message: "Firm account is not active" }, HttpStatusCodes.UNAUTHORIZED);
+      }
+    }
+
     const remember = !!payload.remember;
-    const refreshExpiry = remember ? jwtConfig.refreshRememberExpirySeconds : undefined;
+    const refreshExpiry = remember ? jwtConfig.refreshRememberExpirySeconds : jwtConfig.refreshExpirySeconds;
     const accessToken = await jwt.generateToken(
       {
         id: user.id,
         email: user.email,
-        roleId: user.role?.id,
-        role: user.role?.name,
+        name: user.name,
+        adminId: user.adminId ? Number(user.adminId) : null,
+        roleId: user.role?.id ?? null,
+        role: user.role?.name ?? null,
         remember
       },
       "access"
@@ -627,8 +642,9 @@ export const refreshToken: Handler = async (c: any) => {
       {
         id: user.id,
         email: user.email,
-        roleId: user.role?.id,
-        role: user.role?.name,
+        adminId: user.adminId ? Number(user.adminId) : null,
+        roleId: user.role?.id ?? null,
+        role: user.role?.name ?? null,
         remember
       },
       "refresh",
@@ -651,7 +667,7 @@ export const refreshToken: Handler = async (c: any) => {
       {
         message: "Token refreshed successfully",
         data: {
-          user: sanitizeUser(user),
+          user: await sanitizeUser(user),
           access_token: accessToken.token,
           refresh_token: newRefreshToken.token,
           token_type: "Bearer"

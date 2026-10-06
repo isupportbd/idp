@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import type { Handler } from "hono";
 import { db, getDefaultTaxPeriod, getSubmissionDeadline, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
+import { broadcast } from "@/framework/realtime/broadcast.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
 import { vatSubmissions } from "@/modules/clients/database/models/vat_submissions.js";
@@ -237,12 +238,16 @@ export const recordSubmission: Handler = async (c: any) => {
         .limit(1)
     )[0];
 
-    if (!client) {
-      return c.json({ message: "Client not found" }, HttpStatusCodes.NOT_FOUND);
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+    if (!isSuperAdmin && tenantAdminId && client.createdBy && client.createdBy !== tenantAdminId) {
+      return c.json({ message: "Unauthorized access to client" }, HttpStatusCodes.FORBIDDEN);
     }
 
-    // Automatically resolve client manager from client_managers
-    let managerId: number | null = payload.submittedBy || null;
+    const user = c.get("auth") || c.get("user") || (c.req as any).user;
+    const currentUserId = user?.id ? Number(user.id) : null;
+
+    // Automatically resolve submitter: explicit in payload > logged in user > assigned client manager
+    let managerId: number | null = payload.submittedBy ? Number(payload.submittedBy) : currentUserId;
     if (!managerId) {
       const assignedManager = (
         await db
@@ -307,10 +312,46 @@ export const recordSubmission: Handler = async (c: any) => {
       )[0];
     }
 
+    // Resolve submitter name for real-time dispatch
+    let submitterName = user?.name || null;
+    if (managerId && managerId !== currentUserId) {
+      const submitterUser = (
+        await db
+          .select({ name: users.name })
+          .from(users)
+          .where(eq(users.id, managerId))
+          .limit(1)
+      )[0];
+      if (submitterUser) {
+        submitterName = submitterUser.name;
+      }
+    }
+
+    const targetAdminId = client.createdBy || tenantAdminId || (user?.adminId ? Number(user.adminId) : null);
+
+    // Broadcast realtime event for immediate UI updates without reload
+    broadcast(
+      "submission:updated",
+      {
+        id: result?.id,
+        clientId,
+        taxPeriod,
+        submissionId: submissionId.trim(),
+        status,
+        submittedBy: managerId,
+        submittedByName: submitterName,
+        submittedAt,
+        remarks: remarks?.trim() || null
+      },
+      {
+        auth: true,
+        rooms: targetAdminId ? [`tenant:${targetAdminId}`] : []
+      }
+    );
+
     // Trigger automated SMS in background (non-blocking)
     // Use client.createdBy as the authoritative adminId for gateway lookup.
     // Fall back to the authenticated user's tenant admin. Never fall back to 1.
-    const user = c.get("auth") || c.get("user") || (c.req as any).user;
     const adminId: number | null = client.createdBy
       || (user?.adminId ? Number(user.adminId) : null)
       || (user?.id ? Number(user.id) : null)
@@ -353,7 +394,11 @@ export const deleteSubmission: Handler = async (c: any) => {
     const { id } = c.req.valid("param");
     const existing = (
       await db
-        .select({ id: vatSubmissions.id })
+        .select({
+          id: vatSubmissions.id,
+          clientId: vatSubmissions.clientId,
+          taxPeriod: vatSubmissions.taxPeriod
+        })
         .from(vatSubmissions)
         .where(eq(vatSubmissions.id, id))
         .limit(1)
@@ -364,6 +409,18 @@ export const deleteSubmission: Handler = async (c: any) => {
     }
 
     await db.delete(vatSubmissions).where(eq(vatSubmissions.id, id));
+
+    broadcast(
+      "submission:deleted",
+      {
+        id,
+        clientId: existing.clientId,
+        taxPeriod: existing.taxPeriod
+      },
+      {
+        auth: true
+      }
+    );
 
     return c.json({ message: "Submission record deleted successfully" }, HttpStatusCodes.OK);
   } catch (err: any) {
@@ -384,6 +441,16 @@ export const batchDeleteSubmissions: Handler = async (c: any) => {
     }
 
     await db.delete(vatSubmissions).where(inArray(vatSubmissions.id, ids));
+
+    broadcast(
+      "submission:batch_deleted",
+      {
+        ids
+      },
+      {
+        auth: true
+      }
+    );
 
     return c.json({ message: `${ids.length} submission records deleted` }, HttpStatusCodes.OK);
   } catch (err: any) {

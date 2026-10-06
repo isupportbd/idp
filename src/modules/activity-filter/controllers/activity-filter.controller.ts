@@ -49,7 +49,7 @@ export const getActivityMatrix: Handler = async (c: any) => {
           ? eq(clients.isActive, true)
           : and(
               eq(clients.isActive, true),
-              or(eq(clients.createdBy, tenantAdminId), sql`${clients.createdBy} IS NULL`)
+              eq(clients.createdBy, tenantAdminId)
             )
       )
       .orderBy(asc(clients.companyName));
@@ -144,7 +144,7 @@ export const getActivityMatrix: Handler = async (c: any) => {
               submissionId: submission.submissionId,
               status: submission.status,
               submittedAt: submission.submittedAt,
-              submittedBy: submission.submitterName || "System Staff",
+              submittedBy: submission.submitterName || (submission.submittedBy ? `User #${submission.submittedBy}` : "—"),
               remarks: submission.remarks
             }
           : null

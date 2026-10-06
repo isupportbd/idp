@@ -356,7 +356,11 @@ export async function extendTenant(c: Context) {
       await db.insert(subscriptionTransactions).values({
         userId: id,
         planId: targetUser.planId || null,
+        type: "extension",
         billingCycle: "custom",
+        grossAmount: 0,
+        gatewayCharge: 0,
+        netAmount: 0,
         planRate: 0,
         paidAmount: 0,
         excessCredit: 0,

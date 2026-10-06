@@ -17,36 +17,23 @@ export async function authMiddleware(c: Context, next: Next) {
     const accessPayload = await jwt.verifyToken(accessToken, "access");
 
     if (accessPayload && accessPayload.id) {
-      // Fast path: verified cryptographically signed JWT payload contains user identity
-      if (accessPayload.role !== undefined) {
-        c.set("auth", {
-          ...accessPayload,
-          id: Number(accessPayload.id),
-          email: accessPayload.email,
-          adminId: accessPayload.adminId !== undefined ? (accessPayload.adminId ? Number(accessPayload.adminId) : null) : null,
-          roleId: accessPayload.roleId ? Number(accessPayload.roleId) : null,
-          role: accessPayload.role || null
-        });
-        return await next();
-      }
-
-      // Fallback for older tokens lacking role in payload
       const user = await db.query.users.findFirst({
-        where: eq(users.id, accessPayload.id as number),
+        where: eq(users.id, Number(accessPayload.id)),
         with: { role: true }
       });
 
-      if (!user) {
+      if (!user || user.status === "suspended" || user.status === "inactive" || user.status === "pending") {
         cookie.deleteAuth(c);
         cookie.deleteRefresh(c);
-        return c.json({ message: "Unauthorized" }, 401);
+        return c.json({ message: "Unauthorized: Account is not active" }, 401);
       }
 
       c.set("auth", {
         ...accessPayload,
         id: user.id,
         email: user.email,
-        adminId: user.adminId ?? null,
+        name: user.name,
+        adminId: user.adminId ? Number(user.adminId) : null,
         roleId: user.role?.id ?? null,
         role: user.role?.name ?? null
       });

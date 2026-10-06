@@ -23,14 +23,18 @@ function r2(num: number): number {
 /**
  * Generates sequential Invoice No in format: INV-YYYY-000001
  */
-async function generateNextBillNo(year: number, customPrefix = "INV"): Promise<string> {
+async function generateNextBillNo(year: number, customPrefix = "INV", tenantAdminId?: number | null): Promise<string> {
   const cleanPrefix = (customPrefix || "INV").replace(/-+$/, "").toUpperCase();
   const prefix = `${cleanPrefix}-${year}-`;
+  const conditions: any[] = [or(like(bills.billNo, `${prefix}%`), ilike(bills.billNo, `%-${year}-%`))];
+  if (tenantAdminId) {
+    conditions.push(eq(bills.createdBy, tenantAdminId));
+  }
   const latestBill = (
     await db
       .select({ billNo: bills.billNo })
       .from(bills)
-      .where(or(like(bills.billNo, `${prefix}%`), ilike(bills.billNo, `%-${year}-%`)))
+      .where(and(...conditions))
       .orderBy(desc(bills.id))
       .limit(1)
   )[0];
@@ -53,14 +57,19 @@ async function generateNextBillNo(year: number, customPrefix = "INV"): Promise<s
 /**
  * Generates sequential Money Receipt No in format: RCP-YYYY-000001
  */
-async function generateNextReceiptNo(year: number, customPrefix = "RCP"): Promise<string> {
+async function generateNextReceiptNo(year: number, customPrefix = "RCP", tenantAdminId?: number | null): Promise<string> {
   const cleanPrefix = (customPrefix || "RCP").replace(/-+$/, "").toUpperCase();
   const prefix = `${cleanPrefix}-${year}-`;
+  const conditions: any[] = [or(like(collections.receiptNo, `${prefix}%`), ilike(collections.receiptNo, `%-${year}-%`))];
+  if (tenantAdminId) {
+    conditions.push(eq(clients.createdBy, tenantAdminId));
+  }
   const latestCol = (
     await db
       .select({ receiptNo: collections.receiptNo })
       .from(collections)
-      .where(or(like(collections.receiptNo, `${prefix}%`), ilike(collections.receiptNo, `%-${year}-%`)))
+      .leftJoin(clients, eq(collections.clientId, clients.id))
+      .where(and(...conditions))
       .orderBy(desc(collections.id))
       .limit(1)
   )[0];

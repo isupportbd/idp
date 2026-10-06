@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import StatusBadge from "@/components/common/StatusBadge.vue";
 import { useSubmissionsApi, type SubmissionItem } from "@/composables/useSubmissionsApi";
@@ -8,6 +8,7 @@ import { useClientsApi } from "@/composables/useClientsApi";
 import { useToast } from "@/composables/useToast";
 import { can } from "@/composables/useAuth";
 import SearchInput from "@/components/common/SearchInput.vue";
+import { pulse } from "@/plugins/pulse";
 
 const toast = useToast();
 
@@ -100,6 +101,25 @@ const loadData = async () => {
 
 onMounted(() => {
   loadData();
+
+  pulse.channel("auth").listen("submission:updated", (data: any) => {
+    if (!data) return;
+    if (data.taxPeriod === selectedMonth.value) {
+      loadSubmissionsList();
+    }
+  });
+
+  pulse.channel("auth").listen("submission:deleted", (data: any) => {
+    if (!data) return;
+    if (data.taxPeriod === selectedMonth.value) {
+      loadSubmissionsList();
+    }
+  });
+});
+
+onUnmounted(() => {
+  pulse.channel("auth").stopListening("submission:updated");
+  pulse.channel("auth").stopListening("submission:deleted");
 });
 
 // Pagination State (10 items per page)

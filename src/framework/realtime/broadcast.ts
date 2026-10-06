@@ -21,7 +21,10 @@ function emitViaIo(event: string, payload: any, options: BroadcastOptions) {
   const io = socketServer();
   if (!io) return;
 
-  if (options.all) io.emit(event, payload);
+  if (options.all) {
+    io.emit(event, payload);
+    return;
+  }
   if (options.auth) io.to("auth").emit(event, payload);
 
   for (const user of options.users || []) io.to(`user:${user}`).emit(event, payload);

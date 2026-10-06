@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import axios from "axios";
 import MonthMatrix from "@/components/MonthMatrix.vue";
 import { can, canAccessModule } from "@/composables/useAuth";
+import { pulse } from "@/plugins/pulse";
 
 // Types
 interface Client {
@@ -1187,6 +1188,35 @@ watch(selectedUnitId, () => {
 
 onMounted(async () => {
   await fetchMasterData();
+
+  pulse.channel("auth").listen("submission:updated", (data: any) => {
+    if (!data) return;
+    if (data.taxPeriod && !submissionMonths.value.includes(data.taxPeriod) && data.clientId === selectedClientId.value) {
+      submissionMonths.value.push(data.taxPeriod);
+    }
+    if (data.clientId === selectedClientId.value) {
+      submissionsMap.value[data.taxPeriod] = data.submissionId;
+      if (data.taxPeriod === selectedMonthYear.value) {
+        submissionId.value = data.submissionId || null;
+      }
+    }
+  });
+
+  pulse.channel("auth").listen("submission:deleted", (data: any) => {
+    if (!data) return;
+    if (data.clientId === selectedClientId.value) {
+      delete submissionsMap.value[data.taxPeriod];
+      submissionMonths.value = submissionMonths.value.filter((m) => m !== data.taxPeriod);
+      if (data.taxPeriod === selectedMonthYear.value) {
+        submissionId.value = null;
+      }
+    }
+  });
+});
+
+onUnmounted(() => {
+  pulse.channel("auth").stopListening("submission:updated");
+  pulse.channel("auth").stopListening("submission:deleted");
 });
 </script>
 

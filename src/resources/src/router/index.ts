@@ -16,6 +16,30 @@ export const routes = [
     meta: { guestOnly: true, title: "Sign In" }
   },
   {
+    path: "/register",
+    name: "register",
+    component: () => import("@/pages/auth/register.vue"),
+    meta: { guestOnly: true, title: "Create Account" }
+  },
+  {
+    path: "/forgot-password",
+    name: "forgot-password",
+    component: () => import("@/pages/auth/forgetPassword.vue"),
+    meta: { guestOnly: true, title: "Forgot Password" }
+  },
+  {
+    path: "/reset-password",
+    name: "reset-password",
+    component: () => import("@/pages/auth/resetPassword.vue"),
+    meta: { guestOnly: true, title: "Reset Password" }
+  },
+  {
+    path: "/verify-email",
+    name: "verify-email",
+    component: () => import("@/pages/auth/verifyEmail.vue"),
+    meta: { guestOnly: true, title: "Verify Email" }
+  },
+  {
     path: "/",
     component: () => import("@/layouts/Layout/index.vue"),
     meta: { requiresAuth: true },

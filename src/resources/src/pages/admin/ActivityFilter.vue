@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
 import { useActivityFilterApi, type ActivityClient } from "@/composables/useActivityFilterApi";
 import { can } from "@/composables/useAuth";
+import { pulse } from "@/plugins/pulse";
 
 const router = useRouter();
 const { loading, matrixData, stats, clientTypes, references, loadActivityMatrix } = useActivityFilterApi();
@@ -243,6 +244,35 @@ watch([searchQuery, statusFilter, selectedClientType, selectedReference], () => 
 
 onMounted(() => {
   loadActivityMatrix(selectedMonth.value);
+
+  pulse.channel("auth").listen("submission:updated", (data: any) => {
+    if (!data) return;
+    const client = matrixData.value.find((c) => c.id === data.clientId);
+    if (client && data.taxPeriod === selectedMonth.value) {
+      client.isSubmitted = Boolean(data.submissionId);
+      client.submission = {
+        submissionId: data.submissionId,
+        status: data.status,
+        submittedAt: data.submittedAt,
+        submittedBy: data.submittedByName || (data.submittedBy ? `User #${data.submittedBy}` : "—"),
+        remarks: data.remarks
+      };
+    }
+  });
+
+  pulse.channel("auth").listen("submission:deleted", (data: any) => {
+    if (!data) return;
+    const client = matrixData.value.find((c) => c.id === data.clientId);
+    if (client && data.taxPeriod === selectedMonth.value) {
+      client.isSubmitted = false;
+      client.submission = null;
+    }
+  });
+});
+
+onUnmounted(() => {
+  pulse.channel("auth").stopListening("submission:updated");
+  pulse.channel("auth").stopListening("submission:deleted");
 });
 </script>
 
