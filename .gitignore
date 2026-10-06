@@ -17,8 +17,7 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Lock files — regenerated per developer's package manager
-bun.lock
+# Lock files
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
