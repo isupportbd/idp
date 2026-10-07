@@ -48,7 +48,11 @@ const stats = ref<{
   tenantBreakdown: []
 });
 
+import { useToast } from "@/composables/useToast";
+
+const toast = useToast();
 const isLoading = ref(false);
+const isDownloadingBackup = ref(false);
 const searchTerm = ref("");
 
 const fetchStorageStats = async () => {
@@ -62,6 +66,40 @@ const fetchStorageStats = async () => {
     console.error("Failed to fetch storage stats:", e);
   } finally {
     isLoading.value = false;
+  }
+};
+
+const downloadDatabaseBackup = async () => {
+  isDownloadingBackup.value = true;
+  try {
+    const res = await axios.get("/api/superadmin/database-backup", {
+      responseType: "blob"
+    });
+
+    let filename = `idp_backup_${new Date().toISOString().slice(0, 10)}.sql`;
+    const disposition = res.headers["content-disposition"];
+    if (disposition && disposition.indexOf("filename=") !== -1) {
+      const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+      if (matches != null && matches[1]) {
+        filename = matches[1].replace(/['"]/g, "");
+      }
+    }
+
+    const url = window.URL.createObjectURL(new Blob([res.data], { type: "application/sql" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    toast.success("Full database SQL backup downloaded successfully!");
+  } catch (err: any) {
+    console.error("Backup download failed:", err);
+    toast.error("Failed to download database backup.");
+  } finally {
+    isDownloadingBackup.value = false;
   }
 };
 
@@ -114,14 +152,27 @@ onMounted(fetchStorageStats);
     <!-- 1. SYSTEM STORAGE OVERVIEW CARDS -->
     <div class="row g-3 mb-4">
       <div class="col-md-3">
-        <div class="idp-card p-3 d-flex align-items-center gap-3">
-          <div class="card-icon bg-primary bg-opacity-10 text-primary rounded p-2.5">
-            <i class="bi bi-database fs-3"></i>
+        <div class="idp-card p-3 d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-3">
+            <div class="card-icon bg-primary bg-opacity-10 text-primary rounded p-2.5">
+              <i class="bi bi-database fs-3"></i>
+            </div>
+            <div>
+              <div class="text-muted small">PostgreSQL Database</div>
+              <h4 class="text-white fw-bold mb-0 font-monospace">{{ stats.dbSizeMB }} MB</h4>
+            </div>
           </div>
-          <div>
-            <div class="text-muted small">PostgreSQL Database</div>
-            <h4 class="text-white fw-bold mb-0 font-monospace">{{ stats.dbSizeMB }} MB</h4>
-          </div>
+          <button
+            type="button"
+            class="btn btn-outline-primary btn-sm rounded-circle p-2 d-flex align-items-center justify-content-center shadow-sm"
+            style="width: 38px; height: 38px; flex-shrink: 0;"
+            :disabled="isDownloadingBackup"
+            title="Download Full Database SQL Backup (.sql)"
+            @click="downloadDatabaseBackup"
+          >
+            <span v-if="isDownloadingBackup" class="spinner-border spinner-border-sm" role="status"></span>
+            <i v-else class="bi bi-download fs-6"></i>
+          </button>
         </div>
       </div>
       <div class="col-md-3">

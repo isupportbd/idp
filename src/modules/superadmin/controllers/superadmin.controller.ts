@@ -2664,6 +2664,89 @@ export async function deleteServiceUnit(c: Context) {
   }
 }
 
+// 22. Full Database SQL Backup Export
+export async function exportDatabaseBackup(c: Context) {
+  try {
+    const tablesRes = await db.execute(sql`
+      SELECT tablename 
+      FROM pg_tables 
+      WHERE schemaname = 'public'
+      ORDER BY tablename ASC
+    `);
+    const tables = (Array.isArray(tablesRes) ? tablesRes : (tablesRes as any).rows || [])
+      .map((r: any) => r.tablename)
+      .filter(Boolean);
+
+    let sqlDump = `-- ========================================================\n`;
+    sqlDump += `-- IDP ERP PostgreSQL Database Backup\n`;
+    sqlDump += `-- Generated: ${new Date().toISOString()}\n`;
+    sqlDump += `-- Total Public Tables: ${tables.length}\n`;
+    sqlDump += `-- ========================================================\n\n`;
+    sqlDump += `SET statement_timeout = 0;\n`;
+    sqlDump += `SET lock_timeout = 0;\n`;
+    sqlDump += `SET client_encoding = 'UTF8';\n`;
+    sqlDump += `SET standard_conforming_strings = on;\n`;
+    sqlDump += `SET check_function_bodies = false;\n`;
+    sqlDump += `SET client_min_messages = warning;\n\n`;
+    sqlDump += `BEGIN;\n\n`;
+
+    for (const table of tables) {
+      try {
+        const rowsRes = await db.execute(sql.raw(`SELECT * FROM "${table}"`));
+        const rows = (Array.isArray(rowsRes) ? rowsRes : (rowsRes as any).rows || []);
+
+        sqlDump += `-- --------------------------------------------------------\n`;
+        sqlDump += `-- Table data for "${table}" (${rows.length} records)\n`;
+        sqlDump += `-- --------------------------------------------------------\n`;
+
+        if (rows.length > 0) {
+          const columns = Object.keys(rows[0]);
+          const colsList = columns.map((col) => `"${col}"`).join(", ");
+
+          for (const row of rows) {
+            const values = columns.map((col) => {
+              const val = row[col];
+              if (val === null || val === undefined) return "NULL";
+              if (typeof val === "number" || typeof val === "bigint") return val.toString();
+              if (typeof val === "boolean") return val ? "TRUE" : "FALSE";
+              if (val instanceof Date) return `'${val.toISOString()}'`;
+              if (typeof val === "object") {
+                return `'${JSON.stringify(val).replace(/'/g, "''")}'`;
+              }
+              return `'${String(val).replace(/'/g, "''")}'`;
+            });
+
+            sqlDump += `INSERT INTO "${table}" (${colsList}) VALUES (${values.join(", ")});\n`;
+          }
+        }
+        sqlDump += `\n`;
+      } catch (err: any) {
+        sqlDump += `-- Error dumping table "${table}": ${err.message}\n\n`;
+      }
+    }
+
+    sqlDump += `COMMIT;\n`;
+    sqlDump += `-- End of Backup\n`;
+
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, "0")}_${String(now.getDate()).padStart(2, "0")}`;
+    const timeStr = `${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`;
+    const filename = `idp_backup_${dateStr}_${timeStr}.sql`;
+
+    return new Response(sqlDump, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/sql; charset=utf-8",
+        "Content-Disposition": `attachment; filename="${filename}"`
+      }
+    });
+  } catch (err: any) {
+    console.error("Database backup failed:", err);
+    return c.json({ success: false, error: err.message || "Failed to generate database backup" }, 500);
+  }
+}
+
+
 
 
 

@@ -69,7 +69,8 @@ import {
   getNotifications,
   getPendingRecharges,
   approveRecharge,
-  rejectRecharge
+  rejectRecharge,
+  exportDatabaseBackup
 } from "../controllers/superadmin.controller.js";
 import {
   PlanSchema,
@@ -108,8 +109,12 @@ superAdminRouter.use("/reject-signup*", authMiddleware, requireRole("superadmin"
 superAdminRouter.use("/approve-recharge*", authMiddleware, requireRole("superadmin"));
 superAdminRouter.use("/reject-recharge*", authMiddleware, requireRole("superadmin"));
 superAdminRouter.use("/storage-stats*", authMiddleware, requireRole("superadmin"));
+superAdminRouter.use("/database-backup*", authMiddleware, requireRole("superadmin"));
 superAdminRouter.use("/transactions*", authMiddleware, requireRole("superadmin"));
 superAdminRouter.use("/metrics*", authMiddleware, requireRole("superadmin"));
+
+// Database Backup (.sql) Export (Protected)
+superAdminRouter.get("/database-backup", exportDatabaseBackup);
 
 // Notifications (Protected)
 superAdminRouter.get("/notifications", getNotifications);
