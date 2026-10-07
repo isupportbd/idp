@@ -1039,6 +1039,80 @@ export const sendTestSms: Handler = async (c: any) => {
 };
 
 /**
+ * Why: Queries SMS provider API directly to sync live balance on demand.
+ * When: Called when tenant clicks SMS badge in Header or requests balance refresh.
+ * Where: POST /api/auth/sync-sms-balance
+ */
+export const syncSmsBalance: Handler = async (c: any) => {
+  try {
+    const auth = c.get("auth") || c.get("user");
+    if (!auth || !auth.id) {
+      return c.json({ success: false, message: "Unauthorized" }, HttpStatusCodes.UNAUTHORIZED);
+    }
+
+    const currentUserId = Number(auth.id);
+    const currentUser = await db.query.users.findFirst({
+      where: eq(users.id, currentUserId)
+    });
+
+    if (!currentUser) {
+      return c.json({ success: false, message: "User not found" }, HttpStatusCodes.NOT_FOUND);
+    }
+
+    const targetAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUserId;
+    const firmSetting = (
+      await db
+        .select()
+        .from(companySettings)
+        .where(eq(companySettings.adminId, targetAdminId))
+        .limit(1)
+    )[0] || (await db.select().from(companySettings).where(isNull(companySettings.adminId)).limit(1))[0];
+
+    if (!firmSetting?.smsApiKey) {
+      return c.json({
+        success: false,
+        message: "SMS Gateway API Key is not configured in Firm Settings",
+        smsBalance: (currentUser as any).smsBalance || 0
+      }, HttpStatusCodes.BAD_REQUEST);
+    }
+
+    const liveBalance = await fetchProviderBalance(firmSetting.smsApiKey);
+    if (liveBalance === null) {
+      return c.json({
+        success: false,
+        message: "Unable to reach SMS Gateway Provider",
+        smsBalance: (currentUser as any).smsBalance || 0
+      }, HttpStatusCodes.BAD_GATEWAY);
+    }
+
+    await db.update(users).set({ smsBalance: liveBalance, updatedAt: new Date() }).where(eq(users.id, targetAdminId));
+
+    try {
+      broadcast(
+        "tenant:sms-updated",
+        {
+          adminId: targetAdminId,
+          smsBalance: liveBalance,
+          timestamp: Date.now()
+        },
+        { all: true, auth: true }
+      );
+    } catch (bErr) {
+      console.error("Broadcast SMS update error:", bErr);
+    }
+
+    return c.json({
+      success: true,
+      message: "SMS balance synced successfully!",
+      smsBalance: liveBalance
+    }, HttpStatusCodes.OK);
+  } catch (err: any) {
+    console.error("syncSmsBalance error:", err);
+    return c.json({ success: false, message: err.message || "Failed to sync SMS balance" }, 500);
+  }
+};
+
+/**
  * Why: Allows a Tenant to purchase extra permanent storage add-on (1 GB = ৳1,000).
  * When: Storage reaches 90%+ or tenant wants to expand database quota.
  * Where: POST /api/auth/buy-storage route.

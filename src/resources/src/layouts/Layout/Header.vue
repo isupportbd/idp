@@ -19,6 +19,26 @@ const isDropdownOpen = ref(false);
 const showNotifications = ref(false);
 const showStatsModal = ref(false);
 const showStatsDropdown = ref(false);
+const isSyncingSms = ref(false);
+
+const syncSmsBalance = async () => {
+  if (isSyncingSms.value) return;
+  isSyncingSms.value = true;
+  try {
+    const res = await axios.post("/api/auth/sync-sms-balance");
+    if (res.data?.success) {
+      if (authStore.user) {
+        (authStore.user as any).smsBalance = res.data.smsBalance;
+      }
+    }
+  } catch (err: any) {
+    console.warn("SMS balance sync warning:", err);
+  } finally {
+    setTimeout(() => {
+      isSyncingSms.value = false;
+    }, 600);
+  }
+};
 
 const notifications = ref<any[]>([]);
 const userStats = ref({
@@ -336,17 +356,24 @@ onUnmounted(() => {
             </strong>
           </div>
 
-          <!-- SMS Balance Card -->
+          <!-- SMS Balance Card (Click to Sync) -->
           <div
-            class="d-flex align-items-center rounded bg-dark border border-secondary"
+            class="d-flex align-items-center rounded bg-dark border border-secondary cursor-pointer user-select-none"
             style="font-size: 0.85rem; padding: 6px 14px !important; gap: 8px; min-width: 120px;"
-            :title="'SMS Balance: ৳ ' + Number((authStore.user as any)?.smsBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })"
+            :title="'SMS Balance: ৳ ' + Number((authStore.user as any)?.smsBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' (Click to sync latest balance)'"
+            @click="syncSmsBalance"
           >
             <i class="bi bi-chat-left-text text-info"></i>
             <span class="text-muted d-none d-sm-inline">SMS:</span>
             <strong class="text-info font-monospace d-inline-flex align-items-baseline">
               <span class="currency-symbol">৳</span>{{ Number((authStore.user as any)?.smsBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
             </strong>
+            <i
+              class="bi bi-arrow-repeat ms-1 text-muted"
+              :class="{ 'spin-icon text-info': isSyncingSms }"
+              style="font-size: 0.8rem;"
+              title="Sync live balance"
+            ></i>
           </div>
 
           <!-- Storage Usage Card (Clickable to open Buy Storage Modal) -->
@@ -888,5 +915,19 @@ onUnmounted(() => {
   font-weight: 600;
   margin-right: 2px;
   opacity: 0.85;
+}
+
+.spin-icon {
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

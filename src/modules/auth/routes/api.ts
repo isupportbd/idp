@@ -14,6 +14,7 @@ import {
   buyStorage,
   resetPassword,
   sendTestSms,
+  syncSmsBalance,
   verifyEmail
 } from "@/modules/auth/controllers/auth.controller.js";
 import {
@@ -227,6 +228,16 @@ const sendTestSmsRoute = createRoute({
   }
 });
 
+const syncSmsBalanceRoute = createRoute({
+  path: "/sync-sms-balance",
+  method: "post",
+  tags: ["Auth"],
+  description: "Sync live remaining balance directly from SMS gateway provider",
+  responses: {
+    [HttpStatusCodes.OK]: jsonContent(z.any(), "SMS balance synced")
+  }
+});
+
 const publicRoute = createRouter()
   .group(loginLimiter)
   .api(registerRoute, register)
@@ -245,6 +256,7 @@ const protectedRoute = createRouter()
   .api(rechargeWalletRoute, rechargeWallet)
   .api(buyStorageRoute, buyStorage)
   .api(sendTestSmsRoute, sendTestSms)
+  .api(syncSmsBalanceRoute, syncSmsBalance)
   .api(logoutRoute, logout)
   .api(logoutAllDevicesRoute, logoutAllDevices);
 

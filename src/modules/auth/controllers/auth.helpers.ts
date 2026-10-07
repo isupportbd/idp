@@ -11,6 +11,8 @@ import { purchases } from "@/modules/clients/database/models/purchases.js";
 import { vatSubmissions } from "@/modules/clients/database/models/vat_submissions.js";
 import { bills } from "@/modules/billing/database/models/bills.js";
 import { subscriptionTransactions } from "@/modules/superadmin/database/models/subscription_transactions.js";
+import { companySettings } from "@/modules/firm/database/models/company_settings.js";
+import { fetchProviderBalance } from "@/framework/sms/index.js";
 import { normalizePermissions } from "@/modules/users/controllers/permissions.js";
 
 const storageCache = new Map<number, { records: number; expiresAt: number }>();
@@ -72,6 +74,24 @@ export async function sanitizeUser(user: any) {
         effectiveSmsBalance = (adminUser as any).smsBalance ?? 0;
         extraStorageMB = adminUser.extraStorageMB ?? 0;
         effectiveExpDate = adminUser.expDate;
+      }
+    } catch {}
+  }
+
+  // Real-time Gateway Balance Sync: If firm has SMS Gateway API Key configured, ensure latest stock
+  if (tenantAdminId) {
+    try {
+      const firmSettings = await db.query.companySettings.findFirst({
+        where: eq(companySettings.adminId, tenantAdminId)
+      });
+      if (firmSettings?.smsApiKey) {
+        const liveBal = await fetchProviderBalance(firmSettings.smsApiKey);
+        if (liveBal !== null) {
+          effectiveSmsBalance = liveBal;
+          if ((user as any).smsBalance !== liveBal) {
+            await db.update(users).set({ smsBalance: liveBal, updatedAt: new Date() }).where(eq(users.id, tenantAdminId)).catch(() => {});
+          }
+        }
       }
     } catch {}
   }
