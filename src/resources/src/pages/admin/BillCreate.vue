@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useBillingApi, type BillItem } from "@/composables/useBillingApi";
 import { useClientsApi } from "@/composables/useClientsApi";
