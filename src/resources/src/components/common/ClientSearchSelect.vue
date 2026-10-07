@@ -15,13 +15,14 @@ export interface ClientOption {
 
 const props = withDefaults(
   defineProps<{
-    clients: ClientOption[];
+    clients?: ClientOption[];
     modelValue?: number | null;
     placeholder?: string;
     disabled?: boolean;
     showBinOnly?: boolean;
   }>(),
   {
+    clients: () => [],
     modelValue: null,
     placeholder: "Type to search Client or BIN...",
     disabled: false,
@@ -37,27 +38,29 @@ const emit = defineEmits<{
 const searchText = ref("");
 const isDropdownOpen = ref(false);
 
-// Match initial modelValue to search input text
+// Match modelValue and clients array to search input text
 watch(
-  () => props.modelValue,
-  (newId) => {
+  [() => props.modelValue, () => props.clients],
+  ([newId, newClients]) => {
     if (!newId) {
       if (!searchText.value.trim()) searchText.value = "";
       return;
     }
-    const match = props.clients.find((c) => c.id === newId);
+    const list = Array.isArray(newClients) ? newClients : [];
+    const match = list.find((c) => c.id === newId);
     if (match) {
       searchText.value = match.name || match.companyName || "";
     }
   },
-  { immediate: true }
+  { immediate: true, deep: true }
 );
 
 // Only filters and returns items when typing has started and no client is selected
 const filteredList = computed(() => {
   if (!searchText.value.trim() || props.modelValue) return [];
   const q = searchText.value.toLowerCase().trim();
-  return props.clients.filter((c) => {
+  const list = Array.isArray(props.clients) ? props.clients : [];
+  return list.filter((c) => {
     const name = (c.name || c.companyName || "").toLowerCase();
     const bin = (c.bin || c.binNumber || "").toLowerCase();
     const mobile = (c.mobile || "").toLowerCase();
