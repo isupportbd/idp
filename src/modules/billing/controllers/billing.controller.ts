@@ -933,7 +933,7 @@ export const batchGenerateBills: Handler = async (c: any) => {
       .where(eq(purchases.month, taxPeriod))
       .groupBy(purchases.clientId);
 
-    const clientPurchaseMap = new Map(purchaseRows.map((p) => [p.clientId, Number(p.totalNetWtKg) || 0]));
+    const clientPurchaseMap = new Map<string, number>(purchaseRows.map((p) => [p.clientId, Number(p.totalNetWtKg) || 0]));
 
     for (const client of targetClients) {
       // Skip if already billed
@@ -949,7 +949,7 @@ export const batchGenerateBills: Handler = async (c: any) => {
 
       // Rates lookup for this client's customer type
       const clientRates = allRates.filter((r) => r.customerTypeId === client.customerTypeId || !r.customerTypeId);
-      const netWtKg = clientPurchaseMap.get(client.id) || 0;
+      const netWtKg: number = Number(clientPurchaseMap.get(client.id)) || 0;
       const netWtMt = r2(netWtKg / 1000);
       const hasPurchases = netWtKg > 0;
 
@@ -1186,7 +1186,7 @@ export const getMissingBills: Handler = async (c: any) => {
       .where(eq(purchases.month, month))
       .groupBy(purchases.clientId);
 
-    const clientPurchaseMap = new Map(purchaseRows.map((p) => [p.clientId, Number(p.totalNetWtKg) || 0]));
+    const clientPurchaseMap = new Map<string, number>(purchaseRows.map((p) => [p.clientId, Number(p.totalNetWtKg) || 0]));
 
     for (const cl of unbilledClients) {
       const sub = subMap.get(cl.id);
@@ -1194,7 +1194,7 @@ export const getMissingBills: Handler = async (c: any) => {
 
       // Compute exact service fee
       const clientRates = allRates.filter((r) => r.customerTypeId === cl.customerTypeId || !r.customerTypeId);
-      const netWtKg = clientPurchaseMap.get(cl.id) || 0;
+      const netWtKg: number = Number(clientPurchaseMap.get(cl.id)) || 0;
       const netWtMt = r2(netWtKg / 1000);
       const hasPurchases = netWtKg > 0;
 
