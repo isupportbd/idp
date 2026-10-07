@@ -38,13 +38,8 @@ const selectedReference = ref<string>("all");
 const currentPage = ref(1);
 const itemsPerPage = 10;
 
-// Password visibility & clipboard copy state
-const visiblePasswords = ref<Record<number, boolean>>({});
+// Clipboard copy state
 const copiedField = ref<string | null>(null);
-
-const togglePasswordVisibility = (id: number) => {
-  visiblePasswords.value[id] = !visiblePasswords.value[id];
-};
 
 const copyToClipboard = async (text?: string, key?: string) => {
   if (!text) return;
@@ -594,17 +589,9 @@ onUnmounted(() => {
             <!-- 4. Password -->
             <td>
               <div v-if="client.password" class="d-flex align-items-center gap-1">
-                <span class="text-light font-monospace small cred-text">
-                  {{ visiblePasswords[client.id] ? client.password : '••••••••' }}
+                <span class="text-light font-monospace small cred-text" style="letter-spacing: 1px;">
+                  ••••••••
                 </span>
-                <button
-                  type="button"
-                  class="btn btn-link btn-sm p-0 text-muted copy-icon-btn ms-1"
-                  :title="visiblePasswords[client.id] ? 'Hide Password' : 'Show Password'"
-                  @click="togglePasswordVisibility(client.id)"
-                >
-                  <i class="bi" :class="visiblePasswords[client.id] ? 'bi-eye-slash text-info' : 'bi-eye'"></i>
-                </button>
                 <button
                   type="button"
                   class="btn btn-link btn-sm p-0 text-muted copy-icon-btn ms-1"
@@ -614,9 +601,6 @@ onUnmounted(() => {
                   <i class="bi" :class="copiedField === 'pass-' + client.id ? 'bi-check2 text-success' : 'bi-copy'"></i>
                 </button>
               </div>
-              <span v-else-if="!can('clients.vat_password')" class="text-muted small" title="You do not have permission to view VAT passwords">
-                <i class="bi bi-lock"></i>
-              </span>
               <span v-else class="text-muted small">—</span>
             </td>
 

@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
-import { broadcast, db, HttpStatusCodes } from "@/framework/facade.js";
+import { broadcast, db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
 import { clients } from "../database/models/clients.js";
 import { clientManagers } from "../database/models/client_managers.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
@@ -142,10 +142,9 @@ export const listClients: Handler = async (c: any) => {
       }
     }
 
-    const canSeeVatPassword = await hasPermission(c, "clients.vat_password");
     const data = rows.map((r) => ({
       ...r,
-      vatPassword: canSeeVatPassword ? r.vatPassword : null,
+      vatPassword: r.vatPassword || null,
       managers: managerMap[r.id] || []
     }));
 
@@ -239,14 +238,12 @@ export const getClientById: Handler = async (c: any) => {
       .innerJoin(users, eq(clientManagers.managerId, users.id))
       .where(eq(clientManagers.clientId, id));
 
-    const canSeeVatPassword = await hasPermission(c, "clients.vat_password");
-
     return c.json(
       {
         message: "Client retrieved successfully",
         data: {
           ...row,
-          vatPassword: canSeeVatPassword ? row.vatPassword : null,
+          vatPassword: row.vatPassword || null,
           managers: assignedManagers
         }
       },

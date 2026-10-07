@@ -435,9 +435,6 @@ onMounted(() => {
                   <span v-if="client.vatPassword" class="font-monospace text-warning fw-bold" style="letter-spacing: 2px;">
                     ••••••••••••
                   </span>
-                  <span v-else-if="!can('clients.vat_password')" class="text-muted font-monospace small">
-                    <i class="bi bi-lock me-1"></i>Hidden (no permission)
-                  </span>
                   <span v-else class="text-muted font-monospace small">Not Configured</span>
                   <div v-if="client.vatPassword" class="d-flex align-items-center gap-1">
                     <button

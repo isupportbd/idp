@@ -474,24 +474,23 @@ const printReport = () => {
                 @change="toggleSelectAll"
               />
             </th>
-            <th style="width: 35%;">Client Organization & BIN</th>
-            <th style="width: 18%;">Customer Type</th>
-            <th style="width: 12%;">Tax Period</th>
-            <th style="width: 16%;">Submission ID</th>
-            <th style="width: 12%;">Status</th>
-            <th style="width: 7%; text-align: right;" class="d-print-none">Actions</th>
+            <th style="width: 38%;">Client Organization & BIN</th>
+            <th style="width: 20%;">Customer Type</th>
+            <th style="width: 14%;">Tax Period</th>
+            <th style="width: 20%;">Submission ID</th>
+            <th style="width: 8%; text-align: right;" class="d-print-none">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading && submissions.length === 0">
-            <td colspan="7" class="text-center py-4 text-muted">
+            <td colspan="6" class="text-center py-4 text-muted">
               <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
               Loading submissions data...
             </td>
           </tr>
 
           <tr v-else-if="submissions.length === 0">
-            <td colspan="7" class="text-center py-5 text-muted">
+            <td colspan="6" class="text-center py-5 text-muted">
               <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
               No active clients found matching the selected filters.
             </td>
@@ -537,17 +536,12 @@ const printReport = () => {
 
             <!-- Submission ID -->
             <td>
-              <span v-if="item.submissionId" class="badge bg-dark border border-primary border-opacity-50 text-light font-monospace px-2 py-1" style="font-size: 0.84rem;">
-                {{ item.submissionId }}
+              <span v-if="item.submissionId" class="badge bg-dark border border-success border-opacity-50 text-success font-monospace px-2.5 py-1 fw-semibold" style="font-size: 0.84rem;">
+                <i class="bi bi-check-circle me-1"></i>{{ item.submissionId }}
               </span>
-              <span v-else class="text-muted fst-italic" style="font-size: 0.82rem;">
-                Pending
+              <span v-else class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-1 font-monospace" style="font-size: 0.78rem;">
+                <i class="bi bi-hourglass-split me-1"></i>Pending
               </span>
-            </td>
-
-            <!-- Status Badge -->
-            <td>
-              <StatusBadge :status="item.status" />
             </td>
 
             <!-- Actions (Icon Only) -->

@@ -112,7 +112,6 @@ export const getActivityMatrix: Handler = async (c: any) => {
     }
 
     // 4. Build Client Matrix Records
-    const canSeeVatPassword = await hasPermission(c, "clients.vat_password");
     const matrixClients = activeClients.map((client) => {
       const submission = submissionsMap[client.id] || null;
       const isSubmitted = Boolean(submission?.submissionId);
@@ -130,7 +129,7 @@ export const getActivityMatrix: Handler = async (c: any) => {
         tinNumber: client.tinNumber,
         mobile: client.mobile,
         username: client.vatUserId,
-        password: canSeeVatPassword ? client.vatPassword : null,
+        password: client.vatPassword || null,
         clientTypeId: client.customerTypeId,
         clientType: client.customerTypeName || "Standard",
         referenceId: client.referenceId,
