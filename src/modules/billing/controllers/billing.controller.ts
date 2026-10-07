@@ -607,8 +607,8 @@ export const getClientBillingOverview: Handler = async (c: any) => {
       notes: `${hasMonthlyPurchases ? 'Regular' : 'Zero'} monthly VAT return filing for ${targetMonth}`
     });
 
-    // Item B: Books of Accounts (Mushak 6.2.1) Maintenance (if FULL service)
-    if (!isOnlyReturn) {
+    // Item B: Books of Accounts (Mushak 6.2.1) Maintenance (only if FULL service AND has imports/purchases)
+    if (!isOnlyReturn && hasMonthlyPurchases) {
       const booksItem = allServiceItems.find(
         (s) => s.itemName.toLowerCase().includes("books") || s.itemName.toLowerCase().includes("6.2.1")
       );
@@ -987,8 +987,8 @@ export const batchGenerateBills: Handler = async (c: any) => {
         notes: `${hasPurchases ? 'Regular' : 'Zero'} monthly VAT return filing for ${taxPeriod}`
       });
 
-      // 2. Books of Accounts Fee (if FULL Service)
-      if (client.vatServiceType === "FULL") {
+      // 2. Books of Accounts Fee (if FULL Service AND has purchases/imports)
+      if (client.vatServiceType === "FULL" && hasPurchases) {
         const booksItem = allServices.find(
           (s) => s.itemName.toLowerCase().includes("books") || s.itemName.toLowerCase().includes("6.2.1")
         );
@@ -1216,7 +1216,7 @@ export const getMissingBills: Handler = async (c: any) => {
       const returnRate = returnRateObj ? returnRateObj.regularRate : 0;
 
       let monthlyServiceFee = returnRate;
-      if (cl.vatServiceType === "FULL") {
+      if (cl.vatServiceType === "FULL" && hasPurchases) {
         const booksItem = allServices.find(
           (s) => s.itemName.toLowerCase().includes("books") || s.itemName.toLowerCase().includes("6.2.1")
         );
