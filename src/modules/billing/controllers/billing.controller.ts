@@ -13,6 +13,7 @@ import { clientReferences } from "@/modules/services/database/models/references.
 import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
 import { users } from "@/modules/auth/database/models/user.js";
 import { purchases } from "@/modules/clients/database/models/purchases.js";
+import { companySettings } from "@/modules/firm/database/models/company_settings.js";
 
 // Helper: Round to 2 decimal places
 function r2(num: number): number {
@@ -22,10 +23,21 @@ function r2(num: number): number {
 // ── 1. SEQUENCE GENERATORS ──────────────────────────────────────────
 
 /**
- * Generates sequential Invoice No in format: INV-YYYY-000001
+ * Generates sequential Invoice No in format: [PREFIX]-YYYY-000001 (Dynamic from firm settings)
  */
-async function generateNextBillNo(year: number, customPrefix = "INV", tenantAdminId?: number | null): Promise<string> {
-  const cleanPrefix = (customPrefix || "INV").replace(/-+$/, "").toUpperCase();
+async function generateNextBillNo(year: number, customPrefix?: string, tenantAdminId?: number | null): Promise<string> {
+  let prefixToUse = customPrefix;
+  if (!prefixToUse && tenantAdminId) {
+    try {
+      const firmSetting = await db.query.companySettings.findFirst({
+        where: eq(companySettings.adminId, tenantAdminId)
+      });
+      if (firmSetting?.invoicePrefix) {
+        prefixToUse = firmSetting.invoicePrefix.trim();
+      }
+    } catch {}
+  }
+  const cleanPrefix = (prefixToUse || "INV").replace(/-+$/, "").toUpperCase();
   const prefix = `${cleanPrefix}-${year}-`;
   const conditions: any[] = [or(like(bills.billNo, `${prefix}%`), ilike(bills.billNo, `%-${year}-%`))];
   if (tenantAdminId) {
@@ -56,10 +68,21 @@ async function generateNextBillNo(year: number, customPrefix = "INV", tenantAdmi
 }
 
 /**
- * Generates sequential Money Receipt No in format: RCP-YYYY-000001
+ * Generates sequential Money Receipt No in format: [PREFIX]-YYYY-000001 (Dynamic from firm settings)
  */
-async function generateNextReceiptNo(year: number, customPrefix = "RCP", tenantAdminId?: number | null): Promise<string> {
-  const cleanPrefix = (customPrefix || "RCP").replace(/-+$/, "").toUpperCase();
+async function generateNextReceiptNo(year: number, customPrefix?: string, tenantAdminId?: number | null): Promise<string> {
+  let prefixToUse = customPrefix;
+  if (!prefixToUse && tenantAdminId) {
+    try {
+      const firmSetting = await db.query.companySettings.findFirst({
+        where: eq(companySettings.adminId, tenantAdminId)
+      });
+      if (firmSetting?.receiptPrefix) {
+        prefixToUse = firmSetting.receiptPrefix.trim();
+      }
+    } catch {}
+  }
+  const cleanPrefix = (prefixToUse || "RCP").replace(/-+$/, "").toUpperCase();
   const prefix = `${cleanPrefix}-${year}-`;
   const conditions: any[] = [or(like(collections.receiptNo, `${prefix}%`), ilike(collections.receiptNo, `%-${year}-%`))];
   if (tenantAdminId) {
@@ -549,23 +572,39 @@ export const getClientBillingOverview: Handler = async (c: any) => {
     // 6. Auto-calculate suggested line items for selected targetMonth
     const isOnlyReturn = client.vatServiceType === "ONLY_RETURN";
     const suggestedItems: any[] = [];
+    const hasMonthlyPurchases = purchaseCount > 0 || totalNetWtKg > 0;
 
-    // Item A: VAT Return Submission
-    const returnItem = allServiceItems.find((s) => s.itemName.toLowerCase().includes("return"));
+    // Item A: VAT Return Submission (Dynamic Regular vs Zero selection)
+    let returnItem = null;
+    if (hasMonthlyPurchases) {
+      returnItem = allServiceItems.find(
+        (s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("regular")
+      );
+    } else {
+      returnItem = allServiceItems.find(
+        (s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("zero")
+      );
+    }
+    if (!returnItem) {
+      returnItem = allServiceItems.find((s) => s.itemName.toLowerCase().includes("return"));
+    }
+
     const returnRateInfo = returnItem ? rateMap[returnItem.id] : null;
-    const returnRate = returnRateInfo ? returnRateInfo.regularRate : 2000;
+    const isReturnRateMissing = !returnRateInfo || returnRateInfo.regularRate === 0;
+    const returnRate = returnRateInfo ? returnRateInfo.regularRate : 0;
     const returnUnit = returnRateInfo?.unit || "Month";
 
     suggestedItems.push({
       serviceItemId: returnItem ? returnItem.id : null,
-      itemName: returnItem?.itemName || "VAT Return Submission",
+      itemName: returnItem?.itemName || (hasMonthlyPurchases ? "VAT Return Submission (Regular)" : "VAT Return Submission (Zero)"),
       unit: returnUnit,
       qty: 1,
       rateUsed: returnRate,
       minimumChargeUsed: returnRateInfo ? returnRateInfo.minimumCharge : 0,
       calculatedAmount: returnRate,
       finalAmount: returnRate,
-      notes: `Monthly VAT return filing for ${targetMonth}`
+      isRateMissing: isReturnRateMissing,
+      notes: `${hasMonthlyPurchases ? 'Regular' : 'Zero'} monthly VAT return filing for ${targetMonth}`
     });
 
     // Item B: Books of Accounts (Mushak 6.2.1) Maintenance (if FULL service)
@@ -574,8 +613,9 @@ export const getClientBillingOverview: Handler = async (c: any) => {
         (s) => s.itemName.toLowerCase().includes("books") || s.itemName.toLowerCase().includes("6.2.1")
       );
       const booksRateInfo = booksItem ? rateMap[booksItem.id] : null;
-      const booksRate = booksRateInfo ? booksRateInfo.regularRate : 3000;
-      const minCharge = booksRateInfo ? booksRateInfo.minimumCharge : 2500;
+      const isBooksRateMissing = !booksRateInfo || booksRateInfo.regularRate === 0;
+      const booksRate = booksRateInfo ? booksRateInfo.regularRate : 0;
+      const minCharge = booksRateInfo ? booksRateInfo.minimumCharge : 0;
       const booksUnit = booksRateInfo?.unit || "MT";
 
       // Compute Quantity based on Rate Unit:
@@ -595,7 +635,7 @@ export const getClientBillingOverview: Handler = async (c: any) => {
       }
 
       const calculatedAmt = r2(qty * booksRate);
-      const finalAmt = Math.max(calculatedAmt, minCharge);
+      const finalAmt = minCharge > 0 ? Math.max(calculatedAmt, minCharge) : calculatedAmt;
 
       suggestedItems.push({
         serviceItemId: booksItem ? booksItem.id : null,
@@ -606,6 +646,7 @@ export const getClientBillingOverview: Handler = async (c: any) => {
         minimumChargeUsed: minCharge,
         calculatedAmount: calculatedAmt,
         finalAmount: finalAmt,
+        isRateMissing: isBooksRateMissing,
         notes: `Purchase & Sales accounts maintenance for ${targetMonth}${qty > 0 && (unitUpper === 'MT' || unitUpper === 'KG') ? ` (${qty} ${booksUnit})` : ''}`
       });
     }
@@ -628,7 +669,13 @@ export const getClientBillingOverview: Handler = async (c: any) => {
             purchaseCount
           },
           suggestedItems,
-          masterServices: allServiceItems
+          masterServices: allServiceItems.map((s) => ({
+            id: s.id,
+            itemName: s.itemName,
+            unit: rateMap[s.id]?.unit || (s as any).defaultUnit || "Month",
+            regularRate: rateMap[s.id]?.regularRate || 0,
+            minimumCharge: rateMap[s.id]?.minimumCharge || 0
+          }))
         }
       },
       HttpStatusCodes.OK
@@ -902,35 +949,53 @@ export const batchGenerateBills: Handler = async (c: any) => {
 
       // Rates lookup for this client's customer type
       const clientRates = allRates.filter((r) => r.customerTypeId === client.customerTypeId || !r.customerTypeId);
-      const returnRateObj = clientRates.find((r) => returnItem && r.serviceItemId === returnItem.id);
-      const booksRateObj = clientRates.find((r) => booksItem && r.serviceItemId === booksItem.id);
+      const netWtKg = clientPurchaseMap.get(client.id) || 0;
+      const netWtMt = r2(netWtKg / 1000);
+      const hasPurchases = netWtKg > 0;
 
-      const returnRate = returnRateObj ? returnRateObj.regularRate : 2000;
+      // 1. VAT Return Fee (Dynamic Regular vs Zero)
+      let returnItem = null;
+      if (hasPurchases) {
+        returnItem = allServices.find(
+          (s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("regular")
+        );
+      } else {
+        returnItem = allServices.find(
+          (s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("zero")
+        );
+      }
+      if (!returnItem) {
+        returnItem = allServices.find((s) => s.itemName.toLowerCase().includes("return"));
+      }
+
+      const returnRateObj = clientRates.find((r) => returnItem && r.serviceItemId === returnItem.id);
+      const returnRate = returnRateObj ? returnRateObj.regularRate : 0;
       const returnUnit = returnRateObj?.unit || "Month";
-      const booksRate = booksRateObj ? booksRateObj.regularRate : 3000;
-      const booksMin = booksRateObj ? booksRateObj.minimumCharge : 2500;
-      const booksUnit = booksRateObj?.unit || "MT";
 
       // Generate Line Items
       const itemsToInsert: any[] = [];
 
-      // 1. VAT Return Fee
       itemsToInsert.push({
         serviceItemId: returnItem ? returnItem.id : null,
-        itemName: returnItem?.itemName || "VAT Return Submission",
+        itemName: returnItem?.itemName || (hasPurchases ? "VAT Return Submission (Regular)" : "VAT Return Submission (Zero)"),
         unit: returnUnit,
         qty: 1,
         rateUsed: returnRate,
         minimumChargeUsed: returnRateObj ? returnRateObj.minimumCharge : 0,
         calculatedAmount: returnRate,
         finalAmount: returnRate,
-        notes: `Monthly VAT return filing for ${taxPeriod}`
+        notes: `${hasPurchases ? 'Regular' : 'Zero'} monthly VAT return filing for ${taxPeriod}`
       });
 
       // 2. Books of Accounts Fee (if FULL Service)
       if (client.vatServiceType === "FULL") {
-        const netWtKg = clientPurchaseMap.get(client.id) || 0;
-        const netWtMt = r2(netWtKg / 1000);
+        const booksItem = allServices.find(
+          (s) => s.itemName.toLowerCase().includes("books") || s.itemName.toLowerCase().includes("6.2.1")
+        );
+        const booksRateObj = clientRates.find((r) => booksItem && r.serviceItemId === booksItem.id);
+        const booksRate = booksRateObj ? booksRateObj.regularRate : 0;
+        const booksMin = booksRateObj ? booksRateObj.minimumCharge : 0;
+        const booksUnit = booksRateObj?.unit || "MT";
         const unitUpper = booksUnit.toUpperCase().trim();
 
         let qty = 1;
@@ -945,7 +1010,7 @@ export const batchGenerateBills: Handler = async (c: any) => {
         }
 
         const calculatedAmt = r2(qty * booksRate);
-        const finalBooksAmt = Math.max(calculatedAmt, booksMin);
+        const finalBooksAmt = booksMin > 0 ? Math.max(calculatedAmt, booksMin) : calculatedAmt;
 
         itemsToInsert.push({
           serviceItemId: booksItem ? booksItem.id : null,
@@ -1129,18 +1194,36 @@ export const getMissingBills: Handler = async (c: any) => {
 
       // Compute exact service fee
       const clientRates = allRates.filter((r) => r.customerTypeId === cl.customerTypeId || !r.customerTypeId);
-      const returnRateObj = clientRates.find((r) => returnItem && r.serviceItemId === returnItem.id);
-      const booksRateObj = clientRates.find((r) => booksItem && r.serviceItemId === booksItem.id);
+      const netWtKg = clientPurchaseMap.get(cl.id) || 0;
+      const netWtMt = r2(netWtKg / 1000);
+      const hasPurchases = netWtKg > 0;
 
-      const returnRate = returnRateObj ? returnRateObj.regularRate : 2000;
-      const booksRate = booksRateObj ? booksRateObj.regularRate : 3000;
-      const booksMin = booksRateObj ? booksRateObj.minimumCharge : 2500;
-      const booksUnit = booksRateObj?.unit || "MT";
+      let returnItem = null;
+      if (hasPurchases) {
+        returnItem = allServices.find(
+          (s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("regular")
+        );
+      } else {
+        returnItem = allServices.find(
+          (s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("zero")
+        );
+      }
+      if (!returnItem) {
+        returnItem = allServices.find((s) => s.itemName.toLowerCase().includes("return"));
+      }
+
+      const returnRateObj = clientRates.find((r) => returnItem && r.serviceItemId === returnItem.id);
+      const returnRate = returnRateObj ? returnRateObj.regularRate : 0;
 
       let monthlyServiceFee = returnRate;
       if (cl.vatServiceType === "FULL") {
-        const netWtKg = clientPurchaseMap.get(cl.id) || 0;
-        const netWtMt = r2(netWtKg / 1000);
+        const booksItem = allServices.find(
+          (s) => s.itemName.toLowerCase().includes("books") || s.itemName.toLowerCase().includes("6.2.1")
+        );
+        const booksRateObj = clientRates.find((r) => booksItem && r.serviceItemId === booksItem.id);
+        const booksRate = booksRateObj ? booksRateObj.regularRate : 0;
+        const booksMin = booksRateObj ? booksRateObj.minimumCharge : 0;
+        const booksUnit = booksRateObj?.unit || "MT";
         const unitUpper = booksUnit.toUpperCase().trim();
 
         let qty = 1;
@@ -1154,7 +1237,8 @@ export const getMissingBills: Handler = async (c: any) => {
           qty = 1;
         }
 
-        monthlyServiceFee += Math.max(r2(qty * booksRate), booksMin);
+        const calculatedAmt = r2(qty * booksRate);
+        monthlyServiceFee += booksMin > 0 ? Math.max(calculatedAmt, booksMin) : calculatedAmt;
       }
 
       missingList.push({

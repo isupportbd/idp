@@ -93,17 +93,47 @@ watch(billingMonth, () => {
 
 // Line items handling
 const addLineItem = () => {
-  items.value.push({
-    serviceItemId: null,
-    itemName: "Additional VAT Consultancy",
-    unit: "Job",
-    qty: 1,
-    rateUsed: 1000,
-    minimumChargeUsed: 0,
-    calculatedAmount: 1000,
-    finalAmount: 1000,
-    notes: ""
-  });
+  const masterList = clientOverview.value?.masterServices || [];
+  const unused = masterList.find((m: any) => !items.value.some((it) => it.serviceItemId === m.id));
+  if (unused) {
+    items.value.push({
+      serviceItemId: unused.id,
+      itemName: unused.itemName,
+      unit: unused.unit || "Month",
+      qty: 1,
+      rateUsed: unused.regularRate || 0,
+      minimumChargeUsed: unused.minimumCharge || 0,
+      calculatedAmount: unused.regularRate || 0,
+      finalAmount: Math.max(unused.regularRate || 0, unused.minimumCharge || 0),
+      notes: ""
+    });
+  } else {
+    items.value.push({
+      serviceItemId: null,
+      itemName: "",
+      unit: "Month",
+      qty: 1,
+      rateUsed: 0,
+      minimumChargeUsed: 0,
+      calculatedAmount: 0,
+      finalAmount: 0,
+      notes: ""
+    });
+  }
+};
+
+const handleItemNameInput = (it: BillItem) => {
+  const masterList = clientOverview.value?.masterServices || [];
+  const match = masterList.find((m: any) => m.itemName.toLowerCase() === (it.itemName || "").toLowerCase().trim());
+  if (match) {
+    it.serviceItemId = match.id;
+    it.unit = match.unit || it.unit || "Month";
+    if (!it.rateUsed || Number(it.rateUsed) === 0) {
+      it.rateUsed = match.regularRate || 0;
+      it.minimumChargeUsed = match.minimumCharge || 0;
+    }
+    updateItemCalculation(it);
+  }
 };
 
 const removeLineItem = (index: number) => {
@@ -118,8 +148,13 @@ const updateItemCalculation = (it: BillItem) => {
   const minCharge = Number(it.minimumChargeUsed) || 0;
   const calculated = qty * rate;
   it.calculatedAmount = calculated;
-  it.finalAmount = Math.max(calculated, minCharge);
+  it.finalAmount = minCharge > 0 ? Math.max(calculated, minCharge) : calculated;
 };
+
+// Check if any line item is missing rate
+const hasMissingRateItems = computed(() => {
+  return items.value.some((it) => !it.rateUsed || Number(it.rateUsed) === 0);
+});
 
 // Totals Calculation
 const subtotal = computed(() => {
@@ -366,6 +401,14 @@ const handleCreateBill = async (status: "finalized" | "draft" = "finalized") => 
         </button>
       </div>
 
+      <!-- Missing Rate Notice Banner -->
+      <div v-if="hasMissingRateItems && items.length > 0" class="px-3 py-2 bg-warning bg-opacity-10 border-bottom border-warning border-opacity-25 d-flex align-items-center justify-content-between">
+        <div class="small text-warning">
+          <i class="bi bi-exclamation-triangle-fill me-1.5"></i>
+          <strong>Notice:</strong> One or more service items have no rate configured. Please enter the rate manually in the Rate column or set standard rates in <em>Admin Settings &gt; Service Rates</em>.
+        </div>
+      </div>
+
       <!-- Purchase Volume Info Banner (If purchases found) -->
       <div v-if="clientOverview?.purchaseVolume?.totalPurchaseKg > 0" class="px-3 py-2 bg-info bg-opacity-10 border-bottom border-info border-opacity-25 d-flex align-items-center justify-content-between">
         <div class="small text-info">
@@ -378,6 +421,17 @@ const handleCreateBill = async (status: "finalized" | "draft" = "finalized") => 
           Auto-computed into 6.2.1 Service Rate
         </span>
       </div>
+
+      <!-- Datalist for Master Service Autocomplete -->
+      <datalist id="masterServicesList">
+        <option
+          v-for="s in (clientOverview?.masterServices || [])"
+          :key="s.id"
+          :value="s.itemName"
+        >
+          {{ s.unit ? `(${s.unit})` : '' }} {{ s.regularRate ? `— ৳${s.regularRate}` : '' }}
+        </option>
+      </datalist>
 
       <!-- Standard Table -->
       <table class="table-custom">
@@ -402,14 +456,17 @@ const handleCreateBill = async (status: "finalized" | "draft" = "finalized") => 
             <!-- Index -->
             <td class="text-muted small align-middle">{{ idx + 1 }}</td>
 
-            <!-- Item Name -->
+            <!-- Item Name (Autocomplete from Master Services) -->
             <td class="align-middle">
               <input
                 v-model="it.itemName"
                 type="text"
+                list="masterServicesList"
                 class="form-control table-cell-input fw-semibold text-white"
-                placeholder="Service description"
+                placeholder="Type or select service description..."
                 required
+                @input="handleItemNameInput(it)"
+                @change="handleItemNameInput(it)"
               />
             </td>
 
@@ -442,9 +499,18 @@ const handleCreateBill = async (status: "finalized" | "draft" = "finalized") => 
                 type="number"
                 step="any"
                 class="form-control table-cell-input text-end font-monospace text-light ms-auto"
+                :class="{ 'border border-warning': !it.rateUsed || Number(it.rateUsed) === 0 }"
                 style="max-width: 120px;"
+                placeholder="0.00"
                 @input="updateItemCalculation(it)"
               />
+              <span
+                v-if="!it.rateUsed || Number(it.rateUsed) === 0"
+                class="badge bg-warning text-dark py-0 px-1 d-block text-center mt-0.5 ms-auto"
+                style="font-size: 0.65rem; max-width: 120px;"
+              >
+                Rate required
+              </span>
             </td>
 
             <!-- Final Amount -->
