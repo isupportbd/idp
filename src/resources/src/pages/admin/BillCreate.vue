@@ -52,11 +52,11 @@ const loadClientData = async () => {
         serviceItemId: it.serviceItemId,
         itemName: it.itemName,
         unit: it.unit || "Month",
-        qty: it.qty || 1,
-        rateUsed: it.rateUsed,
+        qty: it.qty !== undefined && it.qty !== null ? Number(it.qty) : 1,
+        rateUsed: it.rateUsed !== undefined && it.rateUsed !== null ? Number(it.rateUsed) : 0,
         minimumChargeUsed: it.minimumChargeUsed || 0,
-        calculatedAmount: it.calculatedAmount,
-        finalAmount: it.finalAmount,
+        calculatedAmount: it.calculatedAmount || 0,
+        finalAmount: it.finalAmount || 0,
         notes: it.notes
       }));
     }
