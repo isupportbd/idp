@@ -122,17 +122,47 @@ onUnmounted(() => {
   pulse.channel("auth").stopListening("submission:deleted");
 });
 
+// Filtered Submissions (Instant Client-side Search & Responsive Filtering)
+const filteredSubmissions = computed(() => {
+  let list = submissions.value;
+  const q = searchQuery.value.trim().toLowerCase();
+  if (q) {
+    list = list.filter(
+      (s) =>
+        (s.companyName && s.companyName.toLowerCase().includes(q)) ||
+        (s.binNumber && s.binNumber.toLowerCase().includes(q)) ||
+        (s.mobile && s.mobile.includes(q)) ||
+        (s.submissionId && s.submissionId.toLowerCase().includes(q)) ||
+        (s.customerTypeName && s.customerTypeName.toLowerCase().includes(q)) ||
+        (s.referenceName && s.referenceName.toLowerCase().includes(q)) ||
+        (s.submittedByName && s.submittedByName.toLowerCase().includes(q))
+    );
+  }
+  return list;
+});
+
 // Pagination State (10 items per page)
 const currentPage = ref(1);
 const itemsPerPage = 10;
 
-const totalPages = computed(() => Math.ceil(submissions.value.length / itemsPerPage) || 1);
+const totalPages = computed(() => Math.ceil(filteredSubmissions.value.length / itemsPerPage) || 1);
 
 const paginatedSubmissions = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
-  return submissions.value.slice(start, start + itemsPerPage);
+  return filteredSubmissions.value.slice(start, start + itemsPerPage);
 });
 
+// Watch Search Query with Debounce
+watch(searchQuery, () => {
+  selectedIds.value = [];
+  currentPage.value = 1;
+  if (searchTimeout) clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    loadSubmissionsList();
+  }, 250);
+});
+
+// Watch Filters
 watch([selectedMonth, selectedCustomerTypeId, selectedReferenceId, selectedManagerId, statusFilter], () => {
   selectedIds.value = [];
   currentPage.value = 1;
@@ -141,15 +171,15 @@ watch([selectedMonth, selectedCustomerTypeId, selectedReferenceId, selectedManag
 
 // Selection Handlers
 const isAllSelected = computed(() => {
-  if (submissions.value.length === 0) return false;
-  return submissions.value.every((s) => selectedIds.value.includes(s.id));
+  if (filteredSubmissions.value.length === 0) return false;
+  return filteredSubmissions.value.every((s) => selectedIds.value.includes(s.id));
 });
 
 const toggleSelectAll = () => {
   if (isAllSelected.value) {
     selectedIds.value = [];
   } else {
-    selectedIds.value = submissions.value.map((s) => s.id);
+    selectedIds.value = filteredSubmissions.value.map((s) => s.id);
   }
 };
 
@@ -482,14 +512,14 @@ const printReport = () => {
           </tr>
         </thead>
         <tbody>
-          <tr v-if="loading && submissions.length === 0">
+          <tr v-if="loading && filteredSubmissions.length === 0">
             <td colspan="6" class="text-center py-4 text-muted">
               <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
               Loading submissions data...
             </td>
           </tr>
 
-          <tr v-else-if="submissions.length === 0">
+          <tr v-else-if="filteredSubmissions.length === 0">
             <td colspan="6" class="text-center py-5 text-muted">
               <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
               No active clients found matching the selected filters.
@@ -575,11 +605,11 @@ const printReport = () => {
     </div>
 
     <!-- Pagination for Submissions -->
-    <div v-if="submissions.length > 0" class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-2">
+    <div v-if="filteredSubmissions.length > 0" class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-2">
       <span class="text-muted small">
         Showing <strong>{{ (currentPage - 1) * itemsPerPage + 1 }}</strong> to
-        <strong>{{ Math.min(currentPage * itemsPerPage, submissions.length) }}</strong> of
-        <strong>{{ submissions.length }}</strong> submissions
+        <strong>{{ Math.min(currentPage * itemsPerPage, filteredSubmissions.length) }}</strong> of
+        <strong>{{ filteredSubmissions.length }}</strong> submissions
       </span>
 
       <div v-if="totalPages > 1" class="d-flex align-items-center gap-1">
