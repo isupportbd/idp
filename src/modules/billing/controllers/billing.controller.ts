@@ -12,6 +12,7 @@ import { customerTypes } from "@/modules/services/database/models/customer_types
 import { clientReferences } from "@/modules/services/database/models/references.js";
 import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
 import { users } from "@/modules/auth/database/models/user.js";
+import { purchases } from "@/modules/clients/database/models/purchases.js";
 
 // Helper: Round to 2 decimal places
 function r2(num: number): number {
@@ -504,7 +505,26 @@ export const getClientBillingOverview: Handler = async (c: any) => {
     // 3. Compute running previous due
     const previousDue = await getClientRunningDue(clientId);
 
-    // 4. Fetch Master Service Items & Rates for this customer type
+    // 4. Fetch Client's Purchase Volume for targetMonth
+    const purchaseVolumeRes = await db
+      .select({
+        totalNetWt: sql<number>`COALESCE(SUM(${purchases.netWt}), 0)`,
+        totalQty: sql<number>`COALESCE(SUM(${purchases.totalQty}), 0)`,
+        count: sql<number>`COUNT(*)`
+      })
+      .from(purchases)
+      .where(
+        and(
+          eq(purchases.clientId, clientId),
+          eq(purchases.month, targetMonth)
+        )
+      );
+
+    const totalNetWtKg = Number(purchaseVolumeRes[0]?.totalNetWt) || 0;
+    const totalNetWtMt = r2(totalNetWtKg / 1000);
+    const purchaseCount = Number(purchaseVolumeRes[0]?.count) || 0;
+
+    // 5. Fetch Master Service Items & Rates for this customer type
     const allServiceItems = await db
       .select()
       .from(serviceItems)
@@ -514,18 +534,19 @@ export const getClientBillingOverview: Handler = async (c: any) => {
       .select()
       .from(serviceRates);
 
-    // Build rate lookup map
-    const rateMap: Record<number, { regularRate: number; minimumCharge: number }> = {};
+    // Build rate lookup map (including unit)
+    const rateMap: Record<number, { unit: string; regularRate: number; minimumCharge: number }> = {};
     for (const r of allRates) {
       if (r.customerTypeId === client.customerTypeId || (!rateMap[r.serviceItemId] && !r.customerTypeId)) {
         rateMap[r.serviceItemId] = {
+          unit: r.unit || "Month",
           regularRate: r.regularRate,
           minimumCharge: r.minimumCharge
         };
       }
     }
 
-    // 5. Auto-calculate suggested line items for selected targetMonth
+    // 6. Auto-calculate suggested line items for selected targetMonth
     const isOnlyReturn = client.vatServiceType === "ONLY_RETURN";
     const suggestedItems: any[] = [];
 
@@ -533,11 +554,12 @@ export const getClientBillingOverview: Handler = async (c: any) => {
     const returnItem = allServiceItems.find((s) => s.itemName.toLowerCase().includes("return"));
     const returnRateInfo = returnItem ? rateMap[returnItem.id] : null;
     const returnRate = returnRateInfo ? returnRateInfo.regularRate : 2000;
+    const returnUnit = returnRateInfo?.unit || "Month";
 
     suggestedItems.push({
       serviceItemId: returnItem ? returnItem.id : null,
-      itemName: "VAT Return Submission",
-      unit: "Month",
+      itemName: returnItem?.itemName || "VAT Return Submission",
+      unit: returnUnit,
       qty: 1,
       rateUsed: returnRate,
       minimumChargeUsed: returnRateInfo ? returnRateInfo.minimumCharge : 0,
@@ -554,20 +576,37 @@ export const getClientBillingOverview: Handler = async (c: any) => {
       const booksRateInfo = booksItem ? rateMap[booksItem.id] : null;
       const booksRate = booksRateInfo ? booksRateInfo.regularRate : 3000;
       const minCharge = booksRateInfo ? booksRateInfo.minimumCharge : 2500;
+      const booksUnit = booksRateInfo?.unit || "MT";
 
-      // Default calculation: 1 Month or Qty * Rate
-      const finalAmt = Math.max(booksRate, minCharge);
+      // Compute Quantity based on Rate Unit:
+      // If unit is "MT" / "Metric Ton" -> use total purchase volume in Metric Tons (e.g. 1500 MT)
+      // If unit is "KG" -> use total purchase volume in KG
+      // If unit is "Month" -> use 1 Month
+      let qty = 1;
+      const unitUpper = booksUnit.toUpperCase().trim();
+      if (unitUpper === "MT" || unitUpper === "METRIC TON" || unitUpper === "TON" || unitUpper === "TONS") {
+        qty = totalNetWtMt;
+      } else if (unitUpper === "KG" || unitUpper === "KGM") {
+        qty = totalNetWtKg;
+      } else if (totalNetWtMt > 0) {
+        qty = totalNetWtMt;
+      } else {
+        qty = 1;
+      }
+
+      const calculatedAmt = r2(qty * booksRate);
+      const finalAmt = Math.max(calculatedAmt, minCharge);
 
       suggestedItems.push({
         serviceItemId: booksItem ? booksItem.id : null,
-        itemName: "Books of Accounts (Mushak 6.2.1) Maintenance",
-        unit: "Month",
-        qty: 1,
+        itemName: booksItem?.itemName || "Books of Accounts (Mushak 6.2.1) Maintenance",
+        unit: booksUnit,
+        qty: qty,
         rateUsed: booksRate,
         minimumChargeUsed: minCharge,
-        calculatedAmount: booksRate,
+        calculatedAmount: calculatedAmt,
         finalAmount: finalAmt,
-        notes: `Purchase & Sales accounts maintenance for ${targetMonth}`
+        notes: `Purchase & Sales accounts maintenance for ${targetMonth}${qty > 0 && (unitUpper === 'MT' || unitUpper === 'KG') ? ` (${qty} ${booksUnit})` : ''}`
       });
     }
 
@@ -583,6 +622,11 @@ export const getClientBillingOverview: Handler = async (c: any) => {
           allowedMonths,
           targetMonthSubmission: currentSub || null,
           isTargetMonthBilled: billedMonthsMap.has(targetMonth),
+          purchaseVolume: {
+            totalPurchaseKg: totalNetWtKg,
+            totalPurchaseMt: totalNetWtMt,
+            purchaseCount
+          },
           suggestedItems,
           masterServices: allServiceItems
         }
@@ -832,6 +876,18 @@ export const batchGenerateBills: Handler = async (c: any) => {
     );
     const batchDueMap = await getBatchClientsRunningDue(eligibleClients.map((c) => c.id));
 
+    // Batch query purchases for taxPeriod
+    const purchaseRows = await db
+      .select({
+        clientId: purchases.clientId,
+        totalNetWtKg: sql<number>`COALESCE(SUM(${purchases.netWt}), 0)`
+      })
+      .from(purchases)
+      .where(eq(purchases.month, taxPeriod))
+      .groupBy(purchases.clientId);
+
+    const clientPurchaseMap = new Map(purchaseRows.map((p) => [p.clientId, Number(p.totalNetWtKg) || 0]));
+
     for (const client of targetClients) {
       // Skip if already billed
       if (billedClientIds.has(client.id)) {
@@ -850,8 +906,10 @@ export const batchGenerateBills: Handler = async (c: any) => {
       const booksRateObj = clientRates.find((r) => booksItem && r.serviceItemId === booksItem.id);
 
       const returnRate = returnRateObj ? returnRateObj.regularRate : 2000;
+      const returnUnit = returnRateObj?.unit || "Month";
       const booksRate = booksRateObj ? booksRateObj.regularRate : 3000;
       const booksMin = booksRateObj ? booksRateObj.minimumCharge : 2500;
+      const booksUnit = booksRateObj?.unit || "MT";
 
       // Generate Line Items
       const itemsToInsert: any[] = [];
@@ -859,8 +917,8 @@ export const batchGenerateBills: Handler = async (c: any) => {
       // 1. VAT Return Fee
       itemsToInsert.push({
         serviceItemId: returnItem ? returnItem.id : null,
-        itemName: "VAT Return Submission",
-        unit: "Month",
+        itemName: returnItem?.itemName || "VAT Return Submission",
+        unit: returnUnit,
         qty: 1,
         rateUsed: returnRate,
         minimumChargeUsed: returnRateObj ? returnRateObj.minimumCharge : 0,
@@ -871,17 +929,34 @@ export const batchGenerateBills: Handler = async (c: any) => {
 
       // 2. Books of Accounts Fee (if FULL Service)
       if (client.vatServiceType === "FULL") {
-        const finalBooksAmt = Math.max(booksRate, booksMin);
+        const netWtKg = clientPurchaseMap.get(client.id) || 0;
+        const netWtMt = r2(netWtKg / 1000);
+        const unitUpper = booksUnit.toUpperCase().trim();
+
+        let qty = 1;
+        if (unitUpper === "MT" || unitUpper === "METRIC TON" || unitUpper === "TON" || unitUpper === "TONS") {
+          qty = netWtMt;
+        } else if (unitUpper === "KG" || unitUpper === "KGM") {
+          qty = netWtKg;
+        } else if (netWtMt > 0) {
+          qty = netWtMt;
+        } else {
+          qty = 1;
+        }
+
+        const calculatedAmt = r2(qty * booksRate);
+        const finalBooksAmt = Math.max(calculatedAmt, booksMin);
+
         itemsToInsert.push({
           serviceItemId: booksItem ? booksItem.id : null,
-          itemName: "Books of Accounts (Mushak 6.2.1) Maintenance",
-          unit: "Month",
-          qty: 1,
+          itemName: booksItem?.itemName || "Books of Accounts (Mushak 6.2.1) Maintenance",
+          unit: booksUnit,
+          qty: qty,
           rateUsed: booksRate,
           minimumChargeUsed: booksMin,
-          calculatedAmount: booksRate,
+          calculatedAmount: calculatedAmt,
           finalAmount: finalBooksAmt,
-          notes: `Purchase & Sales accounts maintenance for ${taxPeriod}`
+          notes: `Purchase & Sales accounts maintenance for ${taxPeriod}${qty > 0 && (unitUpper === 'MT' || unitUpper === 'KG') ? ` (${qty} ${booksUnit})` : ''}`
         });
       }
 
@@ -1036,6 +1111,18 @@ export const getMissingBills: Handler = async (c: any) => {
     const unbilledClients = activeClients.filter((cl) => !billedSet.has(cl.id));
     const batchDueMap = await getBatchClientsRunningDue(unbilledClients.map((cl) => cl.id));
 
+    // Batch query purchases for missing month
+    const purchaseRows = await db
+      .select({
+        clientId: purchases.clientId,
+        totalNetWtKg: sql<number>`COALESCE(SUM(${purchases.netWt}), 0)`
+      })
+      .from(purchases)
+      .where(eq(purchases.month, month))
+      .groupBy(purchases.clientId);
+
+    const clientPurchaseMap = new Map(purchaseRows.map((p) => [p.clientId, Number(p.totalNetWtKg) || 0]));
+
     for (const cl of unbilledClients) {
       const sub = subMap.get(cl.id);
       const prevDue = batchDueMap.get(cl.id) || 0;
@@ -1048,10 +1135,26 @@ export const getMissingBills: Handler = async (c: any) => {
       const returnRate = returnRateObj ? returnRateObj.regularRate : 2000;
       const booksRate = booksRateObj ? booksRateObj.regularRate : 3000;
       const booksMin = booksRateObj ? booksRateObj.minimumCharge : 2500;
+      const booksUnit = booksRateObj?.unit || "MT";
 
       let monthlyServiceFee = returnRate;
       if (cl.vatServiceType === "FULL") {
-        monthlyServiceFee += Math.max(booksRate, booksMin);
+        const netWtKg = clientPurchaseMap.get(cl.id) || 0;
+        const netWtMt = r2(netWtKg / 1000);
+        const unitUpper = booksUnit.toUpperCase().trim();
+
+        let qty = 1;
+        if (unitUpper === "MT" || unitUpper === "METRIC TON" || unitUpper === "TON" || unitUpper === "TONS") {
+          qty = netWtMt;
+        } else if (unitUpper === "KG" || unitUpper === "KGM") {
+          qty = netWtKg;
+        } else if (netWtMt > 0) {
+          qty = netWtMt;
+        } else {
+          qty = 1;
+        }
+
+        monthlyServiceFee += Math.max(r2(qty * booksRate), booksMin);
       }
 
       missingList.push({
