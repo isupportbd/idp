@@ -6,6 +6,9 @@ import { companySettings } from "@/modules/firm/database/models/company_settings
 import { users } from "@/modules/auth/database/models/user.js";
 import { roles } from "@/modules/auth/database/models/role.js";
 
+import { fetchProviderBalance } from "@/framework/sms/index.js";
+import { broadcast } from "@/framework/realtime/broadcast.js";
+
 const BULKSMSBD_ENDPOINT = "http://bulksmsbd.net/api/smsapi";
 
 export const DEFAULT_TEMPLATES = [
@@ -284,6 +287,27 @@ export async function sendVatSubmissionSms(params: {
     providerResponse: result.raw,
     sentBy: params.sentByUserId ?? null
   }).catch(() => {});
+
+  // If SMS sent successfully, fetch live provider balance & sync to DB & header
+  if (result.ok && params.adminId && smsApiKey) {
+    try {
+      const liveBalance = await fetchProviderBalance(smsApiKey);
+      if (liveBalance !== null) {
+        await db.update(users).set({ smsBalance: liveBalance, updatedAt: new Date() }).where(eq(users.id, params.adminId));
+        broadcast(
+          "tenant:sms-updated",
+          {
+            adminId: params.adminId,
+            smsBalance: liveBalance,
+            timestamp: Date.now()
+          },
+          { all: true, auth: true }
+        );
+      }
+    } catch (balErr) {
+      console.warn("[SMS Service] Failed to sync provider balance after SMS dispatch:", balErr);
+    }
+  }
 
   return { ok: result.ok, status: finalStatus, response: result.raw, message: renderedMessage };
 }

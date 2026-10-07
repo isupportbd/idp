@@ -4,6 +4,9 @@ import { eq, and, isNull, desc, sql } from "drizzle-orm";
 import { smsTemplates } from "../database/models/sms_templates.js";
 import { smsLogs } from "../database/models/sms_logs.js";
 import { companySettings } from "@/modules/firm/database/models/company_settings.js";
+import { users } from "@/modules/auth/database/models/user.js";
+import { fetchProviderBalance } from "@/framework/sms/index.js";
+import { broadcast } from "@/framework/realtime/broadcast.js";
 import {
   DEFAULT_TEMPLATES,
   callBulkSmsBd,
@@ -237,6 +240,26 @@ export async function sendTestSms(c: Context) {
       sentBy: user?.id ?? null
     }).catch(() => {});
 
+    if (result.ok && adminId && settings.smsApiKey) {
+      try {
+        const liveBalance = await fetchProviderBalance(settings.smsApiKey);
+        if (liveBalance !== null) {
+          await db.update(users).set({ smsBalance: liveBalance, updatedAt: new Date() }).where(eq(users.id, adminId));
+          broadcast(
+            "tenant:sms-updated",
+            {
+              adminId,
+              smsBalance: liveBalance,
+              timestamp: Date.now()
+            },
+            { all: true, auth: true }
+          );
+        }
+      } catch (balErr) {
+        console.warn("[SMS Controller] Failed to sync provider balance on test SMS:", balErr);
+      }
+    }
+
     if (result.ok) {
       return c.json({ success: true, message: "Test SMS sent successfully!", response: result.raw });
     }
@@ -339,6 +362,26 @@ export async function updateGatewaySettings(c: Context) {
       });
     }
 
+    if (isUpdatingKey && trimmedKey && adminId) {
+      try {
+        const liveBalance = await fetchProviderBalance(trimmedKey);
+        if (liveBalance !== null) {
+          await db.update(users).set({ smsBalance: liveBalance, updatedAt: new Date() }).where(eq(users.id, adminId));
+          broadcast(
+            "tenant:sms-updated",
+            {
+              adminId,
+              smsBalance: liveBalance,
+              timestamp: Date.now()
+            },
+            { all: true, auth: true }
+          );
+        }
+      } catch (balErr) {
+        console.warn("[SMS Controller] Failed to sync provider balance on settings save:", balErr);
+      }
+    }
+
     return c.json({
       success: true,
       message: "Gateway settings updated successfully!"
@@ -401,6 +444,22 @@ export async function checkGatewayBalance(c: Context) {
       if (match && match[1]) {
         balance = match[1];
       }
+    }
+
+    if (adminId && !isNaN(parseFloat(balance))) {
+      const numBal = parseFloat(balance);
+      await db.update(users).set({ smsBalance: numBal, updatedAt: new Date() }).where(eq(users.id, adminId)).catch(() => {});
+      try {
+        broadcast(
+          "tenant:sms-updated",
+          {
+            adminId,
+            smsBalance: numBal,
+            timestamp: Date.now()
+          },
+          { all: true, auth: true }
+        );
+      } catch {}
     }
 
     return c.json({
