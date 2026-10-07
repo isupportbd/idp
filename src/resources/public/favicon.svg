@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 16 16">
+  <defs>
+    <linearGradient id="idpGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+    <linearGradient id="idpGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+  </defs>
+  <!-- Top Layer -->
+  <path fill="url(#idpGrad1)" d="M8.235 1.559a.5.5 0 0 0-.47 0l-7.5 4a.5.5 0 0 0 0 .882L4.698 8.7 8 10.46l3.302-1.76 4.433-2.259a.5.5 0 0 0 0-.882z"/>
+  <!-- Middle Layer -->
+  <path fill="url(#idpGrad2)" opacity="0.9" d="M1.77 8.375l3.52 1.76L8 11.55l2.71-1.415 3.52-1.76.535.273a.5.5 0 0 1 0 .886l-6.5 3.5a.5.5 0 0 1-.47 0l-6.5-3.5a.5.5 0 0 1 0-.886z"/>
+  <!-- Bottom Layer -->
+  <path fill="url(#idpGrad2)" opacity="0.75" d="M1.77 11.175l3.52 1.76L8 14.35l2.71-1.415 3.52-1.76.535.273a.5.5 0 0 1 0 .886l-6.5 3.5a.5.5 0 0 1-.47 0l-6.5-3.5a.5.5 0 0 1 0-.886z"/>
+</svg>
