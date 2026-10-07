@@ -358,8 +358,8 @@ onUnmounted(() => {
 
           <!-- SMS Balance Card (Click to Sync) -->
           <div
-            class="d-flex align-items-center rounded bg-dark border border-secondary cursor-pointer user-select-none"
-            style="font-size: 0.85rem; padding: 6px 14px !important; gap: 8px; min-width: 120px;"
+            class="d-flex align-items-center rounded bg-dark border border-secondary sms-sync-card cursor-pointer user-select-none"
+            style="font-size: 0.85rem; padding: 6px 14px !important; gap: 8px; min-width: 125px; cursor: pointer !important;"
             :title="'SMS Balance: ৳ ' + Number((authStore.user as any)?.smsBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' (Click to sync latest balance)'"
             @click="syncSmsBalance"
           >
@@ -368,12 +368,18 @@ onUnmounted(() => {
             <strong class="text-info font-monospace d-inline-flex align-items-baseline">
               <span class="currency-symbol">৳</span>{{ Number((authStore.user as any)?.smsBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
             </strong>
-            <i
-              class="bi bi-arrow-repeat ms-1 text-muted"
-              :class="{ 'spin-icon text-info': isSyncingSms }"
-              style="font-size: 0.8rem;"
-              title="Sync live balance"
-            ></i>
+            <button
+              type="button"
+              class="btn-sync-refresh ms-1"
+              :title="isSyncingSms ? 'Syncing...' : 'Click to sync live balance'"
+              @click.stop="syncSmsBalance"
+            >
+              <i
+                class="bi bi-arrow-repeat text-info"
+                :class="{ 'spin-icon': isSyncingSms }"
+                style="font-size: 0.85rem;"
+              ></i>
+            </button>
           </div>
 
           <!-- Storage Usage Card (Clickable to open Buy Storage Modal) -->
@@ -915,6 +921,34 @@ onUnmounted(() => {
   font-weight: 600;
   margin-right: 2px;
   opacity: 0.85;
+}
+
+.cursor-pointer {
+  cursor: pointer !important;
+}
+
+.sms-sync-card {
+  cursor: pointer !important;
+  transition: all 0.2s ease-in-out;
+}
+
+.sms-sync-card:hover {
+  border-color: #0dcaf0 !important;
+  background-color: rgba(13, 202, 240, 0.08) !important;
+}
+
+.sms-sync-card:active {
+  transform: scale(0.98);
+}
+
+.btn-sync-refresh {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .spin-icon {
