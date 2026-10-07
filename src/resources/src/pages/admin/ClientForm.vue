@@ -34,7 +34,6 @@ const activeTab = ref<"basic" | "contact" | "vat" | "managers">("basic");
 const isSubmitting = ref(false);
 const isLoading = ref(false);
 const formError = ref("");
-const showVatPassword = ref(false);
 
 const binStatus = ref<"idle" | "checking" | "unique" | "released" | "taken">("idle");
 const binMessage = ref<string>("");
@@ -633,22 +632,13 @@ const handleSubmit = async () => {
 
             <div v-if="can('clients.vat_password')" class="col-md-6">
               <label class="form-label text-light small fw-medium mb-1">VAT Portal Password</label>
-              <div class="position-relative">
-                <input
-                  v-model="form.vatPassword"
-                  :type="showVatPassword ? 'text' : 'password'"
-                  class="form-control idp-input font-monospace"
-                  placeholder="Enter VAT password"
-                  style="padding-right: 42px;"
-                />
-                <button
-                  type="button"
-                  class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-muted text-decoration-none pe-3"
-                  @click="showVatPassword = !showVatPassword"
-                >
-                  <i class="bi" :class="showVatPassword ? 'bi-eye-slash' : 'bi-eye'"></i>
-                </button>
-              </div>
+              <input
+                v-model="form.vatPassword"
+                type="password"
+                class="form-control idp-input font-monospace"
+                placeholder="Enter VAT password"
+                autocomplete="new-password"
+              />
             </div>
           </div>
 

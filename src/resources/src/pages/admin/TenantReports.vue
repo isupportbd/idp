@@ -1486,14 +1486,6 @@ onUnmounted(() => {
               <i class="bi" :class="copiedField === 'password' ? 'bi-check-lg text-success' : 'bi-copy'"></i>
             </button>
           </div>
-
-          <!-- Submission ID Indicator (if available) -->
-          <div v-if="submissionId" class="d-flex align-items-center">
-            <span class="badge bg-success text-white border border-success rounded-pill px-3 py-1.5 font-monospace fw-semibold shadow-sm d-inline-flex align-items-center" style="font-size: 0.8rem; letter-spacing: 0.5px;">
-              <i class="bi bi-check-circle-fill me-2 fs-6"></i>
-              <span>Sub: {{ submissionId }}</span>
-            </span>
-          </div>
         </div>
       </div>
 

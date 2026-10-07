@@ -37,7 +37,6 @@ const clientId = computed(() => Number(route.params.id));
 const client = ref<ClientDetail | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
-const showPassword = ref(false);
 const copiedField = ref<string | null>(null);
 
 const fetchClientData = async () => {
@@ -433,22 +432,14 @@ onMounted(() => {
                   <span v-if="copiedField === 'vatPass'" class="text-success small fw-semibold">Copied!</span>
                 </div>
                 <div class="value d-flex align-items-center justify-content-between bg-dark p-2 rounded border border-secondary border-opacity-25">
-                  <span v-if="client.vatPassword" class="font-monospace text-warning fw-bold">
-                    {{ showPassword ? client.vatPassword : '••••••••••••' }}
+                  <span v-if="client.vatPassword" class="font-monospace text-warning fw-bold" style="letter-spacing: 2px;">
+                    ••••••••••••
                   </span>
                   <span v-else-if="!can('clients.vat_password')" class="text-muted font-monospace small">
                     <i class="bi bi-lock me-1"></i>Hidden (no permission)
                   </span>
                   <span v-else class="text-muted font-monospace small">Not Configured</span>
                   <div v-if="client.vatPassword" class="d-flex align-items-center gap-1">
-                    <button
-                      type="button"
-                      class="btn btn-outline-secondary btn-sm py-0 px-2"
-                      @click="showPassword = !showPassword"
-                      :title="showPassword ? 'Hide Password' : 'Show Password'"
-                    >
-                      <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
-                    </button>
                     <button
                       type="button"
                       class="btn btn-outline-secondary btn-sm py-0 px-2"

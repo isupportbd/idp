@@ -492,7 +492,7 @@ const handleConfirmUpload = async () => {
                   <span v-else class="text-muted small">—</span>
                 </td>
                 <td>
-                  <span v-if="client.vatPassword" class="font-monospace text-warning small">{{ client.vatPassword }}</span>
+                  <span v-if="client.vatPassword" class="font-monospace text-warning small" style="letter-spacing: 1px;">••••••••</span>
                   <span v-else class="text-muted small">—</span>
                 </td>
                 <td style="text-align: right;">
