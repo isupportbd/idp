@@ -307,8 +307,12 @@ const handleSaveCollection = async () => {
           </h6>
 
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="text-secondary small">Previous Balance</span>
-            <span class="font-monospace text-danger fw-bold">{{ currentDue.toFixed(2) }} Tk</span>
+            <span class="text-secondary small">
+              {{ currentDue > 0 ? 'Previous Due' : currentDue < 0 ? 'Advance Balance' : 'Previous Balance' }}
+            </span>
+            <span class="font-monospace fw-bold" :class="currentDue > 0 ? 'text-danger' : currentDue < 0 ? 'text-success' : 'text-light'">
+              {{ currentDue > 0 ? `+${currentDue.toFixed(2)} Tk` : currentDue < 0 ? `-${Math.abs(currentDue).toFixed(2)} Tk` : '0.00 Tk' }}
+            </span>
           </div>
 
           <div class="d-flex justify-content-between align-items-center mb-2">

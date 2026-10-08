@@ -335,9 +335,11 @@ const handleCreateBill = async (status: "finalized" | "draft" = "finalized") => 
             </div>
           </div>
           <div class="col-md-2 text-md-end">
-            <div class="text-muted small">Previous Balance</div>
-            <div class="fw-bold font-monospace fs-6" :class="previousDue > 0 ? 'text-danger' : 'text-success'">
-              {{ previousDue > 0 ? `+${previousDue.toFixed(2)} Tk (Due)` : '0.00 Tk' }}
+            <div class="text-muted small">
+              {{ previousDue > 0 ? 'Previous Due' : previousDue < 0 ? 'Advance Balance' : 'Previous Balance' }}
+            </div>
+            <div class="fw-bold font-monospace fs-6" :class="previousDue > 0 ? 'text-danger' : previousDue < 0 ? 'text-success' : 'text-light'">
+              {{ previousDue > 0 ? `+${previousDue.toFixed(2)} Tk` : previousDue < 0 ? `-${Math.abs(previousDue).toFixed(2)} Tk` : '0.00 Tk' }}
             </div>
           </div>
         </div>
@@ -580,9 +582,11 @@ const handleCreateBill = async (status: "finalized" | "draft" = "finalized") => 
           </div>
 
           <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary border-opacity-25">
-            <span class="text-secondary small">Previous Balance / Due</span>
-            <span class="font-monospace fw-semibold" :class="previousDue > 0 ? 'text-danger' : 'text-success'">
-              {{ previousDue > 0 ? `+${previousDue.toFixed(2)} Tk` : '0.00 Tk' }}
+            <span class="text-secondary small">
+              {{ previousDue > 0 ? 'Previous Due' : previousDue < 0 ? 'Advance Balance' : 'Previous Balance' }}
+            </span>
+            <span class="font-monospace fw-semibold" :class="previousDue > 0 ? 'text-danger' : previousDue < 0 ? 'text-success' : 'text-light'">
+              {{ previousDue > 0 ? `+${previousDue.toFixed(2)} Tk` : previousDue < 0 ? `-${Math.abs(previousDue).toFixed(2)} Tk` : '0.00 Tk' }}
             </span>
           </div>
 
