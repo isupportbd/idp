@@ -63,8 +63,10 @@ export interface Collection {
 export interface MissingBillItem {
   id: number;
   companyName: string;
+  proprietorName?: string | null;
   binNumber?: string;
   mobile?: string;
+  tinNumber?: string;
   customerTypeId?: number | null;
   customerTypeName?: string;
   referenceId?: number | null;
@@ -228,10 +230,16 @@ export function useBillingApi() {
   };
 
   // 5. Fetch Missing Bills
-  const fetchMissingBills = async (month: string) => {
+  const fetchMissingBills = async (params: {
+    month?: string;
+    search?: string;
+    customerTypeId?: number | string;
+    referenceId?: number | string;
+  } | string) => {
     loading.value = true;
     try {
-      const res = await axios.get("/api/billing/missing", { params: { month } });
+      const queryParams = typeof params === "string" ? { month: params } : params;
+      const res = await axios.get("/api/billing/missing", { params: queryParams });
       missingBills.value = res.data.data || [];
       return res.data;
     } catch (err: any) {

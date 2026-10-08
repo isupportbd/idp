@@ -107,7 +107,12 @@ const loadData = async () => {
         paymentMethod: selectedPaymentMethod.value,
         search: searchQuery.value
       }),
-      fetchMissingBills(selectedMonth.value),
+      fetchMissingBills({
+        month: selectedMonth.value,
+        customerTypeId: selectedCustomerTypeId.value,
+        referenceId: selectedReferenceId.value,
+        search: searchQuery.value
+      }),
       fetchCustomerTypes(),
       fetchReferences(),
       fetchAssignableUsers()
@@ -148,8 +153,10 @@ const filteredMissingBills = computed(() => {
     list = list.filter(
       (m) =>
         (m.companyName && m.companyName.toLowerCase().includes(q)) ||
+        (m.proprietorName && m.proprietorName.toLowerCase().includes(q)) ||
         (m.binNumber && m.binNumber.toLowerCase().includes(q)) ||
         (m.mobile && m.mobile.toLowerCase().includes(q)) ||
+        (m.tinNumber && m.tinNumber.toLowerCase().includes(q)) ||
         (m.referenceName && m.referenceName.toLowerCase().includes(q)) ||
         (m.customerTypeName && m.customerTypeName.toLowerCase().includes(q)) ||
         (m.submissionId && m.submissionId.toLowerCase().includes(q)) ||
@@ -170,7 +177,8 @@ const currentTabList = computed<any[]>(() => {
 const currentTabListCount = computed(() => currentTabList.value.length);
 const { currentPage, itemsPerPage, totalPages, paginateList } = usePagination("billing", {
   defaultPerPage: 10,
-  totalItems: currentTabListCount
+  totalItems: currentTabListCount,
+  syncUrl: false
 });
 
 const paginatedList = computed<any[]>(() => paginateList(currentTabList.value));
@@ -795,6 +803,9 @@ const printReport = () => {
             <td>
               <div class="fw-bold text-white text-truncate" style="max-width: 320px; font-size: 0.92rem;">
                 {{ item.companyName }}
+              </div>
+              <div v-if="item.proprietorName" class="text-secondary small text-truncate" style="max-width: 320px; font-size: 0.78rem;">
+                Proprietor: {{ item.proprietorName }}
               </div>
               <div v-if="item.binNumber" class="badge bg-dark border border-secondary text-info font-monospace mt-1" style="font-size: 0.78rem;">
                 BIN: {{ item.binNumber }}

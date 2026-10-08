@@ -1154,14 +1154,22 @@ export const getMissingBills: Handler = async (c: any) => {
     if (!isSuperAdmin && tenantAdminId) {
       clientConditions.push(eq(clients.createdBy, tenantAdminId));
     }
+    if (query.customerTypeId && query.customerTypeId !== "all") {
+      clientConditions.push(eq(clients.customerTypeId, Number(query.customerTypeId)));
+    }
+    if (query.referenceId && query.referenceId !== "all") {
+      clientConditions.push(eq(clients.referenceId, Number(query.referenceId)));
+    }
 
     // Fetch all Active Clients for tenant
     const activeClients = await db
       .select({
         id: clients.id,
         companyName: clients.companyName,
+        proprietorName: clients.proprietorName,
         binNumber: clients.binNumber,
         mobile: clients.mobile,
+        tinNumber: clients.tinNumber,
         customerTypeId: clients.customerTypeId,
         customerTypeName: customerTypes.typeName,
         referenceId: clients.referenceId,
@@ -1175,7 +1183,7 @@ export const getMissingBills: Handler = async (c: any) => {
       .orderBy(asc(clients.companyName));
 
     if (activeClients.length === 0) {
-      return c.json({ message: "No active clients found", data: [] }, HttpStatusCodes.OK);
+      return c.json({ message: "No active clients found", data: [], totalMissing: 0, readyToBillCount: 0 }, HttpStatusCodes.OK);
     }
 
     // Fetch already billed client IDs for this month
@@ -1210,11 +1218,6 @@ export const getMissingBills: Handler = async (c: any) => {
     // Fetch Master Services and Rates to calculate exact service fee
     const allServices = await db.select().from(serviceItems).where(eq(serviceItems.isActive, true));
     const allRates = await db.select().from(serviceRates);
-
-    const returnItem = allServices.find((s) => s.itemName.toLowerCase().includes("return"));
-    const booksItem = allServices.find(
-      (s) => s.itemName.toLowerCase().includes("books") || s.itemName.toLowerCase().includes("6.2.1")
-    );
 
     const missingList: any[] = [];
     const unbilledClients = activeClients.filter((cl) => !billedSet.has(cl.id));
@@ -1288,8 +1291,10 @@ export const getMissingBills: Handler = async (c: any) => {
       missingList.push({
         id: cl.id,
         companyName: cl.companyName,
+        proprietorName: cl.proprietorName,
         binNumber: cl.binNumber,
         mobile: cl.mobile,
+        tinNumber: cl.tinNumber,
         customerTypeId: cl.customerTypeId,
         customerTypeName: cl.customerTypeName,
         referenceId: cl.referenceId,
@@ -1303,12 +1308,29 @@ export const getMissingBills: Handler = async (c: any) => {
       });
     }
 
+    let resultList = missingList;
+    if (query.search && query.search.trim()) {
+      const q = query.search.trim().toLowerCase();
+      resultList = resultList.filter(
+        (m) =>
+          (m.companyName && m.companyName.toLowerCase().includes(q)) ||
+          (m.proprietorName && m.proprietorName.toLowerCase().includes(q)) ||
+          (m.binNumber && m.binNumber.toLowerCase().includes(q)) ||
+          (m.mobile && m.mobile.toLowerCase().includes(q)) ||
+          (m.tinNumber && m.tinNumber.toLowerCase().includes(q)) ||
+          (m.referenceName && m.referenceName.toLowerCase().includes(q)) ||
+          (m.customerTypeName && m.customerTypeName.toLowerCase().includes(q)) ||
+          (m.submissionId && m.submissionId.toLowerCase().includes(q)) ||
+          (m.vatServiceType && m.vatServiceType.toLowerCase().includes(q))
+      );
+    }
+
     return c.json(
       {
         message: "Missing bills fetched successfully",
-        data: missingList,
-        totalMissing: missingList.length,
-        readyToBillCount: missingList.filter((m) => m.isSubmitted).length
+        data: resultList,
+        totalMissing: resultList.length,
+        readyToBillCount: resultList.filter((m) => m.isSubmitted).length
       },
       HttpStatusCodes.OK
     );
