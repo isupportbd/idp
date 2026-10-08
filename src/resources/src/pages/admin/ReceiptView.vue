@@ -315,6 +315,7 @@ const handlePrint = () => {
       text-transform: uppercase;
       border-bottom: 1px solid #dee2e6 !important;
       padding: 10px 12px;
+      white-space: nowrap !important;
     }
     .invoice-table td {
       padding: 12px 10px;
@@ -521,10 +522,10 @@ const handleCloseTab = () => {
         <table class="table invoice-table mb-0">
           <thead>
             <tr>
-              <th style="width: 6%;">#</th>
-              <th style="width: 54%;">Description / Particulars</th>
-              <th style="width: 20%; text-align: center;">Payment Method</th>
-              <th style="width: 20%; text-align: right;">Amount (Tk)</th>
+              <th style="width: 5%;" class="text-nowrap">#</th>
+              <th style="width: 50%;">Description / Particulars</th>
+              <th style="width: 25%; text-align: center;" class="text-nowrap">Payment Mode</th>
+              <th style="width: 20%; text-align: right;" class="text-nowrap">Amount (Tk)</th>
             </tr>
           </thead>
           <tbody>
@@ -659,6 +660,7 @@ const handleCloseTab = () => {
   text-transform: uppercase;
   border-bottom: 1px solid #dee2e6;
   padding: 10px 12px;
+  white-space: nowrap !important;
 }
 
 .invoice-table td {
