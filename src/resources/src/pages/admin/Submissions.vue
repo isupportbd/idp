@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import StatusBadge from "@/components/common/StatusBadge.vue";
 import { useSubmissionsApi, type SubmissionItem } from "@/composables/useSubmissionsApi";
@@ -9,6 +10,7 @@ import { useToast } from "@/composables/useToast";
 import { can } from "@/composables/useAuth";
 import SearchInput from "@/components/common/SearchInput.vue";
 import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
+import { usePagination } from "@/composables/usePagination";
 import { pulse } from "@/plugins/pulse";
 
 const toast = useToast();
@@ -142,16 +144,14 @@ const filteredSubmissions = computed(() => {
   return list;
 });
 
-// Pagination State (10 items per page)
-const currentPage = ref(1);
-const itemsPerPage = 10;
-
-const totalPages = computed(() => Math.ceil(filteredSubmissions.value.length / itemsPerPage) || 1);
-
-const paginatedSubmissions = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage;
-  return filteredSubmissions.value.slice(start, start + itemsPerPage);
+// Reusable Persistent Pagination (10 items per page)
+const filteredSubmissionsCount = computed(() => filteredSubmissions.value.length);
+const { currentPage, itemsPerPage, totalPages, paginateList } = usePagination("submissions", {
+  defaultPerPage: 10,
+  totalItems: filteredSubmissionsCount
 });
+
+const paginatedSubmissions = computed(() => paginateList(filteredSubmissions.value));
 
 // Watch Search Query with Debounce
 watch(searchQuery, () => {

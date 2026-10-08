@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
 import StatusBadge from "@/components/common/StatusBadge.vue";
@@ -8,9 +8,11 @@ import { useBillingApi, type Bill, type Collection } from "@/composables/useBill
 import { useServicesApi } from "@/composables/useServicesApi";
 import { useClientsApi } from "@/composables/useClientsApi";
 import { useToast } from "@/composables/useToast";
+import { usePagination } from "@/composables/usePagination";
 import { can } from "@/composables/useAuth";
 
 const router = useRouter();
+const route = useRoute();
 const toast = useToast();
 
 const openInvoiceInNewTab = (billId: number) => {
@@ -102,10 +104,7 @@ const dueClientsList = computed(() => {
   return bills.value.filter((b) => b.dueAmount > 0);
 });
 
-// Pagination State (10 items per page)
-const currentPage = ref(1);
-const itemsPerPage = 10;
-
+// Pagination State (10 items per page with reload persistence)
 const currentTabList = computed<any[]>(() => {
   if (activeTab.value === 'dues') return dueClientsList.value;
   if (activeTab.value === 'collections') return collections.value;
@@ -113,12 +112,13 @@ const currentTabList = computed<any[]>(() => {
   return bills.value;
 });
 
-const totalPages = computed(() => Math.ceil(currentTabList.value.length / itemsPerPage) || 1);
-
-const paginatedList = computed<any[]>(() => {
-  const start = (currentPage.value - 1) * itemsPerPage;
-  return currentTabList.value.slice(start, start + itemsPerPage);
+const currentTabListCount = computed(() => currentTabList.value.length);
+const { currentPage, itemsPerPage, totalPages, paginateList } = usePagination("billing", {
+  defaultPerPage: 10,
+  totalItems: currentTabListCount
 });
+
+const paginatedList = computed<any[]>(() => paginateList(currentTabList.value));
 
 watch([activeTab, selectedMonth, selectedCustomerTypeId, selectedReferenceId, selectedStatusFilter, selectedPaymentMethod, searchQuery], () => {
   currentPage.value = 1;

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import axios from "axios";
 import ConfirmModal from "@/components/common/ConfirmModal.vue";
 import { useClientsApi, type ClientItem, type AssignableUser } from "@/composables/useClientsApi";
@@ -8,9 +8,11 @@ import { useServicesApi, type CustomerType, type ClientReference } from "@/compo
 import { useToast } from "@/composables/useToast";
 import { useSubscriptionGuard } from "@/composables/useSubscriptionGuard";
 import SearchInput from "@/components/common/SearchInput.vue";
+import { usePagination } from "@/composables/usePagination";
 import { can, isTenantAdmin } from "@/composables/useAuth";
 
 const router = useRouter();
+const route = useRoute();
 const toast = useToast();
 const { isSubscriptionActive, checkOrPromptRecharge } = useSubscriptionGuard();
 
@@ -46,10 +48,11 @@ const searchQuery = ref("");
 const selectedTypeFilter = ref<number | "all">("all");
 const selectedReferenceFilter = ref<number | "all">("all");
 const selectedStatusFilter = ref<"all" | "true" | "false">("all");
-const currentPage = ref(1);
-const itemsPerPage = 10;
 
-const totalPages = computed(() => Math.ceil(totalCount.value / itemsPerPage) || 1);
+const { currentPage, itemsPerPage, totalPages } = usePagination("clients", {
+  defaultPerPage: 10,
+  totalItems: totalCount
+});
 
 const selectedClientDetails = ref<ClientItem | null>(null);
 const deleteTarget = ref<ClientItem | null>(null);

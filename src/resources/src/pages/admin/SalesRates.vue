@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import axios from "axios";
 import SearchInput from "@/components/common/SearchInput.vue";
+import { usePagination } from "@/composables/usePagination";
 import { can } from "@/composables/useAuth";
+
+const router = useRouter();
+const route = useRoute();
 
 interface SalesRate {
   id: number;
@@ -62,8 +67,6 @@ const searchQuery = ref("");
 const selectedClient = ref("");
 const selectedItem = ref("");
 const selectedStatus = ref("");
-const currentPage = ref(1);
-const itemsPerPage = ref(10);
 const isLoading = ref(false);
 
 // Modal State
@@ -170,12 +173,14 @@ const filteredRates = computed(() => {
   return list;
 });
 
-// Pagination
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredRates.value.length / itemsPerPage.value)));
-const paginatedRates = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage.value;
-  return filteredRates.value.slice(start, start + itemsPerPage.value);
+// Pagination (Persistent reload support)
+const filteredRatesCount = computed(() => filteredRates.value.length);
+const { currentPage, itemsPerPage, totalPages, paginateList } = usePagination("sales_rates", {
+  defaultPerPage: 10,
+  totalItems: filteredRatesCount
 });
+
+const paginatedRates = computed(() => paginateList(filteredRates.value));
 
 watch([searchQuery, selectedClient, selectedItem, selectedStatus, itemsPerPage], () => {
   currentPage.value = 1;

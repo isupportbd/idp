@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
 import { useActivityFilterApi, type ActivityClient } from "@/composables/useActivityFilterApi";
+import { usePagination } from "@/composables/usePagination";
 import { can } from "@/composables/useAuth";
 import { pulse } from "@/plugins/pulse";
 
 const router = useRouter();
+const route = useRoute();
 const { loading, matrixData, stats, clientTypes, references, loadActivityMatrix } = useActivityFilterApi();
 
 // Previous Month setup (Default to previous month, e.g. "2026-08" for September 2026)
@@ -35,8 +37,6 @@ const statusFilter = ref<
 >("all");
 const selectedClientType = ref<string>("all");
 const selectedReference = ref<string>("all");
-const currentPage = ref(1);
-const itemsPerPage = 10;
 
 // Clipboard copy state
 const copiedField = ref<string | null>(null);
@@ -176,15 +176,14 @@ const filteredClients = computed(() => {
   return list;
 });
 
-// Pagination computed
-const totalPages = computed(() => {
-  return Math.max(1, Math.ceil(filteredClients.value.length / itemsPerPage));
+// Pagination (10 items per page with persistent reload support)
+const filteredClientsCount = computed(() => filteredClients.value.length);
+const { currentPage, itemsPerPage, totalPages, paginateList } = usePagination("activity_filter", {
+  defaultPerPage: 10,
+  totalItems: filteredClientsCount
 });
 
-const paginatedClients = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage;
-  return filteredClients.value.slice(start, start + itemsPerPage);
-});
+const paginatedClients = computed(() => paginateList(filteredClients.value));
 
 // Card click filter function
 const selectCardFilter = (filter: typeof statusFilter.value) => {

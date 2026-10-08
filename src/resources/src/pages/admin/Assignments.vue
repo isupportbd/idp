@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import { useClientsApi, type ClientManagerAssignment, type AssignableUser } from "@/composables/useClientsApi";
 import { useServicesApi, type CustomerType, type ClientReference } from "@/composables/useServicesApi";
 import { useToast } from "@/composables/useToast";
 import ManagersMultiSelect from "@/components/common/ManagersMultiSelect.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
+import { usePagination } from "@/composables/usePagination";
 
+const router = useRouter();
+const route = useRoute();
 const toast = useToast();
 const {
   assignments,
@@ -129,28 +133,31 @@ const stats = computed(() => {
   };
 });
 
-// Pagination State (10 items per page)
-const currentPage = ref(1);
-const itemsPerPage = 10;
-
-const totalPages = computed(() => Math.ceil(filteredAssignments.value.length / itemsPerPage) || 1);
-
-const paginatedAssignments = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage;
-  return filteredAssignments.value.slice(start, start + itemsPerPage);
+// Pagination State (10 items per page with persistent reload support)
+const filteredAssignmentsCount = computed(() => filteredAssignments.value.length);
+const { currentPage, itemsPerPage, totalPages, paginateList } = usePagination("assignments", {
+  defaultPerPage: 10,
+  totalItems: filteredAssignmentsCount
 });
+
+const paginatedAssignments = computed(() => paginateList(filteredAssignments.value));
 
 // Shared Tab Pagination State
-const sharedCurrentPage = ref(1);
-const sharedTotalPages = computed(() => Math.ceil(sharedClientsList.value.length / itemsPerPage) || 1);
-
-const paginatedSharedClients = computed(() => {
-  const start = (sharedCurrentPage.value - 1) * itemsPerPage;
-  return sharedClientsList.value.slice(start, start + itemsPerPage);
+const sharedClientsCount = computed(() => sharedClientsList.value.length);
+const {
+  currentPage: sharedCurrentPage,
+  totalPages: sharedTotalPages,
+  paginateList: paginateSharedList
+} = usePagination("assignments_shared", {
+  defaultPerPage: 10,
+  totalItems: sharedClientsCount,
+  syncUrl: false
 });
 
+const paginatedSharedClients = computed(() => paginateSharedList(sharedClientsList.value));
+
 // Reset page on filter changes
-watch([selectedTypeFilter, selectedReferenceFilter, activeFilter, searchQuery], () => {
+watch([selectedTypeFilter, selectedReferenceFilter, activeFilter, searchQuery, mainTab], () => {
   currentPage.value = 1;
   sharedCurrentPage.value = 1;
 });

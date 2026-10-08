@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import axios from "axios";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import { useToast } from "@/composables/useToast";
+import { usePagination } from "@/composables/usePagination";
 import { can } from "@/composables/useAuth";
 import SearchInput from "@/components/common/SearchInput.vue";
 
+const router = useRouter();
+const route = useRoute();
 const toast = useToast();
 
 interface Purchase {
@@ -41,6 +45,11 @@ const references = ref<any[]>([]);
 const totalCount = ref(0);
 const isLoading = ref(false);
 
+const { currentPage, itemsPerPage, totalPages } = usePagination("purchases", {
+  defaultPerPage: 15,
+  totalItems: totalCount
+});
+
 const searchQuery = ref("");
 const selectedClient = ref("");
 const selectedReference = ref("");
@@ -54,10 +63,6 @@ const getLastMonth = () => {
   return `${year}-${month}`;
 };
 const selectedMonth = ref(getLastMonth());
-
-const currentPage = ref(1);
-const itemsPerPage = ref(15);
-const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / itemsPerPage.value)));
 
 // Deletion Modal State
 const showDeleteModal = ref(false);

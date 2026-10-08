@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
 import SearchInput from "@/components/common/SearchInput.vue";
+import { usePagination } from "@/composables/usePagination";
 
 const toast = useToast();
 
@@ -35,8 +36,6 @@ const maxPlanUsers = computed(() => {
 const searchQuery = ref("");
 const roleFilter = ref<string>("all");
 const statusFilter = ref<string>("all");
-const currentPage = ref(1);
-const itemsPerPage = ref(10);
 const isLoading = ref(false);
 
 // Modal state (password reset only; create/edit use the full UserForm page)
@@ -90,11 +89,17 @@ const filteredUsers = computed(() => {
 });
 
 // Pagination
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredUsers.value.length / itemsPerPage.value)));
-const paginatedUsers = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage.value;
-  return filteredUsers.value.slice(start, start + itemsPerPage.value);
+const filteredUsersCount = computed(() => filteredUsers.value.length);
+const { currentPage, itemsPerPage, totalPages, paginateList } = usePagination("users", {
+  defaultPerPage: 10,
+  totalItems: filteredUsersCount
 });
+
+watch([searchQuery, roleFilter, statusFilter, itemsPerPage], () => {
+  currentPage.value = 1;
+});
+
+const paginatedUsers = computed(() => paginateList(filteredUsers.value));
 
 // Fetch Data from API
 const fetchUsers = async () => {

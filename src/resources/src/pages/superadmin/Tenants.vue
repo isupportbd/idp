@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { pulse } from "@/plugins/pulse";
 import {
   useSuperAdminApi,
@@ -8,8 +8,10 @@ import {
   type PendingSignup
 } from "@/composables/useSuperAdminApi";
 import SearchInput from "@/components/common/SearchInput.vue";
+import { usePagination } from "@/composables/usePagination";
 
 const router = useRouter();
+const route = useRoute();
 
 const {
   tenants,
@@ -37,10 +39,13 @@ const selectedTenant = ref<Tenant | null>(null);
 const extendDaysCount = ref(30);
 const isSubmittingAction = ref(false);
 
-// Pagination State for 1,000+ Tenants
-const currentPage = ref(1);
-const perPage = ref(15);
+// Reusable Persistent Pagination for 1,000+ Tenants
 const perPageOptions = [10, 15, 25, 50, 100];
+const filteredTenantsCount = computed(() => filteredTenants.value.length);
+const { currentPage, itemsPerPage: perPage, totalPages, paginateList } = usePagination("tenants", {
+  defaultPerPage: 15,
+  totalItems: filteredTenantsCount
+});
 
 const activeCount = computed(() => tenants.value.filter(t => t.status === "active").length);
 const suspendedCount = computed(() => tenants.value.filter(t => t.status === "suspended").length);
@@ -61,14 +66,9 @@ const filteredTenants = computed(() => {
   );
 });
 
-// Paginated view for 1,000+ tenants
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredTenants.value.length / perPage.value)));
 const startIndex = computed(() => (currentPage.value - 1) * perPage.value);
 const endIndex = computed(() => Math.min(startIndex.value + perPage.value, filteredTenants.value.length));
-
-const paginatedTenants = computed(() => {
-  return filteredTenants.value.slice(startIndex.value, startIndex.value + perPage.value);
-});
+const paginatedTenants = computed(() => paginateList(filteredTenants.value));
 
 watch([searchTerm, statusFilter, perPage], () => {
   currentPage.value = 1;
