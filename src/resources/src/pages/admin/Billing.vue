@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
 import StatusBadge from "@/components/common/StatusBadge.vue";
+import InvoiceModal from "@/components/common/InvoiceModal.vue";
 import { useBillingApi, type Bill, type Collection } from "@/composables/useBillingApi";
 import { useServicesApi } from "@/composables/useServicesApi";
 import { useClientsApi } from "@/composables/useClientsApi";
@@ -12,6 +13,15 @@ import { can } from "@/composables/useAuth";
 
 const router = useRouter();
 const toast = useToast();
+
+// Invoice Modal State
+const showInvoiceModal = ref(false);
+const selectedBillId = ref<number | null>(null);
+
+const openInvoiceModal = (billId: number) => {
+  selectedBillId.value = billId;
+  showInvoiceModal.value = true;
+};
 
 const {
   bills,
@@ -533,6 +543,16 @@ const printReport = () => {
             <!-- Actions (Icon Only) -->
             <td style="text-align: right;" class="d-print-none">
               <div class="d-inline-flex align-items-center gap-1">
+                <!-- View & Print Invoice Button -->
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-info p-1"
+                  title="View & Print Invoice"
+                  @click="openInvoiceModal(bill.id)"
+                >
+                  <i class="bi bi-printer"></i>
+                </button>
+
                 <!-- Collect Payment Button (If due exists) -->
                 <button
                   v-if="bill.dueAmount > 0 && can('collections.create')"
@@ -802,6 +822,12 @@ const printReport = () => {
         </button>
       </div>
     </div>
+
+    <!-- Invoice Preview & Print Modal -->
+    <InvoiceModal
+      v-model:show="showInvoiceModal"
+      :bill-id="selectedBillId"
+    />
   </div>
 </template>
 

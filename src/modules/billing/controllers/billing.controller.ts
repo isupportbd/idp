@@ -384,8 +384,10 @@ export const getBillDetails: Handler = async (c: any) => {
           billNo: bills.billNo,
           clientId: bills.clientId,
           clientName: clients.companyName,
+          clientProprietor: clients.proprietorName,
           clientBin: clients.binNumber,
           clientMobile: clients.mobile,
+          clientEmail: clients.email,
           clientAddress: clients.address,
           customerTypeName: customerTypes.typeName,
           referenceName: clientReferences.name,
@@ -400,6 +402,7 @@ export const getBillDetails: Handler = async (c: any) => {
           dueAmount: bills.dueAmount,
           status: bills.status,
           notes: bills.notes,
+          createdBy: bills.createdBy,
           createdAt: bills.createdAt
         })
         .from(bills)
@@ -424,11 +427,52 @@ export const getBillDetails: Handler = async (c: any) => {
       .from(collections)
       .where(eq(collections.billId, id));
 
+    // Fetch matching VAT return submission if any
+    const submission = (
+      await db
+        .select({ submissionId: vatSubmissions.submissionId, submittedAt: vatSubmissions.submittedAt })
+        .from(vatSubmissions)
+        .where(
+          and(
+            eq(vatSubmissions.clientId, bill.clientId),
+            eq(vatSubmissions.taxPeriod, bill.taxPeriod)
+          )
+        )
+        .limit(1)
+    )[0];
+
+    // Fetch tenant/company branding settings
+    let firmSetting: any = null;
+    try {
+      if (bill.createdBy) {
+        firmSetting = await db.query.companySettings.findFirst({
+          where: eq(companySettings.adminId, bill.createdBy)
+        });
+      }
+      if (!firmSetting) {
+        firmSetting = await db.query.companySettings.findFirst();
+      }
+    } catch {}
+
     return c.json(
       {
         message: "Bill details fetched successfully",
         data: {
           ...bill,
+          submissionId: submission?.submissionId || null,
+          submittedAt: submission?.submittedAt || null,
+          companySettings: firmSetting ? {
+            companyName: firmSetting.companyName,
+            proprietorName: firmSetting.proprietorName,
+            phone: firmSetting.phone,
+            email: firmSetting.email,
+            website: firmSetting.website,
+            address: firmSetting.address,
+            binNumber: firmSetting.binNumber,
+            tinNumber: firmSetting.tinNumber,
+            tradeLicenseNo: firmSetting.tradeLicenseNo,
+            invoiceTerms: firmSetting.invoiceTerms
+          } : null,
           items,
           collections: linkedCollections
         }

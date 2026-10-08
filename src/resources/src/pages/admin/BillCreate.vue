@@ -5,6 +5,7 @@ import { useBillingApi, type BillItem } from "@/composables/useBillingApi";
 import { useClientsApi } from "@/composables/useClientsApi";
 import { useToast } from "@/composables/useToast";
 import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
+import InvoiceModal from "@/components/common/InvoiceModal.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -21,6 +22,10 @@ const dueDate = ref("");
 const discountAmount = ref<number>(0);
 const notes = ref("");
 const isSaving = ref(false);
+
+// Invoice Modal
+const showInvoiceModal = ref(false);
+const createdBillId = ref<number | null>(null);
 
 // Client overview & loaded data
 const clientOverview = ref<any>(null);
@@ -187,7 +192,7 @@ const handleCreateBill = async (status: "finalized" | "draft" = "finalized") => 
 
   isSaving.value = true;
   try {
-    await createBill({
+    const createdBill = await createBill({
       clientId: selectedClientId.value,
       referenceId: clientOverview.value?.client?.referenceId || null,
       taxPeriod: billingMonth.value,
@@ -199,12 +204,22 @@ const handleCreateBill = async (status: "finalized" | "draft" = "finalized") => 
       items: items.value
     });
 
-    router.push("/admin/billing");
+    if (createdBill && createdBill.id) {
+      createdBillId.value = createdBill.id;
+      showInvoiceModal.value = true;
+    } else {
+      router.push("/admin/billing");
+    }
   } catch (err: any) {
     // Toast is handled in useBillingApi composable
   } finally {
     isSaving.value = false;
   }
+};
+
+const handleInvoiceModalClose = () => {
+  showInvoiceModal.value = false;
+  router.push("/admin/billing");
 };
 </script>
 
@@ -597,6 +612,13 @@ const handleCreateBill = async (status: "finalized" | "draft" = "finalized") => 
         </div>
       </div>
     </div>
+
+    <!-- Invoice Preview & Print Modal -->
+    <InvoiceModal
+      v-model:show="showInvoiceModal"
+      :bill-id="createdBillId"
+      @close="handleInvoiceModalClose"
+    />
   </div>
 </template>
 
