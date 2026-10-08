@@ -69,7 +69,7 @@ const fetchClientsList = async () => {
       referenceId: selectedReferenceFilter.value !== "all" ? selectedReferenceFilter.value : undefined,
       isActive: selectedStatusFilter.value,
       page: currentPage.value,
-      limit: itemsPerPage
+      limit: itemsPerPage.value
     });
   } catch (err: any) {
     toast.error("Failed to load clients");
