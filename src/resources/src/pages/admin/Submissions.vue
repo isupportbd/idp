@@ -8,6 +8,7 @@ import { useClientsApi } from "@/composables/useClientsApi";
 import { useToast } from "@/composables/useToast";
 import { can } from "@/composables/useAuth";
 import SearchInput from "@/components/common/SearchInput.vue";
+import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
 import { pulse } from "@/plugins/pulse";
 
 const toast = useToast();
@@ -705,20 +706,11 @@ const printReport = () => {
                 <label class="form-label small text-secondary fw-semibold">
                   Select Active Client Organization <span class="text-danger">*</span>
                 </label>
-                <select
+                <ClientSearchSelect
                   v-model="form.clientId"
-                  class="form-select idp-modal-input"
-                  required
-                >
-                  <option :value="null" disabled>Choose a client to record submission...</option>
-                  <option
-                    v-for="c in submissions"
-                    :key="c.id"
-                    :value="c.id"
-                  >
-                    {{ c.companyName }} {{ c.binNumber ? `(BIN: ${c.binNumber})` : '' }}
-                  </option>
-                </select>
+                  :clients="submissions"
+                  placeholder="Type to search company name, BIN, or mobile..."
+                />
               </div>
 
               <!-- Tax Period Input Field -->

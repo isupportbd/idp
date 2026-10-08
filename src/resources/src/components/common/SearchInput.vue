@@ -136,7 +136,12 @@ onUnmounted(() => {
   color: #6c757d;
   pointer-events: none;
   font-size: 0.82rem;
-  z-index: 2;
+  z-index: 10;
+  transition: color 0.15s ease-in-out;
+}
+
+.idp-search-container:focus-within .idp-search-icon {
+  color: #38bdf8;
 }
 
 .idp-search-input {
@@ -199,7 +204,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2;
+  z-index: 10;
   transition: all 0.15s ease;
   font-size: 0.95rem;
 }

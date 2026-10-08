@@ -133,7 +133,7 @@ const clearSelection = () => {
     <div
       v-if="isDropdownOpen && filteredList.length > 0"
       class="search-dropdown-menu shadow-lg position-absolute top-100 start-0 w-100 mt-1 p-1"
-      style="max-height: 240px; overflow-y: auto; z-index: 1060;"
+      style="max-height: 240px; overflow-y: auto; z-index: 1100;"
     >
       <div
         v-for="c in filteredList"
