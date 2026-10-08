@@ -65,7 +65,9 @@ export interface MissingBillItem {
   companyName: string;
   binNumber?: string;
   mobile?: string;
+  customerTypeId?: number | null;
   customerTypeName?: string;
+  referenceId?: number | null;
   referenceName?: string;
   vatServiceType: string;
   targetMonth: string;

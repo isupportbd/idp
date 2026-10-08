@@ -227,6 +227,19 @@ const netPayable = computed(() => {
   return Math.max(0, subtotal.value - discount + previousDue.value);
 });
 
+const fromTab = computed(() => (route.query.tab as string) || "invoices");
+const backQuery = computed(() => {
+  const q: any = {};
+  if (fromTab.value) q.tab = fromTab.value;
+  if (billingMonth.value) q.month = billingMonth.value;
+  else if (route.query.month) q.month = route.query.month;
+  return q;
+});
+
+const handleCancel = () => {
+  router.push({ path: "/admin/billing", query: backQuery.value });
+};
+
 // Submit / Create or Update Bill Action
 const handleCreateBill = async (status: "finalized" | "draft" = "finalized") => {
   if (!selectedClientId.value) {
@@ -255,7 +268,7 @@ const handleCreateBill = async (status: "finalized" | "draft" = "finalized") => 
       });
 
       window.open(`/admin/billing/invoices/${editBillId.value}`, "_blank");
-      router.push("/admin/billing");
+      router.push({ path: "/admin/billing", query: backQuery.value });
     } else {
       const createdBill = await createBill({
         clientId: selectedClientId.value,
@@ -272,7 +285,7 @@ const handleCreateBill = async (status: "finalized" | "draft" = "finalized") => 
       if (createdBill && createdBill.id) {
         window.open(`/admin/billing/invoices/${createdBill.id}`, "_blank");
       }
-      router.push("/admin/billing");
+      router.push({ path: "/admin/billing", query: backQuery.value });
     }
   } catch (err: any) {
     // Toast is handled in useBillingApi composable
@@ -288,8 +301,8 @@ const handleCreateBill = async (status: "finalized" | "draft" = "finalized") => 
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
       <div>
         <div class="d-flex align-items-center gap-2 mb-1">
-          <router-link to="/admin/billing" class="text-muted text-decoration-none small">
-            <i class="bi bi-arrow-left me-1"></i> Back to Invoices
+          <router-link :to="{ path: '/admin/billing', query: backQuery }" class="text-muted text-decoration-none small">
+            <i class="bi bi-arrow-left me-1"></i> Back to {{ fromTab === 'missing' ? 'Missing Bills' : 'Invoices' }}
           </router-link>
           <span class="text-muted small">/</span>
           <span class="text-primary small fw-semibold">{{ isEditMode ? 'Edit Bill' : 'New Bill' }}</span>
@@ -304,7 +317,7 @@ const handleCreateBill = async (status: "finalized" | "draft" = "finalized") => 
         <button
           type="button"
           class="btn btn-outline-secondary btn-sm px-3"
-          @click="router.push('/admin/billing')"
+          @click="handleCancel"
         >
           Cancel
         </button>

@@ -38,7 +38,11 @@ const { customerTypes, references, fetchCustomerTypes, fetchReferences } = useSe
 const { assignableUsers, fetchAssignableUsers } = useClientsApi();
 
 // Active View Tab
-const activeTab = ref<"invoices" | "collections" | "billed" | "dues" | "missing">("invoices");
+const validTabs = ["invoices", "collections", "billed", "dues", "missing"] as const;
+type TabType = typeof validTabs[number];
+
+const initialTab = (route.query.tab as TabType) || "invoices";
+const activeTab = ref<TabType>(validTabs.includes(initialTab) ? initialTab : "invoices");
 
 // Period State
 const getLastMonth = () => {
@@ -49,14 +53,40 @@ const getLastMonth = () => {
   const month = String(d.getMonth() + 1).padStart(2, "0");
   return `${year}-${month}`;
 };
-const selectedMonth = ref(getLastMonth());
+const selectedMonth = ref((route.query.month as string) || getLastMonth());
 
 // Filters
-const searchQuery = ref("");
+const searchQuery = ref((route.query.search as string) || "");
 const selectedCustomerTypeId = ref<number | "all">("all");
 const selectedReferenceId = ref<number | "all">("all");
 const selectedStatusFilter = ref<string>("all");
 const selectedPaymentMethod = ref<string>("all");
+
+// Update URL parameters when tab, month, or search changes without refreshing
+const updateUrlParams = () => {
+  const q: any = { ...route.query };
+  q.tab = activeTab.value;
+  q.month = selectedMonth.value;
+  if (searchQuery.value && searchQuery.value.trim()) {
+    q.search = searchQuery.value.trim();
+  } else {
+    delete q.search;
+  }
+  router.replace({ query: q });
+};
+
+watch([activeTab, selectedMonth, searchQuery], () => {
+  updateUrlParams();
+});
+
+watch(
+  () => route.query.tab,
+  (newTab) => {
+    if (newTab && validTabs.includes(newTab as TabType) && activeTab.value !== newTab) {
+      activeTab.value = newTab as TabType;
+    }
+  }
+);
 
 // Batch Generating State
 const isBatchGenerating = ref(false);
@@ -104,11 +134,36 @@ const dueClientsList = computed(() => {
   return bills.value.filter((b) => b.dueAmount > 0);
 });
 
+// Filtered Missing Bills (Search + Filter Support)
+const filteredMissingBills = computed(() => {
+  let list = missingBills.value;
+  if (selectedCustomerTypeId.value !== "all") {
+    list = list.filter((m) => m.customerTypeId === selectedCustomerTypeId.value);
+  }
+  if (selectedReferenceId.value !== "all") {
+    list = list.filter((m) => m.referenceId === selectedReferenceId.value);
+  }
+  if (searchQuery.value && searchQuery.value.trim()) {
+    const q = searchQuery.value.toLowerCase().trim();
+    list = list.filter(
+      (m) =>
+        (m.companyName && m.companyName.toLowerCase().includes(q)) ||
+        (m.binNumber && m.binNumber.toLowerCase().includes(q)) ||
+        (m.mobile && m.mobile.toLowerCase().includes(q)) ||
+        (m.referenceName && m.referenceName.toLowerCase().includes(q)) ||
+        (m.customerTypeName && m.customerTypeName.toLowerCase().includes(q)) ||
+        (m.submissionId && m.submissionId.toLowerCase().includes(q)) ||
+        (m.vatServiceType && m.vatServiceType.toLowerCase().includes(q))
+    );
+  }
+  return list;
+});
+
 // Pagination State (10 items per page with reload persistence)
 const currentTabList = computed<any[]>(() => {
   if (activeTab.value === 'dues') return dueClientsList.value;
   if (activeTab.value === 'collections') return collections.value;
-  if (activeTab.value === 'missing') return missingBills.value;
+  if (activeTab.value === 'missing') return filteredMissingBills.value;
   return bills.value;
 });
 
@@ -130,6 +185,7 @@ const goToCreateBill = (clientId?: number, month?: string) => {
   if (clientId) query.clientId = clientId;
   if (month) query.month = month;
   else query.month = selectedMonth.value;
+  query.tab = activeTab.value;
   router.push({ path: "/admin/billing/create", query });
 };
 
@@ -138,12 +194,13 @@ const goToCreateCollection = (clientId?: number, billId?: number) => {
   const query: any = {};
   if (clientId) query.clientId = clientId;
   if (billId) query.billId = billId;
+  query.tab = activeTab.value;
   router.push({ path: "/admin/billing/collections/create", query });
 };
 
 // Batch Generate Missing Bills
 const handleBatchGenerate = async () => {
-  const eligibleCount = missingBills.value.filter((m) => m.isSubmitted).length;
+  const eligibleCount = filteredMissingBills.value.filter((m) => m.isSubmitted).length;
   if (eligibleCount === 0) {
     toast.error("No eligible clients with finalized submissions found for this month");
     return;
@@ -160,7 +217,8 @@ const handleBatchGenerate = async () => {
   isBatchGenerating.value = true;
   try {
     const res = await batchGenerateBills({
-      taxPeriod: selectedMonth.value
+      taxPeriod: selectedMonth.value,
+      clientIds: filteredMissingBills.value.filter((m) => m.isSubmitted).map((m) => m.id)
     });
     await loadData();
     activeTab.value = "invoices";
@@ -229,7 +287,7 @@ const exportToExcel = async () => {
       "Status": c.status.toUpperCase()
     }));
   } else if (activeTab.value === "missing") {
-    exportRows = missingBills.value.map((m) => ({
+    exportRows = filteredMissingBills.value.map((m) => ({
       "Client Organization": m.companyName,
       "BIN Number": m.binNumber || "N/A",
       "Service Scope": m.vatServiceType,
@@ -440,7 +498,7 @@ const printReport = () => {
           @click="activeTab = 'missing'"
         >
           <i class="bi bi-file-earmark-plus"></i>
-          <span>Missing Bills ({{ missingBills.length }})</span>
+          <span>Missing Bills ({{ searchQuery ? filteredMissingBills.length : missingBills.length }})</span>
         </button>
       </div>
 
@@ -674,7 +732,7 @@ const printReport = () => {
       <div class="px-3 py-2 bg-dark bg-opacity-40 border-bottom border-secondary border-opacity-25 d-flex align-items-center justify-content-between flex-wrap gap-2">
         <div class="d-flex align-items-center gap-2">
           <span class="badge bg-warning text-dark px-2 py-1 fw-bold" style="font-size: 0.8rem;">
-            {{ missingBills.length }} Missing Clients
+            {{ filteredMissingBills.length }} Missing Clients
           </span>
           <span class="text-secondary small">
             Target Tax Period: <strong class="text-light font-monospace">{{ selectedMonth }}</strong>
@@ -686,12 +744,12 @@ const printReport = () => {
           type="button"
           class="btn btn-sm btn-warning text-dark fw-bold px-3 shadow-sm d-flex align-items-center gap-1.5"
           style="height: 32px; font-size: 0.82rem;"
-          :disabled="isBatchGenerating || missingBills.filter(m => m.isSubmitted).length === 0"
+          :disabled="isBatchGenerating || filteredMissingBills.filter(m => m.isSubmitted).length === 0"
           @click="handleBatchGenerate"
         >
           <span v-if="isBatchGenerating" class="spinner-border spinner-border-sm text-dark"></span>
           <i v-else class="bi bi-lightning-charge-fill"></i>
-          <span>Batch Generate Bills ({{ missingBills.filter(m => m.isSubmitted).length }})</span>
+          <span>Batch Generate Bills ({{ filteredMissingBills.filter(m => m.isSubmitted).length }})</span>
         </button>
       </div>
 
@@ -719,6 +777,13 @@ const printReport = () => {
             <td colspan="7" class="text-center py-5 text-success">
               <i class="bi bi-check-circle-fill fs-2 d-block mb-2"></i>
               All active clients have been billed for {{ selectedMonth }}!
+            </td>
+          </tr>
+
+          <tr v-else-if="filteredMissingBills.length === 0">
+            <td colspan="7" class="text-center py-5 text-muted">
+              <i class="bi bi-search fs-2 d-block mb-2"></i>
+              No missing clients match "{{ searchQuery }}"
             </td>
           </tr>
 

@@ -78,6 +78,17 @@ const remainingDue = computed(() => {
   return Math.max(0, currentDue.value - entered);
 });
 
+const fromTab = computed(() => (route.query.tab as string) || "collections");
+const backQuery = computed(() => {
+  const q: any = {};
+  if (fromTab.value) q.tab = fromTab.value;
+  return q;
+});
+
+const handleCancel = () => {
+  router.push({ path: "/admin/billing", query: backQuery.value });
+};
+
 const handleSaveCollection = async () => {
   if (!selectedClientId.value) {
     toast.error("Please select a client");
@@ -99,7 +110,7 @@ const handleSaveCollection = async () => {
       referenceNo: referenceNo.value || null,
       notes: notes.value || null
     });
-    router.push("/admin/billing");
+    router.push({ path: "/admin/billing", query: backQuery.value });
   } catch (err: any) {
     // Toast already shown
   } finally {
@@ -114,7 +125,7 @@ const handleSaveCollection = async () => {
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
       <div>
         <div class="d-flex align-items-center gap-2 mb-1">
-          <router-link to="/admin/billing" class="text-muted text-decoration-none small">
+          <router-link :to="{ path: '/admin/billing', query: backQuery }" class="text-muted text-decoration-none small">
             <i class="bi bi-arrow-left me-1"></i> Back to Invoices & Collections
           </router-link>
           <span class="text-muted small">/</span>
@@ -130,7 +141,7 @@ const handleSaveCollection = async () => {
         <button
           type="button"
           class="btn btn-outline-secondary btn-sm px-3"
-          @click="router.push('/admin/billing')"
+          @click="handleCancel"
         >
           Cancel
         </button>
