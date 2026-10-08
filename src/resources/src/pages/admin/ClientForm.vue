@@ -226,6 +226,22 @@ const toggleManager = (userId: number) => {
   form.value.managerIds = current;
 };
 
+const formatWhatsAppNumber = (val?: string) => {
+  if (!val) return "";
+  const digits = val.replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("880")) return digits;
+  if (digits.startsWith("0")) return "88" + digits;
+  if (digits.length === 10 && digits.startsWith("1")) return "880" + digits;
+  return digits;
+};
+
+const handleAlternativeMobileBlur = () => {
+  if (form.value.alternativeMobile) {
+    form.value.alternativeMobile = formatWhatsAppNumber(form.value.alternativeMobile);
+  }
+};
+
 const handleSubmit = async () => {
   formError.value = "";
   if (!form.value.companyName.trim()) {
@@ -251,7 +267,7 @@ const handleSubmit = async () => {
       tradeLicenseNo: form.value.tradeLicenseNo?.trim() || undefined,
       address: form.value.address?.trim() || undefined,
       mobile: form.value.mobile?.trim() || undefined,
-      alternativeMobile: form.value.alternativeMobile?.trim() || undefined,
+      alternativeMobile: form.value.alternativeMobile ? formatWhatsAppNumber(form.value.alternativeMobile) : undefined,
       email: form.value.email?.trim() || undefined,
       customerTypeId: form.value.customerTypeId || undefined,
       referenceId: form.value.referenceId || undefined,
@@ -567,7 +583,8 @@ const handleSubmit = async () => {
                 v-model="form.alternativeMobile"
                 type="text"
                 class="form-control idp-input font-monospace"
-                placeholder="e.g. 01819556677"
+                placeholder="e.g. 8801719950891"
+                @blur="handleAlternativeMobileBlur"
               />
             </div>
 

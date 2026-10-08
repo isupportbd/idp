@@ -173,6 +173,38 @@ export function useBillingApi() {
     }
   };
 
+  // 3.1 Update Bill
+  const updateBill = async (
+    id: number,
+    payload: {
+      billDate?: string;
+      dueDate?: string | null;
+      discountAmount?: number;
+      notes?: string | null;
+      status?: string;
+      items?: Array<{
+        serviceItemId?: number | null;
+        itemName: string;
+        unit?: string;
+        qty: number;
+        rateUsed: number;
+        minimumChargeUsed?: number;
+        calculatedAmount?: number;
+        finalAmount: number;
+        notes?: string | null;
+      }>;
+    }
+  ) => {
+    try {
+      const res = await axios.put(`/api/billing/${id}`, payload);
+      toast.success(res.data.message || "Invoice updated successfully");
+      return res.data.data;
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to update invoice");
+      throw err;
+    }
+  };
+
   // 4. Batch Generate Bills
   const batchGenerateBills = async (payload: {
     taxPeriod: string;
@@ -296,6 +328,7 @@ export function useBillingApi() {
     fetchBills,
     fetchBillDetails,
     createBill,
+    updateBill,
     batchGenerateBills,
     fetchMissingBills,
     fetchClientBillingOverview,

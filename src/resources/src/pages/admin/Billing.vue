@@ -4,7 +4,6 @@ import { useRouter } from "vue-router";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
 import StatusBadge from "@/components/common/StatusBadge.vue";
-import InvoiceModal from "@/components/common/InvoiceModal.vue";
 import { useBillingApi, type Bill, type Collection } from "@/composables/useBillingApi";
 import { useServicesApi } from "@/composables/useServicesApi";
 import { useClientsApi } from "@/composables/useClientsApi";
@@ -14,13 +13,8 @@ import { can } from "@/composables/useAuth";
 const router = useRouter();
 const toast = useToast();
 
-// Invoice Modal State
-const showInvoiceModal = ref(false);
-const selectedBillId = ref<number | null>(null);
-
-const openInvoiceModal = (billId: number) => {
-  selectedBillId.value = billId;
-  showInvoiceModal.value = true;
+const openInvoiceInNewTab = (billId: number) => {
+  window.open(`/admin/billing/invoices/${billId}`, "_blank");
 };
 
 const {
@@ -253,6 +247,10 @@ const exportToExcel = async () => {
   XLSX.utils.book_append_sheet(wb, ws, "Billing Data");
   XLSX.writeFile(wb, `IDP_Billing_${activeTab.value}_${selectedMonth.value}.xlsx`);
   toast.success("Excel report exported successfully");
+};
+
+const goToEditBill = (id: number) => {
+  router.push(`/admin/billing/edit/${id}`);
 };
 
 // Print Report
@@ -492,9 +490,18 @@ const printReport = () => {
           </tr>
 
           <tr v-for="bill in (paginatedList as Bill[])" :key="bill.id">
-            <!-- Invoice No -->
+            <!-- Invoice No (Clicking opens Invoice View in New Tab) -->
             <td>
-              <span class="font-monospace fw-bold text-info" style="font-size: 0.88rem;">{{ bill.billNo }}</span>
+              <a
+                :href="`/admin/billing/invoices/${bill.id}`"
+                target="_blank"
+                class="font-monospace fw-bold text-info text-decoration-none hover-underline cursor-pointer d-inline-block"
+                style="font-size: 0.88rem;"
+                title="Click to View Invoice (Opens in New Tab)"
+                @click.prevent="openInvoiceInNewTab(bill.id)"
+              >
+                {{ bill.billNo }}
+              </a>
               <div class="text-muted small" style="font-size: 0.76rem;">{{ new Date(bill.billDate).toLocaleDateString() }}</div>
             </td>
 
@@ -543,14 +550,15 @@ const printReport = () => {
             <!-- Actions (Icon Only) -->
             <td style="text-align: right;" class="d-print-none">
               <div class="d-inline-flex align-items-center gap-1">
-                <!-- View & Print Invoice Button -->
+                <!-- Edit Invoice Button -->
                 <button
+                  v-if="can('billing.edit')"
                   type="button"
-                  class="btn btn-sm btn-outline-info p-1"
-                  title="View & Print Invoice"
-                  @click="openInvoiceModal(bill.id)"
+                  class="btn btn-sm btn-outline-primary p-1"
+                  title="Edit Invoice"
+                  @click="goToEditBill(bill.id)"
                 >
-                  <i class="bi bi-printer"></i>
+                  <i class="bi bi-pencil"></i>
                 </button>
 
                 <!-- Collect Payment Button (If due exists) -->
@@ -822,12 +830,6 @@ const printReport = () => {
         </button>
       </div>
     </div>
-
-    <!-- Invoice Preview & Print Modal -->
-    <InvoiceModal
-      v-model:show="showInvoiceModal"
-      :bill-id="selectedBillId"
-    />
   </div>
 </template>
 

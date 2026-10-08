@@ -35,7 +35,7 @@ async function generateNextBillNo(year: number, customPrefix?: string, tenantAdm
       if (firmSetting?.invoicePrefix) {
         prefixToUse = firmSetting.invoicePrefix.trim();
       }
-    } catch {}
+    } catch { }
   }
   const cleanPrefix = (prefixToUse || "INV").replace(/-+$/, "").toUpperCase();
   const prefix = `${cleanPrefix}-${year}-`;
@@ -80,7 +80,7 @@ async function generateNextReceiptNo(year: number, customPrefix?: string, tenant
       if (firmSetting?.receiptPrefix) {
         prefixToUse = firmSetting.receiptPrefix.trim();
       }
-    } catch {}
+    } catch { }
   }
   const cleanPrefix = (prefixToUse || "RCP").replace(/-+$/, "").toUpperCase();
   const prefix = `${cleanPrefix}-${year}-`;
@@ -452,7 +452,7 @@ export const getBillDetails: Handler = async (c: any) => {
       if (!firmSetting) {
         firmSetting = await db.query.companySettings.findFirst();
       }
-    } catch {}
+    } catch { }
 
     return c.json(
       {

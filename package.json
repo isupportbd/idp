@@ -58,6 +58,7 @@
     "glob": "^13.0.6",
     "hono": "^4.13.1",
     "hono-rate-limiter": "^0.5.3",
+    "html2canvas-pro": "^2.0.4",
     "ioredis": "^5.11.1",
     "lodash-es": "^4.18.1",
     "luxon": "^3.7.2",

@@ -40,6 +40,12 @@ export const routes = [
     meta: { guestOnly: true, title: "Verify Email" }
   },
   {
+    path: "/admin/billing/invoices/:id",
+    name: "invoice-view",
+    component: () => import("@/pages/admin/InvoiceView.vue"),
+    meta: { requiresAuth: true, title: "Invoice Details" }
+  },
+  {
     path: "/",
     component: () => import("@/layouts/Layout/index.vue"),
     meta: { requiresAuth: true },
@@ -140,6 +146,12 @@ export const routes = [
         name: "billing-create",
         component: () => import("@/pages/admin/BillCreate.vue"),
         meta: { title: "Create Invoice", permission: ["billing.create"] }
+      },
+      {
+        path: "admin/billing/edit/:id",
+        name: "billing-edit",
+        component: () => import("@/pages/admin/BillCreate.vue"),
+        meta: { title: "Edit Invoice", permission: ["billing.edit"] }
       },
       {
         path: "admin/billing/collections/create",

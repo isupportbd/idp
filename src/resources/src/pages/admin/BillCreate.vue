@@ -5,27 +5,40 @@ import { useBillingApi, type BillItem } from "@/composables/useBillingApi";
 import { useClientsApi } from "@/composables/useClientsApi";
 import { useToast } from "@/composables/useToast";
 import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
-import InvoiceModal from "@/components/common/InvoiceModal.vue";
 
 const router = useRouter();
 const route = useRoute();
 const toast = useToast();
 
-const { createBill, fetchClientBillingOverview } = useBillingApi();
+const { createBill, updateBill, fetchBillDetails, fetchClientBillingOverview } = useBillingApi();
 const { clients, fetchClients } = useClientsApi();
+
+const isEditMode = computed(() => !!route.params.id);
+const editBillId = computed(() => (route.params.id ? Number(route.params.id) : null));
+const existingBill = ref<any>(null);
+
+const calculateDefaultDueDate = (dStr: string) => {
+  if (!dStr) return "";
+  const d = new Date(dStr);
+  if (isNaN(d.getTime())) return "";
+  d.setDate(d.getDate() + 7);
+  return d.toISOString().slice(0, 10);
+};
 
 // Form States
 const selectedClientId = ref<number | null>(null);
 const billingMonth = ref("");
 const billDate = ref(new Date().toISOString().slice(0, 10));
-const dueDate = ref("");
+const dueDate = ref(calculateDefaultDueDate(billDate.value));
 const discountAmount = ref<number>(0);
 const notes = ref("");
 const isSaving = ref(false);
 
-// Invoice Modal
-const showInvoiceModal = ref(false);
-const createdBillId = ref<number | null>(null);
+watch(billDate, (newVal) => {
+  if (newVal && !isEditMode.value) {
+    dueDate.value = calculateDefaultDueDate(newVal);
+  }
+});
 
 // Client overview & loaded data
 const clientOverview = ref<any>(null);
@@ -37,7 +50,7 @@ const loadClientData = async () => {
   if (!selectedClientId.value) {
     clientOverview.value = null;
     allowedMonths.value = [];
-    items.value = [];
+    if (!isEditMode.value) items.value = [];
     return;
   }
 
@@ -51,8 +64,8 @@ const loadClientData = async () => {
       billingMonth.value = allowedMonths.value[0].taxPeriod;
     }
 
-    // Set suggested line items if items are empty
-    if (data.suggestedItems && data.suggestedItems.length > 0) {
+    // Set suggested line items only in create mode when items are empty
+    if (!isEditMode.value && items.value.length === 0 && data.suggestedItems && data.suggestedItems.length > 0) {
       items.value = data.suggestedItems.map((it: any) => ({
         serviceItemId: it.serviceItemId,
         itemName: it.itemName,
@@ -73,7 +86,43 @@ const loadClientData = async () => {
 onMounted(async () => {
   await fetchClients();
 
-  // If query parameter has clientId or month
+  // If in edit mode, load existing invoice
+  if (editBillId.value) {
+    try {
+      const data = await fetchBillDetails(editBillId.value);
+      existingBill.value = data;
+      selectedClientId.value = data.clientId;
+      billingMonth.value = data.taxPeriod;
+      if (data.billDate) {
+        billDate.value = new Date(data.billDate).toISOString().slice(0, 10);
+      }
+      if (data.dueDate) {
+        dueDate.value = new Date(data.dueDate).toISOString().slice(0, 10);
+      }
+      discountAmount.value = Number(data.discountAmount) || 0;
+      notes.value = data.notes || "";
+      if (data.items && data.items.length > 0) {
+        items.value = data.items.map((it: any) => ({
+          id: it.id,
+          serviceItemId: it.serviceItemId,
+          itemName: it.itemName,
+          unit: it.unit || "Month",
+          qty: Number(it.qty) || 1,
+          rateUsed: Number(it.rateUsed) || 0,
+          minimumChargeUsed: Number(it.minimumChargeUsed) || 0,
+          calculatedAmount: Number(it.calculatedAmount) || 0,
+          finalAmount: Number(it.finalAmount) || 0,
+          notes: it.notes || ""
+        }));
+      }
+      await loadClientData();
+      return;
+    } catch (err) {
+      toast.error("Failed to load invoice for editing");
+    }
+  }
+
+  // If query parameter has clientId or month (create mode)
   if (route.query.clientId) {
     selectedClientId.value = Number(route.query.clientId);
   }
@@ -167,7 +216,10 @@ const subtotal = computed(() => {
 });
 
 const previousDue = computed(() => {
-  return clientOverview.value?.previousDue || 0;
+  if (isEditMode.value && existingBill.value) {
+    return Number(existingBill.value.previousDue) || 0;
+  }
+  return Number(clientOverview.value?.previousDue) || 0;
 });
 
 const netPayable = computed(() => {
@@ -175,7 +227,7 @@ const netPayable = computed(() => {
   return Math.max(0, subtotal.value - discount + previousDue.value);
 });
 
-// Submit / Create Bill Action
+// Submit / Create or Update Bill Action
 const handleCreateBill = async (status: "finalized" | "draft" = "finalized") => {
   if (!selectedClientId.value) {
     toast.error("Please select a client organization");
@@ -192,22 +244,34 @@ const handleCreateBill = async (status: "finalized" | "draft" = "finalized") => 
 
   isSaving.value = true;
   try {
-    const createdBill = await createBill({
-      clientId: selectedClientId.value,
-      referenceId: clientOverview.value?.client?.referenceId || null,
-      taxPeriod: billingMonth.value,
-      billDate: billDate.value,
-      dueDate: dueDate.value || null,
-      discountAmount: Number(discountAmount.value) || 0,
-      notes: notes.value || null,
-      status: status,
-      items: items.value
-    });
+    if (isEditMode.value && editBillId.value) {
+      await updateBill(editBillId.value, {
+        billDate: billDate.value,
+        dueDate: dueDate.value || null,
+        discountAmount: Number(discountAmount.value) || 0,
+        notes: notes.value || null,
+        status: status,
+        items: items.value
+      });
 
-    if (createdBill && createdBill.id) {
-      createdBillId.value = createdBill.id;
-      showInvoiceModal.value = true;
+      window.open(`/admin/billing/invoices/${editBillId.value}`, "_blank");
+      router.push("/admin/billing");
     } else {
+      const createdBill = await createBill({
+        clientId: selectedClientId.value,
+        referenceId: clientOverview.value?.client?.referenceId || null,
+        taxPeriod: billingMonth.value,
+        billDate: billDate.value,
+        dueDate: dueDate.value || null,
+        discountAmount: Number(discountAmount.value) || 0,
+        notes: notes.value || null,
+        status: status,
+        items: items.value
+      });
+
+      if (createdBill && createdBill.id) {
+        window.open(`/admin/billing/invoices/${createdBill.id}`, "_blank");
+      }
       router.push("/admin/billing");
     }
   } catch (err: any) {
@@ -215,11 +279,6 @@ const handleCreateBill = async (status: "finalized" | "draft" = "finalized") => 
   } finally {
     isSaving.value = false;
   }
-};
-
-const handleInvoiceModalClose = () => {
-  showInvoiceModal.value = false;
-  router.push("/admin/billing");
 };
 </script>
 
@@ -233,10 +292,11 @@ const handleInvoiceModalClose = () => {
             <i class="bi bi-arrow-left me-1"></i> Back to Invoices
           </router-link>
           <span class="text-muted small">/</span>
-          <span class="text-primary small fw-semibold">New Bill</span>
+          <span class="text-primary small fw-semibold">{{ isEditMode ? 'Edit Bill' : 'New Bill' }}</span>
         </div>
         <h4 class="text-white fw-bold mb-0 d-flex align-items-center gap-2">
-          <i class="bi bi-receipt-cutoff text-primary"></i> Create Client Invoice
+          <i class="bi bi-receipt-cutoff text-primary"></i>
+          <span>{{ isEditMode ? `Edit Invoice — ${existingBill?.billNo || ''}` : 'Create Client Invoice' }}</span>
         </h4>
       </div>
 
@@ -259,12 +319,12 @@ const handleInvoiceModalClose = () => {
         <button
           type="button"
           class="btn btn-primary btn-sm px-4 fw-semibold d-flex align-items-center gap-1 shadow-sm"
-          :disabled="isSaving || !selectedClientId || !billingMonth || !clientOverview?.targetMonthSubmission"
+          :disabled="isSaving || !selectedClientId || !billingMonth || (!isEditMode && !clientOverview?.targetMonthSubmission)"
           @click="handleCreateBill('finalized')"
         >
           <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span>
           <i v-else class="bi bi-check2-circle"></i>
-          <span>Finalize Bill</span>
+          <span>{{ isEditMode ? 'Update Bill' : 'Finalize Bill' }}</span>
         </button>
       </div>
     </div>
@@ -278,29 +338,36 @@ const handleInvoiceModalClose = () => {
 
       <div class="row g-3">
         <!-- Client Search & Select -->
-        <div class="col-md-6">
+        <div class="col-md-4">
           <label class="form-label text-secondary small fw-semibold">
             Company / Client Organization <span class="text-danger">*</span>
           </label>
           <ClientSearchSelect
             v-model="selectedClientId"
             :clients="clients"
+            :disabled="isEditMode"
             placeholder="Type to search company name, BIN, or mobile..."
           />
         </div>
 
         <!-- Billing Month (Showing YYYY-MM — #SubmissionID) -->
-        <div class="col-md-3">
+        <div class="col-md-2">
           <label class="form-label text-secondary small fw-semibold">
             Billing Month <span class="text-danger">*</span>
           </label>
           <select
             v-model="billingMonth"
             class="form-select idp-input font-monospace"
-            :disabled="!selectedClientId || allowedMonths.length === 0"
+            :disabled="isEditMode || !selectedClientId || (allowedMonths.length === 0 && !billingMonth)"
           >
             <option value="" disabled>
-              {{ !selectedClientId ? 'Select client first' : allowedMonths.length === 0 ? 'No finalized submissions' : 'Select Month' }}
+              {{ !selectedClientId ? 'Select client first' : allowedMonths.length === 0 && !billingMonth ? 'No submissions' : 'Select Month' }}
+            </option>
+            <option
+              v-if="isEditMode && billingMonth && !allowedMonths.some((m: any) => m.taxPeriod === billingMonth)"
+              :value="billingMonth"
+            >
+              {{ billingMonth }} (Current Bill Month)
             </option>
             <option
               v-for="m in allowedMonths"
@@ -322,6 +389,18 @@ const handleInvoiceModalClose = () => {
             type="date"
             class="form-control idp-input font-monospace"
             required
+          />
+        </div>
+
+        <!-- Payment Due Date -->
+        <div class="col-md-3">
+          <label class="form-label text-secondary small fw-semibold">
+            Payment Due Date <span class="text-muted fw-normal">(7 days default)</span>
+          </label>
+          <input
+            v-model="dueDate"
+            type="date"
+            class="form-control idp-input font-monospace text-danger"
           />
         </div>
       </div>
@@ -612,13 +691,6 @@ const handleInvoiceModalClose = () => {
         </div>
       </div>
     </div>
-
-    <!-- Invoice Preview & Print Modal -->
-    <InvoiceModal
-      v-model:show="showInvoiceModal"
-      :bill-id="createdBillId"
-      @close="handleInvoiceModalClose"
-    />
   </div>
 </template>
 
