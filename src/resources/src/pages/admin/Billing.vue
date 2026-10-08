@@ -436,16 +436,16 @@ const printReport = () => {
         </button>
       </div>
 
-      <!-- Right: Search & Month Navigator (Equal 38px Heights) -->
-      <div class="d-flex align-items-center gap-2 ms-auto flex-wrap">
+      <!-- Right: Search & Month Navigator (Equal 38px Heights & Always Side-by-Side) -->
+      <div class="d-flex align-items-center gap-2 flex-nowrap ms-auto">
         <SearchInput
           v-model="searchQuery"
           placeholder="Search invoice, client, receipt..."
-          max-width="260px"
-          min-width="180px"
+          max-width="220px"
+          min-width="160px"
         />
 
-        <div class="month-nav-container" style="width: 195px; flex-shrink: 0;">
+        <div class="month-nav-container" style="width: 185px; flex-shrink: 0;">
           <MonthNavigator v-model="selectedMonth" />
         </div>
       </div>
