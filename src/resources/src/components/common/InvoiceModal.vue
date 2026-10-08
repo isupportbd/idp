@@ -204,7 +204,7 @@ const handlePrint = () => {
           </thead>
           <tbody>
             <tr v-for="(it, idx) in bill.items" :key="it.id || idx">
-              <td class="text-muted">{{ idx + 1 }}</td>
+              <td class="text-muted">{{ Number(idx) + 1 }}</td>
               <td>
                 <div class="fw-bold text-dark">{{ it.itemName }}</div>
                 <div v-if="it.notes" class="text-muted small">{{ it.notes }}</div>
