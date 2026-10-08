@@ -14,6 +14,7 @@ import {
   updateBill,
   deleteBill,
   listCollections,
+  getCollectionDetails,
   createCollection,
   cancelCollection
 } from "../controllers/billing.controller.js";
@@ -38,6 +39,7 @@ const BILL_READERS = ["billing.view", "collections.view", "collections.create", 
 
 // ── COLLECTIONS ENDPOINTS (Register before /:id wildcard) ─────────────
 billingRouter.get("/collections", requirePermission("collections.view", "reports.view"), zValidator("query", listCollectionsQuerySchema), listCollections);
+billingRouter.get("/collections/:id", requirePermission(...BILL_READERS), getCollectionDetails);
 billingRouter.post("/collections", requirePermission("collections.create"), zValidator("json", createCollectionSchema), createCollection);
 billingRouter.delete("/collections/:id", requirePermission("collections.delete"), cancelCollection);
 

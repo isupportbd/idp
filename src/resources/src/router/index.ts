@@ -46,6 +46,12 @@ export const routes = [
     meta: { requiresAuth: true, title: "Invoice Details" }
   },
   {
+    path: "/admin/billing/receipts/:id",
+    name: "receipt-view",
+    component: () => import("@/pages/admin/ReceiptView.vue"),
+    meta: { requiresAuth: true, title: "Money Receipt Details" }
+  },
+  {
     path: "/",
     component: () => import("@/layouts/Layout/index.vue"),
     meta: { requiresAuth: true },

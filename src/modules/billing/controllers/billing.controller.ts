@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, inArray, like, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, like, ne, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import { db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
 import { bills } from "../database/models/bills.js";
@@ -1650,3 +1650,113 @@ export const cancelCollection: Handler = async (c: any) => {
     );
   }
 };
+
+export const getCollectionDetails: Handler = async (c: any) => {
+  try {
+    const id = Number(c.req.param("id"));
+    if (!id || isNaN(id)) {
+      return c.json({ message: "Invalid collection ID" }, HttpStatusCodes.BAD_REQUEST);
+    }
+
+    const col = (
+      await db
+        .select({
+          id: collections.id,
+          receiptNo: collections.receiptNo,
+          billId: collections.billId,
+          billNo: bills.billNo,
+          taxPeriod: bills.taxPeriod,
+          billGrandTotal: bills.grandTotal,
+          billPaidAmount: bills.paidAmount,
+          billDueAmount: bills.dueAmount,
+          clientId: collections.clientId,
+          clientName: clients.companyName,
+          clientProprietor: clients.proprietorName,
+          clientBin: clients.binNumber,
+          clientMobile: clients.mobile,
+          clientEmail: clients.email,
+          clientAddress: clients.address,
+          collectionDate: collections.collectionDate,
+          amount: collections.amount,
+          paymentMethod: collections.paymentMethod,
+          referenceNo: collections.referenceNo,
+          notes: collections.notes,
+          receivedById: collections.receivedBy,
+          receivedByName: users.name,
+          status: collections.status,
+          createdAt: collections.createdAt,
+          createdBy: clients.createdBy
+        })
+        .from(collections)
+        .leftJoin(clients, eq(collections.clientId, clients.id))
+        .leftJoin(bills, eq(collections.billId, bills.id))
+        .leftJoin(users, eq(collections.receivedBy, users.id))
+        .where(eq(collections.id, id))
+        .limit(1)
+    )[0];
+
+    if (!col) {
+      return c.json({ message: "Payment receipt not found" }, HttpStatusCodes.NOT_FOUND);
+    }
+
+    // Fetch overall client outstanding balance
+    const clientBilledSum = await db
+      .select({
+        totalBilled: sql<number>`COALESCE(SUM(${bills.grandTotal}), 0)::float`
+      })
+      .from(bills)
+      .where(and(eq(bills.clientId, col.clientId), ne(bills.status, "cancelled")));
+
+    const clientCollectedSum = await db
+      .select({
+        totalCollected: sql<number>`COALESCE(SUM(${collections.amount}), 0)::float`
+      })
+      .from(collections)
+      .where(and(eq(collections.clientId, col.clientId), eq(collections.status, "completed")));
+
+    const totalBilled = clientBilledSum[0]?.totalBilled || 0;
+    const totalCollected = clientCollectedSum[0]?.totalCollected || 0;
+    const currentOutstandingDue = r2(Math.max(0, totalBilled - totalCollected));
+
+    // Fetch tenant company branding settings
+    let firmSetting: any = null;
+    try {
+      if (col.createdBy) {
+        firmSetting = await db.query.companySettings.findFirst({
+          where: eq(companySettings.adminId, col.createdBy)
+        });
+      }
+      if (!firmSetting) {
+        firmSetting = await db.query.companySettings.findFirst();
+      }
+    } catch { }
+
+    return c.json(
+      {
+        message: "Receipt details fetched successfully",
+        data: {
+          ...col,
+          clientOutstandingDue: currentOutstandingDue,
+          companySettings: firmSetting ? {
+            companyName: firmSetting.companyName,
+            proprietorName: firmSetting.proprietorName,
+            phone: firmSetting.phone,
+            email: firmSetting.email,
+            website: firmSetting.website,
+            address: firmSetting.address,
+            binNumber: firmSetting.binNumber,
+            tinNumber: firmSetting.tinNumber,
+            tradeLicenseNo: firmSetting.tradeLicenseNo
+          } : null
+        }
+      },
+      HttpStatusCodes.OK
+    );
+  } catch (err: any) {
+    return c.json(
+      { message: err.message || "Failed to fetch receipt details" },
+      HttpStatusCodes.INTERNAL_SERVER_ERROR
+    );
+  }
+};
+

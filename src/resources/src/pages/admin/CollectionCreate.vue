@@ -101,7 +101,7 @@ const handleSaveCollection = async () => {
 
   isSaving.value = true;
   try {
-    await createCollection({
+    const created = await createCollection({
       clientId: selectedClientId.value,
       billId: selectedBillId.value || null,
       collectionDate: collectionDate.value,
@@ -110,7 +110,11 @@ const handleSaveCollection = async () => {
       referenceNo: referenceNo.value || null,
       notes: notes.value || null
     });
-    router.push({ path: "/admin/billing", query: backQuery.value });
+    if (created && created.id) {
+      router.push({ path: `/admin/billing/receipts/${created.id}` });
+    } else {
+      router.push({ path: "/admin/billing", query: backQuery.value });
+    }
   } catch (err: any) {
     // Toast already shown
   } finally {

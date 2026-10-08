@@ -316,7 +316,21 @@ export function useBillingApi() {
     }
   };
 
-  // 10. Cancel Collection
+  // 10. Fetch Collection Details
+  const fetchCollectionDetails = async (id: number) => {
+    loading.value = true;
+    try {
+      const res = await axios.get(`/api/billing/collections/${id}`);
+      return res.data?.data;
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to fetch receipt details");
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  // 11. Cancel Collection
   const cancelCollection = async (id: number) => {
     try {
       const res = await axios.delete(`/api/billing/collections/${id}`);
@@ -344,6 +358,7 @@ export function useBillingApi() {
     fetchClientBillingOverview,
     deleteBill,
     fetchCollections,
+    fetchCollectionDetails,
     createCollection,
     cancelCollection
   };

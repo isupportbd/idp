@@ -686,15 +686,26 @@ const printReport = () => {
           <tr v-for="col in (paginatedList as Collection[])" :key="col.id">
             <!-- Receipt No -->
             <td>
-              <span class="font-monospace fw-bold text-success" style="font-size: 0.88rem;">{{ col.receiptNo }}</span>
+              <router-link
+                :to="`/admin/billing/receipts/${col.id}`"
+                class="font-monospace fw-bold text-success text-decoration-none hover-underline"
+                style="font-size: 0.88rem;"
+                title="View Money Receipt"
+              >
+                {{ col.receiptNo }}
+              </router-link>
               <div v-if="col.billNo" class="text-muted small" style="font-size: 0.76rem;">Inv: {{ col.billNo }}</div>
             </td>
 
             <!-- Client Name & BIN -->
             <td>
-              <div class="fw-bold text-white text-truncate" style="max-width: 320px; font-size: 0.92rem;">
+              <router-link
+                :to="`/admin/billing/receipts/${col.id}`"
+                class="fw-bold text-white text-truncate text-decoration-none d-block"
+                style="max-width: 320px; font-size: 0.92rem;"
+              >
                 {{ col.clientName }}
-              </div>
+              </router-link>
               <div v-if="col.clientBin" class="badge bg-dark border border-secondary text-info font-monospace mt-1" style="font-size: 0.78rem;">
                 BIN: {{ col.clientBin }}
               </div>
@@ -718,16 +729,28 @@ const printReport = () => {
 
             <!-- Actions -->
             <td style="text-align: right;" class="d-print-none">
-              <button
-                v-if="can('collections.delete')"
-                type="button"
-                class="btn btn-sm btn-outline-danger p-1"
-                title="Cancel Receipt"
-                :disabled="col.status === 'cancelled'"
-                @click="handleCancelReceipt(col)"
-              >
-                <i class="bi bi-x-circle"></i>
-              </button>
+              <div class="d-inline-flex align-items-center gap-1">
+                <!-- View / Share Receipt -->
+                <router-link
+                  :to="`/admin/billing/receipts/${col.id}`"
+                  class="btn btn-sm btn-outline-info p-1"
+                  title="View & Share Money Receipt"
+                >
+                  <i class="bi bi-eye"></i>
+                </router-link>
+
+                <!-- Cancel Receipt -->
+                <button
+                  v-if="can('collections.delete')"
+                  type="button"
+                  class="btn btn-sm btn-outline-danger p-1"
+                  title="Cancel Receipt"
+                  :disabled="col.status === 'cancelled'"
+                  @click="handleCancelReceipt(col)"
+                >
+                  <i class="bi bi-x-circle"></i>
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>

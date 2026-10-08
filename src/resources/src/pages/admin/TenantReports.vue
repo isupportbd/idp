@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import axios from "axios";
 import MonthMatrix from "@/components/MonthMatrix.vue";
+import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
 import { can, canAccessModule } from "@/composables/useAuth";
 import { pulse } from "@/plugins/pulse";
 
@@ -967,6 +968,22 @@ const selectClient = async (c: Client) => {
   await fetchReportsData();
 };
 
+const onClientSelected = async (clientOption: any) => {
+  if (!clientOption) {
+    clearClient();
+    return;
+  }
+  const c: Client = {
+    id: clientOption.id,
+    name: clientOption.companyName || clientOption.name,
+    bin: clientOption.binNumber || clientOption.bin || "",
+    serviceScope: clientOption.vatServiceType || "FULL",
+    vatUserId: clientOption.vatUserId || "",
+    vatPassword: clientOption.vatPassword || ""
+  };
+  await selectClient(c);
+};
+
 const clearClient = () => {
   selectedClient.value = null;
   selectedClientId.value = null;
@@ -1258,48 +1275,12 @@ onUnmounted(() => {
       <div class="row g-2 align-items-center">
         <!-- 1. Client Autocomplete Filter -->
         <div class="col-lg-4 col-md-6">
-          <div class="position-relative">
-            <i class="bi bi-building position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
-            <input
-              v-model="clientSearchText"
-              type="text"
-              class="form-control idp-input"
-              style="padding-left: 36px !important; padding-right: 32px !important; height: 38px;"
-              placeholder="Type to search Client or BIN..."
-              @input="selectedClientId = null; showClientDropdown = clientSearchText.trim().length > 0"
-              @focus="showClientDropdown = clientSearchText.trim().length > 0 && !selectedClientId"
-              @blur="hideClientDropdown"
-            />
-            <button
-              v-if="clientSearchText"
-              class="btn btn-link btn-sm position-absolute top-50 end-0 translate-middle-y text-muted text-decoration-none p-1 me-2"
-              @mousedown="clearClient"
-            >
-              ✕
-            </button>
-
-            <!-- Autocomplete Dropdown (Shows only when typing) -->
-            <div
-              v-if="showClientDropdown && filteredClients.length > 0"
-              class="idp-card position-absolute top-100 start-0 w-100 mt-1 shadow-lg p-1"
-              style="max-height: 220px; overflow-y: auto; z-index: 1050;"
-            >
-              <div
-                v-for="c in filteredClients"
-                :key="c.id"
-                class="client-option-item p-2 rounded cursor-pointer"
-                @mousedown="selectClient(c)"
-              >
-                <div class="fw-semibold text-white small">{{ c.name }}</div>
-                <div class="text-muted font-monospace" style="font-size: 0.72rem;">
-                  BIN: {{ c.bin || "N/A" }}
-                </div>
-              </div>
-              <div v-if="filteredClients.length === 0" class="p-2 text-muted small italic text-center">
-                No clients found
-              </div>
-            </div>
-          </div>
+          <ClientSearchSelect
+            v-model="selectedClientId"
+            :clients="clients"
+            placeholder="Type to search Client or BIN..."
+            @select="onClientSelected"
+          />
         </div>
 
         <!-- 2. Smart Year-Tabbed Month Matrix Selector -->
