@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import StatusBadge from "@/components/common/StatusBadge.vue";
 import { useSubmissionsApi, type SubmissionItem } from "@/composables/useSubmissionsApi";
@@ -48,11 +48,56 @@ const getLastMonth = () => {
   return `${year}-${month}`;
 };
 
-const selectedMonth = ref(getLastMonth());
-const searchQuery = ref("");
-const selectedCustomerTypeId = ref<number | "all">("all");
-const selectedReferenceId = ref<number | "all">("all");
-const selectedManagerId = ref<number | "all">("all");
+const SUBMISSIONS_FILTER_KEY = "idp_submissions_filters";
+
+const getSavedFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      const raw = sessionStorage.getItem(SUBMISSIONS_FILTER_KEY);
+      if (raw) return JSON.parse(raw);
+    }
+  } catch {}
+  return {};
+};
+
+const savedFilters = getSavedFilters();
+
+const selectedMonth = ref(savedFilters.selectedMonth || getLastMonth());
+const searchQuery = ref(savedFilters.searchQuery || "");
+const selectedCustomerTypeId = ref<number | "all">(savedFilters.selectedCustomerTypeId ?? "all");
+const selectedReferenceId = ref<number | "all">(savedFilters.selectedReferenceId ?? "all");
+const selectedManagerId = ref<number | "all">(savedFilters.selectedManagerId ?? "all");
+const statusFilter = ref<"all" | "submitted" | "pending" | "late_submitted">(savedFilters.statusFilter || "all");
+
+const saveFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.setItem(
+        SUBMISSIONS_FILTER_KEY,
+        JSON.stringify({
+          selectedMonth: selectedMonth.value,
+          searchQuery: searchQuery.value,
+          selectedCustomerTypeId: selectedCustomerTypeId.value,
+          selectedReferenceId: selectedReferenceId.value,
+          selectedManagerId: selectedManagerId.value,
+          statusFilter: statusFilter.value
+        })
+      );
+    }
+  } catch {}
+};
+
+watch([selectedMonth, searchQuery, selectedCustomerTypeId, selectedReferenceId, selectedManagerId, statusFilter], saveFilters);
+
+onBeforeRouteLeave((to) => {
+  if (!to.path.startsWith("/admin/submissions")) {
+    try {
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        sessionStorage.removeItem(SUBMISSIONS_FILTER_KEY);
+      }
+    } catch {}
+  }
+});
 
 const customerTypeOptions = computed(() => [
   { value: "all", label: `All Customer Types (${customerTypes.value.length})` },
@@ -68,7 +113,6 @@ const managerOptions = computed(() => [
   { value: "all", label: `All Managers (${assignableUsers.value.length})` },
   ...assignableUsers.value.map((u) => ({ value: u.id, label: u.name }))
 ]);
-const statusFilter = ref<"all" | "submitted" | "pending" | "late_submitted">("all");
 
 const hasActiveFilters = computed(() => {
   return (
@@ -87,6 +131,11 @@ const clearAllFilters = () => {
   selectedReferenceId.value = "all";
   selectedManagerId.value = "all";
   currentPage.value = 1;
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.removeItem(SUBMISSIONS_FILTER_KEY);
+    }
+  } catch {}
 };
 
 // Multi-Selection State

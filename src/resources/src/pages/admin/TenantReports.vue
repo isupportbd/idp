@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
 import MonthMatrix from "@/components/MonthMatrix.vue";
 import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
@@ -74,17 +75,19 @@ interface SalesReportItem {
   isFfs?: boolean;
 }
 
-// State
-const clients = ref<Client[]>([]);
-const clientSearchText = ref("");
-const showClientDropdown = ref(false);
-const selectedClientId = ref<number | null>(null);
-const selectedClient = ref<Client | null>(null);
+const REPORTS_FILTER_KEY = "idp_tenant_reports_filters";
 
-const availableMonths = ref<string[]>([]);
-const purchaseMonths = ref<string[]>([]);
-const submissionMonths = ref<string[]>([]);
-const submissionsMap = ref<Record<string, string>>({});
+const getSavedFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      const raw = sessionStorage.getItem(REPORTS_FILTER_KEY);
+      if (raw) return JSON.parse(raw);
+    }
+  } catch {}
+  return {};
+};
+
+const savedFilters = getSavedFilters();
 
 const getDefaultPreviousMonth = () => {
   const d = new Date();
@@ -93,7 +96,19 @@ const getDefaultPreviousMonth = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 
-const selectedMonthYear = ref(getDefaultPreviousMonth());
+// State
+const clients = ref<Client[]>([]);
+const clientSearchText = ref("");
+const showClientDropdown = ref(false);
+const selectedClientId = ref<number | null>(savedFilters.selectedClientId || null);
+const selectedClient = ref<Client | null>(null);
+
+const availableMonths = ref<string[]>([]);
+const purchaseMonths = ref<string[]>([]);
+const submissionMonths = ref<string[]>([]);
+const submissionsMap = ref<Record<string, string>>({});
+
+const selectedMonthYear = ref(savedFilters.selectedMonthYear || getDefaultPreviousMonth());
 
 const unitConversions = ref<UnitConversion[]>([]);
 const selectedUnitId = ref<number | null>(null);
@@ -105,7 +120,34 @@ const selectedItemId = ref<number | null>(null);
 const clientMonthItems = ref<Item[]>([]);
 
 // Active tab: purchases | sales | return | statement
-const currentTab = ref<"purchases" | "sales" | "return" | "statement">("purchases");
+const currentTab = ref<"purchases" | "sales" | "return" | "statement">(savedFilters.currentTab || "purchases");
+
+const saveFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.setItem(
+        REPORTS_FILTER_KEY,
+        JSON.stringify({
+          selectedClientId: selectedClientId.value,
+          selectedMonthYear: selectedMonthYear.value,
+          currentTab: currentTab.value
+        })
+      );
+    }
+  } catch {}
+};
+
+watch([selectedClientId, selectedMonthYear, currentTab], saveFilters);
+
+onBeforeRouteLeave((to) => {
+  if (!to.path.startsWith("/admin/reports") && !to.path.startsWith("/admin/clients")) {
+    try {
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        sessionStorage.removeItem(REPORTS_FILTER_KEY);
+      }
+    } catch {}
+  }
+});
 
 // Data States
 const purchases = ref<Purchase[]>([]);

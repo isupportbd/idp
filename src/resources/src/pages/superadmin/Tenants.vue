@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import { pulse } from "@/plugins/pulse";
 import {
   useSuperAdminApi,
@@ -31,13 +31,68 @@ const {
   deleteTenant
 } = useSuperAdminApi();
 
-const searchTerm = ref("");
-const statusFilter = ref<"all" | "active" | "suspended">("all");
+const TENANTS_FILTER_KEY = "idp_superadmin_tenants_filters";
+
+const getSavedFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      const raw = sessionStorage.getItem(TENANTS_FILTER_KEY);
+      if (raw) return JSON.parse(raw);
+    }
+  } catch {}
+  return {};
+};
+
+const savedFilters = getSavedFilters();
+
+const searchTerm = ref(savedFilters.searchTerm || "");
+const statusFilter = ref<"all" | "active" | "suspended">(savedFilters.statusFilter || "all");
 const approveDays = ref<{ [key: number]: number | undefined }>({});
 const showExtendModal = ref(false);
 const selectedTenant = ref<Tenant | null>(null);
 const extendDaysCount = ref(30);
 const isSubmittingAction = ref(false);
+
+const saveFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.setItem(
+        TENANTS_FILTER_KEY,
+        JSON.stringify({
+          searchTerm: searchTerm.value,
+          statusFilter: statusFilter.value
+        })
+      );
+    }
+  } catch {}
+};
+
+watch([searchTerm, statusFilter], saveFilters);
+
+onBeforeRouteLeave((to) => {
+  if (!to.path.startsWith("/superadmin/tenants") && !to.path.startsWith("/superadmin/tenant-ledger")) {
+    try {
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        sessionStorage.removeItem(TENANTS_FILTER_KEY);
+      }
+    } catch {}
+  }
+});
+
+const hasActiveFilters = computed(() => {
+  return searchTerm.value.trim() !== "" || statusFilter.value !== "all";
+});
+
+const clearAllFilters = () => {
+  searchTerm.value = "";
+  statusFilter.value = "all";
+  currentPage.value = 1;
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.removeItem(TENANTS_FILTER_KEY);
+    }
+  } catch {}
+};
 
 // Reusable Persistent Pagination for 1,000+ Tenants
 const perPageOptions = [10, 15, 25, 50, 100];
@@ -513,6 +568,18 @@ onUnmounted(() => {
             max-width="280px"
             min-width="200px"
           />
+
+          <!-- Clear Filter Icon Button -->
+          <button
+            v-if="hasActiveFilters"
+            type="button"
+            class="btn btn-outline-danger btn-sm px-2 d-flex align-items-center justify-content-center"
+            title="Clear all filters"
+            style="height: 38px;"
+            @click="clearAllFilters"
+          >
+            <i class="bi bi-x-lg"></i>
+          </button>
         </div>
       </div>
 

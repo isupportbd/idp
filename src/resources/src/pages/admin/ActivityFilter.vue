@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
 import IdpSelect from "@/components/common/IdpSelect.vue";
@@ -23,8 +23,22 @@ const getPreviousMonth = () => {
   return `${year}-${month}`;
 };
 
-const selectedMonth = ref(getPreviousMonth());
-const searchQuery = ref("");
+const ACTIVITY_FILTER_KEY = "idp_activity_filters";
+
+const getSavedFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      const raw = sessionStorage.getItem(ACTIVITY_FILTER_KEY);
+      if (raw) return JSON.parse(raw);
+    }
+  } catch {}
+  return {};
+};
+
+const savedFilters = getSavedFilters();
+
+const selectedMonth = ref(savedFilters.selectedMonth || getPreviousMonth());
+const searchQuery = ref(savedFilters.searchQuery || "");
 const statusFilter = ref<
   | "all"
   | "active"
@@ -35,9 +49,38 @@ const statusFilter = ref<
   | "inactive_unfiled"
   | "total_filed"
   | "total_unfiled"
->("all");
-const selectedClientType = ref<string>("all");
-const selectedReference = ref<string>("all");
+>(savedFilters.statusFilter || "all");
+const selectedClientType = ref<string>(savedFilters.selectedClientType || "all");
+const selectedReference = ref<string>(savedFilters.selectedReference || "all");
+
+const saveFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.setItem(
+        ACTIVITY_FILTER_KEY,
+        JSON.stringify({
+          selectedMonth: selectedMonth.value,
+          searchQuery: searchQuery.value,
+          statusFilter: statusFilter.value,
+          selectedClientType: selectedClientType.value,
+          selectedReference: selectedReference.value
+        })
+      );
+    }
+  } catch {}
+};
+
+watch([selectedMonth, searchQuery, statusFilter, selectedClientType, selectedReference], saveFilters);
+
+onBeforeRouteLeave((to) => {
+  if (!to.path.startsWith("/admin/activity-filter")) {
+    try {
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        sessionStorage.removeItem(ACTIVITY_FILTER_KEY);
+      }
+    } catch {}
+  }
+});
 
 const clientTypeOptions = computed(() => [
   { value: "all", label: `All Types (${clientTypes.value.length})` },
@@ -64,6 +107,11 @@ const clearAllFilters = () => {
   selectedClientType.value = "all";
   selectedReference.value = "all";
   currentPage.value = 1;
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.removeItem(ACTIVITY_FILTER_KEY);
+    }
+  } catch {}
 };
 
 // Clipboard copy state

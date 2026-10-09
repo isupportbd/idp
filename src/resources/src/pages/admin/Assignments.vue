@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import { useClientsApi, type ClientManagerAssignment, type AssignableUser } from "@/composables/useClientsApi";
 import { useServicesApi, type CustomerType, type ClientReference } from "@/composables/useServicesApi";
 import { useToast } from "@/composables/useToast";
@@ -29,10 +29,53 @@ const {
   fetchReferences
 } = useServicesApi();
 
+const ASSIGNMENTS_FILTER_KEY = "idp_assignments_filters";
+
+const getSavedFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      const raw = sessionStorage.getItem(ASSIGNMENTS_FILTER_KEY);
+      if (raw) return JSON.parse(raw);
+    }
+  } catch {}
+  return {};
+};
+
+const savedFilters = getSavedFilters();
+
 const mainTab = ref<"customers" | "shared">("customers");
-const searchQuery = ref("");
-const selectedTypeFilter = ref<number | "all">("all");
-const selectedReferenceFilter = ref<number | "all">("all");
+const searchQuery = ref(savedFilters.searchQuery || "");
+const selectedTypeFilter = ref<number | "all">(savedFilters.selectedTypeFilter ?? "all");
+const selectedReferenceFilter = ref<number | "all">(savedFilters.selectedReferenceFilter ?? "all");
+const activeFilter = ref<"all" | "assigned" | "shared" | "unassigned">(savedFilters.activeFilter ?? "all");
+
+const saveFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.setItem(
+        ASSIGNMENTS_FILTER_KEY,
+        JSON.stringify({
+          searchQuery: searchQuery.value,
+          selectedTypeFilter: selectedTypeFilter.value,
+          selectedReferenceFilter: selectedReferenceFilter.value,
+          activeFilter: activeFilter.value
+        })
+      );
+    }
+  } catch {}
+};
+
+watch([searchQuery, selectedTypeFilter, selectedReferenceFilter, activeFilter], saveFilters);
+
+onBeforeRouteLeave((to) => {
+  if (!to.path.startsWith("/admin/assignments") && !to.path.startsWith("/admin/clients")) {
+    try {
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        sessionStorage.removeItem(ASSIGNMENTS_FILTER_KEY);
+      }
+    } catch {}
+  }
+});
 
 const customerTypeOptions = computed(() => [
   { value: "all", label: `All Customer Types (${customerTypes.value.length})` },
@@ -44,7 +87,6 @@ const referenceOptions = computed(() => [
   ...references.value.map((r) => ({ value: r.id, label: r.name }))
 ]);
 
-const activeFilter = ref<"all" | "assigned" | "shared" | "unassigned">("all");
 const pendingAssignments = ref<Record<number, number[]>>({});
 const savingIds = ref<Record<number, boolean>>({});
 
@@ -63,6 +105,11 @@ const clearAllFilters = () => {
   selectedReferenceFilter.value = "all";
   activeFilter.value = "all";
   currentPage.value = 1;
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.removeItem(ASSIGNMENTS_FILTER_KEY);
+    }
+  } catch {}
 };
 
 const loadData = async () => {

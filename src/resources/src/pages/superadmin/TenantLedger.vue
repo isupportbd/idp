@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { ref, computed, onMounted, watch } from "vue";
+import { useRoute, useRouter, onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
 import { type Tenant, type SubscriptionTransaction } from "@/composables/useSuperAdminApi";
 import SearchInput from "@/components/common/SearchInput.vue";
@@ -12,8 +12,61 @@ const tenantId = computed(() => Number(route.params.id));
 const tenant = ref<Tenant | null>(null);
 const transactions = ref<SubscriptionTransaction[]>([]);
 const isLoading = ref(true);
-const searchTerm = ref("");
+
+const LEDGER_FILTER_KEY = "idp_superadmin_ledger_filters";
+
+const getSavedFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      const raw = sessionStorage.getItem(LEDGER_FILTER_KEY);
+      if (raw) return JSON.parse(raw);
+    }
+  } catch {}
+  return {};
+};
+
+const savedFilters = getSavedFilters();
+
+const searchTerm = ref(savedFilters.searchTerm || "");
 const error = ref<string | null>(null);
+
+const saveFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.setItem(
+        LEDGER_FILTER_KEY,
+        JSON.stringify({
+          searchTerm: searchTerm.value
+        })
+      );
+    }
+  } catch {}
+};
+
+watch(searchTerm, saveFilters);
+
+onBeforeRouteLeave((to) => {
+  if (!to.path.startsWith("/superadmin/tenants") && !to.path.startsWith("/superadmin/tenant-ledger")) {
+    try {
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        sessionStorage.removeItem(LEDGER_FILTER_KEY);
+      }
+    } catch {}
+  }
+});
+
+const hasActiveFilters = computed(() => {
+  return searchTerm.value.trim() !== "";
+});
+
+const clearAllFilters = () => {
+  searchTerm.value = "";
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.removeItem(LEDGER_FILTER_KEY);
+    }
+  } catch {}
+};
 
 // Extend Subscription state
 const showExtendModal = ref(false);
@@ -304,14 +357,28 @@ onMounted(fetchLedgerData);
             <span class="badge bg-primary px-2.5 py-1">{{ filteredTransactions.length }} Entries</span>
           </div>
 
-          <!-- Search Box -->
-          <SearchInput
-            v-model="searchTerm"
-            placeholder="Search TrxID, plan, cycle..."
-            max-width="260px"
-            min-width="180px"
-            class="no-print"
-          />
+          <div class="d-flex align-items-center gap-2">
+            <!-- Search Box -->
+            <SearchInput
+              v-model="searchTerm"
+              placeholder="Search TrxID, plan, cycle..."
+              max-width="260px"
+              min-width="180px"
+              class="no-print"
+            />
+
+            <!-- Clear Filter Icon Button -->
+            <button
+              v-if="hasActiveFilters"
+              type="button"
+              class="btn btn-outline-danger btn-sm px-2 d-flex align-items-center justify-content-center"
+              title="Clear search"
+              style="height: 38px;"
+              @click="clearAllFilters"
+            >
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
         </div>
 
         <div class="table-responsive">

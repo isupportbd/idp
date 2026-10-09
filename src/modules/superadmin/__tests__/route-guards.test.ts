@@ -1,18 +1,28 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, beforeAll } from "vitest";
 import { Hono } from "hono";
-import { jwt } from "@/framework/facade.js";
+import { db, jwt } from "@/framework/facade.js";
+import { users } from "@/modules/auth/database/models/user.js";
+import { initDatabase } from "@/framework/database/connection.js";
 import superAdminRouter from "@/modules/superadmin/routes/api.js";
 
 /**
  * Route-guard tests for the superadmin module.
- * Only checks the auth/role layer: every request here is rejected before a controller runs,
- * so no database rows are touched.
+ * Only checks the auth/role layer: every request here is rejected before a controller runs.
  */
 describe("superadmin.route-guards", () => {
   const app = new Hono().route("/api/superadmin", superAdminRouter);
+  let adminUserId = 1;
+
+  beforeAll(async () => {
+    await initDatabase();
+    const existingUser = (await db.select().from(users).limit(1))[0];
+    if (existingUser) {
+      adminUserId = existingUser.id;
+    }
+  });
 
   const tokenFor = async (role: string) => {
-    const { token } = await jwt.generateToken({ id: 999999, email: `${role}@test.com`, adminId: null, roleId: null, role }, "access");
+    const { token } = await jwt.generateToken({ id: adminUserId, email: `${role}@test.com`, adminId: null, roleId: null, role }, "access");
     return { Authorization: `Bearer ${token}` };
   };
 

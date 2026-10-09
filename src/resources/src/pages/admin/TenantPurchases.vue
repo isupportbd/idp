@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import { useToast } from "@/composables/useToast";
@@ -50,9 +50,61 @@ const { currentPage, itemsPerPage, totalPages } = usePagination("purchases", {
   totalItems: totalCount
 });
 
-const searchQuery = ref("");
-const selectedClient = ref("");
-const selectedReference = ref("");
+const getLastMonth = () => {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() - 1);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+};
+
+const PURCHASES_FILTER_KEY = "idp_purchases_filters";
+
+const getSavedFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      const raw = sessionStorage.getItem(PURCHASES_FILTER_KEY);
+      if (raw) return JSON.parse(raw);
+    }
+  } catch {}
+  return {};
+};
+
+const savedFilters = getSavedFilters();
+
+const searchQuery = ref(savedFilters.searchQuery || "");
+const selectedClient = ref(savedFilters.selectedClient || "");
+const selectedReference = ref(savedFilters.selectedReference || "");
+const selectedMonth = ref(savedFilters.selectedMonth || getLastMonth());
+
+const saveFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.setItem(
+        PURCHASES_FILTER_KEY,
+        JSON.stringify({
+          selectedMonth: selectedMonth.value,
+          searchQuery: searchQuery.value,
+          selectedClient: selectedClient.value,
+          selectedReference: selectedReference.value
+        })
+      );
+    }
+  } catch {}
+};
+
+watch([selectedMonth, searchQuery, selectedClient, selectedReference], saveFilters);
+
+onBeforeRouteLeave((to) => {
+  if (!to.path.startsWith("/admin/purchases") && !to.path.startsWith("/admin/upload-purchases")) {
+    try {
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        sessionStorage.removeItem(PURCHASES_FILTER_KEY);
+      }
+    } catch {}
+  }
+});
 
 const hasActiveFilters = computed(() => {
   return (
@@ -67,17 +119,12 @@ const clearAllFilters = () => {
   selectedReference.value = "";
   selectedClient.value = "";
   currentPage.value = 1;
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.removeItem(PURCHASES_FILTER_KEY);
+    }
+  } catch {}
 };
-
-const getLastMonth = () => {
-  const d = new Date();
-  d.setDate(1);
-  d.setMonth(d.getMonth() - 1);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  return `${year}-${month}`;
-};
-const selectedMonth = ref(getLastMonth());
 
 // Deletion Modal State
 const showDeleteModal = ref(false);

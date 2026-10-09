@@ -33,10 +33,51 @@ const maxPlanUsers = computed(() => {
   return user?.plan?.maxUsers || 5;
 });
 
-const searchQuery = ref("");
-const roleFilter = ref<string>("all");
-const statusFilter = ref<string>("all");
+const USERS_FILTER_KEY = "idp_users_filters";
+
+const getSavedFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      const raw = sessionStorage.getItem(USERS_FILTER_KEY);
+      if (raw) return JSON.parse(raw);
+    }
+  } catch {}
+  return {};
+};
+
+const savedFilters = getSavedFilters();
+
+const searchQuery = ref(savedFilters.searchQuery || "");
+const roleFilter = ref<string>(savedFilters.roleFilter || "all");
+const statusFilter = ref<string>(savedFilters.statusFilter || "all");
 const isLoading = ref(false);
+
+const saveFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.setItem(
+        USERS_FILTER_KEY,
+        JSON.stringify({
+          searchQuery: searchQuery.value,
+          roleFilter: roleFilter.value,
+          statusFilter: statusFilter.value
+        })
+      );
+    }
+  } catch {}
+};
+
+watch([searchQuery, roleFilter, statusFilter], saveFilters);
+
+onBeforeRouteLeave((to) => {
+  if (!to.path.startsWith("/admin/users")) {
+    try {
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        sessionStorage.removeItem(USERS_FILTER_KEY);
+      }
+    } catch {}
+  }
+});
 
 const hasActiveFilters = computed(() => {
   return (
@@ -51,6 +92,11 @@ const clearAllFilters = () => {
   roleFilter.value = "all";
   statusFilter.value = "all";
   currentPage.value = 1;
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.removeItem(USERS_FILTER_KEY);
+    }
+  } catch {}
 };
 
 // Modal state (password reset only; create/edit use the full UserForm page)

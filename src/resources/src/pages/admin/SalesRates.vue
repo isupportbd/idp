@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
 import SearchInput from "@/components/common/SearchInput.vue";
 import { usePagination } from "@/composables/usePagination";
@@ -62,12 +62,76 @@ const unitsList = ref<UnitOption[]>([]);
 // Master Sales Rates Database
 const salesRates = ref<SalesRate[]>([]);
 
+const SALES_RATES_FILTER_KEY = "idp_sales_rates_filters";
+
+const getSavedFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      const raw = sessionStorage.getItem(SALES_RATES_FILTER_KEY);
+      if (raw) return JSON.parse(raw);
+    }
+  } catch {}
+  return {};
+};
+
+const savedFilters = getSavedFilters();
+
 // Filters State
-const searchQuery = ref("");
-const selectedClient = ref("");
-const selectedItem = ref("");
-const selectedStatus = ref("");
+const searchQuery = ref(savedFilters.searchQuery || "");
+const selectedClient = ref(savedFilters.selectedClient || "");
+const selectedItem = ref(savedFilters.selectedItem || "");
+const selectedStatus = ref(savedFilters.selectedStatus || "");
 const isLoading = ref(false);
+
+const saveFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.setItem(
+        SALES_RATES_FILTER_KEY,
+        JSON.stringify({
+          searchQuery: searchQuery.value,
+          selectedClient: selectedClient.value,
+          selectedItem: selectedItem.value,
+          selectedStatus: selectedStatus.value
+        })
+      );
+    }
+  } catch {}
+};
+
+watch([searchQuery, selectedClient, selectedItem, selectedStatus], saveFilters);
+
+onBeforeRouteLeave((to) => {
+  if (!to.path.startsWith("/admin/sales-rates")) {
+    try {
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        sessionStorage.removeItem(SALES_RATES_FILTER_KEY);
+      }
+    } catch {}
+  }
+});
+
+const hasActiveFilters = computed(() => {
+  return (
+    searchQuery.value.trim() !== "" ||
+    selectedClient.value !== "" ||
+    selectedItem.value !== "" ||
+    selectedStatus.value !== ""
+  );
+});
+
+const clearAllFilters = () => {
+  searchQuery.value = "";
+  selectedClient.value = "";
+  selectedItem.value = "";
+  selectedStatus.value = "";
+  currentPage.value = 1;
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.removeItem(SALES_RATES_FILTER_KEY);
+    }
+  } catch {}
+};
 
 // Modal State
 const showModal = ref(false);
@@ -545,6 +609,18 @@ onMounted(async () => {
             <option value="Frozen">Frozen Only</option>
           </select>
         </div>
+
+        <!-- Clear Filter Icon Button -->
+        <button
+          v-if="hasActiveFilters"
+          type="button"
+          class="btn btn-outline-danger btn-sm px-2 d-flex align-items-center justify-content-center"
+          title="Clear all filters"
+          style="height: 38px;"
+          @click="clearAllFilters"
+        >
+          <i class="bi bi-x-lg"></i>
+        </button>
       </div>
 
       <!-- Right Rows selector -->

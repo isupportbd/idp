@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
 import StatusBadge from "@/components/common/StatusBadge.vue";
@@ -37,11 +37,25 @@ const {
 const { customerTypes, references, fetchCustomerTypes, fetchReferences } = useServicesApi();
 const { assignableUsers, fetchAssignableUsers } = useClientsApi();
 
+const BILLING_FILTER_KEY = "idp_billing_filters";
+
+const getSavedFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      const raw = sessionStorage.getItem(BILLING_FILTER_KEY);
+      if (raw) return JSON.parse(raw);
+    }
+  } catch {}
+  return {};
+};
+
+const savedFilters = getSavedFilters();
+
 // Active View Tab
 const validTabs = ["invoices", "collections", "billed", "dues", "missing"] as const;
 type TabType = typeof validTabs[number];
 
-const initialTab = (route.query.tab as TabType) || "invoices";
+const initialTab = (route.query.tab as TabType) || savedFilters.activeTab || "invoices";
 const activeTab = ref<TabType>(validTabs.includes(initialTab) ? initialTab : "invoices");
 
 // Period State
@@ -53,14 +67,45 @@ const getLastMonth = () => {
   const month = String(d.getMonth() + 1).padStart(2, "0");
   return `${year}-${month}`;
 };
-const selectedMonth = ref((route.query.month as string) || getLastMonth());
+const selectedMonth = ref((route.query.month as string) || savedFilters.selectedMonth || getLastMonth());
 
 // Filters
-const searchQuery = ref((route.query.search as string) || "");
-const selectedCustomerTypeId = ref<number | "all">("all");
-const selectedReferenceId = ref<number | "all">("all");
-const selectedStatusFilter = ref<string>("all");
-const selectedPaymentMethod = ref<string>("all");
+const searchQuery = ref((route.query.search as string) || savedFilters.searchQuery || "");
+const selectedCustomerTypeId = ref<number | "all">(savedFilters.selectedCustomerTypeId ?? "all");
+const selectedReferenceId = ref<number | "all">(savedFilters.selectedReferenceId ?? "all");
+const selectedStatusFilter = ref<string>(savedFilters.selectedStatusFilter || "all");
+const selectedPaymentMethod = ref<string>(savedFilters.selectedPaymentMethod || "all");
+
+const saveFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.setItem(
+        BILLING_FILTER_KEY,
+        JSON.stringify({
+          activeTab: activeTab.value,
+          selectedMonth: selectedMonth.value,
+          searchQuery: searchQuery.value,
+          selectedCustomerTypeId: selectedCustomerTypeId.value,
+          selectedReferenceId: selectedReferenceId.value,
+          selectedStatusFilter: selectedStatusFilter.value,
+          selectedPaymentMethod: selectedPaymentMethod.value
+        })
+      );
+    }
+  } catch {}
+};
+
+watch([activeTab, selectedMonth, searchQuery, selectedCustomerTypeId, selectedReferenceId, selectedStatusFilter, selectedPaymentMethod], saveFilters);
+
+onBeforeRouteLeave((to) => {
+  if (!to.path.startsWith("/admin/billing")) {
+    try {
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        sessionStorage.removeItem(BILLING_FILTER_KEY);
+      }
+    } catch {}
+  }
+});
 
 const hasActiveFilters = computed(() => {
   return (
@@ -78,6 +123,11 @@ const clearAllFilters = () => {
   selectedReferenceId.value = "all";
   selectedStatusFilter.value = "all";
   selectedPaymentMethod.value = "all";
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.removeItem(BILLING_FILTER_KEY);
+    }
+  } catch {}
   updateUrlParams();
 };
 
