@@ -261,9 +261,7 @@ const formatMonth = (mStr?: string): string => {
 
 // Unit Conversion Helpers
 const filteredUnitConversions = computed(() => {
-  if (!purchases.value.length) return unitConversions.value;
-  const currentPurchaseUnits = new Set(purchases.value.map((p) => (p.unit || "KGM").trim().toUpperCase()));
-  return unitConversions.value.filter((u) => currentPurchaseUnits.has((u.purchaseUnit || "").trim().toUpperCase()));
+  return unitConversions.value;
 });
 
 const currentConvFactor = computed(() => {
@@ -377,12 +375,15 @@ const getPurchaseSummary = (list: Purchase[]) => {
       pDate = new Date(p.beDate || new Date().toISOString().slice(0, 10));
     }
 
-    let applicableRate = sortedRates.find((r) => r.itemId === p.itemId && new Date(r.activationDate) <= pDate);
+    let applicableRate = sortedRates.find((r) => Number(r.itemId) === Number(p.itemId) && new Date(r.activationDate) <= pDate);
     if (!applicableRate) {
-      applicableRate = sortedRates.find((r) => r.itemId === p.itemId && new Date(r.activationDate) <= reportMonthEnd);
+      applicableRate = sortedRates.find((r) => Number(r.itemId) === Number(p.itemId) && new Date(r.activationDate) <= reportMonthEnd);
+    }
+    if (!applicableRate) {
+      applicableRate = sortedRates.find((r) => Number(r.itemId) === Number(p.itemId) || (p.itemName && r.itemName === p.itemName));
     }
 
-    const key = `${p.hsCode}_${p.itemName}`;
+    const key = `${p.hsCode}_${p.itemName}_${p.itemId}`;
     if (!groups[key]) {
       groups[key] = {
         hsCode: p.hsCode || "",
@@ -395,16 +396,16 @@ const getPurchaseSummary = (list: Purchase[]) => {
         at: 0,
         purchaseRate: 0,
         maxSalesRate: 0,
-        additionPercent: applicableRate ? Number(applicableRate.additionPercent) || 0 : 0,
-        vatRate: applicableRate ? Number(applicableRate.vatRate) || 0 : 0,
+        additionPercent: applicableRate && applicableRate.additionPercent !== undefined ? Number(applicableRate.additionPercent) : 36,
+        vatRate: applicableRate && applicableRate.vatRate !== undefined ? Number(applicableRate.vatRate) : (Number(p.vat) > 0 ? 15 : 0),
         totalMaxSalesValue: 0
       };
     }
 
     const pQty = Number(p.totalQty) || 0;
     const pBaseValueOfVat = Number(p.baseValueOfVat) || 0;
-    const additionPercent = applicableRate ? Number(applicableRate.additionPercent) || 0 : 0;
-    const vatRate = applicableRate ? Number(applicableRate.vatRate) || 0 : 0;
+    const additionPercent = applicableRate && applicableRate.additionPercent !== undefined ? Number(applicableRate.additionPercent) : 36;
+    const vatRate = applicableRate && applicableRate.vatRate !== undefined ? Number(applicableRate.vatRate) : (Number(p.vat) > 0 ? 15 : 0);
 
     let pPurchaseRate = 0;
     let pAddedBase = 0;
@@ -1591,7 +1592,7 @@ onUnmounted(() => {
                     <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(s.vat) }}</td>
                     <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(s.at) }}</td>
                     <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(s.purchaseRate / currentConvFactor) }}</td>
-                    <td class="text-end font-monospace fw-bold" style="font-size: 1.22rem; color: #f59e0b;">{{ Math.floor((s.maxSalesRate / currentConvFactor) / 10) * 10 }}</td>
+                    <td class="text-end font-monospace fw-bold" style="font-size: 1.15rem; color: #f59e0b;">{{ fmt(s.maxSalesRate / currentConvFactor) }}</td>
                   </tr>
                 </tbody>
               </table>
