@@ -5,6 +5,7 @@ import axios from "axios";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
 import SearchInput from "@/components/common/SearchInput.vue";
+import IdpSelect from "@/components/common/IdpSelect.vue";
 import { usePagination } from "@/composables/usePagination";
 
 const toast = useToast();
@@ -51,6 +52,18 @@ const searchQuery = ref(savedFilters.searchQuery || "");
 const roleFilter = ref<string>(savedFilters.roleFilter || "all");
 const statusFilter = ref<string>(savedFilters.statusFilter || "all");
 const isLoading = ref(false);
+
+const roleOptions = [
+  { value: "all", label: "All Roles" },
+  { value: "admin", label: "Admin" },
+  { value: "user", label: "Staff / Sub-User" }
+];
+
+const statusOptions = [
+  { value: "all", label: "All Status" },
+  { value: "active", label: "Active Only" },
+  { value: "inactive", label: "Inactive Only" }
+];
 
 const saveFilters = () => {
   try {
@@ -351,22 +364,18 @@ onMounted(async () => {
         />
 
         <!-- Role Filter Dropdown -->
-        <div style="min-width: 150px;">
-          <select v-model="roleFilter" class="form-select form-select-sm idp-input" style="height: 38px;">
-            <option value="all">All Roles</option>
-            <option value="admin">Admin</option>
-            <option value="user">Staff / Sub-User</option>
-          </select>
-        </div>
+        <IdpSelect
+          v-model="roleFilter"
+          :options="roleOptions"
+          min-width="150px"
+        />
 
         <!-- Status Filter Dropdown -->
-        <div style="min-width: 150px;">
-          <select v-model="statusFilter" class="form-select form-select-sm idp-input" style="height: 38px;">
-            <option value="all">All Status</option>
-            <option value="active">Active Only</option>
-            <option value="inactive">Inactive Only</option>
-          </select>
-        </div>
+        <IdpSelect
+          v-model="statusFilter"
+          :options="statusOptions"
+          min-width="150px"
+        />
 
         <!-- Clear Filter Icon Button -->
         <button

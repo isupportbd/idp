@@ -153,9 +153,66 @@ textarea {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+/* Global text selection */
+::selection {
+  background-color: #374151 !important;
+  color: #ffffff !important;
+}
+
+::-moz-selection {
+  background-color: #374151 !important;
+  color: #ffffff !important;
+}
+
 .form-select,
 select {
   padding-right: 2.25rem !important;
+  color-scheme: dark !important;
+}
+
+select option,
+.form-select option,
+optgroup {
+  background-color: #1a1d21 !important;
+  color: #f8f9fa !important;
+  padding: 8px 12px !important;
+}
+
+select option:hover,
+select option:focus,
+select option:active,
+select option:checked,
+.form-select option:hover,
+.form-select option:focus,
+.form-select option:active,
+.form-select option:checked {
+  background: #2a313a linear-gradient(0deg, #2a313a 0%, #2a313a 100%) !important;
+  background-color: #2a313a !important;
+  color: #ffffff !important;
+}
+
+/* Bootstrap Dropdown Items */
+.dropdown-menu {
+  background-color: #1a1e23 !important;
+  border: 1px solid #343a40 !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45) !important;
+}
+
+.dropdown-item {
+  color: #e2e8f0 !important;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background-color: #2a313a !important;
+  color: #ffffff !important;
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+  background-color: #2d3642 !important;
+  color: #ffffff !important;
 }
 
 .form-control-sm,

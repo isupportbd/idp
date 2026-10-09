@@ -7,6 +7,7 @@ import { useToast } from "@/composables/useToast";
 import { usePagination } from "@/composables/usePagination";
 import { can } from "@/composables/useAuth";
 import SearchInput from "@/components/common/SearchInput.vue";
+import IdpSelect from "@/components/common/IdpSelect.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -178,6 +179,16 @@ const availableClients = computed(() => {
   return clients.value.filter((c) => String(c.referenceId) === String(selectedReference.value));
 });
 
+const referenceOptions = computed(() => [
+  { value: "", label: "All References" },
+  ...references.value.map((r) => ({ value: String(r.id), label: r.name }))
+]);
+
+const clientOptions = computed(() => [
+  { value: "", label: "All Clients" },
+  ...availableClients.value.map((c) => ({ value: String(c.id), label: c.companyName || c.name }))
+]);
+
 
 
 
@@ -328,24 +339,18 @@ onMounted(async () => {
         />
 
         <!-- Middle-Left: Reference Filter -->
-        <div style="width: 170px;">
-          <select v-model="selectedReference" class="form-select form-select-sm idp-input">
-            <option value="">All References</option>
-            <option v-for="r in references" :key="r.id" :value="r.id">
-              {{ r.name }}
-            </option>
-          </select>
-        </div>
+        <IdpSelect
+          v-model="selectedReference"
+          :options="referenceOptions"
+          min-width="170px"
+        />
 
         <!-- Middle-Right: Client Filter -->
-        <div style="width: 200px;">
-          <select v-model="selectedClient" class="form-select form-select-sm idp-input">
-            <option value="">All Clients</option>
-            <option v-for="c in availableClients" :key="c.id" :value="c.id">
-              {{ c.companyName || c.name }}
-            </option>
-          </select>
-        </div>
+        <IdpSelect
+          v-model="selectedClient"
+          :options="clientOptions"
+          min-width="200px"
+        />
 
         <!-- Clear Filter Icon Button -->
         <button

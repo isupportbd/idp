@@ -5,6 +5,7 @@ import { useClientsApi, type ClientItem, type AssignableUser } from "@/composabl
 import { useServicesApi } from "@/composables/useServicesApi";
 import { useToast } from "@/composables/useToast";
 import { can } from "@/composables/useAuth";
+import IdpSelect from "@/components/common/IdpSelect.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -29,6 +30,22 @@ const {
   fetchCustomerTypes,
   fetchReferences
 } = useServicesApi();
+
+const customerTypeOptions = computed(() => [
+  { value: null, label: "-- Select Customer Type --" },
+  ...customerTypes.value.map((t) => ({ value: t.id, label: t.typeName }))
+]);
+
+const referenceOptions = computed(() => [
+  { value: null, label: "Direct Client / No Reference" },
+  ...references.value.map((r) => ({ value: r.id, label: r.name }))
+]);
+
+const balanceTypeOptions = [
+  { value: "none", label: "No Initial Balance (0.00)" },
+  { value: "due", label: "Due (Client owes money)" },
+  { value: "advance", label: "Advance (Paid in advance / Credit)" }
+];
 
 const activeTab = ref<"basic" | "contact" | "vat" | "managers">("basic");
 const isSubmitting = ref(false);
@@ -493,28 +510,32 @@ const handleSubmit = async () => {
             <!-- Customer Type & Reference -->
             <div class="col-md-6">
               <label class="form-label text-light small fw-medium mb-1">Customer Type</label>
-              <select v-model="form.customerTypeId" class="form-select idp-input">
-                <option :value="null">-- Select Customer Type --</option>
-                <option v-for="t in customerTypes" :key="t.id" :value="t.id">{{ t.typeName }}</option>
-              </select>
+              <IdpSelect
+                v-model="form.customerTypeId"
+                :options="customerTypeOptions"
+                placeholder="-- Select Customer Type --"
+                width="100%"
+              />
             </div>
 
             <div class="col-md-6">
               <label class="form-label text-light small fw-medium mb-1">Referral / Introducer Partner</label>
-              <select v-model="form.referenceId" class="form-select idp-input">
-                <option :value="null">Direct Client / No Reference</option>
-                <option v-for="r in references" :key="r.id" :value="r.id">{{ r.name }}</option>
-              </select>
+              <IdpSelect
+                v-model="form.referenceId"
+                :options="referenceOptions"
+                placeholder="Direct Client / No Reference"
+                width="100%"
+              />
             </div>
 
             <!-- Opening Balance Type & Amount -->
             <div class="col-md-6">
               <label class="form-label text-light small fw-medium mb-1">Opening Balance Type</label>
-              <select v-model="balanceType" class="form-select idp-input">
-                <option value="none">No Initial Balance (0.00)</option>
-                <option value="due">Due (Client owes money)</option>
-                <option value="advance">Advance (Paid in advance / Credit)</option>
-              </select>
+              <IdpSelect
+                v-model="balanceType"
+                :options="balanceTypeOptions"
+                width="100%"
+              />
             </div>
 
             <div class="col-md-6">

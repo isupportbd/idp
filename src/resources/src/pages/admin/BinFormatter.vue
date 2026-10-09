@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
 import axios from "axios";
+import IdpSelect from "@/components/common/IdpSelect.vue";
 
 interface ClientRecord {
   id: number;
@@ -18,6 +19,17 @@ const startIndex = ref<number>(1);
 const batchSize = ref<number>(10);
 const copied = ref(false);
 const isLoading = ref(false);
+
+const statusOptions = [
+  { value: "all", label: "All Statuses" },
+  { value: "active", label: "Active Clients Only" },
+  { value: "inactive", label: "Inactive Clients Only" }
+];
+
+const clientTypeOptions = computed(() => [
+  { value: "all", label: `All Types (${clientTypesList.value.length})` },
+  ...clientTypesList.value.map((t) => ({ value: t, label: t }))
+]);
 
 // Clean raw BIN into numeric string
 const cleanBin = (raw: string): string => {
@@ -251,22 +263,21 @@ const clearManualInput = () => {
               <!-- Filter 1: Status Filter -->
               <div class="col-sm-6">
                 <label class="form-label text-muted small mb-1">1. Business Status</label>
-                <select v-model="statusFilter" class="form-select form-select-sm idp-input">
-                  <option value="all">All Statuses</option>
-                  <option value="active">Active Clients Only</option>
-                  <option value="inactive">Inactive Clients Only</option>
-                </select>
+                <IdpSelect
+                  v-model="statusFilter"
+                  :options="statusOptions"
+                  width="100%"
+                />
               </div>
 
               <!-- Filter 2: Customer Type Filter -->
               <div class="col-sm-6">
                 <label class="form-label text-muted small mb-1">2. Customer Type</label>
-                <select v-model="selectedClientType" class="form-select form-select-sm idp-input">
-                  <option value="all">All Types ({{ clientTypesList.length }})</option>
-                  <option v-for="t in clientTypesList" :key="t" :value="t">
-                    {{ t }}
-                  </option>
-                </select>
+                <IdpSelect
+                  v-model="selectedClientType"
+                  :options="clientTypeOptions"
+                  width="100%"
+                />
               </div>
             </div>
           </div>

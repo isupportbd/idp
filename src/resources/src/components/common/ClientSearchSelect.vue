@@ -366,7 +366,7 @@ onUnmounted(() => {
 
 .search-item:hover,
 .search-item-active {
-  background: rgba(13, 110, 253, 0.18) !important;
+  background: #2a313a !important;
 }
 
 .cursor-pointer {

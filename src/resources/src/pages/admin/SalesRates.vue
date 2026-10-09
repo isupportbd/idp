@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
 import SearchInput from "@/components/common/SearchInput.vue";
+import IdpSelect from "@/components/common/IdpSelect.vue";
 import { usePagination } from "@/composables/usePagination";
 import { can } from "@/composables/useAuth";
 
@@ -61,6 +62,22 @@ const unitsList = ref<UnitOption[]>([]);
 
 // Master Sales Rates Database
 const salesRates = ref<SalesRate[]>([]);
+
+const clientOptions = computed(() => [
+  { value: "", label: "All Clients" },
+  ...clientsList.value.map((c) => ({ value: String(c.id), label: c.name }))
+]);
+
+const itemOptions = computed(() => [
+  { value: "", label: "All Commodity Items" },
+  ...itemsList.value.map((i) => ({ value: String(i.id), label: `${i.name} (${i.hsCode || '—'})` }))
+]);
+
+const statusOptions = [
+  { value: "", label: "All Status" },
+  { value: "Active", label: "Active Only" },
+  { value: "Frozen", label: "Frozen Only" }
+];
 
 const SALES_RATES_FILTER_KEY = "idp_sales_rates_filters";
 
@@ -584,31 +601,25 @@ onMounted(async () => {
         />
 
         <!-- Client Filter -->
-        <div style="min-width: 190px;">
-          <select v-model="selectedClient" class="form-select form-select-sm idp-input" style="height: 38px;">
-            <option value="">All Clients</option>
-            <option v-for="c in clientsList" :key="c.id" :value="c.id">{{ c.name }}</option>
-          </select>
-        </div>
+        <IdpSelect
+          v-model="selectedClient"
+          :options="clientOptions"
+          min-width="190px"
+        />
 
         <!-- Item Filter -->
-        <div style="min-width: 200px;">
-          <select v-model="selectedItem" class="form-select form-select-sm idp-input" style="height: 38px;">
-            <option value="">All Commodity Items</option>
-            <option v-for="item in itemsList" :key="item.id" :value="item.id">
-              {{ item.name }} ({{ item.hsCode }})
-            </option>
-          </select>
-        </div>
+        <IdpSelect
+          v-model="selectedItem"
+          :options="itemOptions"
+          min-width="200px"
+        />
 
         <!-- Status Filter -->
-        <div style="min-width: 140px;">
-          <select v-model="selectedStatus" class="form-select form-select-sm idp-input" style="height: 38px;">
-            <option value="">All Status</option>
-            <option value="Active">Active Only</option>
-            <option value="Frozen">Frozen Only</option>
-          </select>
-        </div>
+        <IdpSelect
+          v-model="selectedStatus"
+          :options="statusOptions"
+          min-width="140px"
+        />
 
         <!-- Clear Filter Icon Button -->
         <button

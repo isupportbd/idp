@@ -255,26 +255,26 @@ onUnmounted(() => {
 .idp-custom-select-option {
   padding: 8px 12px;
   font-size: 0.84rem;
-  color: #e9ecef;
+  color: #e2e8f0;
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.12s ease, color 0.12s ease;
 }
 
 .idp-custom-select-option:hover {
-  background-color: #2c3238;
+  background-color: #2a313a;
   color: #ffffff;
 }
 
 .idp-custom-select-option.is-active {
-  background-color: #272d34;
-  color: #3b8eed;
+  background-color: #2d3642;
+  color: #ffffff;
   font-weight: 600;
 }
 
 .idp-custom-select-option.is-active:hover {
-  background-color: #2e353e;
-  color: #4da3ff;
+  background-color: #333d4b;
+  color: #ffffff;
 }
 
 .idp-custom-select-option.is-disabled {
