@@ -300,10 +300,10 @@ const handleConfirmDelete = async () => {
       <table class="table-custom">
         <thead>
           <tr>
-            <th style="width: 27%;">Company & Proprietor</th>
+            <th style="width: 28%;">Company & Proprietor</th>
             <th style="width: 15%;">Identifiers (BIN / TIN)</th>
-            <th style="width: 15%;">Customer & Service Type</th>
-            <th style="width: 13%;">Reference</th>
+            <th style="width: 13%;">Customer Type</th>
+            <th style="width: 14%;">Reference</th>
             <th style="width: 14%;">Assigned Users</th>
             <th style="width: 6%; text-align: center;">Status</th>
             <th style="width: 10%; text-align: right;">Actions</th>
@@ -337,7 +337,7 @@ const handleConfirmDelete = async () => {
             <!-- Identifiers -->
             <td>
               <div v-if="client.binNumber" class="font-monospace text-info small fw-bold">
-                 BIN: {{ client.binNumber }}
+                BIN: {{ client.binNumber }}
               </div>
               <div v-if="client.tinNumber" class="text-muted small font-monospace">
                 TIN: {{ client.tinNumber }}
@@ -347,27 +347,11 @@ const handleConfirmDelete = async () => {
               </div>
             </td>
 
-            <!-- Customer & Service Type -->
+            <!-- Customer Type -->
             <td>
-              <div class="d-flex flex-wrap align-items-center gap-1">
-                <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25 small">
-                  {{ client.customerTypeName || 'Standard' }}
-                </span>
-                <span
-                  v-if="client.vatServiceType === 'ONLY_RETURN'"
-                  class="badge bg-warning bg-opacity-15 text-warning border border-warning border-opacity-25 small"
-                  title="Only Return Submission Service"
-                >
-                  Return Only
-                </span>
-                <span
-                  v-else
-                  class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 small"
-                  title="Full VAT Services"
-                >
-                  Full
-                </span>
-              </div>
+              <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25 small">
+                {{ client.customerTypeName || 'Standard' }}
+              </span>
             </td>
 
             <!-- Reference -->
