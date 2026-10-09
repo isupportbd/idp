@@ -44,10 +44,39 @@ const {
   fetchReferences
 } = useServicesApi();
 
-const searchQuery = ref("");
-const selectedTypeFilter = ref<number | "all">("all");
-const selectedReferenceFilter = ref<number | "all">("all");
-const selectedStatusFilter = ref<"all" | "true" | "false">("all");
+const CLIENTS_FILTER_KEY = "idp_clients_filters";
+
+const getSavedFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      const raw = sessionStorage.getItem(CLIENTS_FILTER_KEY);
+      if (raw) return JSON.parse(raw);
+    }
+  } catch {}
+  return {};
+};
+
+const savedFilters = getSavedFilters();
+const searchQuery = ref(savedFilters.searchQuery || "");
+const selectedTypeFilter = ref<number | "all">(savedFilters.selectedTypeFilter ?? "all");
+const selectedReferenceFilter = ref<number | "all">(savedFilters.selectedReferenceFilter ?? "all");
+const selectedStatusFilter = ref<"all" | "true" | "false">(savedFilters.selectedStatusFilter ?? "all");
+
+const saveFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.setItem(
+        CLIENTS_FILTER_KEY,
+        JSON.stringify({
+          searchQuery: searchQuery.value,
+          selectedTypeFilter: selectedTypeFilter.value,
+          selectedReferenceFilter: selectedReferenceFilter.value,
+          selectedStatusFilter: selectedStatusFilter.value
+        })
+      );
+    }
+  } catch {}
+};
 
 const { currentPage, itemsPerPage, totalPages } = usePagination("clients", {
   defaultPerPage: 10,
@@ -94,6 +123,7 @@ onMounted(() => {
 });
 
 watch(searchQuery, () => {
+  saveFilters();
   if (searchTimeout) clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
     currentPage.value = 1;
@@ -102,6 +132,7 @@ watch(searchQuery, () => {
 });
 
 watch([selectedTypeFilter, selectedReferenceFilter, selectedStatusFilter], () => {
+  saveFilters();
   currentPage.value = 1;
   fetchClientsList();
 });

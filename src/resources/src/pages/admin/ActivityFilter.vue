@@ -499,29 +499,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Active Filter Chips Bar -->
-    <div v-if="selectedClientType !== 'all' || selectedReference !== 'all'" class="d-flex flex-wrap align-items-center gap-2 mb-3">
-      <span class="text-muted small">Active Filters:</span>
-      
-      <!-- Client Type Chip -->
-      <span v-if="selectedClientType !== 'all'" class="badge bg-info text-dark d-inline-flex align-items-center gap-1">
-        <i class="bi bi-tag-fill"></i> Type: {{ selectedClientType }}
-        <i class="bi bi-x cursor-pointer ms-1" @click="selectedClientType = 'all'"></i>
-      </span>
 
-      <!-- Reference Chip -->
-      <span v-if="selectedReference !== 'all'" class="badge bg-primary d-inline-flex align-items-center gap-1">
-        <i class="bi bi-person-lines-fill"></i> Ref: {{ selectedReference }}
-        <i class="bi bi-x cursor-pointer ms-1" @click="selectedReference = 'all'"></i>
-      </span>
-
-      <button
-        class="btn btn-link btn-sm text-muted text-decoration-none p-0 small ms-1"
-        @click="selectedClientType = 'all'; selectedReference = 'all';"
-      >
-        Clear All
-      </button>
-    </div>
 
     <!-- Activity Clients Table Card -->
     <div class="table-card shadow-sm">
