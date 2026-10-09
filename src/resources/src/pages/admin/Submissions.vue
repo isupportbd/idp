@@ -202,11 +202,16 @@ onMounted(() => {
       loadSubmissionsList();
     }
   });
+
+  pulse.channel("auth").listen("submission:batch_deleted", () => {
+    loadSubmissionsList();
+  });
 });
 
 onUnmounted(() => {
   pulse.channel("auth").stopListening("submission:updated");
   pulse.channel("auth").stopListening("submission:deleted");
+  pulse.channel("auth").stopListening("submission:batch_deleted");
 });
 
 // Filtered Submissions (Instant Client-side Search & Responsive Filtering)

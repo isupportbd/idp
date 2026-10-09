@@ -243,7 +243,7 @@ export const recordSubmission: Handler = async (c: any) => {
         .limit(1)
     )[0];
 
-    const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
+    const { currentUser, isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
     if (!isSuperAdmin && tenantAdminId && client.createdBy && client.createdBy !== tenantAdminId) {
       return c.json({ message: "Unauthorized access to client" }, HttpStatusCodes.FORBIDDEN);
     }
@@ -329,7 +329,7 @@ export const recordSubmission: Handler = async (c: any) => {
     }
 
     // Resolve submitter name for real-time dispatch
-    let submitterName: string | null = user?.name || null;
+    let submitterName: string | null = currentUser?.name || null;
     const targetUserId = managerId || currentUserId;
     if (targetUserId) {
       if (!submitterName || targetUserId !== currentUserId) {
@@ -361,14 +361,14 @@ export const recordSubmission: Handler = async (c: any) => {
       submitterName = "System Staff";
     }
 
-    const targetAdminId = client.createdBy || tenantAdminId || (user?.adminId ? Number(user.adminId) : null);
+    const targetAdminId = client.createdBy || tenantAdminId || (currentUser?.adminId ? Number(currentUser.adminId) : null);
 
     // Broadcast realtime event for immediate UI updates without reload
     broadcast(
       "submission:updated",
       {
         id: result?.id,
-        clientId,
+        clientId: Number(clientId),
         taxPeriod,
         submissionId: submissionId.trim(),
         status,
@@ -379,7 +379,7 @@ export const recordSubmission: Handler = async (c: any) => {
       },
       {
         auth: true,
-        rooms: targetAdminId ? [`tenant:${targetAdminId}`] : []
+        all: true
       }
     );
 
@@ -387,8 +387,8 @@ export const recordSubmission: Handler = async (c: any) => {
     // Use client.createdBy as the authoritative adminId for gateway lookup.
     // Fall back to the authenticated user's tenant admin. Never fall back to 1.
     const adminId: number | null = client.createdBy
-      || (user?.adminId ? Number(user.adminId) : null)
-      || (user?.id ? Number(user.id) : null)
+      || (currentUser?.adminId ? Number(currentUser.adminId) : null)
+      || (currentUser?.id ? Number(currentUser.id) : null)
       || null;
 
     if (adminId) {
@@ -400,7 +400,7 @@ export const recordSubmission: Handler = async (c: any) => {
         taxPeriod,
         submissionId: submissionId.trim(),
         adminId,
-        sentByUserId: user?.id ?? null
+        sentByUserId: currentUser?.id ?? null
       }).catch((smsErr) => {
         console.warn("[Submission Auto-SMS Warning]:", smsErr?.message || smsErr);
       });
@@ -448,11 +448,12 @@ export const deleteSubmission: Handler = async (c: any) => {
       "submission:deleted",
       {
         id,
-        clientId: existing.clientId,
+        clientId: Number(existing.clientId),
         taxPeriod: existing.taxPeriod
       },
       {
-        auth: true
+        auth: true,
+        all: true
       }
     );
 
@@ -482,7 +483,8 @@ export const batchDeleteSubmissions: Handler = async (c: any) => {
         ids
       },
       {
-        auth: true
+        auth: true,
+        all: true
       }
     );
 

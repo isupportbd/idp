@@ -1255,10 +1255,10 @@ onMounted(async () => {
 
   pulse.channel("auth").listen("submission:updated", (data: any) => {
     if (!data) return;
-    if (data.taxPeriod && !submissionMonths.value.includes(data.taxPeriod) && data.clientId === selectedClientId.value) {
+    if (data.taxPeriod && !submissionMonths.value.includes(data.taxPeriod) && Number(data.clientId) === Number(selectedClientId.value)) {
       submissionMonths.value.push(data.taxPeriod);
     }
-    if (data.clientId === selectedClientId.value) {
+    if (Number(data.clientId) === Number(selectedClientId.value)) {
       submissionsMap.value[data.taxPeriod] = data.submissionId;
       if (data.taxPeriod === selectedMonthYear.value) {
         submissionId.value = data.submissionId || null;
@@ -1268,7 +1268,7 @@ onMounted(async () => {
 
   pulse.channel("auth").listen("submission:deleted", (data: any) => {
     if (!data) return;
-    if (data.clientId === selectedClientId.value) {
+    if (Number(data.clientId) === Number(selectedClientId.value)) {
       delete submissionsMap.value[data.taxPeriod];
       submissionMonths.value = submissionMonths.value.filter((m) => m !== data.taxPeriod);
       if (data.taxPeriod === selectedMonthYear.value) {
