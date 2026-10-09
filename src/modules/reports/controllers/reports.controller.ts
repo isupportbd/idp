@@ -131,9 +131,12 @@ export const getSalesReport = async (c: Context) => {
         WHERE r.item_id = p.item_id
           AND r.client_id = p.client_id
           AND r.status = 'Active'
-          AND (r.activation_date <= GREATEST(p.be_date, TO_DATE(p.month || '-01', 'YYYY-MM-DD')) OR r.activation_date <= ${reportMonthEndStr})
         ORDER BY 
-          CASE WHEN r.activation_date <= GREATEST(p.be_date, TO_DATE(p.month || '-01', 'YYYY-MM-DD')) THEN 0 ELSE 1 END ASC,
+          CASE 
+            WHEN r.activation_date <= GREATEST(p.be_date, TO_DATE(p.month || '-01', 'YYYY-MM-DD')) THEN 0 
+            WHEN r.activation_date <= ${reportMonthEndStr} THEN 1
+            ELSE 2 
+          END ASC,
           r.activation_date DESC
         LIMIT 1
       ) sr ON true
@@ -324,6 +327,9 @@ export const getStatementReport = async (c: Context) => {
       const monthRates = itemRates.filter(
         (r) => parseDate(r.activationDate) > mStartTimestamp && parseDate(r.activationDate) <= mEndTimestamp
       );
+      if (!baseRate && monthRates.length === 0 && itemRates.length > 0) {
+        baseRate = itemRates[0];
+      }
 
       const ranges: { startDate: string; endDate: string; rate: any }[] = [];
 

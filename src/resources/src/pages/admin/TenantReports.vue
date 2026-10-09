@@ -1276,11 +1276,35 @@ onMounted(async () => {
       }
     }
   });
+
+  pulse.channel("auth").listen("sales_rate:created", (data: any) => {
+    if (!data) return;
+    if (selectedClientId.value && (!data.clientId || Number(data.clientId) === Number(selectedClientId.value))) {
+      fetchReportsData();
+    }
+  });
+
+  pulse.channel("auth").listen("sales_rate:updated", (data: any) => {
+    if (!data) return;
+    if (selectedClientId.value && (!data.clientId || Number(data.clientId) === Number(selectedClientId.value))) {
+      fetchReportsData();
+    }
+  });
+
+  pulse.channel("auth").listen("sales_rate:deleted", (data: any) => {
+    if (!data) return;
+    if (selectedClientId.value && (!data.clientId || Number(data.clientId) === Number(selectedClientId.value))) {
+      fetchReportsData();
+    }
+  });
 });
 
 onUnmounted(() => {
   pulse.channel("auth").stopListening("submission:updated");
   pulse.channel("auth").stopListening("submission:deleted");
+  pulse.channel("auth").stopListening("sales_rate:created");
+  pulse.channel("auth").stopListening("sales_rate:updated");
+  pulse.channel("auth").stopListening("sales_rate:deleted");
 });
 </script>
 

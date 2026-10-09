@@ -1,6 +1,6 @@
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
-import { db, HttpStatusCodes } from "@/framework/facade.js";
+import { broadcast, db, HttpStatusCodes } from "@/framework/facade.js";
 import { salesRates } from "@/modules/clients/database/models/sales_rates.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
@@ -177,6 +177,22 @@ export const createSalesRate: Handler = async (c: any) => {
       })
       .returning();
 
+    broadcast(
+      "sales_rate:created",
+      {
+        id: newRate.id,
+        clientId: newRate.clientId,
+        itemId: newRate.itemId,
+        salesRate: newRate.salesRate,
+        vatRate: newRate.vatRate,
+        vatableValue: newRate.vatableValue,
+        additionPercent: newRate.additionPercent,
+        activationDate: newRate.activationDate,
+        status: newRate.status
+      },
+      { auth: true, all: true }
+    );
+
     return c.json(
       {
         success: true,
@@ -222,6 +238,22 @@ export const updateSalesRate: Handler = async (c: any) => {
     if (!updated) {
       return c.json({ success: false, message: "Sales rate not found" }, HttpStatusCodes.NOT_FOUND);
     }
+
+    broadcast(
+      "sales_rate:updated",
+      {
+        id: updated.id,
+        clientId: updated.clientId,
+        itemId: updated.itemId,
+        salesRate: updated.salesRate,
+        vatRate: updated.vatRate,
+        vatableValue: updated.vatableValue,
+        additionPercent: updated.additionPercent,
+        activationDate: updated.activationDate,
+        status: updated.status
+      },
+      { auth: true, all: true }
+    );
 
     return c.json({
       success: true,
@@ -272,6 +304,16 @@ export const deleteSalesRate: Handler = async (c: any) => {
           .where(eq(salesRates.id, remainingFrozen[0].id));
       }
     }
+
+    broadcast(
+      "sales_rate:deleted",
+      {
+        id,
+        clientId: rate.clientId,
+        itemId: rate.itemId
+      },
+      { auth: true, all: true }
+    );
 
     return c.json({
       success: true,

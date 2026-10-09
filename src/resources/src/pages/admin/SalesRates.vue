@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
 import SearchInput from "@/components/common/SearchInput.vue";
 import IdpSelect from "@/components/common/IdpSelect.vue";
 import { usePagination } from "@/composables/usePagination";
 import { can } from "@/composables/useAuth";
+import { pulse } from "@/plugins/pulse";
 
 const router = useRouter();
 const route = useRoute();
@@ -564,6 +565,16 @@ const viewRateHistory = async (r: SalesRate) => {
 onMounted(async () => {
   await fetchMasterData();
   await fetchRates();
+
+  pulse.channel("auth").listen("sales_rate:created", () => fetchRates());
+  pulse.channel("auth").listen("sales_rate:updated", () => fetchRates());
+  pulse.channel("auth").listen("sales_rate:deleted", () => fetchRates());
+});
+
+onUnmounted(() => {
+  pulse.channel("auth").stopListening("sales_rate:created");
+  pulse.channel("auth").stopListening("sales_rate:updated");
+  pulse.channel("auth").stopListening("sales_rate:deleted");
 });
 </script>
 
