@@ -38,6 +38,21 @@ const roleFilter = ref<string>("all");
 const statusFilter = ref<string>("all");
 const isLoading = ref(false);
 
+const hasActiveFilters = computed(() => {
+  return (
+    searchQuery.value.trim() !== "" ||
+    roleFilter.value !== "all" ||
+    statusFilter.value !== "all"
+  );
+});
+
+const clearAllFilters = () => {
+  searchQuery.value = "";
+  roleFilter.value = "all";
+  statusFilter.value = "all";
+  currentPage.value = 1;
+};
+
 // Modal state (password reset only; create/edit use the full UserForm page)
 const showPasswordModal = ref(false);
 const passwordForm = ref({ userId: 0, userName: "", newPassword: "" });
@@ -306,6 +321,18 @@ onMounted(async () => {
             <option value="inactive">Inactive Only</option>
           </select>
         </div>
+
+        <!-- Clear Filter Icon Button -->
+        <button
+          v-if="hasActiveFilters"
+          type="button"
+          class="btn btn-outline-danger btn-sm px-2 d-flex align-items-center justify-content-center"
+          title="Clear all filters"
+          style="height: 38px;"
+          @click="clearAllFilters"
+        >
+          <i class="bi bi-x-lg"></i>
+        </button>
       </div>
 
       <!-- Right: Rows per page -->

@@ -54,6 +54,21 @@ const searchQuery = ref("");
 const selectedClient = ref("");
 const selectedReference = ref("");
 
+const hasActiveFilters = computed(() => {
+  return (
+    searchQuery.value.trim() !== "" ||
+    selectedReference.value !== "" ||
+    selectedClient.value !== ""
+  );
+});
+
+const clearAllFilters = () => {
+  searchQuery.value = "";
+  selectedReference.value = "";
+  selectedClient.value = "";
+  currentPage.value = 1;
+};
+
 const getLastMonth = () => {
   const d = new Date();
   d.setDate(1);
@@ -284,6 +299,18 @@ onMounted(async () => {
             </option>
           </select>
         </div>
+
+        <!-- Clear Filter Icon Button -->
+        <button
+          v-if="hasActiveFilters"
+          type="button"
+          class="btn btn-outline-danger btn-sm px-2 d-flex align-items-center justify-content-center"
+          title="Clear all filters"
+          style="height: 38px;"
+          @click="clearAllFilters"
+        >
+          <i class="bi bi-x-lg"></i>
+        </button>
 
         <!-- Right: Month Navigator -->
         <div style="width: 210px;">

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
 import ConfirmModal from "@/components/common/ConfirmModal.vue";
 import { useClientsApi, type ClientItem, type AssignableUser } from "@/composables/useClientsApi";
@@ -102,6 +102,41 @@ const saveFilters = () => {
     }
   } catch {}
 };
+
+const hasActiveFilters = computed(() => {
+  return (
+    searchQuery.value.trim() !== "" ||
+    selectedTypeFilter.value !== "all" ||
+    selectedReferenceFilter.value !== "all" ||
+    selectedServiceTypeFilter.value !== "all" ||
+    selectedStatusFilter.value !== "all"
+  );
+});
+
+const clearAllFilters = () => {
+  searchQuery.value = "";
+  selectedTypeFilter.value = "all";
+  selectedReferenceFilter.value = "all";
+  selectedServiceTypeFilter.value = "all";
+  selectedStatusFilter.value = "all";
+  currentPage.value = 1;
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.removeItem(CLIENTS_FILTER_KEY);
+    }
+  } catch {}
+};
+
+onBeforeRouteLeave((to) => {
+  // If navigating away from clients module (e.g. to Dashboard or other features), clear saved filters
+  if (!to.path.startsWith("/admin/clients")) {
+    try {
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        sessionStorage.removeItem(CLIENTS_FILTER_KEY);
+      }
+    } catch {}
+  }
+});
 
 const { currentPage, itemsPerPage, totalPages } = usePagination("clients", {
   defaultPerPage: 10,
@@ -287,6 +322,17 @@ const handleConfirmDelete = async () => {
           :options="statusOptions"
           min-width="130px"
         />
+
+        <!-- 5. Compact Clear Filter Icon Button -->
+        <button
+          v-if="hasActiveFilters"
+          type="button"
+          class="btn btn-outline-danger btn-sm px-2 d-flex align-items-center justify-content-center clear-filter-btn"
+          title="Clear all filters"
+          @click="clearAllFilters"
+        >
+          <i class="bi bi-x-lg"></i>
+        </button>
       </div>
 
       <!-- Counter -->
@@ -839,5 +885,13 @@ const handleConfirmDelete = async () => {
 .upload-dropzone:hover {
   border-color: #0d6efd !important;
   background-color: rgba(13, 110, 253, 0.05) !important;
+}
+
+.clear-filter-btn {
+  height: 34px;
+  min-height: 34px;
+  max-height: 34px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
 }
 </style>

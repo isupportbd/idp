@@ -70,6 +70,25 @@ const managerOptions = computed(() => [
 ]);
 const statusFilter = ref<"all" | "submitted" | "pending" | "late_submitted">("all");
 
+const hasActiveFilters = computed(() => {
+  return (
+    searchQuery.value.trim() !== "" ||
+    statusFilter.value !== "all" ||
+    selectedCustomerTypeId.value !== "all" ||
+    selectedReferenceId.value !== "all" ||
+    selectedManagerId.value !== "all"
+  );
+});
+
+const clearAllFilters = () => {
+  searchQuery.value = "";
+  statusFilter.value = "all";
+  selectedCustomerTypeId.value = "all";
+  selectedReferenceId.value = "all";
+  selectedManagerId.value = "all";
+  currentPage.value = 1;
+};
+
 // Multi-Selection State
 const selectedIds = ref<number[]>([]);
 
@@ -489,6 +508,17 @@ const printReport = () => {
         :options="managerOptions"
         min-width="160px"
       />
+
+      <!-- Clear Filter Icon Button -->
+      <button
+        v-if="hasActiveFilters"
+        type="button"
+        class="btn btn-outline-danger btn-sm px-2 d-flex align-items-center justify-content-center clear-filter-btn"
+        title="Clear all filters"
+        @click="clearAllFilters"
+      >
+        <i class="bi bi-x-lg"></i>
+      </button>
 
       <!-- 5. Month Navigator Component (Right Aligned) -->
       <div class="month-nav-container ms-auto" style="width: 180px; flex-shrink: 0;">
@@ -1034,5 +1064,13 @@ const printReport = () => {
 .idp-modal-input:focus {
   border-color: #0d6efd !important;
   box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+}
+
+.clear-filter-btn {
+  height: 38px;
+  min-height: 38px;
+  max-height: 38px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
 }
 </style>

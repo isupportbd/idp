@@ -49,6 +49,23 @@ const referenceOptions = computed(() => [
   ...references.value.map((r) => ({ value: r.name, label: r.name }))
 ]);
 
+const hasActiveFilters = computed(() => {
+  return (
+    searchQuery.value.trim() !== "" ||
+    statusFilter.value !== "all" ||
+    selectedClientType.value !== "all" ||
+    selectedReference.value !== "all"
+  );
+});
+
+const clearAllFilters = () => {
+  searchQuery.value = "";
+  statusFilter.value = "all";
+  selectedClientType.value = "all";
+  selectedReference.value = "all";
+  currentPage.value = 1;
+};
+
 // Clipboard copy state
 const copiedField = ref<string | null>(null);
 
@@ -488,6 +505,17 @@ onUnmounted(() => {
           :options="referenceOptions"
           min-width="180px"
         />
+
+        <!-- Clear Filter Icon Button -->
+        <button
+          v-if="hasActiveFilters"
+          type="button"
+          class="btn btn-outline-danger btn-sm px-2 d-flex align-items-center justify-content-center clear-filter-btn"
+          title="Clear all filters"
+          @click="clearAllFilters"
+        >
+          <i class="bi bi-x-lg"></i>
+        </button>
       </div>
 
       <!-- Right: Month Navigator (Equal 38px Height) -->
@@ -856,5 +884,12 @@ onUnmounted(() => {
 .idp-input:focus {
   border-color: #3b8eed !important;
   box-shadow: 0 0 0 0.15rem rgba(59, 142, 237, 0.25) !important;
+}
+.clear-filter-btn {
+  height: 38px;
+  min-height: 38px;
+  max-height: 38px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
 }
 </style>

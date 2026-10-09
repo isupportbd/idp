@@ -62,6 +62,25 @@ const selectedReferenceId = ref<number | "all">("all");
 const selectedStatusFilter = ref<string>("all");
 const selectedPaymentMethod = ref<string>("all");
 
+const hasActiveFilters = computed(() => {
+  return (
+    searchQuery.value.trim() !== "" ||
+    selectedCustomerTypeId.value !== "all" ||
+    selectedReferenceId.value !== "all" ||
+    selectedStatusFilter.value !== "all" ||
+    selectedPaymentMethod.value !== "all"
+  );
+});
+
+const clearAllFilters = () => {
+  searchQuery.value = "";
+  selectedCustomerTypeId.value = "all";
+  selectedReferenceId.value = "all";
+  selectedStatusFilter.value = "all";
+  selectedPaymentMethod.value = "all";
+  updateUrlParams();
+};
+
 // Update URL parameters when tab, month, or search changes without refreshing
 const updateUrlParams = () => {
   const q: any = { ...route.query };
@@ -518,6 +537,17 @@ const printReport = () => {
           max-width="220px"
           min-width="160px"
         />
+
+        <!-- Clear Filter Icon Button -->
+        <button
+          v-if="hasActiveFilters"
+          type="button"
+          class="btn btn-outline-danger btn-sm px-2 d-flex align-items-center justify-content-center clear-filter-btn"
+          title="Clear search filter"
+          @click="clearAllFilters"
+        >
+          <i class="bi bi-x-lg"></i>
+        </button>
 
         <div class="month-nav-container" style="width: 185px; flex-shrink: 0;">
           <MonthNavigator v-model="selectedMonth" />
@@ -1100,5 +1130,13 @@ const printReport = () => {
 
 .table-custom tbody tr:hover {
   background-color: #242930;
+}
+
+.clear-filter-btn {
+  height: 38px;
+  min-height: 38px;
+  max-height: 38px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
 }
 </style>

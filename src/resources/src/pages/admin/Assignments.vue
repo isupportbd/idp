@@ -48,6 +48,23 @@ const activeFilter = ref<"all" | "assigned" | "shared" | "unassigned">("all");
 const pendingAssignments = ref<Record<number, number[]>>({});
 const savingIds = ref<Record<number, boolean>>({});
 
+const hasActiveFilters = computed(() => {
+  return (
+    searchQuery.value.trim() !== "" ||
+    selectedTypeFilter.value !== "all" ||
+    selectedReferenceFilter.value !== "all" ||
+    activeFilter.value !== "all"
+  );
+});
+
+const clearAllFilters = () => {
+  searchQuery.value = "";
+  selectedTypeFilter.value = "all";
+  selectedReferenceFilter.value = "all";
+  activeFilter.value = "all";
+  currentPage.value = 1;
+};
+
 const loadData = async () => {
   try {
     await Promise.all([
@@ -350,6 +367,17 @@ watch([selectedTypeFilter, selectedReferenceFilter, activeFilter, searchQuery, m
             Unassigned
           </button>
         </div>
+
+        <!-- Clear Filters Icon Button -->
+        <button
+          v-if="hasActiveFilters"
+          type="button"
+          class="btn btn-outline-danger btn-sm px-2 d-flex align-items-center justify-content-center clear-filter-btn"
+          title="Clear all filters"
+          @click="clearAllFilters"
+        >
+          <i class="bi bi-x-lg"></i>
+        </button>
       </div>
 
       <!-- Assignments Table with Searchable Multi-Select Dropdown -->
@@ -831,5 +859,13 @@ watch([selectedTypeFilter, selectedReferenceFilter, activeFilter, searchQuery, m
 
 .hover-primary:hover {
   color: #3b8eed !important;
+}
+
+.clear-filter-btn {
+  height: 31px;
+  min-height: 31px;
+  max-height: 31px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
 }
 </style>
