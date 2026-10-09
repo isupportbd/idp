@@ -14,6 +14,7 @@ const route = useRoute();
 const toast = useToast();
 const {
   assignments,
+  assignmentStats,
   assignableUsers,
   loading,
   fetchAssignments,
@@ -65,7 +66,7 @@ onMounted(() => {
 });
 
 watch([activeFilter, searchQuery], () => {
-  loadData();
+  fetchAssignments({ search: searchQuery.value, filter: activeFilter.value }).catch(() => {});
 });
 
 const getClientManagerIds = (client: ClientManagerAssignment): number[] => {
@@ -135,15 +136,7 @@ const sharedClientsList = computed(() => {
   return list;
 });
 
-const stats = computed(() => {
-  const list = assignments.value;
-  return {
-    total: list.length,
-    assigned: list.filter((c) => (c.managerIds || []).length > 0).length,
-    shared: list.filter((c) => (c.managerIds || []).length > 1).length,
-    unassigned: list.filter((c) => !c.managerIds || c.managerIds.length === 0).length
-  };
-});
+const stats = computed(() => assignmentStats.value);
 
 // Pagination State (10 items per page with persistent reload support)
 const filteredAssignmentsCount = computed(() => filteredAssignments.value.length);
@@ -217,7 +210,7 @@ watch([selectedTypeFilter, selectedReferenceFilter, activeFilter, searchQuery, m
           >
             <i class="bi bi-people"></i>
             <span>Customer Assignment</span>
-            <span class="badge bg-dark border border-secondary text-light ms-1">{{ assignments.length }}</span>
+            <span class="badge bg-dark border border-secondary text-light ms-1">{{ stats.total }}</span>
           </button>
         </li>
         <li class="nav-item">

@@ -18,11 +18,16 @@ export const listSubmissions: Handler = async (c: any) => {
     const taxPeriod = getDefaultTaxPeriod(query.month || query.taxPeriod);
     const deadline = getSubmissionDeadline(taxPeriod);
 
-    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+    const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
 
     const clientConditions: any[] = [eq(clients.isActive, true)];
     if (!isSuperAdmin && tenantAdminId) {
       clientConditions.push(eq(clients.createdBy, tenantAdminId));
+    }
+    if (!isSuperAdmin && !isTenantAdmin) {
+      clientConditions.push(
+        sql`${clients.id} IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`
+      );
     }
 
     // 1. Fetch all ACTIVE clients only
@@ -238,13 +243,24 @@ export const recordSubmission: Handler = async (c: any) => {
         .limit(1)
     )[0];
 
-    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+    const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
     if (!isSuperAdmin && tenantAdminId && client.createdBy && client.createdBy !== tenantAdminId) {
       return c.json({ message: "Unauthorized access to client" }, HttpStatusCodes.FORBIDDEN);
     }
+    if (!isSuperAdmin && !isTenantAdmin) {
+      const isAssigned = (
+        await db
+          .select({ id: clientManagers.id })
+          .from(clientManagers)
+          .where(and(eq(clientManagers.clientId, clientId), eq(clientManagers.managerId, userId)))
+          .limit(1)
+      )[0];
+      if (!isAssigned) {
+        return c.json({ message: "Unauthorized: You are not assigned to manage this client" }, HttpStatusCodes.FORBIDDEN);
+      }
+    }
 
-    const user = c.get("auth") || c.get("user") || (c.req as any).user;
-    const currentUserId = user?.id ? Number(user.id) : null;
+    const currentUserId = userId || null;
 
     // Automatically resolve submitter: explicit in payload > logged in user > assigned client manager
     let managerId: number | null = payload.submittedBy ? Number(payload.submittedBy) : currentUserId;
@@ -490,7 +506,20 @@ export const getSingleSubmission: Handler = async (c: any) => {
       return c.json({ message: "Client ID is required", data: null }, HttpStatusCodes.BAD_REQUEST);
     }
 
-    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+    const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
+
+    const subConditions: any[] = [
+      eq(vatSubmissions.clientId, clientId),
+      eq(vatSubmissions.taxPeriod, taxPeriod)
+    ];
+    if (!isSuperAdmin && tenantAdminId) {
+      subConditions.push(eq(clients.createdBy, tenantAdminId));
+    }
+    if (!isSuperAdmin && !isTenantAdmin) {
+      subConditions.push(
+        sql`${vatSubmissions.clientId} IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`
+      );
+    }
 
     const sub = (
       await db
@@ -508,13 +537,7 @@ export const getSingleSubmission: Handler = async (c: any) => {
         .from(vatSubmissions)
         .leftJoin(users, eq(vatSubmissions.submittedBy, users.id))
         .leftJoin(clients, eq(vatSubmissions.clientId, clients.id))
-        .where(
-          and(
-            eq(vatSubmissions.clientId, clientId),
-            eq(vatSubmissions.taxPeriod, taxPeriod),
-            !isSuperAdmin && tenantAdminId ? eq(clients.createdBy, tenantAdminId) : undefined
-          )
-        )
+        .where(and(...subConditions))
         .limit(1)
     )[0];
 

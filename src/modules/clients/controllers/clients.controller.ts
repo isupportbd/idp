@@ -26,25 +26,18 @@ export const listClients: Handler = async (c: any) => {
     const limit = query.limit || 50;
     const offset = (page - 1) * limit;
 
-    const auth = c.get("auth") || c.get("user");
-    let tenantAdminId: number | null = null;
-    let isSuperAdmin = false;
-
-    if (auth?.id) {
-      const currentUser = await db.query.users.findFirst({
-        where: eq(users.id, Number(auth.id)),
-        with: { role: true }
-      });
-      if (currentUser) {
-        isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin" || auth.role === "superadmin";
-        tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
-      }
-    }
+    const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
 
     const conditions: any[] = [];
 
     if (!isSuperAdmin && tenantAdminId) {
       conditions.push(eq(clients.createdBy, tenantAdminId));
+    }
+
+    if (!isSuperAdmin && !isTenantAdmin) {
+      conditions.push(
+        sql`${clients.id} IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`
+      );
     }
 
     if (query.search && query.search.trim()) {
@@ -175,24 +168,16 @@ export const listClients: Handler = async (c: any) => {
 export const getClientById: Handler = async (c: any) => {
   try {
     const { id } = c.req.valid("param");
-    const auth = c.get("auth") || c.get("user");
-    let tenantAdminId: number | null = null;
-    let isSuperAdmin = false;
-
-    if (auth?.id) {
-      const currentUser = await db.query.users.findFirst({
-        where: eq(users.id, Number(auth.id)),
-        with: { role: true }
-      });
-      if (currentUser) {
-        isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin" || auth.role === "superadmin";
-        tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
-      }
-    }
+    const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
 
     const whereConditions = [eq(clients.id, id)];
     if (!isSuperAdmin && tenantAdminId) {
       whereConditions.push(eq(clients.createdBy, tenantAdminId));
+    }
+    if (!isSuperAdmin && !isTenantAdmin) {
+      whereConditions.push(
+        sql`${clients.id} IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`
+      );
     }
 
     const row = (
@@ -439,24 +424,16 @@ export const updateClient: Handler = async (c: any) => {
   try {
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
-    const auth = c.get("auth") || c.get("user");
-    let tenantAdminId: number | null = null;
-    let isSuperAdmin = false;
-
-    if (auth?.id) {
-      const currentUser = await db.query.users.findFirst({
-        where: eq(users.id, Number(auth.id)),
-        with: { role: true }
-      });
-      if (currentUser) {
-        isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin" || auth.role === "superadmin";
-        tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
-      }
-    }
+    const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
 
     const whereConditions = [eq(clients.id, id)];
     if (!isSuperAdmin && tenantAdminId) {
       whereConditions.push(eq(clients.createdBy, tenantAdminId));
+    }
+    if (!isSuperAdmin && !isTenantAdmin) {
+      whereConditions.push(
+        sql`${clients.id} IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`
+      );
     }
 
     const existing = (await db.select().from(clients).where(and(...whereConditions)).limit(1))[0];
@@ -506,16 +483,18 @@ export const updateClient: Handler = async (c: any) => {
         .returning()
     )[0];
 
-    // Update manager assignments if passed
-    if (body.managerIds !== undefined && Array.isArray(body.managerIds)) {
-      await db.delete(clientManagers).where(eq(clientManagers.clientId, id));
-      if (body.managerIds.length > 0) {
-        await db.insert(clientManagers).values(
-          body.managerIds.map((mgrId: number) => ({
-            clientId: id,
-            managerId: mgrId
-          }))
-        );
+    // Update manager assignments if passed (tenant admin only)
+    if (isTenantAdmin || isSuperAdmin) {
+      if (body.managerIds !== undefined && Array.isArray(body.managerIds)) {
+        await db.delete(clientManagers).where(eq(clientManagers.clientId, id));
+        if (body.managerIds.length > 0) {
+          await db.insert(clientManagers).values(
+            body.managerIds.map((mgrId: number) => ({
+              clientId: id,
+              managerId: mgrId
+            }))
+          );
+        }
       }
     }
 
@@ -851,7 +830,7 @@ export const listAssignments: Handler = async (c: any) => {
       });
     }
 
-    let result = allClients.map((cl) => {
+    const allAssignments = allClients.map((cl) => {
       const mgrs = managerMap[cl.id] || [];
       return {
         ...cl,
@@ -859,6 +838,15 @@ export const listAssignments: Handler = async (c: any) => {
         managers: mgrs
       };
     });
+
+    const stats = {
+      total: allAssignments.length,
+      assigned: allAssignments.filter((r) => r.managerIds.length > 0).length,
+      shared: allAssignments.filter((r) => r.managerIds.length > 1).length,
+      unassigned: allAssignments.filter((r) => r.managerIds.length === 0).length
+    };
+
+    let result = allAssignments;
 
     if (query.search && query.search.trim()) {
       const term = query.search.trim().toLowerCase();
@@ -878,7 +866,7 @@ export const listAssignments: Handler = async (c: any) => {
       result = result.filter((r) => r.managerIds.length === 0);
     }
 
-    return c.json({ message: "Assignments fetched", data: result }, HttpStatusCodes.OK);
+    return c.json({ message: "Assignments fetched", data: result, stats }, HttpStatusCodes.OK);
   } catch (err: any) {
     return c.json({ message: err.message || "Failed to list assignments" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
@@ -1177,6 +1165,21 @@ export const getClientPurchasedItems: Handler = async (c: any) => {
     const clientId = Number(c.req.param("id"));
     if (!clientId || isNaN(clientId)) {
       return c.json({ message: "Invalid client ID", data: [] }, HttpStatusCodes.BAD_REQUEST);
+    }
+
+    const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
+    const existingClient = (await db.select({ id: clients.id, createdBy: clients.createdBy }).from(clients).where(eq(clients.id, clientId)).limit(1))[0];
+    if (!existingClient) {
+      return c.json({ message: "Client not found", data: [] }, HttpStatusCodes.NOT_FOUND);
+    }
+    if (!isSuperAdmin && tenantAdminId && existingClient.createdBy !== tenantAdminId) {
+      return c.json({ message: "Unauthorized access to client", data: [] }, HttpStatusCodes.FORBIDDEN);
+    }
+    if (!isSuperAdmin && !isTenantAdmin) {
+      const isAssigned = (await db.select({ id: clientManagers.id }).from(clientManagers).where(and(eq(clientManagers.clientId, clientId), eq(clientManagers.managerId, userId))).limit(1))[0];
+      if (!isAssigned) {
+        return c.json({ message: "Unauthorized: You are not assigned to this client", data: [] }, HttpStatusCodes.FORBIDDEN);
+      }
     }
 
     const pQuery = await db

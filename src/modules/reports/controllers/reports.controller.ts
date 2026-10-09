@@ -4,6 +4,7 @@ import { resolveTenantContext } from "@/framework/facade.js";
 import { purchases } from "@/modules/clients/database/models/purchases.js";
 import { salesRates } from "@/modules/clients/database/models/sales_rates.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
+import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
 import { unitConversions } from "@/modules/superadmin/database/models/unit_conversions.js";
 import { vatNotes } from "@/modules/superadmin/database/models/vat_notes.js";
@@ -17,11 +18,15 @@ export const getMonthlySummary = async (c: Context) => {
       return c.json({ success: false, message: "month is required" }, 400);
     }
 
-    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+    const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
 
-    const tenantFilter = !isSuperAdmin && tenantAdminId
+    let tenantFilter = !isSuperAdmin && tenantAdminId
       ? sql`AND c.created_by = ${tenantAdminId} AND p.admin_id = ${tenantAdminId}`
       : sql``;
+
+    if (!isSuperAdmin && !isTenantAdmin) {
+      tenantFilter = sql`${tenantFilter} AND c.id IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`;
+    }
 
     const rawSql = sql`
       SELECT 
@@ -65,7 +70,7 @@ export const getSalesReport = async (c: Context) => {
       return c.json({ success: false, message: "clientId and month are required" }, 400);
     }
 
-    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+    const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
     const parsedClientId = parseInt(clientId);
 
     // Verify client belongs to current tenant
@@ -85,6 +90,19 @@ export const getSalesReport = async (c: Context) => {
 
       if (!client) {
         return c.json({ success: false, message: "Client not found or unauthorized access" }, 403);
+      }
+    }
+
+    if (!isSuperAdmin && !isTenantAdmin) {
+      const isAssigned = (
+        await db
+          .select({ id: clientManagers.id })
+          .from(clientManagers)
+          .where(and(eq(clientManagers.clientId, parsedClientId), eq(clientManagers.managerId, userId)))
+          .limit(1)
+      )[0];
+      if (!isAssigned) {
+        return c.json({ success: false, message: "Unauthorized: You are not assigned to this client" }, 403);
       }
     }
 
@@ -195,7 +213,7 @@ export const getStatementReport = async (c: Context) => {
       return c.json({ success: false, message: "clientId and month are required" }, 400);
     }
 
-    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+    const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
     const parsedClientId = parseInt(clientId);
 
     // Verify client belongs to current tenant
@@ -215,6 +233,19 @@ export const getStatementReport = async (c: Context) => {
 
       if (!client) {
         return c.json({ success: false, message: "Client not found or unauthorized access" }, 403);
+      }
+    }
+
+    if (!isSuperAdmin && !isTenantAdmin) {
+      const isAssigned = (
+        await db
+          .select({ id: clientManagers.id })
+          .from(clientManagers)
+          .where(and(eq(clientManagers.clientId, parsedClientId), eq(clientManagers.managerId, userId)))
+          .limit(1)
+      )[0];
+      if (!isAssigned) {
+        return c.json({ success: false, message: "Unauthorized: You are not assigned to this client" }, 403);
       }
     }
 

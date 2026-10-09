@@ -2,6 +2,7 @@ import { describe, expect, it, beforeAll, afterAll } from "bun:test";
 import { initDatabase } from "@/framework/database/connection.js";
 import { db, jwt } from "@/framework/facade.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
+import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
 import { vatSubmissions } from "@/modules/clients/database/models/vat_submissions.js";
 import { users } from "@/modules/auth/database/models/user.js";
 import { and, eq } from "drizzle-orm";
@@ -25,8 +26,10 @@ describe("Activity Filter Module Integration Tests", () => {
 
     // Ensure user
     const existingUser = (await db.select().from(users).limit(1))[0];
+    let tenantAdminId = 1;
     if (existingUser) {
       testUserId = existingUser.id;
+      tenantAdminId = existingUser.adminId ? Number(existingUser.adminId) : existingUser.id;
     } else {
       const u = (
         await db
@@ -39,6 +42,7 @@ describe("Activity Filter Module Integration Tests", () => {
           .returning()
       )[0];
       testUserId = u.id;
+      tenantAdminId = u.id;
     }
 
     // Simulate an authenticated request for the controller (the real route uses authMiddleware)
@@ -59,7 +63,8 @@ describe("Activity Filter Module Integration Tests", () => {
         .values({
           companyName: `Activity Test Org 1 ${Date.now()}`,
           binNumber: `BIN-${Date.now()}-1`,
-          isActive: true
+          isActive: true,
+          createdBy: tenantAdminId
         })
         .returning()
     )[0];
@@ -72,11 +77,17 @@ describe("Activity Filter Module Integration Tests", () => {
         .values({
           companyName: `Activity Test Org 2 ${Date.now()}`,
           binNumber: `BIN-${Date.now()}-2`,
-          isActive: true
+          isActive: true,
+          createdBy: tenantAdminId
         })
         .returning()
     )[0];
     testClientId2 = c2.id;
+
+    await db.insert(clientManagers).values([
+      { clientId: testClientId1, managerId: testUserId },
+      { clientId: testClientId2, managerId: testUserId }
+    ]);
 
     // Record submission for client 1
     await db.insert(vatSubmissions).values({
@@ -92,9 +103,11 @@ describe("Activity Filter Module Integration Tests", () => {
     // Cleanup
     if (testClientId1) {
       await db.delete(vatSubmissions).where(eq(vatSubmissions.clientId, testClientId1));
+      await db.delete(clientManagers).where(eq(clientManagers.clientId, testClientId1));
       await db.delete(clients).where(eq(clients.id, testClientId1));
     }
     if (testClientId2) {
+      await db.delete(clientManagers).where(eq(clientManagers.clientId, testClientId2));
       await db.delete(clients).where(eq(clients.id, testClientId2));
     }
   });
@@ -109,8 +122,9 @@ describe("Activity Filter Module Integration Tests", () => {
   it("rejects superadmin on the real route (tenant-only API)", async () => {
     const publicApp = new OpenAPIHono();
     publicApp.route("/api/activity-filter", activityFilterRouter);
+    const sa = (await db.select().from(users).where(eq(users.email, "isupportbd.info@gmail.com")).limit(1))[0];
     const { token } = await jwt.generateToken(
-      { id: testUserId, email: "sa@test.com", adminId: null, roleId: null, role: "superadmin" },
+      { id: sa ? sa.id : 1, email: "sa@test.com", adminId: null, roleId: sa ? sa.roleId : 1, role: "superadmin" },
       "access"
     );
     const res = await publicApp.request(`/api/activity-filter?month=${testMonth}`, {

@@ -35,19 +35,24 @@ const filteredManagers = computed(() => {
 });
 
 const selectedUsers = computed(() => {
-  return props.managers.filter((m) => props.selected.includes(m.id));
+  const selectedNum = (props.selected || []).map(Number);
+  return props.managers.filter((m) => selectedNum.includes(Number(m.id)));
 });
 
-const isSelected = (id: number) => props.selected.includes(id);
+const isSelected = (id: number) => {
+  const selectedNum = (props.selected || []).map(Number);
+  return selectedNum.includes(Number(id));
+};
 
 const toggleUser = (id: number) => {
   if (props.disabled) return;
-  const current = [...props.selected];
-  const idx = current.indexOf(id);
+  const numId = Number(id);
+  const current = (props.selected || []).map(Number);
+  const idx = current.indexOf(numId);
   if (idx > -1) {
     current.splice(idx, 1);
   } else {
-    current.push(id);
+    current.push(numId);
   }
   emit("update:selected", current);
 };
@@ -56,7 +61,7 @@ const selectAll = () => {
   if (props.disabled) return;
   emit(
     "update:selected",
-    props.managers.map((m) => m.id)
+    props.managers.map((m) => Number(m.id))
   );
 };
 
@@ -68,12 +73,15 @@ const clearAll = () => {
 // Summary label text for single-line trigger
 const labelText = computed(() => {
   if (selectedUsers.value.length === 0) {
+    if ((props.selected || []).length > 0) {
+      return `${props.selected.length} user${props.selected.length > 1 ? "s" : ""} assigned`;
+    }
     return props.placeholder;
   }
   if (selectedUsers.value.length === 1) {
     return selectedUsers.value[0].name;
   }
-  return `${selectedUsers.value.length} managers assigned`;
+  return `${selectedUsers.value.length} users assigned`;
 });
 
 // Outside click listener

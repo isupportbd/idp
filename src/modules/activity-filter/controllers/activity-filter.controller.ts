@@ -16,7 +16,17 @@ export const getActivityMatrix: Handler = async (c: any) => {
   try {
     const query = c.req.valid("query");
     const taxPeriod = getDefaultTaxPeriod(query.month || query.taxPeriod);
-    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+    const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
+
+    const clientConditions: any[] = [eq(clients.isActive, true)];
+    if (!isSuperAdmin && tenantAdminId) {
+      clientConditions.push(eq(clients.createdBy, tenantAdminId));
+    }
+    if (!isSuperAdmin && !isTenantAdmin) {
+      clientConditions.push(
+        sql`${clients.id} IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`
+      );
+    }
 
     const auth = c.get("auth") || c.get("user");
 
@@ -44,14 +54,7 @@ export const getActivityMatrix: Handler = async (c: any) => {
       .from(clients)
       .leftJoin(customerTypes, eq(clients.customerTypeId, customerTypes.id))
       .leftJoin(clientReferences, eq(clients.referenceId, clientReferences.id))
-      .where(
-        isSuperAdmin
-          ? eq(clients.isActive, true)
-          : and(
-              eq(clients.isActive, true),
-              eq(clients.createdBy, tenantAdminId)
-            )
-      )
+      .where(and(...clientConditions))
       .orderBy(asc(clients.companyName));
 
     const activeClientIds = activeClients.map((cl) => cl.id);

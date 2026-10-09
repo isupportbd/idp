@@ -49,6 +49,12 @@ export interface AssignableUser {
 export function useClientsApi() {
   const clients = ref<ClientItem[]>([]);
   const assignments = ref<ClientManagerAssignment[]>([]);
+  const assignmentStats = ref<{ total: number; assigned: number; shared: number; unassigned: number }>({
+    total: 0,
+    assigned: 0,
+    shared: 0,
+    unassigned: 0
+  });
   const assignableUsers = ref<AssignableUser[]>([]);
   const totalCount = ref(0);
   const loading = ref(false);
@@ -177,7 +183,10 @@ export function useClientsApi() {
     try {
       const res = await axios.get("/api/clients/assignments", { params });
       assignments.value = res.data?.data || [];
-      return assignments.value;
+      if (res.data?.stats) {
+        assignmentStats.value = res.data.stats;
+      }
+      return res.data;
     } catch (err: any) {
       error.value = err.response?.data?.message || "Failed to fetch assignments";
       throw err;
@@ -214,6 +223,7 @@ export function useClientsApi() {
   return {
     clients,
     assignments,
+    assignmentStats,
     assignableUsers,
     totalCount,
     loading,
