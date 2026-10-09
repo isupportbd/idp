@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute, useRouter, onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
