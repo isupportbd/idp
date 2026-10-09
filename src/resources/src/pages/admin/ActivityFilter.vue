@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
+import IdpSelect from "@/components/common/IdpSelect.vue";
 import { useActivityFilterApi, type ActivityClient } from "@/composables/useActivityFilterApi";
 import { usePagination } from "@/composables/usePagination";
 import { can } from "@/composables/useAuth";
@@ -37,6 +38,16 @@ const statusFilter = ref<
 >("all");
 const selectedClientType = ref<string>("all");
 const selectedReference = ref<string>("all");
+
+const clientTypeOptions = computed(() => [
+  { value: "all", label: `All Types (${clientTypes.value.length})` },
+  ...clientTypes.value.map((t) => ({ value: t.name, label: t.name }))
+]);
+
+const referenceOptions = computed(() => [
+  { value: "all", label: `All References (${references.value.length})` },
+  ...references.value.map((r) => ({ value: r.name, label: r.name }))
+]);
 
 // Clipboard copy state
 const copiedField = ref<string | null>(null);
@@ -465,32 +476,18 @@ onUnmounted(() => {
         />
 
         <!-- 1. Client Type Dropdown Filter -->
-        <div style="min-width: 170px;">
-          <select
-            v-model="selectedClientType"
-            class="form-select form-select-sm idp-input"
-            style="height: 38px;"
-          >
-            <option value="all">All Types ({{ clientTypes.length }})</option>
-            <option v-for="typeObj in clientTypes" :key="typeObj.id" :value="typeObj.name">
-              {{ typeObj.name }}
-            </option>
-          </select>
-        </div>
+        <IdpSelect
+          v-model="selectedClientType"
+          :options="clientTypeOptions"
+          min-width="170px"
+        />
 
         <!-- 2. Reference Dropdown Filter -->
-        <div style="min-width: 180px;">
-          <select
-            v-model="selectedReference"
-            class="form-select form-select-sm idp-input"
-            style="height: 38px;"
-          >
-            <option value="all">All References ({{ references.length }})</option>
-            <option v-for="refObj in references" :key="refObj.id" :value="refObj.name">
-              {{ refObj.name }}
-            </option>
-          </select>
-        </div>
+        <IdpSelect
+          v-model="selectedReference"
+          :options="referenceOptions"
+          min-width="180px"
+        />
       </div>
 
       <!-- Right: Month Navigator (Equal 38px Height) -->

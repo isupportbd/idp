@@ -10,6 +10,7 @@ import { useToast } from "@/composables/useToast";
 import { can } from "@/composables/useAuth";
 import SearchInput from "@/components/common/SearchInput.vue";
 import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
+import IdpSelect from "@/components/common/IdpSelect.vue";
 import { usePagination } from "@/composables/usePagination";
 import { pulse } from "@/plugins/pulse";
 
@@ -52,6 +53,21 @@ const searchQuery = ref("");
 const selectedCustomerTypeId = ref<number | "all">("all");
 const selectedReferenceId = ref<number | "all">("all");
 const selectedManagerId = ref<number | "all">("all");
+
+const customerTypeOptions = computed(() => [
+  { value: "all", label: `All Customer Types (${customerTypes.value.length})` },
+  ...customerTypes.value.map((t) => ({ value: t.id, label: t.typeName }))
+]);
+
+const referenceOptions = computed(() => [
+  { value: "all", label: `All References (${references.value.length})` },
+  ...references.value.map((r) => ({ value: r.id, label: r.name }))
+]);
+
+const managerOptions = computed(() => [
+  { value: "all", label: `All Managers (${assignableUsers.value.length})` },
+  ...assignableUsers.value.map((u) => ({ value: u.id, label: u.name }))
+]);
 const statusFilter = ref<"all" | "submitted" | "pending" | "late_submitted">("all");
 
 // Multi-Selection State
@@ -454,22 +470,25 @@ const printReport = () => {
       />
 
       <!-- 2. Customer Type Filter -->
-      <select v-model="selectedCustomerTypeId" class="form-select idp-select" style="width: auto;">
-        <option value="all">All Customer Types</option>
-        <option v-for="t in customerTypes" :key="t.id" :value="t.id">{{ t.typeName }}</option>
-      </select>
+      <IdpSelect
+        v-model="selectedCustomerTypeId"
+        :options="customerTypeOptions"
+        min-width="170px"
+      />
 
       <!-- 3. Reference Filter -->
-      <select v-model="selectedReferenceId" class="form-select idp-select" style="width: auto;">
-        <option value="all">All References</option>
-        <option v-for="r in references" :key="r.id" :value="r.id">{{ r.name }}</option>
-      </select>
+      <IdpSelect
+        v-model="selectedReferenceId"
+        :options="referenceOptions"
+        min-width="170px"
+      />
 
       <!-- 4. Assigned Manager Filter -->
-      <select v-model="selectedManagerId" class="form-select idp-select" style="width: auto;">
-        <option value="all">All Managers</option>
-        <option v-for="u in assignableUsers" :key="u.id" :value="u.id">{{ u.name }}</option>
-      </select>
+      <IdpSelect
+        v-model="selectedManagerId"
+        :options="managerOptions"
+        min-width="160px"
+      />
 
       <!-- 5. Month Navigator Component (Right Aligned) -->
       <div class="month-nav-container ms-auto" style="width: 180px; flex-shrink: 0;">

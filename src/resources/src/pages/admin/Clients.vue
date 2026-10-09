@@ -8,6 +8,7 @@ import { useServicesApi, type CustomerType, type ClientReference } from "@/compo
 import { useToast } from "@/composables/useToast";
 import { useSubscriptionGuard } from "@/composables/useSubscriptionGuard";
 import SearchInput from "@/components/common/SearchInput.vue";
+import IdpSelect from "@/components/common/IdpSelect.vue";
 import { usePagination } from "@/composables/usePagination";
 import { can, isTenantAdmin } from "@/composables/useAuth";
 
@@ -43,6 +44,28 @@ const {
   fetchCustomerTypes,
   fetchReferences
 } = useServicesApi();
+
+const customerTypeOptions = computed(() => [
+  { value: "all", label: `All Customer Types (${customerTypes.value.length})` },
+  ...customerTypes.value.map((t) => ({ value: t.id, label: t.typeName }))
+]);
+
+const referenceOptions = computed(() => [
+  { value: "all", label: `All References (${references.value.length})` },
+  ...references.value.map((r) => ({ value: r.id, label: r.name }))
+]);
+
+const serviceTypeOptions = [
+  { value: "all", label: "All Services" },
+  { value: "FULL", label: "Full Service" },
+  { value: "ONLY_RETURN", label: "Return Only" }
+];
+
+const statusOptions = [
+  { value: "all", label: "All Status" },
+  { value: "true", label: "Active Only" },
+  { value: "false", label: "Inactive Only" }
+];
 
 const CLIENTS_FILTER_KEY = "idp_clients_filters";
 
@@ -238,30 +261,32 @@ const handleConfirmDelete = async () => {
         />
 
         <!-- 1. Customer Type Filter -->
-        <select v-model="selectedTypeFilter" class="idp-select" style="width: auto; min-width: 170px;">
-          <option value="all">All Customer Types</option>
-          <option v-for="t in customerTypes" :key="t.id" :value="t.id">{{ t.typeName }}</option>
-        </select>
+        <IdpSelect
+          v-model="selectedTypeFilter"
+          :options="customerTypeOptions"
+          min-width="175px"
+        />
 
         <!-- 2. Reference Filter -->
-        <select v-model="selectedReferenceFilter" class="idp-select" style="width: auto; min-width: 180px;">
-          <option value="all">All References</option>
-          <option v-for="r in references" :key="r.id" :value="r.id">{{ r.name }}</option>
-        </select>
+        <IdpSelect
+          v-model="selectedReferenceFilter"
+          :options="referenceOptions"
+          min-width="175px"
+        />
 
-        <!-- 3. VAT Service Type Filter (FULL vs ONLY_RETURN) -->
-        <select v-model="selectedServiceTypeFilter" class="idp-select" style="width: auto; min-width: 150px;">
-          <option value="all">All Services</option>
-          <option value="FULL">Full Service</option>
-          <option value="ONLY_RETURN">Return Only</option>
-        </select>
+        <!-- 3. VAT Service Type Filter -->
+        <IdpSelect
+          v-model="selectedServiceTypeFilter"
+          :options="serviceTypeOptions"
+          min-width="145px"
+        />
 
         <!-- 4. Status Filter -->
-        <select v-model="selectedStatusFilter" class="idp-select" style="width: auto; min-width: 130px;">
-          <option value="all">All Status</option>
-          <option value="true">Active Only</option>
-          <option value="false">Inactive Only</option>
-        </select>
+        <IdpSelect
+          v-model="selectedStatusFilter"
+          :options="statusOptions"
+          min-width="130px"
+        />
       </div>
 
       <!-- Counter -->

@@ -6,6 +6,7 @@ import { useServicesApi, type CustomerType, type ClientReference } from "@/compo
 import { useToast } from "@/composables/useToast";
 import ManagersMultiSelect from "@/components/common/ManagersMultiSelect.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
+import IdpSelect from "@/components/common/IdpSelect.vue";
 import { usePagination } from "@/composables/usePagination";
 
 const router = useRouter();
@@ -31,6 +32,17 @@ const mainTab = ref<"customers" | "shared">("customers");
 const searchQuery = ref("");
 const selectedTypeFilter = ref<number | "all">("all");
 const selectedReferenceFilter = ref<number | "all">("all");
+
+const customerTypeOptions = computed(() => [
+  { value: "all", label: `All Customer Types (${customerTypes.value.length})` },
+  ...customerTypes.value.map((t) => ({ value: t.id, label: t.typeName }))
+]);
+
+const referenceOptions = computed(() => [
+  { value: "all", label: `All References (${references.value.length})` },
+  ...references.value.map((r) => ({ value: r.id, label: r.name }))
+]);
+
 const activeFilter = ref<"all" | "assigned" | "shared" | "unassigned">("all");
 const pendingAssignments = ref<Record<number, number[]>>({});
 const savingIds = ref<Record<number, boolean>>({});
@@ -296,16 +308,18 @@ watch([selectedTypeFilter, selectedReferenceFilter, activeFilter, searchQuery, m
           />
 
           <!-- Customer Type Filter -->
-          <select v-model="selectedTypeFilter" class="form-select form-select-sm idp-select" style="width: auto; min-width: 160px;">
-            <option value="all">All Customer Types</option>
-            <option v-for="t in customerTypes" :key="t.id" :value="t.id">{{ t.typeName }}</option>
-          </select>
+          <IdpSelect
+            v-model="selectedTypeFilter"
+            :options="customerTypeOptions"
+            min-width="160px"
+          />
 
           <!-- Reference Filter -->
-          <select v-model="selectedReferenceFilter" class="form-select form-select-sm idp-select" style="width: auto; min-width: 160px;">
-            <option value="all">All References</option>
-            <option v-for="r in references" :key="r.id" :value="r.id">{{ r.name }}</option>
-          </select>
+          <IdpSelect
+            v-model="selectedReferenceFilter"
+            :options="referenceOptions"
+            min-width="160px"
+          />
         </div>
 
         <!-- Filter Buttons -->
