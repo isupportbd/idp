@@ -58,6 +58,7 @@ export function useClientsApi() {
     search?: string;
     customerTypeId?: number;
     referenceId?: number;
+    vatServiceType?: "FULL" | "ONLY_RETURN" | "all";
     isActive?: string;
     page?: number;
     limit?: number;

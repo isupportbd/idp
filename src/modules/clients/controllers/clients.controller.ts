@@ -67,6 +67,10 @@ export const listClients: Handler = async (c: any) => {
       conditions.push(eq(clients.referenceId, query.referenceId));
     }
 
+    if (query.vatServiceType && query.vatServiceType !== "all") {
+      conditions.push(eq(clients.vatServiceType, query.vatServiceType));
+    }
+
     if (query.isActive && query.isActive !== "all") {
       conditions.push(eq(clients.isActive, query.isActive === "true"));
     }

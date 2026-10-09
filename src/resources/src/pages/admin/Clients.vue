@@ -60,6 +60,7 @@ const savedFilters = getSavedFilters();
 const searchQuery = ref(savedFilters.searchQuery || "");
 const selectedTypeFilter = ref<number | "all">(savedFilters.selectedTypeFilter ?? "all");
 const selectedReferenceFilter = ref<number | "all">(savedFilters.selectedReferenceFilter ?? "all");
+const selectedServiceTypeFilter = ref<"all" | "FULL" | "ONLY_RETURN">(savedFilters.selectedServiceTypeFilter ?? "all");
 const selectedStatusFilter = ref<"all" | "true" | "false">(savedFilters.selectedStatusFilter ?? "all");
 
 const saveFilters = () => {
@@ -71,6 +72,7 @@ const saveFilters = () => {
           searchQuery: searchQuery.value,
           selectedTypeFilter: selectedTypeFilter.value,
           selectedReferenceFilter: selectedReferenceFilter.value,
+          selectedServiceTypeFilter: selectedServiceTypeFilter.value,
           selectedStatusFilter: selectedStatusFilter.value
         })
       );
@@ -96,6 +98,7 @@ const fetchClientsList = async () => {
       search: searchQuery.value.trim(),
       customerTypeId: selectedTypeFilter.value !== "all" ? selectedTypeFilter.value : undefined,
       referenceId: selectedReferenceFilter.value !== "all" ? selectedReferenceFilter.value : undefined,
+      vatServiceType: selectedServiceTypeFilter.value !== "all" ? selectedServiceTypeFilter.value : undefined,
       isActive: selectedStatusFilter.value,
       page: currentPage.value,
       limit: itemsPerPage.value
@@ -131,7 +134,7 @@ watch(searchQuery, () => {
   }, 250);
 });
 
-watch([selectedTypeFilter, selectedReferenceFilter, selectedStatusFilter], () => {
+watch([selectedTypeFilter, selectedReferenceFilter, selectedServiceTypeFilter, selectedStatusFilter], () => {
   saveFilters();
   currentPage.value = 1;
   fetchClientsList();
@@ -246,7 +249,14 @@ const handleConfirmDelete = async () => {
           <option v-for="r in references" :key="r.id" :value="r.id">{{ r.name }}</option>
         </select>
 
-        <!-- 3. Status Filter -->
+        <!-- 3. VAT Service Type Filter (FULL vs ONLY_RETURN) -->
+        <select v-model="selectedServiceTypeFilter" class="idp-select" style="width: auto; min-width: 150px;">
+          <option value="all">All Services</option>
+          <option value="FULL">Full Service</option>
+          <option value="ONLY_RETURN">Return Only</option>
+        </select>
+
+        <!-- 4. Status Filter -->
         <select v-model="selectedStatusFilter" class="idp-select" style="width: auto; min-width: 130px;">
           <option value="all">All Status</option>
           <option value="true">Active Only</option>
@@ -265,10 +275,10 @@ const handleConfirmDelete = async () => {
       <table class="table-custom">
         <thead>
           <tr>
-            <th style="width: 28%;">Company & Proprietor</th>
+            <th style="width: 27%;">Company & Proprietor</th>
             <th style="width: 15%;">Identifiers (BIN / TIN)</th>
-            <th style="width: 13%;">Customer Type</th>
-            <th style="width: 14%;">Reference</th>
+            <th style="width: 15%;">Customer & Service Type</th>
+            <th style="width: 13%;">Reference</th>
             <th style="width: 14%;">Assigned Users</th>
             <th style="width: 6%; text-align: center;">Status</th>
             <th style="width: 10%; text-align: right;">Actions</th>
@@ -302,7 +312,7 @@ const handleConfirmDelete = async () => {
             <!-- Identifiers -->
             <td>
               <div v-if="client.binNumber" class="font-monospace text-info small fw-bold">
-                BIN: {{ client.binNumber }}
+                 BIN: {{ client.binNumber }}
               </div>
               <div v-if="client.tinNumber" class="text-muted small font-monospace">
                 TIN: {{ client.tinNumber }}
@@ -312,11 +322,27 @@ const handleConfirmDelete = async () => {
               </div>
             </td>
 
-            <!-- Customer Type -->
+            <!-- Customer & Service Type -->
             <td>
-              <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25 small">
-                {{ client.customerTypeName || 'Standard' }}
-              </span>
+              <div class="d-flex flex-wrap align-items-center gap-1">
+                <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25 small">
+                  {{ client.customerTypeName || 'Standard' }}
+                </span>
+                <span
+                  v-if="client.vatServiceType === 'ONLY_RETURN'"
+                  class="badge bg-warning bg-opacity-15 text-warning border border-warning border-opacity-25 small"
+                  title="Only Return Submission Service"
+                >
+                  Return Only
+                </span>
+                <span
+                  v-else
+                  class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 small"
+                  title="Full VAT Services"
+                >
+                  Full
+                </span>
+              </div>
             </td>
 
             <!-- Reference -->

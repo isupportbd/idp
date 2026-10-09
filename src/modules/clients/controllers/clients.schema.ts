@@ -55,6 +55,7 @@ export const ListClientsQuerySchema = z.object({
   search: z.string().optional(),
   customerTypeId: z.coerce.number().int().positive().optional(),
   referenceId: z.coerce.number().int().positive().optional(),
+  vatServiceType: z.enum(["FULL", "ONLY_RETURN", "all"]).optional(),
   isActive: z.enum(["true", "false", "all"]).optional().default("all"),
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().optional().default(50)
