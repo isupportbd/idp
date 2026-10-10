@@ -172,7 +172,14 @@ const historyClientItem = ref<{ clientName: string; itemName: string; records: S
   records: []
 });
 
-const todayDate = new Date().toISOString().slice(0, 10);
+const getDefaultActivationDate = () => {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() - 1);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${yyyy}-${mm}-01`;
+};
 
 const form = ref({
   id: 0,
@@ -182,7 +189,7 @@ const form = ref({
   salesRate: "" as string | number,
   vatRate: 15.00 as number,
   additionPercent: 36.00 as number,
-  activationDate: todayDate,
+  activationDate: getDefaultActivationDate(),
   status: "Active" as "Active" | "Frozen"
 });
 
@@ -426,7 +433,7 @@ const openAddModal = () => {
     salesRate: "",
     vatRate: 15.00,
     additionPercent: 36.00,
-    activationDate: todayDate,
+    activationDate: getDefaultActivationDate(),
     status: "Active"
   };
 
