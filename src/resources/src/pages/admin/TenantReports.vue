@@ -1547,19 +1547,6 @@ onUnmounted(() => {
       </div>
 
       <div v-else>
-        <!-- Missing Rates Warning Banner (Global across tabs) -->
-        <div v-if="hasMissingRates" class="alert alert-warning d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-          <div class="d-flex align-items-center gap-2">
-            <i class="bi bi-exclamation-triangle-fill fs-5 text-warning"></i>
-            <div>
-              <strong>Warning:</strong> Some items do not have an active Sales Rate configured on or before the bill date. Please configure effective rates in the <strong>Sales Rates</strong> tab starting from the 1st of the tax month.
-            </div>
-          </div>
-          <router-link to="/admin/sales-rates" class="btn btn-warning btn-sm text-dark fw-bold text-nowrap px-3">
-            <i class="bi bi-plus-circle me-1"></i> Add / Adjust Sales Rate
-          </router-link>
-        </div>
-
         <!-- ==================== TAB 1: PURCHASE REPORT ==================== -->
         <div v-if="currentTab === 'purchases'" class="space-y-4">
           <!-- Summary Table -->
