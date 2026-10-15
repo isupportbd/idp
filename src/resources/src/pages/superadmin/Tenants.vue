@@ -94,17 +94,6 @@ const clearAllFilters = () => {
   } catch {}
 };
 
-// Reusable Persistent Pagination for 1,000+ Tenants
-const perPageOptions = [10, 15, 25, 50, 100];
-const filteredTenantsCount = computed(() => filteredTenants.value.length);
-const { currentPage, itemsPerPage: perPage, totalPages, paginateList } = usePagination("tenants", {
-  defaultPerPage: 15,
-  totalItems: filteredTenantsCount
-});
-
-const activeCount = computed(() => tenants.value.filter(t => t.status === "active").length);
-const suspendedCount = computed(() => tenants.value.filter(t => t.status === "suspended").length);
-
 const filteredTenants = computed(() => {
   let list = tenants.value.filter(t => t.roleName !== "superadmin" && (t as any).role !== "superadmin");
   if (statusFilter.value !== "all") {
@@ -120,6 +109,18 @@ const filteredTenants = computed(() => {
       (t.planName && t.planName.toLowerCase().includes(q))
   );
 });
+
+// Reusable Persistent Pagination for 1,000+ Tenants
+const perPageOptions = [10, 15, 25, 50, 100];
+const filteredTenantsCount = computed(() => filteredTenants.value.length);
+const { currentPage, itemsPerPage: perPage, totalPages, paginateList } = usePagination("tenants", {
+  defaultPerPage: 15,
+  totalItems: filteredTenantsCount,
+  syncUrl: false
+});
+
+const activeCount = computed(() => tenants.value.filter(t => t.status === "active").length);
+const suspendedCount = computed(() => tenants.value.filter(t => t.status === "suspended").length);
 
 const startIndex = computed(() => (currentPage.value - 1) * perPage.value);
 const endIndex = computed(() => Math.min(startIndex.value + perPage.value, filteredTenants.value.length));
