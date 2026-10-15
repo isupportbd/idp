@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
+import crypto from "node:crypto";
 import * as XLSX from "xlsx";
 import { broadcast, db, HttpStatusCodes } from "@/framework/facade.js";
 import { columnMappings } from "@/modules/superadmin/database/models/column_mappings.js";
@@ -7,8 +8,9 @@ import { globalItems } from "@/modules/superadmin/database/models/global_items.j
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { purchases } from "@/modules/clients/database/models/purchases.js";
 import { users } from "@/modules/auth/database/models/user.js";
-
-const round2 = (val: number): number => Math.round(val * 100) / 100;
+import { handleControllerError } from "@/framework/http/errors.js";
+import { handleAsyncEndpoint, isAsyncFlagEnabled } from "@/framework/queue/async-endpoint.js";
+import { round2 } from "@/utils/number.js";
 
 const parseNumber = (val: any): number => {
   if (val === undefined || val === null || val === "") return 0;
@@ -447,285 +449,261 @@ export const processUpload: Handler = async (c: any) => {
     });
   } catch (error: any) {
     console.error("Error processing upload file:", error);
-    return c.json(
-      { success: false, message: "Failed to process file." },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return handleControllerError(c, error, "Failed to process file.", { field: "message", success: false });
   }
 };
 
 // ── 2. SAVE PURCHASES TO DATABASE ────────────────────────────────────
 
-export const savePurchases: Handler = async (c: any) => {
+const EXCEL_IMPORT_ASYNC_ENV = "EXCEL_IMPORT_ASYNC";
+const IMPORT_ASYNC_THRESHOLD = 500;
+
+/** Why: resolves the acting tenant admin (and superadmin flag) from the request. */
+async function resolveUploadActor(c: any): Promise<{ tenantAdminId: number; isSuperAdmin: boolean }> {
+  const auth = c.get("auth") || c.get("user");
+  let tenantAdminId = 1;
+  let isSuperAdmin = false;
+
+  if (auth?.id) {
+    const currentUser = await db.query.users.findFirst({
+      where: eq(users.id, Number(auth.id)),
+      with: { role: true }
+    });
+    if (currentUser) {
+      isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin";
+      tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
+    }
+  }
+
+  return { tenantAdminId, isSuperAdmin };
+}
+
+/** Why: live import progress for the importer UI (best-effort no-op without sockets). */
+function broadcastPurchaseProgress(tenantAdminId: number, processed: number, total: number): void {
+  const percent = total > 0 ? Math.round((processed / total) * 100) : 100;
   try {
-    const { data, month, isRebate, isFfs } = await c.req.json();
-    const isRebateValue = Boolean(isRebate);
-    const isFfsValue = Boolean(isFfs);
+    broadcast(
+      "upload:purchases:progress",
+      { adminId: tenantAdminId, processed, total, percent, timestamp: Date.now() },
+      { tenant: tenantAdminId }
+    );
+  } catch {}
+}
 
-    if (!data || !Array.isArray(data) || data.length === 0) {
-      return c.json({ success: false, message: "No data provided to save." }, HttpStatusCodes.BAD_REQUEST);
-    }
-    if (!month) {
-      return c.json({ success: false, message: "Month is required to save data." }, HttpStatusCodes.BAD_REQUEST);
-    }
+/** Why: run imports async behind a flag, or force it for very large files. */
+function shouldUseExcelImportAsync(rowCount: number): boolean {
+  if (isAsyncFlagEnabled(EXCEL_IMPORT_ASYNC_ENV)) return true;
+  return Number.isFinite(rowCount) && rowCount > IMPORT_ASYNC_THRESHOLD;
+}
 
-    const auth = c.get("auth") || c.get("user");
-    let tenantAdminId = 1;
-    let isSuperAdmin = false;
+/** Why: stable job id so a retried upload maps to the same import job. */
+function makeImportJobId(tenantAdminId: number, month: string, key: string): string {
+  return `upload:purchases:${tenantAdminId}:${month}:${key}`;
+}
 
-    if (auth?.id) {
-      const currentUser = await db.query.users.findFirst({
-        where: eq(users.id, Number(auth.id)),
-        with: { role: true }
-      });
-      if (currentUser) {
-        isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin";
-        tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
-      }
-    }
+export type PurchaseImportParams = {
+  data: any[];
+  month: string;
+  isRebate: boolean;
+  isFfs: boolean;
+  tenantAdminId: number;
+  isSuperAdmin: boolean;
+  onProgress?: ((state: { total: number; processed: number }) => void) | undefined;
+};
 
-    // ── Step 1: Preload Clients ──────────────────────────────────────
-    const existingClients = await db
-      .select()
-      .from(clients)
-      .where(
-        isSuperAdmin
-          ? undefined
-          : or(
-              eq(clients.createdBy, tenantAdminId),
-              sql`${clients.createdBy} IS NULL`
-            )
-      );
+export type PurchaseImportResult = {
+  totalRowsProcessed: number;
+  duplicatesList: any[];
+  ffsPendingList: any[];
+};
 
-    const clientByBin = new Map<string, any>();
-    const clientByName = new Map<string, any>();
+/**
+ * Why: Extracted from `savePurchases` so the sync endpoint and the import queue
+ *      worker share ONE copy of the dedup/insert math (no drift).
+ */
+export async function runPurchaseImport(params: PurchaseImportParams): Promise<PurchaseImportResult> {
+  const { data, month, isRebate, isFfs, tenantAdminId, isSuperAdmin, onProgress } = params;
+  const isRebateValue = Boolean(isRebate);
+  const isFfsValue = Boolean(isFfs);
 
-    existingClients.forEach((cl) => {
-      if (cl.binNumber) {
-        const rawBin = String(cl.binNumber).trim();
-        const digits = rawBin.replace(/[^0-9]/g, "");
-        clientByBin.set(rawBin, cl);
-        if (digits) clientByBin.set(digits, cl);
-      }
-      if (cl.companyName) {
-        const nameKey = cl.companyName.trim().toLowerCase().replace(/^m\/s\s+/i, "");
-        clientByName.set(cl.companyName.trim().toLowerCase(), cl);
-        clientByName.set(nameKey, cl);
-      }
-    });
-
-    // ── Step 2: Preload Global Items ─────────────────────────────────
-    const uniqueHsCodes = [
-      ...new Set(
-        data
-          .map((r: any) =>
-            r.awHsCode
-              ? String(r.awHsCode).trim()
-              : r.hsCode
-              ? String(r.hsCode).trim().replace(/[.\s]/g, "")
-              : null
+  // ── Step 1: Preload Clients ──────────────────────────────────────
+  const existingClients = await db
+    .select()
+    .from(clients)
+    .where(
+      isSuperAdmin
+        ? undefined
+        : or(
+            eq(clients.createdBy, tenantAdminId),
+            sql`${clients.createdBy} IS NULL`
           )
-          .filter(Boolean)
-      )
-    ] as string[];
-
-    const existingItems = await db.select().from(globalItems);
-
-    const itemByHsCode = new Map<string, any>();
-    existingItems.forEach((item) => {
-      const awCode = String(item.awHsCode || item.hsCode.replace(/[\.\s]/g, "")).trim();
-      if (awCode) itemByHsCode.set(awCode, item);
-      if (item.hsCode) itemByHsCode.set(item.hsCode.trim(), item);
-    });
-
-    // ── Step 3: Preload existing purchases for duplicate check ────────
-    const existingPurchases = await db
-      .select({
-        id: purchases.id,
-        beNo: purchases.beNo,
-        beDate: purchases.beDate,
-        itemId: purchases.itemId,
-        clientId: purchases.clientId,
-        office: purchases.office,
-        totalQty: purchases.totalQty,
-        netWt: purchases.netWt,
-        excessQty: purchases.excessQty,
-        baseValueOfVat: purchases.baseValueOfVat,
-        vat: purchases.vat,
-        at: purchases.at,
-        clientName: clients.companyName,
-        clientBin: clients.binNumber,
-        itemName: globalItems.name,
-        hsCode: globalItems.hsCode
-      })
-      .from(purchases)
-      .leftJoin(clients, eq(purchases.clientId, clients.id))
-      .leftJoin(globalItems, eq(purchases.itemId, globalItems.id))
-      .where(isSuperAdmin ? undefined : eq(purchases.adminId, tenantAdminId));
-
-    const existingKeys = new Set(
-      existingPurchases.map((p) => `${p.beNo || ""}|${p.beDate}|${p.itemId}|${(p.office || "").trim()}`)
     );
 
-    // ── Step 4: Process Rows & Build Inserts ─────────────────────────
-    const toInsert: any[] = [];
-    const duplicatesList: any[] = [];
-    const ffsPendingList: any[] = [];
+  const clientByBin = new Map<string, any>();
+  const clientByName = new Map<string, any>();
 
-    for (const mappedRow of data) {
-      if (Object.keys(mappedRow).length === 0 || (Object.keys(mappedRow).length === 1 && mappedRow.tempId)) continue;
+  existingClients.forEach((cl) => {
+    if (cl.binNumber) {
+      const rawBin = String(cl.binNumber).trim();
+      const digits = rawBin.replace(/[^0-9]/g, "");
+      clientByBin.set(rawBin, cl);
+      if (digits) clientByBin.set(digits, cl);
+    }
+    if (cl.companyName) {
+      const nameKey = cl.companyName.trim().toLowerCase().replace(/^m\/s\s+/i, "");
+      clientByName.set(cl.companyName.trim().toLowerCase(), cl);
+      clientByName.set(nameKey, cl);
+    }
+  });
 
-      let formattedDate = mappedRow.beDate ? parseDateValue(mappedRow.beDate) : new Date().toISOString().slice(0, 10);
+  // ── Step 2: Preload Global Items ─────────────────────────────────
+  const uniqueHsCodes = [
+    ...new Set(
+      data
+        .map((r: any) =>
+          r.awHsCode
+            ? String(r.awHsCode).trim()
+            : r.hsCode
+            ? String(r.hsCode).trim().replace(/[.\s]/g, "")
+            : null
+        )
+        .filter(Boolean)
+    )
+  ] as string[];
 
-      // Resolve client
-      let clientId: number | null = mappedRow.clientId ? Number(mappedRow.clientId) : null;
-      const bin = mappedRow.bin ? String(mappedRow.bin).trim() : null;
-      const cleanBinDigits = bin ? bin.replace(/[^0-9]/g, "") : "";
+  const existingItems = await db.select().from(globalItems);
 
-      if (!clientId && (bin || mappedRow.clientName)) {
-        const cachedClient =
-          (bin ? clientByBin.get(bin) || (cleanBinDigits ? clientByBin.get(cleanBinDigits) : undefined) : undefined) ||
-          (mappedRow.clientName
-            ? clientByName.get(mappedRow.clientName.trim().toLowerCase()) ||
-              clientByName.get(mappedRow.clientName.trim().toLowerCase().replace(/^m\/s\s+/i, ""))
-            : undefined);
+  const itemByHsCode = new Map<string, any>();
+  existingItems.forEach((item) => {
+    const awCode = String(item.awHsCode || item.hsCode.replace(/[\.\s]/g, "")).trim();
+    if (awCode) itemByHsCode.set(awCode, item);
+    if (item.hsCode) itemByHsCode.set(item.hsCode.trim(), item);
+  });
 
-        if (cachedClient) {
-          clientId = cachedClient.id;
-        } else {
-          // Create new client for tenant
-          const [newClient] = await db
-            .insert(clients)
-            .values({
-              companyName: mappedRow.clientName || "Unknown Client",
-              binNumber: bin || null,
-              createdBy: tenantAdminId,
-              isActive: true
-            })
-            .returning();
-          clientId = newClient.id;
-          if (bin) clientByBin.set(bin, newClient);
-          if (cleanBinDigits) clientByBin.set(cleanBinDigits, newClient);
-        }
+  // ── Step 3: Preload existing purchases for duplicate check ────────
+  const existingPurchases = await db
+    .select({
+      id: purchases.id,
+      beNo: purchases.beNo,
+      beDate: purchases.beDate,
+      itemId: purchases.itemId,
+      clientId: purchases.clientId,
+      office: purchases.office,
+      totalQty: purchases.totalQty,
+      netWt: purchases.netWt,
+      excessQty: purchases.excessQty,
+      baseValueOfVat: purchases.baseValueOfVat,
+      vat: purchases.vat,
+      at: purchases.at,
+      clientName: clients.companyName,
+      clientBin: clients.binNumber,
+      itemName: globalItems.name,
+      hsCode: globalItems.hsCode
+    })
+    .from(purchases)
+    .leftJoin(clients, eq(purchases.clientId, clients.id))
+    .leftJoin(globalItems, eq(purchases.itemId, globalItems.id))
+    .where(isSuperAdmin ? undefined : eq(purchases.adminId, tenantAdminId));
+
+  const existingKeys = new Set(
+    existingPurchases.map((p) => `${p.beNo || ""}|${p.beDate}|${p.itemId}|${(p.office || "").trim()}`)
+  );
+
+  // ── Step 4: Process Rows & Build Inserts ─────────────────────────
+  const toInsert: any[] = [];
+  const duplicatesList: any[] = [];
+  const ffsPendingList: any[] = [];
+
+  for (const mappedRow of data) {
+    if (Object.keys(mappedRow).length === 0 || (Object.keys(mappedRow).length === 1 && mappedRow.tempId)) continue;
+
+    let formattedDate = mappedRow.beDate ? parseDateValue(mappedRow.beDate) : new Date().toISOString().slice(0, 10);
+
+    // Resolve client
+    let clientId: number | null = mappedRow.clientId ? Number(mappedRow.clientId) : null;
+    const bin = mappedRow.bin ? String(mappedRow.bin).trim() : null;
+    const cleanBinDigits = bin ? bin.replace(/[^0-9]/g, "") : "";
+
+    if (!clientId && (bin || mappedRow.clientName)) {
+      const cachedClient =
+        (bin ? clientByBin.get(bin) || (cleanBinDigits ? clientByBin.get(cleanBinDigits) : undefined) : undefined) ||
+        (mappedRow.clientName
+          ? clientByName.get(mappedRow.clientName.trim().toLowerCase()) ||
+            clientByName.get(mappedRow.clientName.trim().toLowerCase().replace(/^m\/s\s+/i, ""))
+          : undefined);
+
+      if (cachedClient) {
+        clientId = cachedClient.id;
+      } else {
+        // Create new client for tenant
+        const [newClient] = await db
+          .insert(clients)
+          .values({
+            companyName: mappedRow.clientName || "Unknown Client",
+            binNumber: bin || null,
+            createdBy: tenantAdminId,
+            isActive: true
+          })
+          .returning();
+        clientId = newClient.id;
+        if (bin) clientByBin.set(bin, newClient);
+        if (cleanBinDigits) clientByBin.set(cleanBinDigits, newClient);
       }
+    }
 
-      // Resolve item
-      let itemId: number | null = mappedRow.itemId ? Number(mappedRow.itemId) : null;
-      if (!itemId && (mappedRow.hsCode || mappedRow.awHsCode || mappedRow.itemName)) {
-        const normalizedHsCode = String(mappedRow.awHsCode || mappedRow.hsCode || "").trim().replace(/[.\s]/g, "");
-        const stdHs = formatStandardHsCode(mappedRow.hsCode || normalizedHsCode);
-        const cachedItem = itemByHsCode.get(normalizedHsCode) || itemByHsCode.get(stdHs);
-        if (cachedItem) {
-          itemId = cachedItem.id;
-        } else {
-          const [newItem] = await db
-            .insert(globalItems)
-            .values({
-              name: mappedRow.itemName || "Unknown Item",
-              hsCode: stdHs || "0000.00.00",
-              awHsCode: normalizedHsCode,
-              isActive: true
-            })
-            .returning();
-          itemId = newItem.id;
-          itemByHsCode.set(normalizedHsCode, newItem);
-          itemByHsCode.set(stdHs, newItem);
-        }
+    // Resolve item
+    let itemId: number | null = mappedRow.itemId ? Number(mappedRow.itemId) : null;
+    if (!itemId && (mappedRow.hsCode || mappedRow.awHsCode || mappedRow.itemName)) {
+      const normalizedHsCode = String(mappedRow.awHsCode || mappedRow.hsCode || "").trim().replace(/[.\s]/g, "");
+      const stdHs = formatStandardHsCode(mappedRow.hsCode || normalizedHsCode);
+      const cachedItem = itemByHsCode.get(normalizedHsCode) || itemByHsCode.get(stdHs);
+      if (cachedItem) {
+        itemId = cachedItem.id;
+      } else {
+        const [newItem] = await db
+          .insert(globalItems)
+          .values({
+            name: mappedRow.itemName || "Unknown Item",
+            hsCode: stdHs || "0000.00.00",
+            awHsCode: normalizedHsCode,
+            isActive: true
+          })
+          .returning();
+        itemId = newItem.id;
+        itemByHsCode.set(normalizedHsCode, newItem);
+        itemByHsCode.set(stdHs, newItem);
       }
+    }
 
-      if (!clientId || !itemId) continue;
+    if (!clientId || !itemId) continue;
 
-      const netWt = round2(parseNumber(mappedRow.netWt));
-      const excessQty = round2(parseNumber(mappedRow.excessQty));
-      const totalQty = round2(netWt + excessQty);
-      const assValue = round2(parseNumber(mappedRow.assValue));
-      const cd = round2(parseNumber(mappedRow.cd));
-      const rd = round2(parseNumber(mappedRow.rd));
-      const sd = round2(parseNumber(mappedRow.sd));
-      const baseValueOfVat = round2(assValue + cd + rd + sd);
-      const unitValue = round2(totalQty > 0 ? baseValueOfVat / totalQty : 0);
-      const vat = round2(parseNumber(mappedRow.vat));
-      const at = round2(parseNumber(mappedRow.at));
-      const office = (mappedRow.office?.toString() || "").trim();
-      const beNo = (mappedRow.beNo?.toString() || "").trim();
+    const netWt = round2(parseNumber(mappedRow.netWt));
+    const excessQty = round2(parseNumber(mappedRow.excessQty));
+    const totalQty = round2(netWt + excessQty);
+    const assValue = round2(parseNumber(mappedRow.assValue));
+    const cd = round2(parseNumber(mappedRow.cd));
+    const rd = round2(parseNumber(mappedRow.rd));
+    const sd = round2(parseNumber(mappedRow.sd));
+    const baseValueOfVat = round2(assValue + cd + rd + sd);
+    const unitValue = round2(totalQty > 0 ? baseValueOfVat / totalQty : 0);
+    const vat = round2(parseNumber(mappedRow.vat));
+    const at = round2(parseNumber(mappedRow.at));
+    const office = (mappedRow.office?.toString() || "").trim();
+    const beNo = (mappedRow.beNo?.toString() || "").trim();
 
-      const dedupKey = `${beNo}|${formattedDate}|${itemId}|${office}`;
+    const dedupKey = `${beNo}|${formattedDate}|${itemId}|${office}`;
 
-      // Pre-July FFS check
-      const parsedDate = new Date(formattedDate);
-      if (isFfsValue && parsedDate < new Date("2025-07-01T00:00:00")) {
-        ffsPendingList.push({
-          ...mappedRow,
-          clientId,
-          itemId,
-          office,
-          beNo,
-          beDate: formattedDate,
-          month,
-          netWt,
-          excessQty,
-          totalQty,
-          assValue,
-          unitValue,
-          cd,
-          rd,
-          sd,
-          baseValueOfVat,
-          vat,
-          at,
-          isRebate: isRebateValue,
-          isFfs: isFfsValue
-        });
-        continue;
-      }
-
-      if (existingKeys.has(dedupKey)) {
-        const existing = existingPurchases.find(
-          (p) =>
-            p.beNo === beNo &&
-            String(p.beDate) === formattedDate &&
-            p.itemId === itemId &&
-            (p.office || "").trim() === office
-        );
-        const incomingData = {
-          ...mappedRow,
-          clientId,
-          itemId,
-          office,
-          beNo,
-          beDate: formattedDate,
-          month,
-          netWt,
-          excessQty,
-          totalQty,
-          assValue,
-          unitValue,
-          cd,
-          rd,
-          sd,
-          baseValueOfVat,
-          vat,
-          at,
-          isRebate: isRebateValue,
-          isFfs: isFfsValue
-        };
-        duplicatesList.push({
-          existing: existing || {},
-          incoming: incomingData,
-          newData: incomingData
-        });
-        continue;
-      }
-
-      toInsert.push({
-        adminId: tenantAdminId,
+    // Pre-July FFS check
+    const parsedDate = new Date(formattedDate);
+    if (isFfsValue && parsedDate < new Date("2025-07-01T00:00:00")) {
+      ffsPendingList.push({
+        ...mappedRow,
         clientId,
         itemId,
         office,
         beNo,
         beDate: formattedDate,
         month,
-        lcNumber: mappedRow.lcNumber ? String(mappedRow.lcNumber).trim() : null,
         netWt,
         excessQty,
         totalQty,
@@ -740,48 +718,169 @@ export const savePurchases: Handler = async (c: any) => {
         isRebate: isRebateValue,
         isFfs: isFfsValue
       });
+      continue;
     }
 
-    if (toInsert.length > 0) {
-      const CHUNK_SIZE = 500;
-      for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
-        const chunk = toInsert.slice(i, i + CHUNK_SIZE);
-        await db.insert(purchases).values(chunk);
+    if (existingKeys.has(dedupKey)) {
+      const existing = existingPurchases.find(
+        (p) =>
+          p.beNo === beNo &&
+          String(p.beDate) === formattedDate &&
+          p.itemId === itemId &&
+          (p.office || "").trim() === office
+      );
+      const incomingData = {
+        ...mappedRow,
+        clientId,
+        itemId,
+        office,
+        beNo,
+        beDate: formattedDate,
+        month,
+        netWt,
+        excessQty,
+        totalQty,
+        assValue,
+        unitValue,
+        cd,
+        rd,
+        sd,
+        baseValueOfVat,
+        vat,
+        at,
+        isRebate: isRebateValue,
+        isFfs: isFfsValue
+      };
+      duplicatesList.push({
+        existing: existing || {},
+        incoming: incomingData,
+        newData: incomingData
+      });
+      continue;
+    }
 
-        if (toInsert.length > 500) {
-          const processedCount = Math.min(toInsert.length, i + chunk.length);
-          const percent = Math.round((processedCount / toInsert.length) * 100);
-          try {
-            broadcast(
-              "upload:purchases:progress",
-              {
-                adminId: tenantAdminId,
-                processed: processedCount,
-                total: toInsert.length,
-                percent,
-                timestamp: Date.now()
-              },
-              { tenant: tenantAdminId }
-            );
-          } catch {}
-        }
+    toInsert.push({
+      adminId: tenantAdminId,
+      clientId,
+      itemId,
+      office,
+      beNo,
+      beDate: formattedDate,
+      month,
+      lcNumber: mappedRow.lcNumber ? String(mappedRow.lcNumber).trim() : null,
+      netWt,
+      excessQty,
+      totalQty,
+      assValue,
+      unitValue,
+      cd,
+      rd,
+      sd,
+      baseValueOfVat,
+      vat,
+      at,
+      isRebate: isRebateValue,
+      isFfs: isFfsValue
+    });
+  }
+
+  if (toInsert.length > 0) {
+    const CHUNK_SIZE = 500;
+    for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
+      const chunk = toInsert.slice(i, i + CHUNK_SIZE);
+      await db.insert(purchases).values(chunk);
+
+      if (toInsert.length > 500) {
+        const processedCount = Math.min(toInsert.length, i + chunk.length);
+        onProgress?.({ total: toInsert.length, processed: processedCount });
       }
     }
+  }
+
+  return { totalRowsProcessed: toInsert.length, duplicatesList, ffsPendingList };
+}
+
+/**
+ * Synchronous REST endpoint — response shape unchanged.
+ */
+export const savePurchases: Handler = async (c: any) => {
+  try {
+    const { data, month, isRebate, isFfs } = await c.req.json();
+
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      return c.json({ success: false, message: "No data provided to save." }, HttpStatusCodes.BAD_REQUEST);
+    }
+    if (!month) {
+      return c.json({ success: false, message: "Month is required to save data." }, HttpStatusCodes.BAD_REQUEST);
+    }
+
+    const { tenantAdminId, isSuperAdmin } = await resolveUploadActor(c);
+
+    const result = await runPurchaseImport({
+      data,
+      month,
+      isRebate: Boolean(isRebate),
+      isFfs: Boolean(isFfs),
+      tenantAdminId,
+      isSuperAdmin,
+      onProgress: ({ processed, total }) => broadcastPurchaseProgress(tenantAdminId, processed, total)
+    });
 
     return c.json({
       success: true,
-      message: `${toInsert.length} records saved to database successfully!`,
-      totalRowsProcessed: toInsert.length,
-      duplicatesList,
-      ffsPendingList
+      message: `${result.totalRowsProcessed} records saved to database successfully!`,
+      totalRowsProcessed: result.totalRowsProcessed,
+      duplicatesList: result.duplicatesList,
+      ffsPendingList: result.ffsPendingList
     });
   } catch (error: any) {
     console.error("Error saving purchases:", error);
-    return c.json(
-      { success: false, message: "Failed to save purchases" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return handleControllerError(c, error, "Failed to save purchases", { field: "message", success: false });
   }
+};
+
+/**
+ * Why: large XLSX imports can outlive the HTTP request.
+ * When: POST /api/upload/save/async (flag, or >500 rows).
+ * How: Enqueues onto the `import` queue; falls back to the sync handler when the
+ *      flag is off, the file is small, or Redis is unavailable.
+ */
+export const savePurchasesAsync: Handler = async (c: any) => {
+  const { data, month, isRebate, isFfs } = await c.req.json();
+
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return c.json({ success: false, message: "No data provided to save." }, HttpStatusCodes.BAD_REQUEST);
+  }
+  if (!month) {
+    return c.json({ success: false, message: "Month is required to save data." }, HttpStatusCodes.BAD_REQUEST);
+  }
+
+  const { tenantAdminId, isSuperAdmin } = await resolveUploadActor(c);
+
+  // Fingerprint the payload so two *different* imports of equal size don't
+  // collapse onto the same deterministic job id.
+  const contentHash = crypto.createHash("sha256").update(JSON.stringify(data)).digest("hex").slice(0, 32);
+
+  return handleAsyncEndpoint({
+    c,
+    queue: "import",
+    jobName: "upload.purchases.import",
+    shouldUseAsync: shouldUseExcelImportAsync(data.length),
+    fallback: () => (savePurchases as any)(c),
+    idemParts: [tenantAdminId, month, "purchases-import", contentHash],
+    makeJobId: (idemKey) => makeImportJobId(tenantAdminId, month, idemKey),
+    buildPayload: (jobId) => ({
+      data,
+      month,
+      isRebate: Boolean(isRebate),
+      isFfs: Boolean(isFfs),
+      tenantAdminId,
+      isSuperAdmin,
+      jobId
+    }),
+    successMessage: `Purchase import of ${data.length} rows queued.`,
+    extraResponse: { total: data.length }
+  });
 };
 
 // ── 3. REPLACE DUPLICATE PURCHASE RECORD ─────────────────────────────
@@ -851,10 +950,7 @@ export const replaceDuplicate: Handler = async (c: any) => {
 
     return c.json({ success: true, message: "Duplicate record replaced successfully" });
   } catch (error: any) {
-    return c.json(
-      { success: false, message: "Failed to replace record" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return handleControllerError(c, error, "Failed to replace record", { field: "message", success: false });
   }
 };
 
@@ -906,9 +1002,6 @@ export const savePendingFfs: Handler = async (c: any) => {
 
     return c.json({ success: true, message: `${toInsert.length} FFS records saved successfully!` });
   } catch (error: any) {
-    return c.json(
-      { success: false, message: "Failed to save FFS items" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return handleControllerError(c, error, "Failed to save FFS items", { field: "message", success: false });
   }
 };

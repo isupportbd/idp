@@ -9,7 +9,7 @@ import { redisConfig } from "./redis.js";
  *      Key prefixes derive from the shared `REDIS_PREFIX`.
  */
 export const queueConfig = {
-  queues: ["default", "mail", "maintenance"],
+  queues: ["default", "mail", "maintenance", "billing", "import"],
   concurrency: 10,
   /**
    * autoPruneQueues

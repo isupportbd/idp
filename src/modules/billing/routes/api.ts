@@ -9,6 +9,7 @@ import {
   getBillDetails,
   createBill,
   batchGenerateBills,
+  batchGenerateBillsAsync,
   getMissingBills,
   getClientBillingOverview,
   updateBill,
@@ -51,6 +52,14 @@ billingRouter.get("/missing", requirePermission(...BILL_READERS), zValidator("qu
 billingRouter.get("/", requirePermission(...BILL_READERS), zValidator("query", listBillsQuerySchema), listBills);
 billingRouter.post("/", requirePermission("billing.create"), zValidator("json", createBillSchema), createBill);
 billingRouter.post("/batch", requirePermission("billing.create"), zValidator("json", batchGenerateBillsSchema), batchGenerateBills);
+// Async variant: returns 202 + jobId. Falls back to the sync handler when the
+// flag is off or Redis is unavailable, so the existing contract is preserved.
+billingRouter.post(
+  "/batch/async",
+  requirePermission("billing.create"),
+  zValidator("json", batchGenerateBillsSchema),
+  batchGenerateBillsAsync
+);
 billingRouter.get("/:id", requirePermission(...BILL_READERS), getBillDetails);
 billingRouter.put("/:id", requirePermission("billing.edit"), zValidator("json", updateBillSchema), updateBill);
 billingRouter.delete("/:id", requirePermission("billing.delete"), deleteBill);
