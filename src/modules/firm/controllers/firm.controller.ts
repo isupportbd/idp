@@ -29,7 +29,10 @@ export const getCompanySettings: Handler = async (c: any) => {
           tinNumber: "",
           tradeLicenseNo: "",
           invoicePrefix: "INV",
-          receiptPrefix: "MR"
+          receiptPrefix: "RCP",
+          autoDueReminder: false,
+          dueReminderDays: 7,
+          dueReminderMinAmount: 1000
         }
       }, HttpStatusCodes.OK);
     }
@@ -60,7 +63,10 @@ export const getCompanySettings: Handler = async (c: any) => {
             address: "",
             binNumber: "",
             tinNumber: "",
-            tradeLicenseNo: ""
+            tradeLicenseNo: "",
+            autoDueReminder: false,
+            dueReminderDays: 7,
+            dueReminderMinAmount: 1000
           })
           .returning()
       )[0];

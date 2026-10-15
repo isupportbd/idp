@@ -1,4 +1,4 @@
-import { boolean, integer, pgTable, serial, text, timestamp, varchar, index } from "drizzle-orm/pg-core";
+import { boolean, integer, numeric, pgTable, serial, text, timestamp, varchar, index } from "drizzle-orm/pg-core";
 import { users } from "@/modules/auth/database/models/user.js";
 
 export const companySettings = pgTable("company_settings", {
@@ -23,6 +23,9 @@ export const companySettings = pgTable("company_settings", {
   smsSenderId: varchar("sms_sender_id", { length: 50 }).default(""),
   smsProvider: varchar("sms_provider", { length: 100 }).default(""),
   smsEndpointUrl: text("sms_endpoint_url").default(""),
+  autoDueReminder: boolean("auto_due_reminder").default(false).notNull(),
+  dueReminderDays: integer("due_reminder_days").default(7).notNull(),
+  dueReminderMinAmount: numeric("due_reminder_min_amount", { precision: 14, scale: 2 }).default("1000.00").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
 }, (table) => ({

@@ -8,7 +8,8 @@ import { vatSubmissions } from "@/modules/clients/database/models/vat_submission
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
 import { users } from "@/modules/auth/database/models/user.js";
-import { sendVatSubmissionSms } from "@/modules/sms-templates/services/sms.service.js";
+import { enqueueTransactionalSms } from "@/modules/sms-templates/services/sms-queue.service.js";
+import { buildVatSubmissionSmsPayload } from "@/modules/sms-templates/services/sms.service.js";
 
 // ── 1. LIST SUBMISSIONS FOR A TAX PERIOD ──────────────────────────────
 
@@ -390,7 +391,9 @@ export const recordSubmission: Handler = async (c: any) => {
       }
     );
 
-    // Trigger automated SMS in background (non-blocking)
+    // Queue the automated SMS so the gateway call (0.5–3 s) never runs on the
+    // HTTP event loop. The `sms` worker delivers it with retries + logging and
+    // falls back to an inline background send when the queue is unavailable.
     // Use client.createdBy as the authoritative adminId for gateway lookup.
     // Fall back to the authenticated user's tenant admin. Never fall back to 1.
     const adminId: number | null = client.createdBy
@@ -399,18 +402,18 @@ export const recordSubmission: Handler = async (c: any) => {
       || null;
 
     if (adminId) {
-      sendVatSubmissionSms({
-        clientName: client.companyName,
-        clientMobile: client.mobile,
-        clientAltMobile: client.alternativeMobile,
-        clientBin: client.binNumber,
-        taxPeriod,
-        submissionId: submissionId.trim(),
-        adminId,
-        sentByUserId: currentUser?.id ?? null
-      }).catch((smsErr) => {
-        console.warn("[Submission Auto-SMS Warning]:", smsErr?.message || smsErr);
-      });
+      void enqueueTransactionalSms(
+        buildVatSubmissionSmsPayload({
+          clientName: client.companyName,
+          clientMobile: client.mobile,
+          clientAltMobile: client.alternativeMobile,
+          clientBin: client.binNumber,
+          taxPeriod,
+          submissionId: submissionId.trim(),
+          adminId,
+          sentByUserId: currentUser?.id ?? null
+        })
+      );
     }
 
     return c.json(

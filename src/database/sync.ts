@@ -201,6 +201,11 @@ export async function syncDatabaseSchemaAndSuperAdmin() {
     await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS auto_messaging_enabled BOOLEAN NOT NULL DEFAULT true`);
     await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS receipt_prefix VARCHAR(20) DEFAULT 'RCP'`);
 
+    // Ensure company_settings has the due-reminder configuration columns
+    await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS auto_due_reminder BOOLEAN NOT NULL DEFAULT false`);
+    await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS due_reminder_days INTEGER NOT NULL DEFAULT 7`);
+    await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS due_reminder_min_amount NUMERIC(14,2) NOT NULL DEFAULT 1000.00`);
+
     // Copy legacy sender_id to sms_sender_id if it exists
     await executeSingleSql(`
       DO $$ 

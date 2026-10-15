@@ -11,6 +11,41 @@ import { broadcast } from "@/framework/realtime/broadcast.js";
 
 const BULKSMSBD_ENDPOINT = "http://bulksmsbd.net/api/smsapi";
 
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/** Transactional SMS event keys (one template row per key in `sms_templates`). */
+export type TransactionalSmsTemplateKey = "bill_notification" | "collection_receipt" | "vat_submission" | "mushak_submission" | "due_reminder";
+
+/**
+ * Why: One stable wire format for every transactional SMS so controllers only
+ *      hand the queue a plain, JSON-serializable payload (no Hono context).
+ * When: A bill is generated, a receipt is recorded, a return is submitted...
+ * Where: `sms` queue job `sms.transactional.send` (jobs/transactional-sms.ts).
+ */
+export interface SendTransactionalSmsPayload {
+  tenantId: string;
+  templateKey: TransactionalSmsTemplateKey;
+  recipientPhone: string;
+  variables: Record<string, string | number | null | undefined>;
+  referenceType?: "invoice" | "collection" | "submission";
+  referenceId?: string;
+  triggeredByUserId?: string;
+}
+
+export type TransactionalSmsResult = {
+  ok: boolean;
+  status: "SENT" | "FAILED";
+  /** Raw (truncated) gateway response, or a friendly failure reason. */
+  response: string;
+  /** The rendered message — exactly what is/was sent or attempted. */
+  message: string;
+  /** True when a retry can plausibly succeed (transient failure only). */
+  retryable: boolean;
+};
+
+/** Gateway codes that will never succeed on a retry — fail fast, no backoff burn. */
+const PERMANENT_GATEWAY_CODES = new Set([1001, 1002, 1003, 1004, 1005, 1006, 1007, 1011]);
+
 export const DEFAULT_TEMPLATES = [
   {
     key: "vat_submission",
@@ -142,7 +177,7 @@ export async function callSmsGateway(opts: {
   message: string;
   endpointUrl?: string;
   provider?: string;
-}): Promise<{ ok: boolean; raw: string }> {
+}): Promise<{ ok: boolean; raw: string; code: number | null; networkError: boolean }> {
   try {
     const endpoint = opts.endpointUrl || BULKSMSBD_ENDPOINT;
     const isBulkSmsBd = endpoint.includes("bulksmsbd");
@@ -164,12 +199,13 @@ export async function callSmsGateway(opts: {
     const text = await res.text();
     let ok = res.ok;
     let friendly = text;
+    let code: number | null = null;
 
     try {
       const j = JSON.parse(text);
       if (typeof j?.response_code === "number") {
+        code = j.response_code;
         ok = j.response_code === 202;
-        const code = j.response_code;
         const errMap: Record<number, string> = {
           1001: "Invalid Number",
           1002: "Sender ID not correct / disabled",
@@ -184,14 +220,208 @@ export async function callSmsGateway(opts: {
       }
     } catch {}
 
-    return { ok, raw: friendly.slice(0, 500) };
+    return { ok, raw: friendly.slice(0, 500), code, networkError: false };
   } catch (e: any) {
-    return { ok: false, raw: `Network error: ${e?.message || String(e)}` };
+    return { ok: false, raw: `Network error: ${e?.message || String(e)}`, code: null, networkError: true };
   }
 }
 
 export const callBulkSmsBd = callSmsGateway;
 
+/**
+ * Why: SMS templates show a human month label ("July-2026") while the app
+ *      stores tax periods as `YYYY-MM`.
+ * When: Building `month`-style variables for bill/reminder templates.
+ * Where: Shared next to the other template helpers.
+ * How: Formats strict `YYYY-MM`; passes anything else through unchanged.
+ */
+export function formatPeriodLabel(taxPeriod: string | null | undefined): string {
+  const raw = String(taxPeriod || "");
+  const m = /^(\d{4})-(\d{2})$/.exec(raw);
+  if (!m) return raw;
+  const monthIndex = Number(m[2]) - 1;
+  if (monthIndex < 0 || monthIndex > 11) return raw;
+  return `${MONTH_NAMES[monthIndex]}-${m[1]}`;
+}
+
+/**
+ * Why: ONE delivery core shared by every trigger (bill / collection /
+ *      submission / future reminders) — template rendering, gateway settings,
+ *      sms_logs auditing, and balance sync exist in exactly one place.
+ * When: The `sms.transactional.send` worker runs, or an inline fallback fires.
+ * Where: sms queue job → this function (HTTP never calls it directly).
+ * How: Settings → render → recipient guard → gateway → audit log → balance
+ *      sync. Never throws; every exit is typed. `retryable` separates
+ *      transient failures (network, unknown gateway errors — BullMQ retries
+ *      with backoff) from permanent ones (bad number, no config, insufficient
+ *      balance — fail fast instead of burning retries).
+ */
+export async function sendTransactionalSms(payload: SendTransactionalSmsPayload): Promise<TransactionalSmsResult> {
+  const templateKey = payload.templateKey;
+  const adminIdNum = Number(payload.tenantId);
+  const adminId = Number.isFinite(adminIdNum) && adminIdNum > 0 ? adminIdNum : null;
+  const sentByNum = Number(payload.triggeredByUserId);
+  const sentBy = payload.triggeredByUserId && Number.isFinite(sentByNum) ? sentByNum : null;
+
+  // 1. Gateway settings for the owning tenant (global row when ownerless —
+  //    same convention sendTestSms already uses).
+  let smsApiKey = "";
+  let senderId = "";
+  let companyName = "IDP System";
+  let settings: any = null;
+  try {
+    settings = await db.query.companySettings.findFirst({
+      where: adminId ? eq(companySettings.adminId, adminId) : isNull(companySettings.adminId)
+    });
+    if (settings) {
+      smsApiKey = settings.smsApiKey || "";
+      senderId = settings.smsSenderId || "";
+      companyName = settings.companyName || companyName;
+    }
+  } catch {}
+
+  // 2. Effective template (DB override → built-in default) + variables.
+  const tpl = await getEffectiveTemplate(templateKey, adminId);
+  const rawBody = tpl?.body || DEFAULT_TEMPLATES.find((t) => t.key === templateKey)?.body || "";
+  const senderRole = rawBody.includes("{{sender_role}}") ? await resolveSenderRoleLabel(sentBy) : undefined;
+
+  const renderedMessage = renderTemplate(rawBody, {
+    ...payload.variables,
+    sender_role: payload.variables.sender_role ?? senderRole,
+    company_name: payload.variables.company_name ?? companyName
+  });
+
+  // 3. Recipient — identical BD-normalization rules as the old inline flow.
+  const recipient = normalizeBdMobile(payload.recipientPhone);
+  if (!recipient) {
+    await db
+      .insert(smsLogs)
+      .values({
+        adminId,
+        recipientMobile: payload.recipientPhone || "NO_MOBILE",
+        message: renderedMessage,
+        templateKey,
+        submissionId: payload.referenceType === "submission" ? payload.referenceId || null : null,
+        status: "FAILED",
+        providerResponse: "No valid Bangladesh mobile number found for client",
+        sentBy
+      })
+      .catch(() => {});
+    return { ok: false, status: "FAILED", response: "No valid mobile number", message: renderedMessage, retryable: false };
+  }
+
+  // 4. Gateway not configured → audit + fail fast (a retry cannot help).
+  if (!smsApiKey || !senderId) {
+    await db
+      .insert(smsLogs)
+      .values({
+        adminId,
+        recipientMobile: recipient,
+        message: renderedMessage,
+        templateKey,
+        submissionId: payload.referenceType === "submission" ? payload.referenceId || null : null,
+        status: "FAILED",
+        providerResponse: "SMS Gateway API Key or Sender ID not configured in Firm Settings",
+        sentBy
+      })
+      .catch(() => {});
+    return { ok: false, status: "FAILED", response: "SMS Gateway not configured", message: renderedMessage, retryable: false };
+  }
+
+  // 5. Deliver via the provider gateway (0.5–3 s — exactly why this runs on
+  //    the worker, never inside an HTTP request).
+  const result = await callSmsGateway({
+    apiKey: smsApiKey,
+    senderId,
+    number: recipient,
+    message: renderedMessage,
+    endpointUrl: settings?.smsEndpointUrl || undefined,
+    provider: settings?.smsProvider || undefined
+  });
+
+  const finalStatus = result.ok ? "SENT" : "FAILED";
+  await db
+    .insert(smsLogs)
+    .values({
+      adminId,
+      recipientMobile: recipient,
+      message: renderedMessage,
+      templateKey,
+      submissionId: payload.referenceType === "submission" ? payload.referenceId || null : null,
+      status: finalStatus,
+      providerResponse: result.raw,
+      sentBy
+    })
+    .catch(() => {});
+
+  // 6. Sync live provider balance after a successful send (header badge stays true).
+  if (result.ok && adminId && smsApiKey) {
+    try {
+      const liveBalance = await fetchProviderBalance(smsApiKey);
+      if (liveBalance !== null) {
+        await db.update(users).set({ smsBalance: liveBalance, updatedAt: new Date() }).where(eq(users.id, adminId));
+        broadcast(
+          "tenant:sms-updated",
+          {
+            adminId,
+            smsBalance: liveBalance,
+            timestamp: Date.now()
+          },
+          { tenant: adminId }
+        );
+      }
+    } catch (balErr) {
+      console.warn("[SMS Service] Failed to sync provider balance after SMS dispatch:", balErr);
+    }
+  }
+
+  const retryable = !result.ok && (result.networkError || result.code === null || !PERMANENT_GATEWAY_CODES.has(result.code));
+  return { ok: result.ok, status: finalStatus, response: result.raw, message: renderedMessage, retryable };
+}
+
+/**
+ * Why: Builds the exact payload for a submission SMS. Shared by the HTTP
+ *      controller (which enqueues it) and `sendVatSubmissionSms` (the
+ *      synchronous back-compat wrapper) so the recipient fallback rules —
+ *      primary mobile, then alternative, then raw primary for the audit row —
+ *      live in ONE place and can never drift.
+ */
+export function buildVatSubmissionSmsPayload(params: {
+  clientName: string;
+  clientMobile?: string | null;
+  clientAltMobile?: string | null;
+  clientBin?: string | null;
+  taxPeriod: string;
+  submissionId: string;
+  adminId: number;
+  sentByUserId?: number | null;
+}): SendTransactionalSmsPayload {
+  return {
+    tenantId: String(params.adminId),
+    templateKey: "vat_submission",
+    recipientPhone:
+      normalizeBdMobile(params.clientMobile) ||
+      normalizeBdMobile(params.clientAltMobile) ||
+      params.clientMobile ||
+      "",
+    variables: {
+      customer_name: params.clientName,
+      tax_period: params.taxPeriod,
+      submission_id: params.submissionId,
+      bin_number: params.clientBin || ""
+    },
+    referenceType: "submission",
+    referenceId: params.submissionId,
+    triggeredByUserId: params.sentByUserId != null ? String(params.sentByUserId) : undefined
+  };
+}
+
+/**
+ * Why: Back-compatible synchronous entry point for any caller that still wants
+ *      the old inline send. New code should instead do
+ *      `enqueueTransactionalSms(buildVatSubmissionSmsPayload(...))`.
+ * Returns: The same `{ ok, status, response, message }` shape as before.
+ */
 export async function sendVatSubmissionSms(params: {
   clientName: string;
   clientMobile?: string | null;
@@ -202,112 +432,6 @@ export async function sendVatSubmissionSms(params: {
   adminId: number;
   sentByUserId?: number | null;
 }): Promise<{ ok: boolean; status: string; response: string; message: string }> {
-  const recipient = normalizeBdMobile(params.clientMobile) || normalizeBdMobile(params.clientAltMobile);
-
-  // 1. Fetch Company Settings
-  let smsApiKey = "";
-  let senderId = "";
-  let companyName = "IDP System";
-  let settings: any = null;
-
-  try {
-    settings = await db.query.companySettings.findFirst({
-      where: eq(companySettings.adminId, params.adminId)
-    });
-    if (settings) {
-      smsApiKey = settings.smsApiKey || "";
-      senderId = settings.smsSenderId || "";
-      companyName = settings.companyName || companyName;
-    }
-  } catch {}
-
-  const senderRole = await resolveSenderRoleLabel(params.sentByUserId);
-
-  // 2. Render Template
-  const tpl = await getEffectiveTemplate("vat_submission", params.adminId);
-  const rawBody = tpl?.body || DEFAULT_TEMPLATES[0].body;
-
-  const renderedMessage = renderTemplate(rawBody, {
-    customer_name: params.clientName,
-    tax_period: params.taxPeriod,
-    submission_id: params.submissionId,
-    bin_number: params.clientBin || "",
-    sender_role: senderRole,
-    company_name: companyName
-  });
-
-  if (!recipient) {
-    await db.insert(smsLogs).values({
-      adminId: params.adminId,
-      recipientMobile: params.clientMobile || "NO_MOBILE",
-      message: renderedMessage,
-      templateKey: "vat_submission",
-      submissionId: params.submissionId,
-      status: "FAILED",
-      providerResponse: "No valid Bangladesh mobile number found for client",
-      sentBy: params.sentByUserId ?? null
-    }).catch(() => {});
-    return { ok: false, status: "FAILED", response: "No valid mobile number", message: renderedMessage };
-  }
-
-
-  if (!smsApiKey || !senderId) {
-    await db.insert(smsLogs).values({
-      adminId: params.adminId,
-      recipientMobile: recipient,
-      message: renderedMessage,
-      templateKey: "vat_submission",
-      submissionId: params.submissionId,
-      status: "FAILED",
-      providerResponse: "SMS Gateway API Key or Sender ID not configured in Firm Settings",
-      sentBy: params.sentByUserId ?? null
-    }).catch(() => {});
-    return { ok: false, status: "FAILED", response: "SMS Gateway not configured", message: renderedMessage };
-  }
-
-  // 3. Send SMS via Gateway
-  const result = await callSmsGateway({
-    apiKey: smsApiKey,
-    senderId: senderId,
-    number: recipient,
-    message: renderedMessage,
-    endpointUrl: settings?.smsEndpointUrl || undefined,
-    provider: settings?.smsProvider || undefined
-  });
-
-  const finalStatus = result.ok ? "SENT" : "FAILED";
-
-  await db.insert(smsLogs).values({
-    adminId: params.adminId,
-    recipientMobile: recipient,
-    message: renderedMessage,
-    templateKey: "vat_submission",
-    submissionId: params.submissionId,
-    status: finalStatus,
-    providerResponse: result.raw,
-    sentBy: params.sentByUserId ?? null
-  }).catch(() => {});
-
-  // If SMS sent successfully, fetch live provider balance & sync to DB & header
-  if (result.ok && params.adminId && smsApiKey) {
-    try {
-      const liveBalance = await fetchProviderBalance(smsApiKey);
-      if (liveBalance !== null) {
-        await db.update(users).set({ smsBalance: liveBalance, updatedAt: new Date() }).where(eq(users.id, params.adminId));
-        broadcast(
-          "tenant:sms-updated",
-          {
-            adminId: params.adminId,
-            smsBalance: liveBalance,
-            timestamp: Date.now()
-          },
-          { tenant: params.adminId }
-        );
-      }
-    } catch (balErr) {
-      console.warn("[SMS Service] Failed to sync provider balance after SMS dispatch:", balErr);
-    }
-  }
-
-  return { ok: result.ok, status: finalStatus, response: result.raw, message: renderedMessage };
+  const result = await sendTransactionalSms(buildVatSubmissionSmsPayload(params));
+  return { ok: result.ok, status: result.status, response: result.response, message: result.message };
 }

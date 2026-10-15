@@ -4,6 +4,8 @@ import { broadcast, db, HttpStatusCodes, resolveTenantContext } from "@/framewor
 import { handleControllerError } from "@/framework/http/errors.js";
 import { handleAsyncEndpoint, isAsyncFlagEnabled } from "@/framework/queue/async-endpoint.js";
 import { billingScope, collectionReceivedPayload, invoiceCreatedPayload } from "@/framework/realtime/event-builders.js";
+import { enqueueTransactionalSms } from "@/modules/sms-templates/services/sms-queue.service.js";
+import { formatPeriodLabel, normalizeBdMobile } from "@/modules/sms-templates/services/sms.service.js";
 import { bills } from "../database/models/bills.js";
 import { billItems } from "../database/models/bill_items.js";
 import { collections } from "../database/models/collections.js";
@@ -802,7 +804,15 @@ export const createBill: Handler = async (c: any) => {
     // 1. Verify Active Client
     const client = (
       await db
-        .select({ id: clients.id, companyName: clients.companyName, isActive: clients.isActive, referenceId: clients.referenceId })
+        .select({
+          id: clients.id,
+          companyName: clients.companyName,
+          isActive: clients.isActive,
+          referenceId: clients.referenceId,
+          mobile: clients.mobile,
+          alternativeMobile: clients.alternativeMobile,
+          createdBy: clients.createdBy
+        })
         .from(clients)
         .where(eq(clients.id, clientId))
         .limit(1)
@@ -955,6 +965,28 @@ export const createBill: Handler = async (c: any) => {
       billingScope(tenantAdminId)
     );
 
+    // Queue the bill SMS — gateway delivery (0.5–3 s) happens on the `sms`
+    // worker so this response is never held by the provider. Draft invoices are
+    // excluded: they are not yet issued to the client.
+    const billSmsPhone = normalizeBdMobile(client.mobile) || normalizeBdMobile(client.alternativeMobile);
+    if (billSmsPhone && newBill.status !== "draft") {
+      void enqueueTransactionalSms({
+        tenantId: String(client.createdBy ?? creatorId ?? ""),
+        templateKey: "bill_notification",
+        recipientPhone: billSmsPhone,
+        variables: {
+          customer_name: client.companyName,
+          month: formatPeriodLabel(taxPeriod),
+          current_bill: r2(subtotal - discount),
+          due: Number(previousDue),
+          grand_total: Number(grandTotal)
+        },
+        referenceType: "invoice",
+        referenceId: String(newBill.id),
+        triggeredByUserId: auth?.id ? String(auth.id) : undefined
+      });
+    }
+
     return c.json(
       {
         message: `Invoice ${billNo} created successfully`,
@@ -1033,6 +1065,9 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
       customerTypeId: clients.customerTypeId,
       referenceId: clients.referenceId,
       vatServiceType: clients.vatServiceType,
+      createdBy: clients.createdBy,
+      mobile: clients.mobile,
+      alternativeMobile: clients.alternativeMobile,
       isActive: clients.isActive
     })
     .from(clients)
@@ -1251,6 +1286,27 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
       companyName: client.companyName,
       grandTotal: billRecord.grandTotal
     });
+
+    // Queue the bill SMS per new invoice — delivery happens on the `sms`
+    // worker so the batch loop never waits on the gateway.
+    const batchBillSmsPhone = normalizeBdMobile(client.mobile) || normalizeBdMobile(client.alternativeMobile);
+    if (batchBillSmsPhone) {
+      void enqueueTransactionalSms({
+        tenantId: String(client.createdBy ?? creatorId ?? ""),
+        templateKey: "bill_notification",
+        recipientPhone: batchBillSmsPhone,
+        variables: {
+          customer_name: client.companyName,
+          month: formatPeriodLabel(taxPeriod),
+          current_bill: Number(subtotal),
+          due: Number(previousDue),
+          grand_total: Number(grandTotal)
+        },
+        referenceType: "invoice",
+        referenceId: String(billRecord.id),
+        triggeredByUserId: creatorId ? String(creatorId) : undefined
+      });
+    }
 
     processedCount++;
     reportProgress();
@@ -1853,6 +1909,49 @@ export const createCollection: Handler = async (c: any) => {
       }),
       billingScope(tenantAdminId)
     );
+
+    // Queue the receipt SMS — client-facing delivery (0.5–3 s per call)
+    // happens on the `sms` worker; this request already has what it needs.
+    const receiptClient = (
+      await db
+        .select({
+          companyName: clients.companyName,
+          mobile: clients.mobile,
+          alternativeMobile: clients.alternativeMobile,
+          createdBy: clients.createdBy
+        })
+        .from(clients)
+        .where(eq(clients.id, clientId))
+        .limit(1)
+    )[0];
+    const receiptPhone = normalizeBdMobile(receiptClient?.mobile) || normalizeBdMobile(receiptClient?.alternativeMobile);
+    if (receiptPhone) {
+      // Remaining balance: the just-updated bill when linked, else client-wide due.
+      let remainingDue = 0;
+      if (billId) {
+        const updatedBill = (
+          await db.select({ dueAmount: bills.dueAmount }).from(bills).where(eq(bills.id, billId)).limit(1)
+        )[0];
+        remainingDue = Number(updatedBill?.dueAmount ?? 0);
+      } else {
+        remainingDue = Number(await getClientRunningDue(clientId));
+      }
+
+      void enqueueTransactionalSms({
+        tenantId: String(receiptClient?.createdBy ?? tenantAdminId ?? ""),
+        templateKey: "collection_receipt",
+        recipientPhone: receiptPhone,
+        variables: {
+          customer_name: receiptClient?.companyName || "",
+          paid: Number(newCollection.amount),
+          due: remainingDue,
+          receipt_no: newCollection.receiptNo
+        },
+        referenceType: "collection",
+        referenceId: String(newCollection.id),
+        triggeredByUserId: userId ? String(userId) : undefined
+      });
+    }
 
     return c.json(
       {

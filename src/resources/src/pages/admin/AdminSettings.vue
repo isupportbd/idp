@@ -697,6 +697,9 @@ const handleResetToDefault = async () => {
       smsSenderId: "",
       smsProvider: "",
       smsEndpointUrl: "",
+      autoDueReminder: false,
+      dueReminderDays: 7,
+      dueReminderMinAmount: 1000,
       services: [],
       expenseHeads: []
     };
@@ -1693,6 +1696,42 @@ onMounted(async () => {
               </div>
               <div class="form-check form-switch mb-0">
                 <input v-model="form.allowDuplicateMobile" :disabled="!isEditingRules" class="form-check-input" type="checkbox" />
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center p-3 bg-dark border border-secondary rounded">
+              <div>
+                <div class="text-white fw-semibold small">Auto Due Reminder SMS</div>
+                <div class="text-muted small">Automatically send SMS reminders to clients whose latest invoice is overdue and unpaid.</div>
+              </div>
+              <div class="form-check form-switch mb-0">
+                <input v-model="form.autoDueReminder" :disabled="!isEditingRules" class="form-check-input" type="checkbox" />
+              </div>
+            </div>
+
+            <div v-if="form.autoDueReminder" class="p-3 bg-dark border border-secondary rounded d-flex flex-column gap-3">
+              <div>
+                <label class="form-label text-light small fw-medium mb-1">Days After Last Invoice</label>
+                <input
+                  v-model.number="form.dueReminderDays"
+                  type="number"
+                  min="1"
+                  class="form-control idp-input"
+                  :disabled="!isEditingRules"
+                  placeholder="7"
+                />
+              </div>
+              <div>
+                <label class="form-label text-light small fw-medium mb-1">Minimum Due Threshold (৳)</label>
+                <input
+                  v-model.number="form.dueReminderMinAmount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="form-control idp-input"
+                  :disabled="!isEditingRules"
+                  placeholder="1000"
+                />
               </div>
             </div>
           </div>

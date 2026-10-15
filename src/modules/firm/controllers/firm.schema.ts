@@ -25,7 +25,10 @@ export const CompanySettingsSchema = z.object({
   smsApiKey: z.string().optional().nullable().or(z.literal("")),
   smsSenderId: z.string().max(50).optional().nullable().or(z.literal("")),
   smsProvider: z.string().max(100).optional().nullable().or(z.literal("")),
-  smsEndpointUrl: z.string().optional().nullable().or(z.literal(""))
+  smsEndpointUrl: z.string().optional().nullable().or(z.literal("")),
+  autoDueReminder: z.boolean().default(false),
+  dueReminderDays: z.coerce.number().int().min(1).max(365).default(7),
+  dueReminderMinAmount: z.coerce.number().min(0).max(1000000000).default(1000)
 });
 
 // ── BANK ACCOUNT SCHEMAS ─────────────────────────────────────────────
