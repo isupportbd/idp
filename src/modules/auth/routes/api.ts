@@ -1,6 +1,7 @@
 import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { loginLimiter } from "@/framework/http/ratelimiter.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
+import { requireTenantAdmin } from "@/middlewares/permission-middleware.js";
 import {
   forgotPassword,
   getUserStats,
@@ -253,11 +254,22 @@ const protectedRoute = createRouter()
   .group(authMiddleware)
   .api(meRoute, me)
   .api(getUserStatsRoute, getUserStats)
-  .api(rechargeWalletRoute, rechargeWallet)
-  .api(buyStorageRoute, buyStorage)
-  .api(sendTestSmsRoute, sendTestSms)
-  .api(syncSmsBalanceRoute, syncSmsBalance)
   .api(logoutRoute, logout)
   .api(logoutAllDevicesRoute, logoutAllDevices);
 
-export default createRouter().route("/", publicRoute).route("/", protectedRoute);
+// Wallet, storage and SMS-gateway actions spend the tenant owner's funds and use
+// tenant-configured credentials, so they are restricted to the firm owner.
+// Without this a sub-user could drain the tenant wallet or send SMS through the
+// tenant's gateway with an attacker-supplied apiKey.
+const tenantOwnerRoute = createRouter()
+  .group(authMiddleware)
+  .group(requireTenantAdmin)
+  .api(rechargeWalletRoute, rechargeWallet)
+  .api(buyStorageRoute, buyStorage)
+  .api(sendTestSmsRoute, sendTestSms)
+  .api(syncSmsBalanceRoute, syncSmsBalance);
+
+export default createRouter()
+  .route("/", publicRoute)
+  .route("/", protectedRoute)
+  .route("/", tenantOwnerRoute);

@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { boolean, doublePrecision, index, integer, json, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, index, integer, json, numeric, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { roles } from "@/modules/auth/database/models/role.js";
 
 export const users = pgTable(
@@ -17,7 +17,7 @@ export const users = pgTable(
     trxId: varchar("trx_id", { length: 100 }),
     paidAmount: integer("paid_amount").default(0),
     advanceBalance: integer("advance_balance").default(0),
-    smsBalance: doublePrecision("sms_balance").default(0),
+    smsBalance: numeric("sms_balance", { precision: 14, scale: 2, mode: "number" }).default(0),
     adminId: integer("admin_id"),
     permissions: json("permissions").$type<string[]>().default([]),
     expDate: timestamp("exp_date"),

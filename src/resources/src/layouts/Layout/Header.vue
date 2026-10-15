@@ -279,16 +279,16 @@ onMounted(() => {
   }
   window.addEventListener("click", closeAllDropdowns);
 
+  // NOTE: pulse listeners attach to the socket, not to the room, so an event
+  // registered on two channels would fire its handler twice. The socket already
+  // auto-joins its entitled rooms (auth / role:* / tenant:<id>) on connect, so a
+  // single registration per event is enough.
   pulse.channel("auth").listen("tenant:signup", () => {
     if (isSuperAdmin.value) fetchNotifications();
     fetchStats();
   });
-  pulse.channel("role:superadmin").listen("tenant:signup", () => {
-    fetchNotifications();
-    fetchStats();
-  });
-  pulse.channel("role:superadmin").listen("tenant:recharge", () => {
-    fetchNotifications();
+  pulse.channel("auth").listen("tenant:recharge", () => {
+    if (isSuperAdmin.value) fetchNotifications();
     fetchStats();
   });
   pulse.channel("auth").listen("user:subscription-updated", async () => {
@@ -303,25 +303,14 @@ onMounted(() => {
       }
     }
   });
-  pulse.channel("role:admin").listen("tenant:sms-updated", async (payload: any) => {
-    if (authStore.user) {
-      if (payload && typeof payload.smsBalance === "number") {
-        (authStore.user as any).smsBalance = payload.smsBalance;
-      } else {
-        await authStore.bootstrap(true);
-      }
-    }
-  });
 });
 
 onUnmounted(() => {
   window.removeEventListener("click", closeAllDropdowns);
   pulse.channel("auth").stopListening("tenant:signup");
-  pulse.channel("role:superadmin").stopListening("tenant:signup");
-  pulse.channel("role:superadmin").stopListening("tenant:recharge");
+  pulse.channel("auth").stopListening("tenant:recharge");
   pulse.channel("auth").stopListening("user:subscription-updated");
   pulse.channel("auth").stopListening("tenant:sms-updated");
-  pulse.channel("role:admin").stopListening("tenant:sms-updated");
 });
 </script>
 

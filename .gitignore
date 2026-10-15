@@ -25,3 +25,9 @@ yarn.lock
 # Temporary framework sources
 nexgen-main/
 
+# Database dumps / backups
+*.sql
+*.dump
+
+# Audit / Scratch documentation
+money-to-numeric-migration-review.md

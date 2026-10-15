@@ -67,19 +67,41 @@ async function attachRedisAdapter() {
  * Where: Realtime bootstrap.
  * How: Resolves auth from handshake cookies and joins user/role/auth rooms.
  */
+/**
+ * Why: Computes the rooms a socket is entitled to based on its verified claims.
+ * When: Connection setup and any later `join` request.
+ * Where: Realtime room authorization.
+ * How: Derives auth/user/role/tenant rooms from the JWT-derived context only —
+ *      never from client-supplied strings.
+ */
+function entitledRooms(auth: RealtimeAuthContext): Set<string> {
+  const rooms = new Set<string>();
+  if (!auth.isAuthenticated) {
+    rooms.add("guest");
+    return rooms;
+  }
+
+  rooms.add("auth");
+  if (auth.userId) rooms.add(`user:${auth.userId}`);
+  for (const role of auth.roles) rooms.add(`role:${role}`);
+
+  const firmTenantId = auth.payload?.adminId
+    ? Number(auth.payload.adminId)
+    : auth.userId
+      ? Number(auth.userId)
+      : null;
+  if (firmTenantId) rooms.add(`tenant:${firmTenantId}`);
+
+  return rooms;
+}
+
 function registerAuthAndRooms() {
   io?.use(async (socket, next) => {
     const auth = await authFromSocketHandshake(socket);
     socket.data.auth = auth as RealtimeAuthContext;
 
-    if (auth.isAuthenticated) {
-      socket.join("auth");
-      if (auth.userId) socket.join(`user:${auth.userId}`);
-      for (const role of auth.roles) socket.join(`role:${role}`);
-      const firmTenantId = auth.payload?.adminId ? Number(auth.payload.adminId) : (auth.userId ? Number(auth.userId) : null);
-      if (firmTenantId) socket.join(`tenant:${firmTenantId}`);
-    } else {
-      socket.join("guest");
+    for (const room of entitledRooms(auth as RealtimeAuthContext)) {
+      socket.join(room);
     }
 
     next();
@@ -94,7 +116,19 @@ function registerAuthAndRooms() {
       userId: auth.userId
     });
 
-    socket.on("join", (room) => socket.join(String(room)));
+    // Only rooms derived from the verified token may be joined. Without this
+    // allowlist an authenticated client could join `tenant:<other>` or
+    // `role:superadmin` and receive another tenant's realtime traffic.
+    socket.on("join", (room) => {
+      const requested = String(room ?? "").trim();
+      if (!requested) return;
+      if (entitledRooms(auth).has(requested)) {
+        socket.join(requested);
+      } else {
+        logger.warn("Socket join denied", { socketId: socket.id, room: requested, userId: auth.userId });
+      }
+    });
+
     socket.on("disconnect", (reason) => {
       logger.info("Socket disconnected", {
         socketId: socket.id,

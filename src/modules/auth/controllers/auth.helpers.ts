@@ -1,5 +1,5 @@
-import { createHash, randomBytes } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
+import { createHash, randomBytes, randomInt } from "node:crypto";
+import { and, eq, sql } from "drizzle-orm";
 import { jwtConfig } from "@/config/index.js";
 import { cookie, db, jwt } from "@/framework/facade.js";
 import { refreshTokens } from "@/modules/auth/database/models/user.js";
@@ -16,6 +16,11 @@ import { fetchProviderBalance } from "@/framework/sms/index.js";
 import { normalizePermissions } from "@/modules/users/controllers/permissions.js";
 
 const storageCache = new Map<number, { records: number; expiresAt: number }>();
+
+// Short-lived cache for provider SMS balances so a live gateway HTTP call is not
+// made on every authenticated response (sanitizeUser runs on login/me/refresh).
+const gatewayBalanceCache = new Map<string, { balance: number | null; expiresAt: number }>();
+const GATEWAY_BALANCE_TTL_MS = 60_000;
 
 async function getTenantStorageRecords(tenantAdminId: number): Promise<number> {
   const cached = storageCache.get(tenantAdminId);
@@ -85,7 +90,15 @@ export async function sanitizeUser(user: any) {
         where: eq(companySettings.adminId, tenantAdminId)
       });
       if (firmSettings?.smsApiKey) {
-        const liveBal = await fetchProviderBalance(firmSettings.smsApiKey);
+        const cacheKey = firmSettings.smsApiKey;
+        const cachedBalance = gatewayBalanceCache.get(cacheKey);
+        let liveBal: number | null;
+        if (cachedBalance && cachedBalance.expiresAt > Date.now()) {
+          liveBal = cachedBalance.balance;
+        } else {
+          liveBal = await fetchProviderBalance(firmSettings.smsApiKey);
+          gatewayBalanceCache.set(cacheKey, { balance: liveBal, expiresAt: Date.now() + GATEWAY_BALANCE_TTL_MS });
+        }
         if (liveBal !== null) {
           effectiveSmsBalance = liveBal;
           if ((user as any).smsBalance !== liveBal) {
@@ -120,11 +133,14 @@ export async function sanitizeUser(user: any) {
     console.error("Error fetching plan for user:", e);
   }
 
-  // Auto-renewal check for tenant admin: If expired or never activated, but wallet balance covers requiredPlanPrice
+  // Auto-renewal check for tenant admin: If expired or never activated, but
+  // wallet balance covers requiredPlanPrice. Implemented as ONE conditional
+  // UPDATE so that:
+  //   • concurrent /me|/login requests can never spend the balance twice (C6), and
+  //   • suspended/inactive/pending accounts can never reactivate themselves (C7).
   const isExpired = !effectiveExpDate || new Date(effectiveExpDate) <= new Date();
-  if (!user.adminId && user.planId && requiredPlanPrice > 0 && isExpired && (user.advanceBalance || 0) >= requiredPlanPrice) {
+  if (!user.adminId && user.planId && requiredPlanPrice > 0 && isExpired) {
     try {
-      const newBalance = (user.advanceBalance || 0) - requiredPlanPrice;
       const newExp = new Date();
       if (isYearly) {
         newExp.setFullYear(newExp.getFullYear() + 1);
@@ -132,35 +148,47 @@ export async function sanitizeUser(user: any) {
         newExp.setMonth(newExp.getMonth() + 1);
       }
 
-      await db
-        .update(users)
-        .set({
-          advanceBalance: newBalance,
-          expDate: newExp,
-          status: "active",
-          updatedAt: new Date()
-        })
-        .where(eq(users.id, user.id));
+      const renewed = (
+        await db
+          .update(users)
+          .set({
+            advanceBalance: sql`${users.advanceBalance} - ${requiredPlanPrice}`,
+            expDate: newExp,
+            status: "active",
+            updatedAt: new Date()
+          })
+          .where(
+            and(
+              eq(users.id, user.id),
+              eq(users.status, "active"),
+              sql`${users.advanceBalance} >= ${requiredPlanPrice}`,
+              sql`(${users.expDate} IS NULL OR ${users.expDate} <= now())`
+            )
+          )
+          .returning({ advanceBalance: users.advanceBalance, expDate: users.expDate })
+      )[0];
 
-      await db.insert(subscriptionTransactions).values({
-        userId: user.id,
-        planId: user.planId,
-        type: "renewal_fee",
-        billingCycle: user.billingCycle || "monthly",
-        grossAmount: requiredPlanPrice,
-        gatewayCharge: 0,
-        netAmount: -requiredPlanPrice,
-        planRate: requiredPlanPrice,
-        paidAmount: requiredPlanPrice,
-        daysAdded: isYearly ? 365 : 30,
-        status: "completed",
-        note: "Auto-renewed subscription from prepaid wallet balance"
-      });
+      if (renewed) {
+        await db.insert(subscriptionTransactions).values({
+          userId: user.id,
+          planId: user.planId,
+          type: "renewal_fee",
+          billingCycle: user.billingCycle || "monthly",
+          grossAmount: requiredPlanPrice,
+          gatewayCharge: 0,
+          netAmount: -requiredPlanPrice,
+          planRate: requiredPlanPrice,
+          paidAmount: requiredPlanPrice,
+          daysAdded: isYearly ? 365 : 30,
+          status: "completed",
+          note: "Auto-renewed subscription from prepaid wallet balance"
+        });
 
-      user.advanceBalance = newBalance;
-      user.expDate = newExp;
-      effectiveAdvanceBalance = newBalance;
-      effectiveExpDate = newExp;
+        user.advanceBalance = renewed.advanceBalance;
+        user.expDate = renewed.expDate;
+        effectiveAdvanceBalance = renewed.advanceBalance;
+        effectiveExpDate = renewed.expDate;
+      }
     } catch (renewErr) {
       console.error("Failed to auto-renew user plan:", renewErr);
     }
@@ -222,7 +250,7 @@ export function makeResetToken() {
 }
 
 export function makeResetOtp() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return randomInt(100000, 1000000).toString();
 }
 
 export function makeEmailVerificationToken() {

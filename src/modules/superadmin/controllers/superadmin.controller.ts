@@ -24,7 +24,7 @@ export function notifySettingsUpdated(settingType: string) {
   try {
     cache.forget(`master:${settingType}`);
     cache.forgetByPrefix(`master:${settingType}:`);
-    broadcast("global:settings-updated", { type: settingType, timestamp: Date.now() }, { all: true, auth: true });
+    broadcast("global:settings-updated", { type: settingType, timestamp: Date.now() }, { auth: true });
   } catch (err) {
     console.error(`Failed to broadcast ${settingType} update:`, err);
   }
@@ -954,7 +954,7 @@ export async function createLocation(c: Context) {
     return c.json({ success: true, data: created, message: "Location created successfully" }, 201);
   } catch (error: any) {
     console.error("Error creating location:", error);
-    return c.json({ success: false, error: error.message || "Failed to create location" }, 500);
+    return c.json({ success: false, error: "Failed to create location" }, 500);
   }
 }
 
@@ -980,7 +980,7 @@ export async function updateLocation(c: Context) {
     return c.json({ success: true, data: updated, message: "Location updated successfully" });
   } catch (error: any) {
     console.error("Error updating location:", error);
-    return c.json({ success: false, error: error.message || "Failed to update location" }, 500);
+    return c.json({ success: false, error: "Failed to update location" }, 500);
   }
 }
 
@@ -1071,7 +1071,7 @@ export async function createCommercialArea(c: Context) {
     }, 201);
   } catch (error: any) {
     console.error("Error creating commercial area:", error);
-    return c.json({ success: false, error: error.message || "Failed to create area" }, 500);
+    return c.json({ success: false, error: "Failed to create area" }, 500);
   }
 }
 
@@ -1104,7 +1104,7 @@ export async function updateCommercialArea(c: Context) {
     });
   } catch (error: any) {
     console.error("Error updating commercial area:", error);
-    return c.json({ success: false, error: error.message || "Failed to update area" }, 500);
+    return c.json({ success: false, error: "Failed to update area" }, 500);
   }
 }
 
@@ -1179,7 +1179,7 @@ export async function createClientReference(c: Context) {
     return c.json({ success: true, data: created, message: "Reference created successfully" }, 201);
   } catch (error: any) {
     console.error("Error creating reference:", error);
-    return c.json({ success: false, error: error.message || "Failed to create reference" }, 500);
+    return c.json({ success: false, error: "Failed to create reference" }, 500);
   }
 }
 
@@ -1207,7 +1207,7 @@ export async function updateClientReference(c: Context) {
     return c.json({ success: true, data: updated, message: "Reference updated successfully" });
   } catch (error: any) {
     console.error("Error updating reference:", error);
-    return c.json({ success: false, error: error.message || "Failed to update reference" }, 500);
+    return c.json({ success: false, error: "Failed to update reference" }, 500);
   }
 }
 
@@ -1318,7 +1318,7 @@ export async function saveColumnMappings(c: Context) {
     return c.json({ success: true, data: updatedList, message: "Column mappings saved to database successfully" });
   } catch (error: any) {
     console.error("Error saving column mappings:", error);
-    return c.json({ success: false, error: error.message || "Failed to save column mappings" }, 500);
+    return c.json({ success: false, error: "Failed to save column mappings" }, 500);
   }
 }
 
@@ -1381,7 +1381,7 @@ export async function createGlobalItem(c: Context) {
     if (error?.code === "23505") {
       return c.json({ success: false, error: "This HS Code already exists in the database." }, 400);
     }
-    return c.json({ success: false, error: error.message || "Failed to create global item" }, 500);
+    return c.json({ success: false, error: "Failed to create global item" }, 500);
   }
 }
 
@@ -1436,7 +1436,7 @@ export async function updateGlobalItem(c: Context) {
     if (error?.code === "23505") {
       return c.json({ success: false, error: "This HS Code already exists in the database." }, 400);
     }
-    return c.json({ success: false, error: error.message || "Failed to update global item" }, 500);
+    return c.json({ success: false, error: "Failed to update global item" }, 500);
   }
 }
 
@@ -1528,7 +1528,7 @@ export async function createMeasurementUnit(c: Context) {
     if (error?.code === "23505") {
       return c.json({ success: false, error: "This Unit Code already exists in the database." }, 400);
     }
-    return c.json({ success: false, error: error.message || "Failed to create measurement unit" }, 500);
+    return c.json({ success: false, error: "Failed to create measurement unit" }, 500);
   }
 }
 
@@ -1580,7 +1580,7 @@ export async function updateMeasurementUnit(c: Context) {
     if (error?.code === "23505") {
       return c.json({ success: false, error: "This Unit Code already exists in the database." }, 400);
     }
-    return c.json({ success: false, error: error.message || "Failed to update measurement unit" }, 500);
+    return c.json({ success: false, error: "Failed to update measurement unit" }, 500);
   }
 }
 
@@ -1677,7 +1677,7 @@ export async function createVatNote(c: Context) {
     if (error?.code === "23505") {
       return c.json({ success: false, error: "A mapping for this VAT Rate already exists." }, 400);
     }
-    return c.json({ success: false, error: error.message || "Failed to create VAT note mapping" }, 500);
+    return c.json({ success: false, error: "Failed to create VAT note mapping" }, 500);
   }
 }
 
@@ -1729,7 +1729,7 @@ export async function updateVatNote(c: Context) {
     if (error?.code === "23505") {
       return c.json({ success: false, error: "A mapping for this VAT Rate already exists." }, 400);
     }
-    return c.json({ success: false, error: error.message || "Failed to update VAT note mapping" }, 500);
+    return c.json({ success: false, error: "Failed to update VAT note mapping" }, 500);
   }
 }
 
@@ -1886,7 +1886,7 @@ export async function createUnitConversion(c: Context) {
     }, 201);
   } catch (error: any) {
     console.error("Error creating unit conversion:", error);
-    return c.json({ success: false, error: error.message || "Failed to create unit conversion" }, 500);
+    return c.json({ success: false, error: "Failed to create unit conversion" }, 500);
   }
 }
 
@@ -2004,7 +2004,7 @@ export async function updateUnitConversion(c: Context) {
     });
   } catch (error: any) {
     console.error("Error updating unit conversion:", error);
-    return c.json({ success: false, error: error.message || "Failed to update unit conversion" }, 500);
+    return c.json({ success: false, error: "Failed to update unit conversion" }, 500);
   }
 }
 
@@ -2534,7 +2534,7 @@ export async function getServiceUnits(c: Context) {
     return c.json({ success: true, data: list });
   } catch (error: any) {
     console.error("Error fetching service units:", error);
-    return c.json({ success: false, error: error.message || "Failed to fetch service units" }, 500);
+    return c.json({ success: false, error: "Failed to fetch service units" }, 500);
   }
 }
 
@@ -2579,7 +2579,7 @@ export async function createServiceUnit(c: Context) {
     if (error?.code === "23505") {
       return c.json({ success: false, error: "This Unit Code already exists." }, 400);
     }
-    return c.json({ success: false, error: error.message || "Failed to create service unit" }, 500);
+    return c.json({ success: false, error: "Failed to create service unit" }, 500);
   }
 }
 
@@ -2628,7 +2628,7 @@ export async function updateServiceUnit(c: Context) {
     if (error?.code === "23505") {
       return c.json({ success: false, error: "This Unit Code already exists." }, 400);
     }
-    return c.json({ success: false, error: error.message || "Failed to update service unit" }, 500);
+    return c.json({ success: false, error: "Failed to update service unit" }, 500);
   }
 }
 
@@ -2742,7 +2742,7 @@ export async function exportDatabaseBackup(c: Context) {
     });
   } catch (err: any) {
     console.error("Database backup failed:", err);
-    return c.json({ success: false, error: err.message || "Failed to generate database backup" }, 500);
+    return c.json({ success: false, error: "Failed to generate database backup" }, 500);
   }
 }
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import { useClientsApi, type ClientManagerAssignment, type AssignableUser } from "@/composables/useClientsApi";
 import { useServicesApi, type CustomerType, type ClientReference } from "@/composables/useServicesApi";
@@ -125,12 +125,34 @@ const loadData = async () => {
   }
 };
 
+// Static lookups don't depend on the filters, so they are loaded once.
+const loadLookups = async () => {
+  try {
+    await Promise.all([fetchAssignableUsers(), fetchCustomerTypes(), fetchReferences()]);
+  } catch {}
+};
+
 onMounted(() => {
+  loadLookups();
   loadData();
 });
 
+// Debounce search-driven reloads so typing does not fire a request per keystroke.
+let loadTimer: ReturnType<typeof setTimeout> | null = null;
+const scheduleLoad = () => {
+  if (loadTimer) clearTimeout(loadTimer);
+  loadTimer = setTimeout(() => {
+    loadTimer = null;
+    fetchAssignments({ search: searchQuery.value, filter: activeFilter.value }).catch(() => {});
+  }, 300);
+};
+
+onBeforeUnmount(() => {
+  if (loadTimer) clearTimeout(loadTimer);
+});
+
 watch([activeFilter, searchQuery], () => {
-  fetchAssignments({ search: searchQuery.value, filter: activeFilter.value }).catch(() => {});
+  scheduleLoad();
 });
 
 const getClientManagerIds = (client: ClientManagerAssignment): number[] => {

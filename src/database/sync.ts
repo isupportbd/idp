@@ -22,6 +22,108 @@ async function executeSingleSql(rawSql: string) {
   }
 }
 
+/**
+ * Why: Financial columns were originally `double precision`, which drifts
+ *      (binary floating point cannot represent most decimal money exactly).
+ * When: On every boot, before routes are registered.
+ * Where: Called from syncDatabaseSchemaAndSuperAdmin().
+ * How: A single atomic, idempotent, fail-loud PL/pgSQL block that converts
+ *      ONLY the enumerated money columns from `double precision` to
+ *      `numeric(14, 2)`. Runs in one transaction (a DO block is one statement),
+ *      so either every column converts or none do. The information_schema guard
+ *      makes repeat boots a no-op.
+ *
+ * Deliberately NOT routed through executeSingleSql(): that helper swallows
+ * errors. A failed money migration must be loud, not boot against a
+ * half-migrated schema.
+ *
+ * Non-money columns (quantities, weights, conversion factors and percentages)
+ * are intentionally excluded — see money-to-numeric-migration-review.md §3.
+ */
+async function migrateMoneyColumnsToNumeric() {
+  const migrationSql = String.raw`
+DO $mig$
+DECLARE
+  targets constant text[][] := ARRAY[
+    ['bills','subtotal'],['bills','discount_amount'],['bills','previous_due'],
+    ['bills','grand_total'],['bills','paid_amount'],['bills','due_amount'],
+    ['bill_items','rate_used'],['bill_items','minimum_charge_used'],
+    ['bill_items','calculated_amount'],['bill_items','final_amount'],
+    ['collections','amount'],
+    ['clients','opening_balance'],
+    ['service_rates','regular_rate'],['service_rates','minimum_charge'],
+    ['sales_rates','sales_rate'],['sales_rates','vatable_value'],
+    ['purchases','ass_value'],['purchases','unit_value'],['purchases','cd'],
+    ['purchases','rd'],['purchases','sd'],['purchases','base_value_of_vat'],
+    ['purchases','vat'],['purchases','at'],
+    ['plans','rate_monthly'],['plans','rate_yearly'],
+    ['subscription_transactions','gateway_charge'],
+    ['payment_settings','bkash_charge'],
+    ['users','sms_balance']
+  ];
+  i int;
+  cur_type text;
+  bad int;
+  migrated int := 0;
+BEGIN
+  -- Serialize concurrent boots (replicas / workers); released at COMMIT.
+  PERFORM pg_advisory_xact_lock(hashtext('idp_money_to_numeric_v1'));
+
+  -- Fail fast rather than stall boot on a contended ACCESS EXCLUSIVE lock.
+  PERFORM set_config('lock_timeout', '10s', true);
+  PERFORM set_config('statement_timeout', '300s', true);
+
+  FOR i IN 1 .. array_length(targets, 1) LOOP
+    SELECT c.data_type INTO cur_type
+      FROM information_schema.columns c
+     WHERE c.table_schema = 'public'
+       AND c.table_name   = targets[i][1]
+       AND c.column_name  = targets[i][2];
+
+    IF cur_type IS NULL THEN
+      RAISE NOTICE '[DB Sync] skip missing %.%', targets[i][1], targets[i][2];
+      CONTINUE;
+    END IF;
+
+    IF cur_type <> 'double precision' THEN
+      CONTINUE;                       -- already numeric -> idempotent no-op
+    END IF;
+
+    -- Guard: values PostgreSQL cannot represent as numeric(14,2)
+    -- (NaN / +/-Infinity / anything >= 1e12).
+    EXECUTE format(
+      $q$ SELECT count(*) FROM public.%I
+             WHERE %I::text IN ('NaN','Infinity','-Infinity') OR abs(%I) >= 1e12 $q$,
+      targets[i][1], targets[i][2], targets[i][2]
+    ) INTO bad;
+    IF bad > 0 THEN
+      RAISE EXCEPTION '[DB Sync] %.% has % unrepresentable value(s); aborting numeric migration',
+        targets[i][1], targets[i][2], bad;
+    END IF;
+
+    -- Existing defaults (0, 1.8, ...) are re-cast by PostgreSQL automatically.
+    EXECUTE format(
+      'ALTER TABLE public.%I ALTER COLUMN %I TYPE numeric(14,2) USING %I::numeric(14,2)',
+      targets[i][1], targets[i][2], targets[i][2]
+    );
+
+    migrated := migrated + 1;
+    RAISE NOTICE '[DB Sync] migrated %.% -> numeric(14,2)', targets[i][1], targets[i][2];
+  END LOOP;
+
+  RAISE NOTICE '[DB Sync] money columns migrated this boot: %', migrated;
+END
+$mig$;`;
+
+  try {
+    await db.execute(sql.raw(migrationSql));
+  } catch (err: any) {
+    // Do NOT swallow: a failed money migration must be visible.
+    console.error("[DB Sync] MONEY MIGRATION FAILED:", err.message || err);
+    throw err;
+  }
+}
+
 export async function syncDatabaseSchemaAndSuperAdmin() {
   console.log("[DB Sync] Starting clean schema and SuperAdmin synchronization...");
 
@@ -156,6 +258,11 @@ export async function syncDatabaseSchemaAndSuperAdmin() {
   } catch (rErr) {
     console.warn("[DB Roles/Schema Warning]", rErr);
   }
+
+  // 2b. Convert financial double-precision columns to exact numeric (atomic,
+  // idempotent, fail-loud). Must run before routes are served. Intentionally
+  // NOT wrapped in a try/catch so a failed migration aborts boot visibly.
+  await migrateMoneyColumnsToNumeric();
 
   // 3. Dynamic SuperAdmin Account Setup from .env (Only SuperAdmin account, NO demo data)
   try {

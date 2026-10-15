@@ -130,7 +130,7 @@ export const listPurchases: Handler = async (c: any) => {
   } catch (error: any) {
     console.error("Error fetching purchases:", error);
     return c.json(
-      { success: false, message: error.message || "Failed to fetch purchases" },
+      { success: false, message: "Failed to fetch purchases" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -169,7 +169,7 @@ export const deletePurchase: Handler = async (c: any) => {
     return c.json({ success: true, message: "Purchase record deleted successfully" });
   } catch (error: any) {
     return c.json(
-      { success: false, message: error.message || "Failed to delete purchase" },
+      { success: false, message: "Failed to delete purchase" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -219,7 +219,7 @@ export const batchDeletePurchases: Handler = async (c: any) => {
     return c.json({ success: true, message: "Purchase records deleted successfully" });
   } catch (error: any) {
     return c.json(
-      { success: false, message: error.message || "Failed to batch delete purchases" },
+      { success: false, message: "Failed to batch delete purchases" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -259,7 +259,7 @@ export const deletePurchasesByMonth: Handler = async (c: any) => {
     return c.json({ success: true, message: `All purchases for ${month} deleted successfully` });
   } catch (error: any) {
     return c.json(
-      { success: false, message: error.message || "Failed to delete purchases by month" },
+      { success: false, message: "Failed to delete purchases by month" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -342,7 +342,7 @@ export const getPurchasesMonths: Handler = async (c: any) => {
     });
   } catch (error: any) {
     return c.json(
-      { success: false, message: error.message || "Failed to fetch purchases months" },
+      { success: false, message: "Failed to fetch purchases months" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }

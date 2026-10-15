@@ -123,7 +123,7 @@ export const listUsers: Handler = async (c: any) => {
     return c.json({ success: true, message: "Users fetched", data }, HttpStatusCodes.OK);
   } catch (err: any) {
     console.error("Failed to list users:", err);
-    return c.json({ success: false, message: err.message || "Failed to list users", data: [] }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
+    return c.json({ success: false, message: "Failed to list users", data: [] }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -235,7 +235,7 @@ export const createUser: Handler = async (c: any) => {
     );
   } catch (err: any) {
     console.error("Failed to create user:", err);
-    return c.json({ message: err.message || "Failed to create user" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
+    return c.json({ message: "Failed to create user" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -304,7 +304,7 @@ export const updateUser: Handler = async (c: any) => {
     return c.json({ success: true, message: "User updated successfully", data }, HttpStatusCodes.OK);
   } catch (err: any) {
     console.error("Failed to update user:", err);
-    return c.json({ message: err.message || "Failed to update user" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
+    return c.json({ message: "Failed to update user" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -338,7 +338,7 @@ export const resetUserPassword: Handler = async (c: any) => {
 
     return c.json({ success: true, message: "Password updated successfully" }, HttpStatusCodes.OK);
   } catch (err: any) {
-    return c.json({ message: err.message || "Failed to reset password" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
+    return c.json({ message: "Failed to reset password" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -400,7 +400,7 @@ export const updateUserStatus: Handler = async (c: any) => {
 
     return c.json({ success: true, message: `User status changed to ${newStatus}`, status: newStatus }, HttpStatusCodes.OK);
   } catch (err: any) {
-    return c.json({ message: err.message || "Failed to update status" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
+    return c.json({ message: "Failed to update status" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -432,6 +432,6 @@ export const deleteUser: Handler = async (c: any) => {
 
     return c.json({ success: true, message: "User deleted successfully" }, HttpStatusCodes.OK);
   } catch (err: any) {
-    return c.json({ message: err.message || "Failed to delete user" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
+    return c.json({ message: "Failed to delete user" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };

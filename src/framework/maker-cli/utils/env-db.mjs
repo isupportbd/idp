@@ -1,8 +1,8 @@
 const DEFAULT_DATABASE_URL = "sqlite:./src/storage/database/nexgen.sqlite";
 
 /** Detect current DB dialect from DATABASE_URL (sqlite/mysql/postgresql). Falls back to sqlite. */
-export function detectDialect() {
-  const url = String(process.env.DATABASE_URL || DEFAULT_DATABASE_URL).toLowerCase();
+export function detectDialect(urlOverride) {
+  const url = String(urlOverride || process.env.DATABASE_URL || DEFAULT_DATABASE_URL).toLowerCase();
   if (url.startsWith("mysql") || url.startsWith("mariadb")) return "mysql";
   if (url.startsWith("postgres") || url.startsWith("postgresql")) return "postgresql";
   return "sqlite";
@@ -44,12 +44,12 @@ export function redisEnabled() {
   return value !== "false" && value !== "0";
 }
 
-/** Detect DB dialect for deploy context (uses raw DATABASE_URL or explicit URL). */
+/** Detect DB dialect for deploy context (uses raw DATABASE_URL or explicit URL).
+ *  Deploy stubs are keyed by the short name "postgres"/"mysql"/"sqlite", so the
+ *  canonical "postgresql" dialect is mapped down here instead of re-parsing. */
 export function detectDeployDatabase(urlOverride) {
-  const url = String(urlOverride || process.env.DATABASE_URL || "").toLowerCase();
-  if (url.startsWith("mysql") || url.startsWith("mariadb")) return "mysql";
-  if (url.startsWith("postgres") || url.startsWith("postgresql")) return "postgres";
-  return "sqlite";
+  const dialect = detectDialect(urlOverride);
+  return dialect === "postgresql" ? "postgres" : dialect;
 }
 
 /** Convert a sqlite:// URL to a filesystem path. */

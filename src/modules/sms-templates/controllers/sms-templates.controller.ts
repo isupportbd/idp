@@ -252,7 +252,7 @@ export async function sendTestSms(c: Context) {
               smsBalance: liveBalance,
               timestamp: Date.now()
             },
-            { all: true, auth: true }
+            { tenant: adminId }
           );
         }
       } catch (balErr) {
@@ -374,7 +374,7 @@ export async function updateGatewaySettings(c: Context) {
               smsBalance: liveBalance,
               timestamp: Date.now()
             },
-            { all: true, auth: true }
+            { tenant: adminId }
           );
         }
       } catch (balErr) {
@@ -457,7 +457,7 @@ export async function checkGatewayBalance(c: Context) {
             smsBalance: numBal,
             timestamp: Date.now()
           },
-          { all: true, auth: true }
+          { tenant: adminId }
         );
       } catch {}
     }

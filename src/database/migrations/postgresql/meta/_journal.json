@@ -43,6 +43,13 @@
       "when": 1790963838361,
       "tag": "0005_chief_lyja",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792069766238,
+      "tag": "0006_money_to_numeric",
+      "breakpoints": true
     }
   ]
 }

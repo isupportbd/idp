@@ -1,4 +1,4 @@
-import { boolean, date, doublePrecision, index, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, date, doublePrecision, index, integer, numeric, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { users } from "@/modules/auth/database/models/user.js";
 import { clients } from "./clients.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
@@ -25,14 +25,14 @@ export const purchases = pgTable(
     netWt: doublePrecision("net_wt").notNull(),
     excessQty: doublePrecision("excess_qty"),
     totalQty: doublePrecision("total_qty"),
-    assValue: doublePrecision("ass_value").notNull(),
-    unitValue: doublePrecision("unit_value"),
-    cd: doublePrecision("cd"),
-    rd: doublePrecision("rd"),
-    sd: doublePrecision("sd"),
-    baseValueOfVat: doublePrecision("base_value_of_vat"),
-    vat: doublePrecision("vat"),
-    at: doublePrecision("at"),
+    assValue: numeric("ass_value", { precision: 14, scale: 2, mode: "number" }).notNull(),
+    unitValue: numeric("unit_value", { precision: 14, scale: 2, mode: "number" }),
+    cd: numeric("cd", { precision: 14, scale: 2, mode: "number" }),
+    rd: numeric("rd", { precision: 14, scale: 2, mode: "number" }),
+    sd: numeric("sd", { precision: 14, scale: 2, mode: "number" }),
+    baseValueOfVat: numeric("base_value_of_vat", { precision: 14, scale: 2, mode: "number" }),
+    vat: numeric("vat", { precision: 14, scale: 2, mode: "number" }),
+    at: numeric("at", { precision: 14, scale: 2, mode: "number" }),
     isRebate: boolean("is_rebate").default(false),
     isFfs: boolean("is_ffs").default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

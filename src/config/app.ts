@@ -35,7 +35,16 @@ export const appConfig = {
    * How: kernel.ts gates ensurePublicDir() and the static/SPA middlewares;
    *      server.ts logs the enabled/disabled status.
    */
-  uiEnabled: env.UI
+  uiEnabled: env.UI,
+  /**
+   * trustProxy
+   * Why: Controls whether rate limiting may read the client IP from
+   *      X-Forwarded-For. undefined = auto (only trust when the direct peer is a
+   *      private/loopback address), true = always trust, false = never trust.
+   * When: Rate limiter / any middleware that needs the real client IP.
+   * How: See src/framework/http/ratelimiter.ts.
+   */
+  trustProxy: env.TRUST_PROXY
 };
 
 export type AppConfig = typeof appConfig;

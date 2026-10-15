@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { boolean, doublePrecision, index, integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, index, integer, numeric, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
 import { users } from "@/modules/auth/database/models/user.js";
@@ -23,7 +23,7 @@ export const clients = pgTable(
     vatUserId: varchar("vat_user_id", { length: 100 }),
     vatPassword: varchar("vat_password", { length: 255 }),
     vatServiceType: varchar("vat_service_type", { length: 50 }).default("FULL").notNull(),
-    openingBalance: doublePrecision("opening_balance").default(0).notNull(),
+    openingBalance: numeric("opening_balance", { precision: 14, scale: 2, mode: "number" }).default(0).notNull(),
     isActive: boolean("is_active").default(true).notNull(),
     notes: text("notes"),
     createdBy: integer("created_by").references(() => users.id, { onUpdate: "cascade", onDelete: "set null" }),

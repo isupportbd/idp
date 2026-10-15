@@ -37,7 +37,27 @@ export default defineConfig({
   },
   build: {
     outDir: "../../public",
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        // Split large, rarely-changing dependencies into their own chunks so the
+        // entry bundle stays small and vendor code is cached across deploys.
+        // NOTE: this bundler (rolldown) requires a function rather than a map.
+        manualChunks(id: string) {
+          if (!id.includes("node_modules")) return undefined;
+          if (/[\\/]node_modules[\\/](socket\.io-client|engine\.io-client|socket\.io-parser|engine\.io-parser)[\\/]/.test(id)) {
+            return "vendor-socket";
+          }
+          if (/[\\/]node_modules[\\/]axios[\\/]/.test(id)) {
+            return "vendor-axios";
+          }
+          if (/[\\/]node_modules[\\/](vue|vue-router|pinia|@vueuse)[\\/]/.test(id)) {
+            return "vendor-vue";
+          }
+          return undefined;
+        }
+      }
+    }
   },
   server: {
     port: 5180,

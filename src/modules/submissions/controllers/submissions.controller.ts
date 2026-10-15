@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import { db, getDefaultTaxPeriod, getSubmissionDeadline, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
 import { broadcast } from "@/framework/realtime/broadcast.js";
@@ -213,7 +213,7 @@ export const listSubmissions: Handler = async (c: any) => {
     );
   } catch (err: any) {
     return c.json(
-      { message: err.message || "Failed to fetch submissions" },
+      { message: "Failed to fetch submissions" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -226,7 +226,9 @@ export const recordSubmission: Handler = async (c: any) => {
     const payload = c.req.valid("json");
     const { clientId, taxPeriod, submissionId, remarks } = payload;
 
-    // Verify active client
+    const { currentUser, isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
+
+    // Verify active client (must exist and belong to the caller's tenant).
     const client = (
       await db
         .select({
@@ -243,8 +245,11 @@ export const recordSubmission: Handler = async (c: any) => {
         .limit(1)
     )[0];
 
-    const { currentUser, isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
-    if (!isSuperAdmin && tenantAdminId && client.createdBy && client.createdBy !== tenantAdminId) {
+    if (!client) {
+      return c.json({ message: "Client not found" }, HttpStatusCodes.NOT_FOUND);
+    }
+    // Fail closed: a client with no recorded owner is never treated as accessible.
+    if (!isSuperAdmin && Number(client.createdBy) !== Number(tenantAdminId)) {
       return c.json({ message: "Unauthorized access to client" }, HttpStatusCodes.FORBIDDEN);
     }
     if (!isSuperAdmin && !isTenantAdmin) {
@@ -278,6 +283,9 @@ export const recordSubmission: Handler = async (c: any) => {
     }
 
     const submittedAt = payload.submittedAt ? new Date(payload.submittedAt) : new Date();
+    if (Number.isNaN(submittedAt.getTime())) {
+      return c.json({ message: "Invalid submission date" }, HttpStatusCodes.BAD_REQUEST);
+    }
     const deadline = getSubmissionDeadline(taxPeriod);
     const status = submittedAt > deadline ? "late_submitted" : "submitted";
 
@@ -378,8 +386,7 @@ export const recordSubmission: Handler = async (c: any) => {
         remarks: remarks?.trim() || null
       },
       {
-        auth: true,
-        all: true
+        tenant: targetAdminId
       }
     );
 
@@ -415,7 +422,7 @@ export const recordSubmission: Handler = async (c: any) => {
     );
   } catch (err: any) {
     return c.json(
-      { message: err.message || "Failed to record submission" },
+      { message: "Failed to record submission" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -426,19 +433,24 @@ export const recordSubmission: Handler = async (c: any) => {
 export const deleteSubmission: Handler = async (c: any) => {
   try {
     const { id } = c.req.valid("param");
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+
     const existing = (
       await db
         .select({
           id: vatSubmissions.id,
           clientId: vatSubmissions.clientId,
-          taxPeriod: vatSubmissions.taxPeriod
+          taxPeriod: vatSubmissions.taxPeriod,
+          clientOwner: clients.createdBy
         })
         .from(vatSubmissions)
+        .leftJoin(clients, eq(vatSubmissions.clientId, clients.id))
         .where(eq(vatSubmissions.id, id))
         .limit(1)
     )[0];
 
-    if (!existing) {
+    // Hide other tenants' rows entirely (404 rather than 403 avoids id probing).
+    if (!existing || (!isSuperAdmin && Number(existing.clientOwner) !== Number(tenantAdminId))) {
       return c.json({ message: "Submission record not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
@@ -452,15 +464,14 @@ export const deleteSubmission: Handler = async (c: any) => {
         taxPeriod: existing.taxPeriod
       },
       {
-        auth: true,
-        all: true
+        tenant: existing.clientOwner ?? tenantAdminId
       }
     );
 
     return c.json({ message: "Submission record deleted successfully" }, HttpStatusCodes.OK);
   } catch (err: any) {
     return c.json(
-      { message: err.message || "Failed to delete submission" },
+      { message: "Failed to delete submission" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -475,23 +486,40 @@ export const batchDeleteSubmissions: Handler = async (c: any) => {
       return c.json({ message: "No submission IDs provided" }, HttpStatusCodes.BAD_REQUEST);
     }
 
-    await db.delete(vatSubmissions).where(inArray(vatSubmissions.id, ids));
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+
+    // Only delete rows owned by the caller's tenant. Foreign ids are ignored
+    // rather than deleted (prevents cross-tenant batch deletion).
+    let deletableIds: number[] = ids;
+    if (!isSuperAdmin) {
+      const owned = await db
+        .select({ id: vatSubmissions.id })
+        .from(vatSubmissions)
+        .leftJoin(clients, eq(vatSubmissions.clientId, clients.id))
+        .where(and(inArray(vatSubmissions.id, ids), eq(clients.createdBy, tenantAdminId)));
+      deletableIds = owned.map((row) => row.id);
+    }
+
+    if (deletableIds.length === 0) {
+      return c.json({ message: "No submission records deleted" }, HttpStatusCodes.OK);
+    }
+
+    await db.delete(vatSubmissions).where(inArray(vatSubmissions.id, deletableIds));
 
     broadcast(
       "submission:batch_deleted",
       {
-        ids
+        ids: deletableIds
       },
       {
-        auth: true,
-        all: true
+        tenant: tenantAdminId
       }
     );
 
-    return c.json({ message: `${ids.length} submission records deleted` }, HttpStatusCodes.OK);
+    return c.json({ message: `${deletableIds.length} submission records deleted` }, HttpStatusCodes.OK);
   } catch (err: any) {
     return c.json(
-      { message: err.message || "Failed to batch delete submissions" },
+      { message: "Failed to batch delete submissions" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -553,7 +581,7 @@ export const getSingleSubmission: Handler = async (c: any) => {
     );
   } catch (err: any) {
     return c.json(
-      { message: err.message || "Failed to fetch submission", data: null },
+      { message: "Failed to fetch submission", data: null },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }

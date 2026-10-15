@@ -2,7 +2,7 @@ import { config } from "dotenv";
 import { expand } from "dotenv-expand";
 import { z } from "zod";
 
-expand(config({ override: true }));
+expand(config());
 
 const envSchema = z
   .object({
@@ -28,9 +28,9 @@ const envSchema = z
       .string()
       .default("nexgen")
       .transform((value) => value.trim()),
-    JWT_ACCESS_SECRET: z.string().default("idp_jwt_access_secret_key_default_2026"),
-    JWT_REFRESH_SECRET: z.string().default("idp_jwt_refresh_secret_key_default_2026"),
-    COOKIE_SECRET: z.string().default("idp_cookie_secret_key_default_2026"),
+    JWT_ACCESS_SECRET: z.string().trim().optional(),
+    JWT_REFRESH_SECRET: z.string().trim().optional(),
+    COOKIE_SECRET: z.string().trim().optional(),
     STORAGE_ACCESS_KEY_ID: z
       .string()
       .optional()
@@ -71,15 +71,39 @@ const envSchema = z
     SOCKET: z
       .string()
       .default("false")
-      .transform((value) => value.trim().toLowerCase() !== "false" && value.trim() !== "0")
+      .transform((value) => value.trim().toLowerCase() !== "false" && value.trim() !== "0"),
+    // Rate-limit client-IP trust policy for X-Forwarded-For.
+    //   unset    -> auto-detect (trust the header only when the direct peer is a
+    //               private/loopback address, i.e. a reverse proxy)
+    //   true     -> always trust X-Forwarded-For (must sit behind a proxy)
+    //   false    -> never trust it (app is directly exposed)
+    // In every mode the LAST (right-most) entry is used, which is the one
+    // appended by the nearest proxy and cannot be forged by the client.
+    TRUST_PROXY: z
+      .string()
+      .optional()
+      .transform((value) => {
+        const trimmed = value?.trim().toLowerCase();
+        if (trimmed === undefined || trimmed === "") return undefined;
+        if (trimmed === "true" || trimmed === "1") return true;
+        if (trimmed === "false" || trimmed === "0") return false;
+        return undefined;
+      })
   })
   .superRefine((data, ctx) => {
+    // In production the signing/cookie secrets MUST be provided by the real
+    // environment. Previously the schema supplied hard-coded defaults, which
+    // made the "is required" check below dead code and shipped forgeable
+    // secrets to every deployment.
+    if (data.APP_ENV !== "production") return;
+
     for (const key of ["JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET", "COOKIE_SECRET"] as const) {
-      if (!data[key]) {
+      const value = data[key];
+      if (!value || value.length < 32) {
         ctx.addIssue({
           code: "custom",
           path: [key],
-          message: `${key} is required`
+          message: `${key} must be set to a random value of at least 32 characters when APP_ENV=production`
         });
       }
     }
@@ -87,9 +111,14 @@ const envSchema = z
 
 const parsedEnv = envSchema.parse(process.env);
 
+// Development/test fallbacks only. Production is validated above, so these can
+// never be used to protect a production instance.
 export const env = {
   ...parsedEnv,
-  FRONTEND_URL: parsedEnv.FRONTEND_URL
+  FRONTEND_URL: parsedEnv.FRONTEND_URL,
+  JWT_ACCESS_SECRET: parsedEnv.JWT_ACCESS_SECRET || "dev-only-insecure-jwt-access-secret",
+  JWT_REFRESH_SECRET: parsedEnv.JWT_REFRESH_SECRET || "dev-only-insecure-jwt-refresh-secret",
+  COOKIE_SECRET: parsedEnv.COOKIE_SECRET || "dev-only-insecure-cookie-secret"
 };
 
 export type Env = typeof env;

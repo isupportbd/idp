@@ -8,6 +8,8 @@ export type BroadcastOptions = {
   rooms?: string[];
   auth?: boolean;
   all?: boolean;
+  /** Restricts the event to a single tenant room (`tenant:<id>`). */
+  tenant?: string | number | null;
 };
 
 /**
@@ -21,15 +23,29 @@ function emitViaIo(event: string, payload: any, options: BroadcastOptions) {
   const io = socketServer();
   if (!io) return;
 
-  if (options.all) {
-    io.emit(event, payload);
-    return;
-  }
-  if (options.auth) io.to("auth").emit(event, payload);
+  // Resolve every target room first so a single chained emit is used.
+  // Socket.IO unions chained rooms and de-duplicates by socket, so a socket that
+  // belongs to several target rooms still receives exactly one copy of the event.
+  const rooms = new Set<string>();
 
-  for (const user of options.users || []) io.to(`user:${user}`).emit(event, payload);
-  for (const role of options.roles || []) io.to(`role:${role}`).emit(event, payload);
-  for (const room of options.rooms || []) io.to(room).emit(event, payload);
+  // `all` historically short-circuited to `io.emit`, leaking every domain event to
+  // guests and (for tenant payloads) to every other tenant. It now means
+  // "all authenticated users" — guests can never receive domain events.
+  if (options.all || options.auth) rooms.add("auth");
+
+  if (options.tenant != null && String(options.tenant) !== "") {
+    rooms.add(`tenant:${options.tenant}`);
+  }
+
+  for (const user of options.users || []) rooms.add(`user:${user}`);
+  for (const role of options.roles || []) rooms.add(`role:${role}`);
+  for (const room of options.rooms || []) if (room) rooms.add(String(room));
+
+  if (rooms.size === 0) return;
+
+  let emitter: any = io;
+  for (const room of rooms) emitter = emitter.to(room);
+  emitter.emit(event, payload);
 }
 
 export function broadcast(event: string, payload: any, options: BroadcastOptions = {}) {

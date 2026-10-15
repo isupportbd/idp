@@ -1,4 +1,3 @@
-import { io, type Socket } from "socket.io-client";
 import type { App } from "vue";
 
 declare const __SOCKET_ENABLED__: boolean;
@@ -24,6 +23,8 @@ export type PulseClient = {
   leave: (room: string) => PulseClient;
 };
 
+type ClientSocket = import("socket.io-client").Socket;
+
 function createPulse(): PulseClient {
   if (!__SOCKET_ENABLED__) {
     const n = (): PulseChannel => ({ listen: () => n(), stopListening: () => n() });
@@ -36,7 +37,9 @@ function createPulse(): PulseClient {
     };
     return c;
   }
-  let socket: Socket | null = null;
+
+  let socket: ClientSocket | null = null;
+  let socketLoading: Promise<ClientSocket> | null = null;
   const channels = new Map<string, ChannelBinding[]>();
   const joinedRooms = new Set<string>();
 
@@ -46,34 +49,61 @@ function createPulse(): PulseClient {
     return window.location.origin;
   };
 
-  const ensureConnected = () => {
-    if (socket) return socket;
+  /**
+   * Why: socket.io-client is only needed once the UI is interactive, so it is
+   *      loaded as a separate chunk instead of being bundled into the entry
+   *      (previously the whole client shipped in the critical entry JS).
+   * How: The first call kicks off a dynamic import; the returned promise is
+   *      cached so every caller shares one socket. Listeners registered before
+   *      the socket exists are re-attached as soon as it is created.
+   */
+  const ensureConnected = (): Promise<ClientSocket> => {
+    if (socket) return Promise.resolve(socket);
+    if (socketLoading) return socketLoading;
 
-    const token = localStorage.getItem("idp_access_token") || localStorage.getItem("auth_token") || "";
+    socketLoading = import("socket.io-client")
+      .then(({ io }) => {
+        const token = localStorage.getItem("idp_access_token") || localStorage.getItem("auth_token") || "";
 
-    socket = io(socketUrl(), {
-      withCredentials: true,
-      auth: token ? { token } : undefined,
-      extraHeaders: token ? { Authorization: `Bearer ${token}` } : undefined,
-      transports: ["websocket", "polling"]
-    });
+        const s = io(socketUrl(), {
+          withCredentials: true,
+          auth: token ? { token } : undefined,
+          extraHeaders: token ? { Authorization: `Bearer ${token}` } : undefined,
+          transports: ["websocket", "polling"]
+        });
 
-    socket.on("connect", () => {
-      for (const room of joinedRooms) {
-        socket?.emit("join", room);
-      }
-    });
+        s.on("connect", () => {
+          for (const room of joinedRooms) {
+            s.emit("join", room);
+          }
+        });
 
-    return socket;
+        // Re-attach everything that was bound before the socket existed.
+        for (const bindings of channels.values()) {
+          for (const binding of bindings) {
+            s.on(binding.event, binding.wrapped);
+          }
+        }
+
+        socket = s;
+        return s;
+      })
+      .catch((error) => {
+        socketLoading = null;
+        throw error;
+      });
+
+    return socketLoading;
   };
 
   const channel = (name: string): PulseChannel => {
     const room = String(name).trim();
     if (!room) throw new Error("Channel name is required");
 
-    const currentSocket = ensureConnected();
     joinedRooms.add(room);
-    currentSocket.emit("join", room);
+    void ensureConnected()
+      .then((s) => s.emit("join", room))
+      .catch(() => {});
 
     const api: PulseChannel = {
       listen: <T = unknown>(event: string, callback: EventCallback<T>) => {
@@ -81,7 +111,9 @@ function createPulse(): PulseClient {
         const bindings = channels.get(room) || [];
         bindings.push({ event, callback: callback as EventCallback, wrapped });
         channels.set(room, bindings);
-        currentSocket.on(event, wrapped);
+        // If the socket is already live, bind immediately; otherwise it will be
+        // attached by ensureConnected() when the chunk finishes loading.
+        if (socket) socket.on(event, wrapped);
         return api;
       },
       stopListening: (event: string, callback?: EventCallback) => {
@@ -92,7 +124,7 @@ function createPulse(): PulseClient {
           const matchesEvent = binding.event === event;
           const matchesCallback = !callback || binding.callback === callback;
           if (matchesEvent && matchesCallback) {
-            currentSocket.off(binding.event, binding.wrapped);
+            socket?.off(binding.event, binding.wrapped);
           } else {
             kept.push(binding);
           }
@@ -109,22 +141,21 @@ function createPulse(): PulseClient {
 
   const pulse: PulseClient = {
     connect: () => {
-      ensureConnected();
+      void ensureConnected().catch(() => {});
       return pulse;
     },
     disconnect: () => {
       socket?.disconnect();
       socket = null;
+      socketLoading = null;
       return pulse;
     },
     channel,
     private: (room: string) => channel(`private:${room}`),
     leave: (room: string) => {
-      if (!socket) return pulse;
-
       const bindings = channels.get(room) || [];
       for (const binding of bindings) {
-        socket.off(binding.event, binding.wrapped);
+        socket?.off(binding.event, binding.wrapped);
       }
 
       channels.delete(room);

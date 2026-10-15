@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { detectDialectFrom } from "@/config/database.js";
 import { databaseConfig } from "@/config/index.js";
 import * as schema from "@/database/schema.js";
 
@@ -20,10 +21,7 @@ async function optionalImport<T = any>(name: string): Promise<T> {
  * How: Checks DATABASE_URL prefix and maps to sqlite/mysql/postgresql.
  */
 export function detectDialect(): Dialect {
-  const url = databaseConfig.url.toLowerCase();
-  if (url.startsWith("mysql")) return "mysql";
-  if (url.startsWith("postgres")) return "postgresql";
-  return "sqlite";
+  return detectDialectFrom(databaseConfig.url);
 }
 
 /**

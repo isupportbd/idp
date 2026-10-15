@@ -301,7 +301,7 @@ export async function sendVatSubmissionSms(params: {
             smsBalance: liveBalance,
             timestamp: Date.now()
           },
-          { all: true, auth: true }
+          { tenant: params.adminId }
         );
       }
     } catch (balErr) {

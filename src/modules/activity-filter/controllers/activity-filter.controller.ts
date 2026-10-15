@@ -210,7 +210,7 @@ export const getActivityMatrix: Handler = async (c: any) => {
     return c.json(
       {
         success: false,
-        message: error.message || "Failed to load activity matrix"
+        message: "Failed to load activity matrix"
       },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );

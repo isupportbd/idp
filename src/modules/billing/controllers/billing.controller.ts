@@ -20,6 +20,53 @@ function r2(num: number): number {
   return Math.round((num + Number.EPSILON) * 100) / 100;
 }
 
+/**
+ * Why: Item-level billing endpoints previously trusted the client-supplied id,
+ *      letting any authenticated user read/modify another tenant's rows (IDOR).
+ * How: Loads the row together with its owning client and enforces the caller's
+ *      tenant. Superadmins bypass the tenant filter.
+ * Returns the row when owned, otherwise null (caller responds 404).
+ */
+async function loadScopedBill(c: any, id: number) {
+  const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+  const rows = await db
+    .select({ bill: bills, clientOwner: clients.createdBy })
+    .from(bills)
+    .leftJoin(clients, eq(bills.clientId, clients.id))
+    .where(eq(bills.id, id))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return null;
+  if (!isSuperAdmin && Number(row.clientOwner) !== Number(tenantAdminId)) return null;
+  return row.bill;
+}
+
+async function loadScopedCollection(c: any, id: number) {
+  const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+  const rows = await db
+    .select({ collection: collections, clientOwner: clients.createdBy })
+    .from(collections)
+    .leftJoin(clients, eq(collections.clientId, clients.id))
+    .where(eq(collections.id, id))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return null;
+  if (!isSuperAdmin && Number(row.clientOwner) !== Number(tenantAdminId)) return null;
+  return row.collection;
+}
+
+/**
+ * Why: Money/CRM rows may only reference clients inside the caller's tenant.
+ * How: Returns true when the client exists and belongs to the caller.
+ */
+async function clientBelongsToTenant(c: any, clientId: number): Promise<boolean> {
+  const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+  const conditions: any[] = [eq(clients.id, clientId)];
+  if (!isSuperAdmin) conditions.push(eq(clients.createdBy, tenantAdminId));
+  const row = (await db.select({ id: clients.id }).from(clients).where(and(...conditions)).limit(1))[0];
+  return !!row;
+}
+
 // ── 1. SEQUENCE GENERATORS ──────────────────────────────────────────
 
 /**
@@ -362,7 +409,7 @@ export const listBills: Handler = async (c: any) => {
     );
   } catch (err: any) {
     return c.json(
-      { message: err.message || "Failed to fetch bills" },
+      { message: "Failed to fetch bills" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -375,6 +422,11 @@ export const getBillDetails: Handler = async (c: any) => {
     const id = Number(c.req.param("id"));
     if (isNaN(id)) {
       return c.json({ message: "Invalid bill ID" }, HttpStatusCodes.BAD_REQUEST);
+    }
+
+    // Tenant ownership guard (prevents cross-tenant IDOR)
+    if (!(await loadScopedBill(c, id))) {
+      return c.json({ message: "Bill not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
     const bill = (
@@ -481,7 +533,7 @@ export const getBillDetails: Handler = async (c: any) => {
     );
   } catch (err: any) {
     return c.json(
-      { message: err.message || "Failed to fetch bill details" },
+      { message: "Failed to fetch bill details" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -726,7 +778,7 @@ export const getClientBillingOverview: Handler = async (c: any) => {
     );
   } catch (err: any) {
     return c.json(
-      { message: err.message || "Failed to fetch client billing overview" },
+      { message: "Failed to fetch client billing overview" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -738,6 +790,11 @@ export const createBill: Handler = async (c: any) => {
   try {
     const payload = c.req.valid("json");
     const { clientId, referenceId: payloadRefId, taxPeriod, billDate, dueDate, discountAmount, notes, items, status } = payload;
+
+    // Tenant ownership guard — a sub-user/tenant must not bill another tenant's client.
+    if (!(await clientBelongsToTenant(c, Number(clientId)))) {
+      return c.json({ message: "Client not found" }, HttpStatusCodes.NOT_FOUND);
+    }
 
     // 1. Verify Active Client
     const client = (
@@ -810,52 +867,72 @@ export const createBill: Handler = async (c: any) => {
     const grandTotal = r2(Math.max(0, subtotal - discount + previousDue));
     const dueAmount = grandTotal;
 
-    // 5. Generate sequential bill number: Inv-YYYY-000001
-    const billNo = await generateNextBillNo(year);
-
+    // 5+6. Generate the sequential bill number and insert the bill with its
+    //      line items atomically. Two concurrent requests can read the same
+    //      "latest" number, so the unique index on bill_no is the real guard —
+    //      on a unique violation we regenerate and retry instead of returning a
+    //      spurious 500.
     const auth = c.get("auth") || c.get("user");
     const creatorId = auth?.adminId ? Number(auth.adminId) : (auth?.id ? Number(auth.id) : null);
 
-    // 6. Insert Bill in DB
-    const newBill = (
-      await db
-        .insert(bills)
-        .values({
-          billNo,
-          clientId,
-          referenceId: payloadRefId !== undefined && payloadRefId !== null ? payloadRefId : client.referenceId,
-          taxPeriod,
-          billDate: parsedBillDate,
-          dueDate: dueDate ? new Date(dueDate) : null,
-          subtotal,
-          discountAmount: discount,
-          previousDue,
-          grandTotal,
-          paidAmount: 0,
-          dueAmount,
-          status: status === "draft" ? "draft" : "unpaid",
-          createdBy: creatorId,
-          notes: notes?.trim() || null
-        })
-        .returning()
-    )[0];
+    let billNo = await generateNextBillNo(year);
+    let newBill: any;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        newBill = await db.transaction(async (tx) => {
+          const created = (
+            await tx
+              .insert(bills)
+              .values({
+                billNo,
+                clientId,
+                referenceId: payloadRefId !== undefined && payloadRefId !== null ? payloadRefId : client.referenceId,
+                taxPeriod,
+                billDate: parsedBillDate,
+                dueDate: dueDate ? new Date(dueDate) : null,
+                subtotal,
+                discountAmount: discount,
+                previousDue,
+                grandTotal,
+                paidAmount: 0,
+                dueAmount,
+                status: status === "draft" ? "draft" : "unpaid",
+                createdBy: creatorId,
+                notes: notes?.trim() || null
+              })
+              .returning()
+          )[0];
 
-    // 7. Insert Line Items
-    if (items.length > 0) {
-      await db.insert(billItems).values(
-        items.map((it) => ({
-          billId: newBill.id,
-          serviceItemId: it.serviceItemId || null,
-          itemName: it.itemName.trim(),
-          unit: it.unit || "Month",
-          qty: it.qty !== undefined && it.qty !== null ? Number(it.qty) : 1,
-          rateUsed: it.rateUsed !== undefined && it.rateUsed !== null ? Number(it.rateUsed) : 0,
-          minimumChargeUsed: it.minimumChargeUsed || 0,
-          calculatedAmount: it.calculatedAmount || 0,
-          finalAmount: it.finalAmount,
-          notes: it.notes?.trim() || null
-        }))
-      );
+          if (items.length > 0) {
+            await tx.insert(billItems).values(
+              items.map((it) => ({
+                billId: created.id,
+                serviceItemId: it.serviceItemId || null,
+                itemName: it.itemName.trim(),
+                unit: it.unit || "Month",
+                qty: it.qty !== undefined && it.qty !== null ? Number(it.qty) : 1,
+                rateUsed: it.rateUsed !== undefined && it.rateUsed !== null ? Number(it.rateUsed) : 0,
+                minimumChargeUsed: it.minimumChargeUsed || 0,
+                calculatedAmount: it.calculatedAmount || 0,
+                finalAmount: it.finalAmount,
+                notes: it.notes?.trim() || null
+              }))
+            );
+          }
+
+          return created;
+        });
+        break;
+      } catch (insertErr: any) {
+        const code = insertErr?.code ?? insertErr?.cause?.code;
+        const isDuplicateBillNo =
+          code === "23505" ||
+          code === "SQLITE_CONSTRAINT_UNIQUE" ||
+          code === "ER_DUP_ENTRY" ||
+          /duplicate key|unique constraint|UNIQUE constraint/i.test(String(insertErr?.message ?? ""));
+        if (!isDuplicateBillNo || attempt >= 4) throw insertErr;
+        billNo = await generateNextBillNo(year);
+      }
     }
 
     return c.json(
@@ -867,7 +944,7 @@ export const createBill: Handler = async (c: any) => {
     );
   } catch (err: any) {
     return c.json(
-      { message: err.message || "Failed to create bill" },
+      { message: "Failed to create bill" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -1136,7 +1213,7 @@ export const batchGenerateBills: Handler = async (c: any) => {
     );
   } catch (err: any) {
     return c.json(
-      { message: err.message || "Failed to batch generate bills" },
+      { message: "Failed to batch generate bills" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -1336,7 +1413,7 @@ export const getMissingBills: Handler = async (c: any) => {
     );
   } catch (err: any) {
     return c.json(
-      { message: err.message || "Failed to fetch missing bills" },
+      { message: "Failed to fetch missing bills" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -1349,9 +1426,7 @@ export const updateBill: Handler = async (c: any) => {
     const id = Number(c.req.param("id"));
     const payload = c.req.valid("json");
 
-    const existing = (
-      await db.select().from(bills).where(eq(bills.id, id)).limit(1)
-    )[0];
+    const existing = await loadScopedBill(c, id);
 
     if (!existing) {
       return c.json({ message: "Bill not found" }, HttpStatusCodes.NOT_FOUND);
@@ -1366,10 +1441,17 @@ export const updateBill: Handler = async (c: any) => {
     if (payload.notes !== undefined) updatedData.notes = payload.notes;
     if (payload.status) updatedData.status = payload.status;
 
-    if (payload.items && payload.items.length > 0) {
-      // Recompute subtotal
-      const newSubtotal = r2(payload.items.reduce((acc, it) => acc + (it.finalAmount || 0), 0));
-      const discount = payload.discountAmount !== undefined ? r2(payload.discountAmount) : existing.discountAmount;
+    const hasItems = Array.isArray(payload.items) && payload.items.length > 0;
+    const discountTouched = payload.discountAmount !== undefined;
+
+    // Recompute totals when EITHER items or discount change. Previously the whole
+    // recalculation lived inside `if (items.length > 0)`, so a discount-only edit
+    // was accepted by the API but silently discarded.
+    if (hasItems || discountTouched) {
+      const newSubtotal = hasItems
+        ? r2(payload.items.reduce((acc: number, it: any) => acc + (it.finalAmount || 0), 0))
+        : r2(existing.subtotal);
+      const discount = discountTouched ? r2(payload.discountAmount) : r2(existing.discountAmount);
       const grandTotal = r2(Math.max(0, newSubtotal - discount + existing.previousDue));
       const dueAmount = r2(Math.max(0, grandTotal - existing.paidAmount));
 
@@ -1378,27 +1460,35 @@ export const updateBill: Handler = async (c: any) => {
       updatedData.grandTotal = grandTotal;
       updatedData.dueAmount = dueAmount;
 
-      // Replace items
-      await db.delete(billItems).where(eq(billItems.billId, id));
-      await db.insert(billItems).values(
-        payload.items.map((it) => ({
-          billId: id,
-          serviceItemId: it.serviceItemId || null,
-          itemName: it.itemName.trim(),
-          unit: it.unit || "Month",
-          qty: it.qty !== undefined && it.qty !== null ? Number(it.qty) : 1,
-          rateUsed: it.rateUsed !== undefined && it.rateUsed !== null ? Number(it.rateUsed) : 0,
-          minimumChargeUsed: it.minimumChargeUsed || 0,
-          calculatedAmount: it.calculatedAmount || 0,
-          finalAmount: it.finalAmount,
-          notes: it.notes?.trim() || null
-        }))
-      );
+      if (!payload.status) {
+        if (grandTotal > 0 && dueAmount === 0) updatedData.status = "paid";
+        else if (existing.paidAmount > 0) updatedData.status = "partial";
+      }
     }
 
-    const result = (
-      await db.update(bills).set(updatedData).where(eq(bills.id, id)).returning()
-    )[0];
+    const result = await db.transaction(async (tx) => {
+      if (hasItems) {
+        // Replace items atomically with the bill update so a failure cannot
+        // leave the invoice without its line items.
+        await tx.delete(billItems).where(eq(billItems.billId, id));
+        await tx.insert(billItems).values(
+          payload.items.map((it: any) => ({
+            billId: id,
+            serviceItemId: it.serviceItemId || null,
+            itemName: it.itemName.trim(),
+            unit: it.unit || "Month",
+            qty: it.qty !== undefined && it.qty !== null ? Number(it.qty) : 1,
+            rateUsed: it.rateUsed !== undefined && it.rateUsed !== null ? Number(it.rateUsed) : 0,
+            minimumChargeUsed: it.minimumChargeUsed || 0,
+            calculatedAmount: it.calculatedAmount || 0,
+            finalAmount: it.finalAmount,
+            notes: it.notes?.trim() || null
+          }))
+        );
+      }
+
+      return (await tx.update(bills).set(updatedData).where(eq(bills.id, id)).returning())[0];
+    });
 
     return c.json(
       { message: `Invoice ${existing.billNo} updated successfully`, data: result },
@@ -1406,7 +1496,7 @@ export const updateBill: Handler = async (c: any) => {
     );
   } catch (err: any) {
     return c.json(
-      { message: err.message || "Failed to update bill" },
+      { message: "Failed to update bill" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -1415,17 +1505,34 @@ export const updateBill: Handler = async (c: any) => {
 export const deleteBill: Handler = async (c: any) => {
   try {
     const id = Number(c.req.param("id"));
-    const existing = (
-      await db.select().from(bills).where(eq(bills.id, id)).limit(1)
-    )[0];
+    const existing = await loadScopedBill(c, id);
 
     if (!existing) {
       return c.json({ message: "Bill not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
-    // Delete bill items cascade and delete bill
-    await db.delete(billItems).where(eq(billItems.billId, id));
-    await db.delete(bills).where(eq(bills.id, id));
+    // Preserve audit history: a bill that already has completed receipts must not
+    // be deleted, otherwise the receipts are silently detached from their invoice.
+    const linkedReceipts = (
+      await db
+        .select({ id: collections.id })
+        .from(collections)
+        .where(and(eq(collections.billId, id), eq(collections.status, "completed")))
+        .limit(1)
+    )[0];
+
+    if (linkedReceipts) {
+      return c.json(
+        { message: "Cannot delete an invoice that has recorded payment receipts. Cancel the receipts first." },
+        HttpStatusCodes.CONFLICT
+      );
+    }
+
+    // Remove line items and the bill atomically.
+    await db.transaction(async (tx) => {
+      await tx.delete(billItems).where(eq(billItems.billId, id));
+      await tx.delete(bills).where(eq(bills.id, id));
+    });
 
     return c.json(
       { message: `Invoice ${existing.billNo} deleted successfully` },
@@ -1433,7 +1540,7 @@ export const deleteBill: Handler = async (c: any) => {
     );
   } catch (err: any) {
     return c.json(
-      { message: err.message || "Failed to delete bill" },
+      { message: "Failed to delete bill" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -1510,7 +1617,7 @@ export const listCollections: Handler = async (c: any) => {
     );
   } catch (err: any) {
     return c.json(
-      { message: err.message || "Failed to fetch collections" },
+      { message: "Failed to fetch collections" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -1522,66 +1629,68 @@ export const createCollection: Handler = async (c: any) => {
     const { clientId, billId, collectionDate, amount, paymentMethod, referenceNo, notes } = payload;
     const { userId } = await resolveTenantContext(c);
 
-    const client = (
-      await db.select().from(clients).where(eq(clients.id, clientId)).limit(1)
-    )[0];
-
-    if (!client) {
+    // Tenant guard: the client (and any linked bill) must belong to the caller.
+    if (!(await clientBelongsToTenant(c, Number(clientId)))) {
       return c.json({ message: "Client not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
     const parsedDate = new Date(collectionDate);
-    const year = parsedDate.getFullYear() || new Date().getFullYear();
+    if (Number.isNaN(parsedDate.getTime())) {
+      return c.json({ message: "Invalid collection date" }, HttpStatusCodes.BAD_REQUEST);
+    }
 
-    // Generate Money Receipt No: MR-YYYY-000001
-    const receiptNo = await generateNextReceiptNo(year);
-
-    const newCollection = (
-      await db
-        .insert(collections)
-        .values({
-          receiptNo,
-          billId: billId || null,
-          clientId,
-          collectionDate: parsedDate,
-          amount: r2(amount),
-          paymentMethod,
-          referenceNo: referenceNo?.trim() || null,
-          notes: notes?.trim() || null,
-          receivedBy: userId,
-          status: "completed"
-        })
-        .returning()
-    )[0];
-
-    // If linked to a specific bill, update bill's paidAmount & dueAmount
+    let targetBill = null;
     if (billId) {
-      const targetBill = (
-        await db.select().from(bills).where(eq(bills.id, billId)).limit(1)
+      targetBill = await loadScopedBill(c, Number(billId));
+      if (!targetBill) {
+        return c.json({ message: "Bill not found" }, HttpStatusCodes.NOT_FOUND);
+      }
+      if (Number(targetBill.clientId) !== Number(clientId)) {
+        return c.json({ message: "Bill does not belong to the selected client" }, HttpStatusCodes.BAD_REQUEST);
+      }
+    }
+
+    const year = parsedDate.getFullYear() || new Date().getFullYear();
+    const receiptNo = await generateNextReceiptNo(year);
+    const normalizedAmount = r2(amount);
+
+    // Insert the receipt and settle the invoice in a single transaction so the
+    // ledger and the invoice balance can never diverge.
+    const newCollection = await db.transaction(async (tx) => {
+      const created = (
+        await tx
+          .insert(collections)
+          .values({
+            receiptNo,
+            billId: billId || null,
+            clientId,
+            collectionDate: parsedDate,
+            amount: normalizedAmount,
+            paymentMethod,
+            referenceNo: referenceNo?.trim() || null,
+            notes: notes?.trim() || null,
+            receivedBy: userId,
+            status: "completed"
+          })
+          .returning()
       )[0];
 
-      if (targetBill) {
-        const newPaid = r2(targetBill.paidAmount + amount);
-        const newDue = r2(Math.max(0, targetBill.grandTotal - newPaid));
-        let newStatus = targetBill.status;
-
-        if (newDue === 0) {
-          newStatus = "paid";
-        } else if (newPaid > 0) {
-          newStatus = "partial";
-        }
-
-        await db
+      if (billId) {
+        // Atomic balance update — no read-modify-write, so concurrent receipts
+        // can never lose an increment.
+        await tx
           .update(bills)
           .set({
-            paidAmount: newPaid,
-            dueAmount: newDue,
-            status: newStatus,
+            paidAmount: sql`${bills.paidAmount} + ${normalizedAmount}`,
+            dueAmount: sql`GREATEST(0, ${bills.grandTotal} - (${bills.paidAmount} + ${normalizedAmount}))`,
+            status: sql`CASE WHEN GREATEST(0, ${bills.grandTotal} - (${bills.paidAmount} + ${normalizedAmount})) <= 0 THEN 'paid' ELSE 'partial' END`,
             updatedAt: new Date()
           })
           .where(eq(bills.id, billId));
       }
-    }
+
+      return created;
+    });
 
     return c.json(
       {
@@ -1592,7 +1701,7 @@ export const createCollection: Handler = async (c: any) => {
     );
   } catch (err: any) {
     return c.json(
-      { message: err.message || "Failed to record collection" },
+      { message: "Failed to record collection" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -1601,43 +1710,35 @@ export const createCollection: Handler = async (c: any) => {
 export const cancelCollection: Handler = async (c: any) => {
   try {
     const id = Number(c.req.param("id"));
-    const col = (
-      await db.select().from(collections).where(eq(collections.id, id)).limit(1)
-    )[0];
+    const col = await loadScopedCollection(c, id);
 
     if (!col) {
       return c.json({ message: "Collection not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
-    // Mark collection cancelled
-    await db
-      .update(collections)
-      .set({ status: "cancelled", updatedAt: new Date() })
-      .where(eq(collections.id, id));
+    if (col.status === "cancelled") {
+      return c.json({ message: `Receipt ${col.receiptNo} is already cancelled` }, HttpStatusCodes.CONFLICT);
+    }
 
-    // Revert linked bill amounts if applicable
-    if (col.billId) {
-      const targetBill = (
-        await db.select().from(bills).where(eq(bills.id, col.billId)).limit(1)
-      )[0];
+    // Cancel the receipt and revert the invoice balance atomically.
+    await db.transaction(async (tx) => {
+      await tx
+        .update(collections)
+        .set({ status: "cancelled", updatedAt: new Date() })
+        .where(eq(collections.id, id));
 
-      if (targetBill) {
-        const newPaid = r2(Math.max(0, targetBill.paidAmount - col.amount));
-        const newDue = r2(targetBill.grandTotal - newPaid);
-        let newStatus: string = "unpaid";
-        if (newPaid > 0) newStatus = "partial";
-
-        await db
+      if (col.billId) {
+        await tx
           .update(bills)
           .set({
-            paidAmount: newPaid,
-            dueAmount: newDue,
-            status: newStatus,
+            paidAmount: sql`GREATEST(0, ${bills.paidAmount} - ${col.amount})`,
+            dueAmount: sql`GREATEST(0, ${bills.grandTotal} - GREATEST(0, ${bills.paidAmount} - ${col.amount}))`,
+            status: sql`CASE WHEN GREATEST(0, ${bills.paidAmount} - ${col.amount}) <= 0 THEN 'unpaid' ELSE 'partial' END`,
             updatedAt: new Date()
           })
           .where(eq(bills.id, col.billId));
       }
-    }
+    });
 
     return c.json(
       { message: `Receipt ${col.receiptNo} cancelled successfully` },
@@ -1645,7 +1746,7 @@ export const cancelCollection: Handler = async (c: any) => {
     );
   } catch (err: any) {
     return c.json(
-      { message: err.message || "Failed to cancel collection" },
+      { message: "Failed to cancel collection" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -1656,6 +1757,11 @@ export const getCollectionDetails: Handler = async (c: any) => {
     const id = Number(c.req.param("id"));
     if (!id || isNaN(id)) {
       return c.json({ message: "Invalid collection ID" }, HttpStatusCodes.BAD_REQUEST);
+    }
+
+    // Tenant ownership guard (prevents cross-tenant IDOR)
+    if (!(await loadScopedCollection(c, id))) {
+      return c.json({ message: "Payment receipt not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
     const col = (
@@ -1754,7 +1860,7 @@ export const getCollectionDetails: Handler = async (c: any) => {
     );
   } catch (err: any) {
     return c.json(
-      { message: err.message || "Failed to fetch receipt details" },
+      { message: "Failed to fetch receipt details" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }

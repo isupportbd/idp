@@ -219,8 +219,7 @@ export const register: Handler = async (c: any) => {
       {
         userId: user.id,
         email: user.email,
-        name: user.name,
-        password: body.password
+        name: user.name
       },
       { queue: "mail" }
     );
@@ -778,7 +777,7 @@ export const rechargeWallet: Handler = async (c: any) => {
           trxId,
           createdAt: inserted.createdAt
         },
-        { roles: ["superadmin"], all: true }
+        { roles: ["superadmin"] }
       );
     } catch (err) {
       console.error("Broadcast recharge error:", err);
@@ -791,7 +790,7 @@ export const rechargeWallet: Handler = async (c: any) => {
     });
   } catch (error: any) {
     console.error("Error submitting recharge:", error);
-    return c.json({ success: false, message: error.message || "Failed to submit recharge" }, 500);
+    return c.json({ success: false, message: "Failed to submit recharge" }, 500);
   }
 };
 
@@ -917,7 +916,7 @@ export const getUserStats: Handler = async (c: any) => {
     });
   } catch (err: any) {
     console.error("Error fetching user stats:", err);
-    return c.json({ success: false, message: err.message || "Failed to fetch stats" }, 500);
+    return c.json({ success: false, message: "Failed to fetch stats" }, 500);
   }
 };
 
@@ -990,7 +989,7 @@ export const sendTestSms: Handler = async (c: any) => {
             smsBalance: newSmsBalance,
             timestamp: Date.now()
           },
-          { all: true, auth: true }
+          { tenant: targetAdminId }
         );
       } catch (bErr) {
         console.error("Broadcast SMS update error:", bErr);
@@ -1021,7 +1020,7 @@ export const sendTestSms: Handler = async (c: any) => {
           smsBalance: newSmsBalance,
           timestamp: Date.now()
         },
-        { all: true, auth: true }
+        { tenant: targetAdminId }
       );
     } catch (bErr) {
       console.error("Broadcast SMS update error:", bErr);
@@ -1034,7 +1033,7 @@ export const sendTestSms: Handler = async (c: any) => {
     });
   } catch (err: any) {
     console.error("sendTestSms error:", err);
-    return c.json({ success: false, message: err.message || "Failed to dispatch test SMS" }, 500);
+    return c.json({ success: false, message: "Failed to dispatch test SMS" }, 500);
   }
 };
 
@@ -1095,7 +1094,7 @@ export const syncSmsBalance: Handler = async (c: any) => {
           smsBalance: liveBalance,
           timestamp: Date.now()
         },
-        { all: true, auth: true }
+        { tenant: targetAdminId }
       );
     } catch (bErr) {
       console.error("Broadcast SMS update error:", bErr);
@@ -1108,7 +1107,7 @@ export const syncSmsBalance: Handler = async (c: any) => {
     }, HttpStatusCodes.OK);
   } catch (err: any) {
     console.error("syncSmsBalance error:", err);
-    return c.json({ success: false, message: err.message || "Failed to sync SMS balance" }, 500);
+    return c.json({ success: false, message: "Failed to sync SMS balance" }, 500);
   }
 };
 
@@ -1251,7 +1250,7 @@ export const buyStorage: Handler = async (c: any) => {
             type: "storage_addon",
             createdAt: inserted.createdAt
           },
-          { roles: ["superadmin"], all: true }
+          { roles: ["superadmin"] }
         );
       } catch (bErr) {
         console.error("Broadcast storage request error:", bErr);
@@ -1265,7 +1264,7 @@ export const buyStorage: Handler = async (c: any) => {
     }
   } catch (err: any) {
     console.error("buyStorage error:", err);
-    return c.json({ success: false, message: err.message || "Failed to process storage purchase" }, 500);
+    return c.json({ success: false, message: "Failed to process storage purchase" }, 500);
   }
 };
 

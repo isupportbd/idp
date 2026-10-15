@@ -79,10 +79,10 @@ export async function authMiddleware(c: Context, next: Next) {
     with: { role: true }
   });
 
-  if (!user) {
+  if (!user || user.status === "suspended" || user.status === "inactive" || user.status === "pending") {
     cookie.deleteAuth(c);
     cookie.deleteRefresh(c);
-    return c.json({ message: "Unauthorized" }, 401);
+    return c.json({ message: "Unauthorized: Account is not active" }, 401);
   }
 
   const newAccessToken = await jwt.generateToken(

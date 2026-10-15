@@ -34,17 +34,21 @@ export function createHttpApp() {
     }
   });
 
-  if (appConfig.openApiEnabled) {
-    configureOpenApi(app);
-    app.api(healthRoute, (c: any) => c.json({ message: "Application is healthy" }));
-  }
-
+  // Global middleware is registered BEFORE the routes below. In Hono a
+  // `use()` only wraps routes registered after it, so previously /health,
+  // /doc and /api-docs were registered first and silently bypassed CORS,
+  // logging and rate limiting.
   app.use("*", sessionMiddleware);
   app.use("*", corsMiddleware);
   app.use("*", loggerMiddleware);
   app.use("*", rateLimiterMiddleware);
   app.use("/storage/*", storageStaticMiddleware);
   app.use(serveEmojiFavicon("🚀"));
+
+  if (appConfig.openApiEnabled) {
+    configureOpenApi(app);
+    app.api(healthRoute, (c: any) => c.json({ message: "Application is healthy" }));
+  }
 
   if (!hasUiBuild()) {
     app.get("/", (c: any) => c.json({ name: appConfig.name, ok: true }));

@@ -448,7 +448,7 @@ export const processUpload: Handler = async (c: any) => {
   } catch (error: any) {
     console.error("Error processing upload file:", error);
     return c.json(
-      { success: false, message: error.message || "Failed to process file." },
+      { success: false, message: "Failed to process file." },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -761,7 +761,7 @@ export const savePurchases: Handler = async (c: any) => {
                 percent,
                 timestamp: Date.now()
               },
-              { all: true, auth: true }
+              { tenant: tenantAdminId }
             );
           } catch {}
         }
@@ -778,7 +778,7 @@ export const savePurchases: Handler = async (c: any) => {
   } catch (error: any) {
     console.error("Error saving purchases:", error);
     return c.json(
-      { success: false, message: error.message || "Failed to save purchases" },
+      { success: false, message: "Failed to save purchases" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -852,7 +852,7 @@ export const replaceDuplicate: Handler = async (c: any) => {
     return c.json({ success: true, message: "Duplicate record replaced successfully" });
   } catch (error: any) {
     return c.json(
-      { success: false, message: error.message || "Failed to replace record" },
+      { success: false, message: "Failed to replace record" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
@@ -907,7 +907,7 @@ export const savePendingFfs: Handler = async (c: any) => {
     return c.json({ success: true, message: `${toInsert.length} FFS records saved successfully!` });
   } catch (error: any) {
     return c.json(
-      { success: false, message: error.message || "Failed to save FFS items" },
+      { success: false, message: "Failed to save FFS items" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }

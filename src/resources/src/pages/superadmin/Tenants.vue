@@ -275,15 +275,15 @@ const handleRealtimeSignup = () => {
 
 onMounted(async () => {
   await Promise.all([fetchTenants(), fetchPendingSignups(), fetchPendingRecharges()]);
+  // Listeners are socket-scoped; registering the same event on two channels
+  // would run the handler twice (the socket already auto-joins role rooms).
   pulse.channel("auth").listen("tenant:signup", handleRealtimeSignup);
-  pulse.channel("role:superadmin").listen("tenant:signup", handleRealtimeSignup);
-  pulse.channel("role:superadmin").listen("tenant:recharge", handleRealtimeSignup);
+  pulse.channel("auth").listen("tenant:recharge", handleRealtimeSignup);
 });
 
 onUnmounted(() => {
   pulse.channel("auth").stopListening("tenant:signup", handleRealtimeSignup);
-  pulse.channel("role:superadmin").stopListening("tenant:signup", handleRealtimeSignup);
-  pulse.channel("role:superadmin").stopListening("tenant:recharge", handleRealtimeSignup);
+  pulse.channel("auth").stopListening("tenant:recharge", handleRealtimeSignup);
 });
 </script>
 

@@ -44,7 +44,9 @@ export async function subscriptionMiddleware(c: Context, next: Next) {
     });
 
     if (!currentUser) {
-      return await next();
+      // Authenticated token without a matching user row — fail closed rather
+      // than allowing the write through unchecked.
+      return c.json({ success: false, message: "Unauthorized" }, 401);
     }
 
     const tenantAdminId = currentUser.adminId || currentUser.id;
@@ -141,7 +143,12 @@ export async function subscriptionMiddleware(c: Context, next: Next) {
 
     return await next();
   } catch (err) {
+    // Fail closed: if entitlement cannot be verified we must not let a write
+    // through (previously this swallowed the error and called next()).
     console.error("Subscription middleware check error:", err);
-    return await next();
+    return c.json(
+      { success: false, message: "Unable to verify subscription status. Please try again shortly." },
+      503
+    );
   }
 }

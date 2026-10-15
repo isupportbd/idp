@@ -1,10 +1,10 @@
-import { boolean, doublePrecision, integer, json, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, doublePrecision, integer, json, numeric, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 export const plans = pgTable("plans", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
-  rateMonthly: doublePrecision("rate_monthly").notNull(),
-  rateYearly: doublePrecision("rate_yearly").notNull(),
+  rateMonthly: numeric("rate_monthly", { precision: 14, scale: 2, mode: "number" }).notNull(),
+  rateYearly: numeric("rate_yearly", { precision: 14, scale: 2, mode: "number" }).notNull(),
   maxUsers: integer("max_users").notNull().default(1),
   maxClients: integer("max_clients").notNull().default(50),
   maxStorageMB: integer("max_storage_mb").notNull().default(1024),

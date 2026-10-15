@@ -121,7 +121,7 @@ export const listSalesRates: Handler = async (c: any) => {
     });
   } catch (err: any) {
     console.error("Error fetching sales rates:", err);
-    return c.json({ success: false, message: err.message || "Failed to fetch sales rates", data: [] }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
+    return c.json({ success: false, message: "Failed to fetch sales rates", data: [] }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -190,7 +190,7 @@ export const createSalesRate: Handler = async (c: any) => {
         activationDate: newRate.activationDate,
         status: newRate.status
       },
-      { auth: true, all: true }
+      { tenant: newRate.adminId }
     );
 
     return c.json(
@@ -203,7 +203,7 @@ export const createSalesRate: Handler = async (c: any) => {
     );
   } catch (err: any) {
     console.error("Error creating sales rate:", err);
-    return c.json({ success: false, message: err.message || "Failed to create sales rate" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
+    return c.json({ success: false, message: "Failed to create sales rate" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -213,6 +213,18 @@ export const updateSalesRate: Handler = async (c: any) => {
     const id = Number(c.req.param("id"));
     if (!id || isNaN(id)) {
       return c.json({ success: false, message: "Invalid sales rate ID" }, HttpStatusCodes.BAD_REQUEST);
+    }
+
+    const auth = c.get("auth") || c.get("user");
+    const isSuperAdmin = String(auth?.role || "").toLowerCase() === "superadmin";
+    const tenantId = Number(auth?.adminId || auth?.id || 0);
+
+    // Tenant guard: never allow editing another tenant's sales rate by id.
+    const owned = (
+      await db.select({ adminId: salesRates.adminId }).from(salesRates).where(eq(salesRates.id, id)).limit(1)
+    )[0];
+    if (!owned || (!isSuperAdmin && Number(owned.adminId) !== tenantId)) {
+      return c.json({ success: false, message: "Sales rate not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
     const body = c.req.valid("json");
@@ -252,7 +264,7 @@ export const updateSalesRate: Handler = async (c: any) => {
         activationDate: updated.activationDate,
         status: updated.status
       },
-      { auth: true, all: true }
+      { tenant: updated.adminId }
     );
 
     return c.json({
@@ -262,7 +274,7 @@ export const updateSalesRate: Handler = async (c: any) => {
     });
   } catch (err: any) {
     console.error("Error updating sales rate:", err);
-    return c.json({ success: false, message: err.message || "Failed to update sales rate" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
+    return c.json({ success: false, message: "Failed to update sales rate" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -281,6 +293,15 @@ export const deleteSalesRate: Handler = async (c: any) => {
     }
 
     const rate = existing[0];
+
+    const auth = c.get("auth") || c.get("user");
+    const isSuperAdmin = String(auth?.role || "").toLowerCase() === "superadmin";
+    const tenantId = Number(auth?.adminId || auth?.id || 0);
+    if (!isSuperAdmin && Number(rate.adminId) !== tenantId) {
+      // Same 404 as a missing row so ids cannot be probed across tenants.
+      return c.json({ success: false, message: "Sales rate not found" }, HttpStatusCodes.NOT_FOUND);
+    }
+
     await db.delete(salesRates).where(eq(salesRates.id, id));
 
     // If deleted rate was Active, unfreeze / activate most recent historical rate for same client + item
@@ -312,7 +333,7 @@ export const deleteSalesRate: Handler = async (c: any) => {
         clientId: rate.clientId,
         itemId: rate.itemId
       },
-      { auth: true, all: true }
+      { tenant: rate.adminId }
     );
 
     return c.json({
@@ -321,7 +342,7 @@ export const deleteSalesRate: Handler = async (c: any) => {
     });
   } catch (err: any) {
     console.error("Error deleting sales rate:", err);
-    return c.json({ success: false, message: err.message || "Failed to delete sales rate" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
+    return c.json({ success: false, message: "Failed to delete sales rate" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -365,6 +386,6 @@ export const getRateHistory: Handler = async (c: any) => {
     });
   } catch (err: any) {
     console.error("Error fetching rate history:", err);
-    return c.json({ success: false, message: err.message || "Failed to fetch rate history", data: [] }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
+    return c.json({ success: false, message: "Failed to fetch rate history", data: [] }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };

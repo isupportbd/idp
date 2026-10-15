@@ -22,12 +22,15 @@ export async function createKernel() {
   const app = createHttpApp();
 
   await initDatabase();
-  try {
-    const { syncDatabaseSchemaAndSuperAdmin } = await import("@/database/sync.js");
-    await syncDatabaseSchemaAndSuperAdmin();
-  } catch (syncErr) {
-    console.error("[Kernel DB Sync Warning]", syncErr);
-  }
+  // Fail-fast: schema sync — including the money-column → numeric(14,2)
+  // migration — must succeed before we serve any traffic. If it throws, we
+  // propagate so boot aborts instead of running against a corrupt or
+  // half-migrated schema. server.ts calls createKernel() at top level, so an
+  // unhandled rejection exits the process non-zero (verified exit code 1),
+  // which fails the container start and lets Coolify keep the previous
+  // healthy deployment.
+  const { syncDatabaseSchemaAndSuperAdmin } = await import("@/database/sync.js");
+  await syncDatabaseSchemaAndSuperAdmin();
   await bootQueueJobs();
   await registerModuleRoutes(app);
 

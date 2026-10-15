@@ -1,6 +1,8 @@
+import { createHash } from "node:crypto";
 import type { Context, MiddlewareHandler, Next } from "hono";
+import { getConnInfo } from "hono/bun";
 import { MemoryStore, RedisStore, rateLimiter } from "hono-rate-limiter";
-import { rateLimitConfig } from "@/config/index.js";
+import { appConfig, rateLimitConfig } from "@/config/index.js";
 import { redisClientIfReady } from "@/framework/redis/client.js";
 
 /**
@@ -132,6 +134,84 @@ function createFailingOverStore() {
   };
 }
 
+/**
+ * Why: Rate-limit keys must be derived from a value the client cannot control
+ *      and must never collapse every unknown client into one shared bucket.
+ * When: The global and login limiters build their key.
+ * How: The peer address of the TCP connection is authoritative. X-Forwarded-For
+ *      is only consulted when the app is (known or auto-detected to be) behind a
+ *      reverse proxy, and then only the RIGHT-MOST entry is used — that is the
+ *      entry appended by the nearest proxy and cannot be forged by the client.
+ *      When no address can be resolved, a fingerprint of the request headers is
+ *      used instead of a constant, so unrelated clients never share a bucket.
+ */
+function isPrivateAddress(address: string): boolean {
+  const ip = address.replace(/^::ffff:/, "").toLowerCase();
+  if (ip === "::1" || ip === "localhost") return true;
+  if (/^f[cd]/.test(ip) || /^fe[89ab]/.test(ip)) return true; // fc00::/7, fe80::/10
+  const parts = ip.split(".");
+  if (parts.length !== 4) return false;
+  const [a, b] = parts.map(Number);
+  if (a === 127 || a === 10 || a === 0) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 169 && b === 254) return true;
+  return false;
+}
+
+function lastForwardedEntry(header: string | undefined): string | null {
+  if (!header) return null;
+  const entries = header.split(",").map((entry) => entry.trim()).filter(Boolean);
+  return entries.length ? entries[entries.length - 1] : null;
+}
+
+function directPeerAddress(c: any): string | null {
+  try {
+    const info = getConnInfo(c);
+    const address = info?.remote?.address;
+    if (typeof address === "string" && address.length > 0) return address;
+  } catch {
+    // Not running on the Bun engine (or env lacks the fetch address) — ignore.
+  }
+  return null;
+}
+
+function clientAddress(c: any): string | null {
+  const peer = directPeerAddress(c);
+  const forwarded = lastForwardedEntry(c.req.header("x-forwarded-for"));
+  const trustProxy = appConfig.trustProxy;
+
+  if (trustProxy === true) return forwarded ?? peer;
+  if (trustProxy === false) return peer;
+
+  // Auto: only honour the proxy header when the direct peer is a
+  // private/loopback address (i.e. a reverse proxy on our own network).
+  if (peer) {
+    if (forwarded && isPrivateAddress(peer)) return forwarded;
+    return peer;
+  }
+
+  // No peer info at all (e.g. a non-Bun engine) — assume a proxy is present so
+  // production deployments keep per-client buckets rather than one shared key.
+  return forwarded;
+}
+
+function rateLimitKey(c: any, prefix: string, useSession = true): string {
+  const sessionId = c.get("sessionId");
+  if (useSession && sessionId) return `${prefix}:session:${sessionId}`;
+
+  const address = clientAddress(c);
+  if (address) return `${prefix}:ip:${address}`;
+
+  // Last resort: never fall back to a shared constant — otherwise a single
+  // header-less request pattern exhausts the bucket for every other client.
+  const fingerprint = createHash("sha1")
+    .update([c.req.header("user-agent") || "", c.req.header("accept-language") || "", c.req.header("accept") || ""].join("|"))
+    .digest("hex")
+    .slice(0, 24);
+  return `${prefix}:fp:${fingerprint}`;
+}
+
 let middleware: MiddlewareHandler | null = null;
 
 export const rateLimiterMiddleware = async (c: Context, next: Next) => {
@@ -139,11 +219,7 @@ export const rateLimiterMiddleware = async (c: Context, next: Next) => {
     middleware = rateLimiter({
       windowMs: rateLimitConfig.windowMs,
       limit: rateLimitConfig.maxRequests,
-      keyGenerator: (c: any) => {
-        const sessionId = c.get("sessionId");
-        if (sessionId) return `session:${sessionId}`;
-        return c.req.header("x-forwarded-for") ?? "unknown";
-      },
+      keyGenerator: (c: any) => rateLimitKey(c, "rl"),
       store: createFailingOverStore(),
       standardHeaders: "draft-6"
     });
@@ -159,10 +235,7 @@ export const loginLimiter = async (c: Context, next: Next) => {
     loginLimiterMiddleware = rateLimiter({
       windowMs: rateLimitConfig.windowMs,
       limit: rateLimitConfig.loginMaxRequests,
-      keyGenerator: (c: any) => {
-        const ip = c.req.header("x-forwarded-for") ?? "unknown";
-        return `login:${ip}`;
-      },
+      keyGenerator: (c: any) => rateLimitKey(c, "login", false),
       store: createFailingOverStore(),
       standardHeaders: "draft-6"
     });

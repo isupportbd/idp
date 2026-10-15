@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { doublePrecision, index, integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { index, integer, numeric, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { bills } from "./bills.js";
 import { users } from "@/modules/auth/database/models/user.js";
@@ -12,7 +12,7 @@ export const collections = pgTable(
     billId: integer("bill_id").references(() => bills.id, { onDelete: "set null" }),
     clientId: integer("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
     collectionDate: timestamp("collection_date", { withTimezone: true }).notNull(),
-    amount: doublePrecision("amount").notNull(),
+    amount: numeric("amount", { precision: 14, scale: 2, mode: "number" }).notNull(),
     paymentMethod: varchar("payment_method", { length: 50 }).default("cash").notNull(), // 'cash' | 'bank' | 'cheque' | 'bkash' | 'nagad' | 'rocket' | 'other'
     referenceNo: varchar("reference_no", { length: 100 }), // Cheque number, TrxID, Bank deposit slip
     notes: text("notes"),

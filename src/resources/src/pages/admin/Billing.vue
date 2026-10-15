@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
@@ -181,22 +181,43 @@ const loadData = async () => {
         customerTypeId: selectedCustomerTypeId.value,
         referenceId: selectedReferenceId.value,
         search: searchQuery.value
-      }),
-      fetchCustomerTypes(),
-      fetchReferences(),
-      fetchAssignableUsers()
+      })
     ]);
   } catch (err: any) {
     toast.error("Failed to load billing data");
   }
 };
 
+// Lookup data (customer types / references / users) is static for the page and
+// does not depend on filters, so it is loaded once instead of on every keystroke.
+const loadLookups = async () => {
+  try {
+    await Promise.all([fetchCustomerTypes(), fetchReferences(), fetchAssignableUsers()]);
+  } catch {}
+};
+
 onMounted(() => {
+  loadLookups();
   loadData();
 });
 
+// Debounce filter-driven reloads so typing in the search box no longer fires
+// the full request fan-out on every keystroke.
+let loadTimer: ReturnType<typeof setTimeout> | null = null;
+const scheduleLoadData = () => {
+  if (loadTimer) clearTimeout(loadTimer);
+  loadTimer = setTimeout(() => {
+    loadTimer = null;
+    void loadData();
+  }, 300);
+};
+
+onBeforeUnmount(() => {
+  if (loadTimer) clearTimeout(loadTimer);
+});
+
 watch([selectedMonth, selectedCustomerTypeId, selectedReferenceId, selectedStatusFilter, selectedPaymentMethod, searchQuery], () => {
-  loadData();
+  scheduleLoadData();
 });
 
 // Filtered Lists for Tabs

@@ -8,11 +8,12 @@ import { PulsePlugin } from "@/plugins/pulse";
 import App from "./App.vue";
 import router from "./router";
 
-import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
+// NOTE: Bootstrap's CSS is compiled by custom.scss (`@use "bootstrap/scss/bootstrap"`),
+// so the prebuilt bootstrap.min.css must NOT also be imported here — doing so shipped
+// the entire framework stylesheet twice (~230 KB of duplicate CSS).
 import "@/assets/scss/custom.scss";
 import "@/assets/scss/idp-dark.scss";
-import "bootstrap/dist/js/bootstrap.bundle.min.js";
 
 const app = createApp(App);
 const pinia = createPinia();
@@ -42,4 +43,22 @@ document.addEventListener("wheel", blockNumberWheel, { passive: false, capture: 
 
 
 app.use(PulsePlugin);
+
+// Bootstrap's JS is only used through data attributes (data-bs-toggle), which
+// rely on document-level event delegation. Loading the bundle as a separate
+// chunk shortly after mount keeps it out of the critical entry bundle without
+// disabling dropdowns/collapses.
+const loadBootstrapJs = () => {
+  import("bootstrap/dist/js/bootstrap.bundle.min.js").catch(() => {});
+};
+
+if (typeof window !== "undefined") {
+  const w = window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number };
+  if (typeof w.requestIdleCallback === "function") {
+    w.requestIdleCallback(loadBootstrapJs, { timeout: 2000 });
+  } else {
+    window.setTimeout(loadBootstrapJs, 300);
+  }
+}
+
 app.mount("#app");

@@ -29,19 +29,12 @@ type AuthData = {
 
 async function request<T>(method: "GET" | "POST", path: string, payload?: unknown): Promise<ApiResponse<T>> {
   try {
-    const headers: Record<string, string> = {};
-    try {
-      const token = localStorage.getItem("idp_access_token");
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-    } catch {}
-
+    // Auth headers, silent refresh and 401 handling all live in the axios
+    // plugin/interceptor, so this wrapper must not duplicate them.
     const response = await axios.request<ApiResponse<T>>({
       method,
       url: `/api/auth${path}`,
-      data: payload,
-      headers
+      data: payload
     });
 
     return response.data;
@@ -83,7 +76,9 @@ export const useAuthStore = defineStore("auth", () => {
   const bootstrap = async (forceRefresh = false) => {
     if (initialized.value && !forceRefresh) return;
 
-    // Load from localStorage immediately so page reloads don't flicker unauthenticated
+    // Hydrate synchronously from the cached user so an already-signed-in user
+    // never waits on a network round-trip before the first paint.
+    let hadCachedUser = false;
     try {
       const cached = localStorage.getItem("idp_auth_user");
       if (cached && !user.value) {
@@ -91,28 +86,38 @@ export const useAuthStore = defineStore("auth", () => {
         user.value = parsed;
         isAuthenticated.value = true;
         setUser(parsed);
+        hadCachedUser = true;
       }
     } catch {}
 
-    try {
-      const token = localStorage.getItem("idp_access_token");
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
+    initialized.value = true;
+
+    const revalidate = async () => {
+      try {
+        // Cookies / the axios interceptor supply credentials and handle a
+        // silent token refresh on an expired access token.
+        const response = await axios.get<ApiResponse<AuthUser>>("/api/auth/me");
+        if (response.data?.data) {
+          syncUser(response.data.data as AuthUser);
+        } else {
+          syncUser(null);
+        }
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response?.status === 401) {
+          syncUser(null);
+        }
       }
-      const response = await axios.get<ApiResponse<AuthUser>>("/api/auth/me", { headers });
-      if (response.data?.data) {
-        syncUser(response.data.data as AuthUser);
-      } else {
-        syncUser(null);
-      }
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error) && error.response?.status === 401) {
-        syncUser(null);
-      }
+    };
+
+    // Fast path: with a cached user we revalidate in the background. Only a
+    // cold start (no cache — e.g. cookie-only session) waits for the server so
+    // the router does not mis-route an authenticated user to /login.
+    if (hadCachedUser && !forceRefresh) {
+      void revalidate();
+      return;
     }
 
-    initialized.value = true;
+    await revalidate();
   };
 
   const login = async (payload: LoginPayload) => {

@@ -1,4 +1,4 @@
-import { date, doublePrecision, index, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { date, doublePrecision, index, integer, numeric, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { users } from "@/modules/auth/database/models/user.js";
 import { clients } from "./clients.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
@@ -20,9 +20,9 @@ export const salesRates = pgTable(
       .notNull(),
     unitId: integer("unit_id")
       .references(() => unitConversions.id),
-    salesRate: doublePrecision("sales_rate").notNull(),
+    salesRate: numeric("sales_rate", { precision: 14, scale: 2, mode: "number" }).notNull(),
     vatRate: doublePrecision("vat_rate").notNull(),
-    vatableValue: doublePrecision("vatable_value").notNull(),
+    vatableValue: numeric("vatable_value", { precision: 14, scale: 2, mode: "number" }).notNull(),
     additionPercent: doublePrecision("addition_percent").default(0),
     activationDate: date("activation_date").notNull(),
     status: varchar("status", { length: 20 }).default("Active").notNull(),
