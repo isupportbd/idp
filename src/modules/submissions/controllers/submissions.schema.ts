@@ -15,6 +15,7 @@ export const QuerySubmissionsSchema = z.object({
   customerTypeId: z.string().optional(),
   referenceId: z.string().optional(),
   managerId: z.string().optional(),
+  submittedById: z.string().optional(),
   status: z.enum(["all", "submitted", "pending", "late_submitted"]).optional(),
   search: z.string().optional()
 });

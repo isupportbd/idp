@@ -38,7 +38,16 @@ const getSubmissionsRoute = createRoute({
           submittedCount: z.number(),
           pendingCount: z.number(),
           lateSubmittedCount: z.number()
-        })
+        }),
+        submitters: z
+          .array(
+            z.object({
+              id: z.number(),
+              name: z.string(),
+              count: z.number()
+            })
+          )
+          .optional()
       }),
       "Submissions dataset"
     )

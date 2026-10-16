@@ -6,7 +6,50 @@ import { clientManagers } from "@/modules/clients/database/models/client_manager
 import { vatSubmissions } from "@/modules/clients/database/models/vat_submissions.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { users } from "@/modules/auth/database/models/user.js";
+import { deriveSubmitters } from "../controllers/submissions.controller.js";
 import { and, eq } from "drizzle-orm";
+
+describe("deriveSubmitters (Submitted By filter options)", () => {
+  it("groups rows by submitter, counts them, and excludes pending (no submitter)", () => {
+    const result = deriveSubmitters([
+      { submittedById: 1, submittedByName: "Alice" },
+      { submittedById: 2, submittedByName: "Bob" },
+      { submittedById: 1, submittedByName: "Alice" },
+      { submittedById: 2, submittedByName: "Bob" },
+      { submittedById: 2, submittedByName: "Bob" },
+      { submittedById: null, submittedByName: null },
+      { submittedById: null, submittedByName: null }
+    ]);
+
+    expect(result).toEqual([
+      { id: 1, name: "Alice", count: 2 },
+      { id: 2, name: "Bob", count: 3 }
+    ]);
+  });
+
+  it("sorts submitters alphabetically by name", () => {
+    const result = deriveSubmitters([
+      { submittedById: 5, submittedByName: "Zoe" },
+      { submittedById: 3, submittedByName: "Adam" },
+      { submittedById: 4, submittedByName: "Mia" }
+    ]);
+
+    expect(result.map((s) => s.name)).toEqual(["Adam", "Mia", "Zoe"]);
+  });
+
+  it("returns an empty list when no rows have been submitted (pending-only month)", () => {
+    expect(
+      deriveSubmitters([
+        { submittedById: null, submittedByName: null },
+        { submittedById: null, submittedByName: null }
+      ])
+    ).toEqual([]);
+  });
+
+  it("ignores rows missing a submitter name even when an id is present", () => {
+    expect(deriveSubmitters([{ submittedById: 9, submittedByName: null }])).toEqual([]);
+  });
+});
 
 describe("Submissions Module Real Database Tests (PostgreSQL)", () => {
   let testUserId: number;

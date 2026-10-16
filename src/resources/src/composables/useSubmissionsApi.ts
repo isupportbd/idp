@@ -28,6 +28,12 @@ export interface SubmissionsStats {
   lateSubmittedCount: number;
 }
 
+export interface SubmitterOption {
+  id: number;
+  name: string;
+  count: number;
+}
+
 export function useSubmissionsApi() {
   const submissions = ref<SubmissionItem[]>([]);
   const stats = ref<SubmissionsStats>({
@@ -36,6 +42,7 @@ export function useSubmissionsApi() {
     pendingCount: 0,
     lateSubmittedCount: 0
   });
+  const submitters = ref<SubmitterOption[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
 
@@ -45,6 +52,7 @@ export function useSubmissionsApi() {
     customerTypeId?: number | string;
     referenceId?: number | string;
     managerId?: number | string;
+    submittedById?: number | string;
     status?: string;
     search?: string;
   } = {}) => {
@@ -57,6 +65,7 @@ export function useSubmissionsApi() {
       if (params.customerTypeId && params.customerTypeId !== "all") cleanParams.customerTypeId = params.customerTypeId;
       if (params.referenceId && params.referenceId !== "all") cleanParams.referenceId = params.referenceId;
       if (params.managerId && params.managerId !== "all") cleanParams.managerId = params.managerId;
+      if (params.submittedById && params.submittedById !== "all") cleanParams.submittedById = params.submittedById;
       if (params.status && params.status !== "all") cleanParams.status = params.status;
       if (params.search && params.search.trim()) cleanParams.search = params.search.trim();
 
@@ -65,6 +74,7 @@ export function useSubmissionsApi() {
       if (res.data?.stats) {
         stats.value = res.data.stats;
       }
+      submitters.value = res.data?.submitters || [];
       return res.data;
     } catch (err: any) {
       error.value = err.response?.data?.message || "Failed to fetch submissions";
@@ -125,6 +135,7 @@ export function useSubmissionsApi() {
   return {
     submissions,
     stats,
+    submitters,
     loading,
     error,
     fetchSubmissions,

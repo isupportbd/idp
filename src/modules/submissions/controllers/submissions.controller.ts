@@ -13,6 +13,33 @@ import { buildVatSubmissionSmsPayload, isTenantSmsEventEnabled } from "@/modules
 
 // ── 1. LIST SUBMISSIONS FOR A TAX PERIOD ──────────────────────────────
 
+export interface SubmitterSummary {
+  id: number;
+  name: string;
+  count: number;
+}
+
+/**
+ * Derive the unique submitters (with per-submitter counts) for a set of
+ * submission rows. Pending clients (no submittedById/name) are excluded.
+ * Sorted alphabetically by submitter name for stable UI ordering.
+ */
+export function deriveSubmitters(
+  rows: Array<{ submittedById: number | null; submittedByName: string | null }>
+): SubmitterSummary[] {
+  const map = new Map<number, SubmitterSummary>();
+  for (const r of rows) {
+    if (r.submittedById == null || !r.submittedByName) continue;
+    const entry = map.get(r.submittedById);
+    if (entry) {
+      entry.count += 1;
+    } else {
+      map.set(r.submittedById, { id: r.submittedById, name: r.submittedByName, count: 1 });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export const listSubmissions: Handler = async (c: any) => {
   try {
     const query = c.req.valid("query");
@@ -36,6 +63,7 @@ export const listSubmissions: Handler = async (c: any) => {
       .select({
         id: clients.id,
         companyName: clients.companyName,
+        address: clients.address,
         binNumber: clients.binNumber,
         mobile: clients.mobile,
         customerTypeId: clients.customerTypeId,
@@ -63,7 +91,8 @@ export const listSubmissions: Handler = async (c: any) => {
             submittedCount: 0,
             pendingCount: 0,
             lateSubmittedCount: 0
-          }
+          },
+          submitters: []
         },
         HttpStatusCodes.OK
       );
@@ -148,6 +177,7 @@ export const listSubmissions: Handler = async (c: any) => {
         id: client.id, // Client ID
         submissionRecordId, // vat_submissions.id (null if pending)
         companyName: client.companyName,
+        address: client.address,
         binNumber: client.binNumber,
         mobile: client.mobile,
         customerTypeId: client.customerTypeId,
@@ -173,6 +203,11 @@ export const listSubmissions: Handler = async (c: any) => {
       lateSubmittedCount: list.filter((r) => r.status === "late_submitted").length
     };
 
+    // 5b. Derive unique submitters (with per-submitter counts) for this tax period,
+    // before the submittedById filter narrows the list. Only clients who actually
+    // filed a return in the selected month have a non-null submittedById.
+    const submitters = deriveSubmitters(list);
+
     // 6. Apply filters
     if (query.status && query.status !== "all") {
       list = list.filter((r) => r.status === query.status);
@@ -193,6 +228,11 @@ export const listSubmissions: Handler = async (c: any) => {
       list = list.filter((r) => r.managers.some((m) => m.id === mgrId));
     }
 
+    if (query.submittedById && query.submittedById !== "all") {
+      const submitterId = Number(query.submittedById);
+      list = list.filter((r) => r.submittedById === submitterId);
+    }
+
     if (query.search && query.search.trim()) {
       const q = query.search.trim().toLowerCase();
       list = list.filter(
@@ -208,7 +248,8 @@ export const listSubmissions: Handler = async (c: any) => {
       {
         message: "Submissions fetched successfully",
         data: list,
-        stats
+        stats,
+        submitters
       },
       HttpStatusCodes.OK
     );

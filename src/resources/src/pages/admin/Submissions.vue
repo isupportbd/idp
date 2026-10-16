@@ -5,7 +5,6 @@ import MonthNavigator from "@/components/MonthNavigator.vue";
 import StatusBadge from "@/components/common/StatusBadge.vue";
 import { useSubmissionsApi, type SubmissionItem } from "@/composables/useSubmissionsApi";
 import { useServicesApi } from "@/composables/useServicesApi";
-import { useClientsApi } from "@/composables/useClientsApi";
 import { useToast } from "@/composables/useToast";
 import { can } from "@/composables/useAuth";
 import SearchInput from "@/components/common/SearchInput.vue";
@@ -19,6 +18,7 @@ const toast = useToast();
 const {
   submissions,
   stats,
+  submitters,
   loading,
   fetchSubmissions,
   recordSubmission,
@@ -32,11 +32,6 @@ const {
   fetchCustomerTypes,
   fetchReferences
 } = useServicesApi();
-
-const {
-  assignableUsers,
-  fetchAssignableUsers
-} = useClientsApi();
 
 // Tax Period Month (e.g. "2026-08")
 const getLastMonth = () => {
@@ -66,7 +61,7 @@ const selectedMonth = ref(savedFilters.selectedMonth || getLastMonth());
 const searchQuery = ref(savedFilters.searchQuery || "");
 const selectedCustomerTypeId = ref<number | "all">(savedFilters.selectedCustomerTypeId ?? "all");
 const selectedReferenceId = ref<number | "all">(savedFilters.selectedReferenceId ?? "all");
-const selectedManagerId = ref<number | "all">(savedFilters.selectedManagerId ?? "all");
+const selectedSubmitterId = ref<number | "all">(savedFilters.selectedSubmitterId ?? "all");
 const statusFilter = ref<"all" | "submitted" | "pending" | "late_submitted">(savedFilters.statusFilter || "all");
 
 const saveFilters = () => {
@@ -79,7 +74,7 @@ const saveFilters = () => {
           searchQuery: searchQuery.value,
           selectedCustomerTypeId: selectedCustomerTypeId.value,
           selectedReferenceId: selectedReferenceId.value,
-          selectedManagerId: selectedManagerId.value,
+          selectedSubmitterId: selectedSubmitterId.value,
           statusFilter: statusFilter.value
         })
       );
@@ -87,7 +82,7 @@ const saveFilters = () => {
   } catch {}
 };
 
-watch([selectedMonth, searchQuery, selectedCustomerTypeId, selectedReferenceId, selectedManagerId, statusFilter], saveFilters);
+watch([selectedMonth, searchQuery, selectedCustomerTypeId, selectedReferenceId, selectedSubmitterId, statusFilter], saveFilters);
 
 onBeforeRouteLeave((to) => {
   if (!to.path.startsWith("/admin/submissions")) {
@@ -109,9 +104,9 @@ const referenceOptions = computed(() => [
   ...references.value.map((r) => ({ value: r.id, label: r.name }))
 ]);
 
-const managerOptions = computed(() => [
-  { value: "all", label: `All Managers (${assignableUsers.value.length})` },
-  ...assignableUsers.value.map((u) => ({ value: u.id, label: u.name }))
+const submitterOptions = computed(() => [
+  { value: "all", label: `All Submitters (${submitters.value.length})` },
+  ...submitters.value.map((u) => ({ value: u.id, label: `${u.name} (${u.count})` }))
 ]);
 
 const hasActiveFilters = computed(() => {
@@ -120,7 +115,7 @@ const hasActiveFilters = computed(() => {
     statusFilter.value !== "all" ||
     selectedCustomerTypeId.value !== "all" ||
     selectedReferenceId.value !== "all" ||
-    selectedManagerId.value !== "all"
+    selectedSubmitterId.value !== "all"
   );
 });
 
@@ -129,7 +124,7 @@ const clearAllFilters = () => {
   statusFilter.value = "all";
   selectedCustomerTypeId.value = "all";
   selectedReferenceId.value = "all";
-  selectedManagerId.value = "all";
+  selectedSubmitterId.value = "all";
   currentPage.value = 1;
   try {
     if (typeof window !== "undefined" && window.sessionStorage) {
@@ -164,7 +159,7 @@ const loadSubmissionsList = async () => {
       month: selectedMonth.value,
       customerTypeId: selectedCustomerTypeId.value,
       referenceId: selectedReferenceId.value,
-      managerId: selectedManagerId.value,
+      submittedById: selectedSubmitterId.value,
       status: statusFilter.value,
       search: searchQuery.value.trim()
     });
@@ -178,8 +173,7 @@ const loadData = async () => {
     await Promise.all([
       loadSubmissionsList(),
       fetchCustomerTypes(),
-      fetchReferences(),
-      fetchAssignableUsers()
+      fetchReferences()
     ]);
   } catch (err: any) {
     toast.error("Failed to load initial submissions data");
@@ -253,10 +247,18 @@ watch(searchQuery, () => {
 });
 
 // Watch Filters
-watch([selectedMonth, selectedCustomerTypeId, selectedReferenceId, selectedManagerId, statusFilter], () => {
+watch([selectedMonth, selectedCustomerTypeId, selectedReferenceId, selectedSubmitterId, statusFilter], () => {
   selectedIds.value = [];
   currentPage.value = 1;
   loadSubmissionsList();
+});
+
+// Pending clients have no submission yet, so "Submitted By" is meaningless there.
+// Freeze it by resetting to "all" whenever the Pending card is selected.
+watch(statusFilter, (val) => {
+  if (val === "pending" && selectedSubmitterId.value !== "all") {
+    selectedSubmitterId.value = "all";
+  }
 });
 
 // Selection Handlers
@@ -382,12 +384,15 @@ const exportToExcel = async () => {
   const exportData = submissions.value.map((s, idx) => ({
     "Sl No.": idx + 1,
     "Client / Company Name": s.companyName,
+    "Address": s.address || "—",
     "BIN Number": s.binNumber || "—",
+    "Mobile": s.mobile || "—",
     "Customer Type": s.customerTypeName || "Standard",
     "Reference": s.referenceName || "Direct",
     "Tax Period": s.taxPeriod,
     "Submission ID": s.submissionId || "Pending",
     "Status": s.status === "submitted" ? "Submitted" : s.status === "late_submitted" ? "Late Submitted" : "Pending",
+    "Submitted By": s.submittedByName || "—",
     "Submission Date": s.submittedAt ? new Date(s.submittedAt).toLocaleDateString() : "—",
     "Remarks": s.remarks || ""
   }));
@@ -556,12 +561,18 @@ const printReport = () => {
         min-width="170px"
       />
 
-      <!-- 4. Assigned Manager Filter -->
-      <IdpSelect
-        v-model="selectedManagerId"
-        :options="managerOptions"
-        min-width="160px"
-      />
+      <!-- 4. Submitted By Filter (frozen while viewing Pending) -->
+      <span
+        class="d-inline-flex"
+        :title="statusFilter === 'pending' ? 'Pending clients have not been submitted yet' : ''"
+      >
+        <IdpSelect
+          v-model="selectedSubmitterId"
+          :options="submitterOptions"
+          :disabled="statusFilter === 'pending'"
+          min-width="160px"
+        />
+      </span>
 
       <!-- Clear Filter Icon Button -->
       <button
@@ -608,23 +619,24 @@ const printReport = () => {
                 @change="toggleSelectAll"
               />
             </th>
-            <th style="width: 38%;">Client Organization & BIN</th>
-            <th style="width: 20%;">Customer Type</th>
-            <th style="width: 14%;">Tax Period</th>
+            <th style="width: 26%;">Client & Address</th>
+            <th style="width: 18%;">BIN & Mobile</th>
+            <th style="width: 16%;">Customer Type</th>
+            <th style="width: 12%;">Tax Period</th>
             <th style="width: 20%;">Submission ID</th>
             <th style="width: 8%; text-align: right;" class="d-print-none">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading && filteredSubmissions.length === 0">
-            <td colspan="6" class="text-center py-4 text-muted">
+            <td colspan="7" class="text-center py-4 text-muted">
               <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
               Loading submissions data...
             </td>
           </tr>
 
           <tr v-else-if="filteredSubmissions.length === 0">
-            <td colspan="6" class="text-center py-5 text-muted">
+            <td colspan="7" class="text-center py-5 text-muted">
               <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
               No active clients found matching the selected filters.
             </td>
@@ -641,19 +653,28 @@ const printReport = () => {
               />
             </td>
 
-            <!-- Client Info -->
+            <!-- 1. Client Organization & Address (Stacked) -->
             <td>
-              <div class="fw-semibold text-white mb-1 text-truncate" style="max-width: 340px; font-size: 0.92rem;">
+              <div class="fw-semibold text-white mb-1 text-truncate" style="max-width: 280px; font-size: 0.92rem;" :title="item.companyName">
                 {{ item.companyName }}
               </div>
-              <div class="d-flex align-items-center gap-2 flex-nowrap" style="font-size: 0.78rem;">
+              <div class="text-muted text-truncate" style="font-size: 0.78rem; max-width: 280px;" :title="item.address || '—'">
+                <i class="bi bi-geo-alt me-1 text-secondary"></i>{{ item.address || '—' }}
+              </div>
+            </td>
+
+            <!-- 2. BIN & Mobile (Stacked) -->
+            <td>
+              <div class="mb-1">
                 <span v-if="item.binNumber" class="badge bg-dark border border-secondary text-info font-monospace" style="font-size: 0.78rem;">
                   BIN: {{ item.binNumber }}
                 </span>
-                <span v-if="item.mobile" class="text-muted" style="font-size: 0.78rem;">
-                  <i class="bi bi-telephone me-1"></i>{{ item.mobile }}
-                </span>
+                <span v-else class="text-muted small">—</span>
               </div>
+              <div v-if="item.mobile" class="text-muted" style="font-size: 0.78rem;">
+                <i class="bi bi-telephone me-1 text-secondary"></i>{{ item.mobile }}
+              </div>
+              <div v-else class="text-muted small" style="font-size: 0.78rem;">—</div>
             </td>
 
             <!-- Customer Type -->
