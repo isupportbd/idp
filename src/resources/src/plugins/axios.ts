@@ -1,29 +1,20 @@
-import axios, { type AxiosResponse, type AxiosError, type InternalAxiosRequestConfig } from "axios";
+import axios, { type AxiosResponse, type AxiosError } from "axios";
 
 if (import.meta.env.VITE_API_URL) {
   axios.defaults.baseURL = import.meta.env.VITE_API_URL;
 }
 
+// Auth is COOKIE-based. The API issues httpOnly, signed access + refresh
+// cookies (see src/framework/support/cookie.ts), and the server transparently
+// mints a new access cookie from the refresh cookie when the access cookie has
+// expired (see src/middlewares/auth-middleware.ts). Nothing secret is therefore
+// stored in JS-accessible storage — an XSS payload can no longer read or exfiltrate
+// a long-lived refresh token.
 axios.defaults.withCredentials = true;
 axios.defaults.headers.common["X-Requested-With"] = "XMLHttpRequest";
 axios.defaults.headers.common.Accept = "application/json";
 
-const ACCESS_TOKEN_KEY = "idp_access_token";
-const REFRESH_TOKEN_KEY = "idp_refresh_token";
 const AUTH_USER_KEY = "idp_auth_user";
-
-const REFRESH_URL = "/api/auth/refresh-token";
-
-// Attach Bearer token from localStorage to every outgoing API request
-axios.interceptors.request.use((config) => {
-  try {
-    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-    if (token && !config.headers.Authorization) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  } catch {}
-  return config;
-});
 
 const isAuthPage = () =>
   window.location.pathname === "/register" ||
@@ -34,48 +25,10 @@ const isAuthPage = () =>
   window.location.pathname === "/reset-password" ||
   window.location.pathname === "/verify-email";
 
-/**
- * Why: Exchange the stored refresh token for a new access token. The refresh
- *      token was previously persisted but never used, so any access-token
- *      expiry caused a silent logout and a hard reload.
- * How: Single-flight — concurrent 401s share one refresh request so we never
- *      overwrite the rotated refresh token twice (which would revoke the
- *      session).
- */
-let refreshPromise: Promise<string | null> | null = null;
-
-async function refreshAccessToken(): Promise<string | null> {
-  let refreshToken: string | null = null;
-  try {
-    refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-  } catch {}
-  if (!refreshToken) return null;
-
-  try {
-    const response = await axios.post(
-      REFRESH_URL,
-      { refresh_token: refreshToken },
-      { headers: { Authorization: undefined } } as InternalAxiosRequestConfig
-    );
-    const data = response.data?.data;
-    if (!data?.access_token) return null;
-
-    try {
-      localStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
-      if (data.refresh_token) localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
-      if (data.user) localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.user));
-    } catch {}
-
-    return data.access_token as string;
-  } catch {
-    return null;
-  }
-}
-
 function clearStoredAuth() {
+  // Only the (non-secret) cached profile is kept client-side; drop it so a
+  // stale identity is never hydrated after the session ends.
   try {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(AUTH_USER_KEY);
   } catch {}
 }
@@ -89,43 +42,15 @@ axios.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
     const status = error?.response?.status;
-    const originalConfig = error?.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
-    const configUrl: string = originalConfig?.url || "";
+    const configUrl: string = error?.config?.url || "";
 
     const onAuthPage = isAuthPage();
-    const isRefreshCall = configUrl.includes(REFRESH_URL);
     const isBootstrapCall = configUrl.includes("/api/auth/me");
 
-    // Attempt a single silent refresh on an expired access token. This covers
-    // authenticated pages AND the bootstrap /me call (so a reload with an
-    // expired access token restores the session instead of logging the user out).
-    if (
-      status === 401 &&
-      originalConfig &&
-      !originalConfig._retry &&
-      !onAuthPage &&
-      !isRefreshCall
-    ) {
-      originalConfig._retry = true;
-
-      if (!refreshPromise) {
-        refreshPromise = refreshAccessToken().finally(() => {
-          refreshPromise = null;
-        });
-      }
-      const newToken = await refreshPromise;
-
-      if (newToken) {
-        originalConfig.headers = originalConfig.headers || {};
-        originalConfig.headers.Authorization = `Bearer ${newToken}`;
-        return axios.request(originalConfig);
-      }
-    }
-
-    // Only a genuine 401 (not a 403 authorization failure) ends the session.
-    // The old code also logged the user out on any 403 whose message contained
-    // "inactive", which is fragile string matching against server copy.
-    const shouldRedirect = !onAuthPage && !isBootstrapCall && !isRefreshCall && status === 401;
+    // The server already auto-refreshes from the refresh cookie, so a genuine
+    // 401 (not a 403 authorization failure) means the whole session is gone.
+    // End it client-side instead of attempting a client-token refresh.
+    const shouldRedirect = !onAuthPage && !isBootstrapCall && status === 401;
 
     if (shouldRedirect) {
       clearStoredAuth();

@@ -63,12 +63,11 @@ function createPulse(): PulseClient {
 
     socketLoading = import("socket.io-client")
       .then(({ io }) => {
-        const token = localStorage.getItem("idp_access_token") || localStorage.getItem("auth_token") || "";
-
+        // Auth is cookie-based; the server falls back to the signed access
+        // cookie on the handshake. withCredentials sends it (and is required
+        // when the UI is served from a different origin).
         const s = io(socketUrl(), {
           withCredentials: true,
-          auth: token ? { token } : undefined,
-          extraHeaders: token ? { Authorization: `Bearer ${token}` } : undefined,
           transports: ["websocket", "polling"]
         });
 

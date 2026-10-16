@@ -67,14 +67,21 @@ export const useAuthStore = defineStore("auth", () => {
       clearUser();
       try {
         localStorage.removeItem("idp_auth_user");
-        localStorage.removeItem("idp_access_token");
-        localStorage.removeItem("idp_refresh_token");
       } catch {}
     }
   };
 
   const bootstrap = async (forceRefresh = false) => {
     if (initialized.value && !forceRefresh) return;
+
+    // One-time cleanup: earlier builds stored the access/refresh tokens in
+    // localStorage. Auth is cookie-only now, so purge any leftovers from
+    // existing sessions (they would otherwise remain readable by XSS).
+    try {
+      localStorage.removeItem("idp_access_token");
+      localStorage.removeItem("idp_refresh_token");
+      localStorage.removeItem("auth_token");
+    } catch {}
 
     // Hydrate synchronously from the cached user so an already-signed-in user
     // never waits on a network round-trip before the first paint.
@@ -124,12 +131,8 @@ export const useAuthStore = defineStore("auth", () => {
     processing.value = true;
     try {
       const data = await request<AuthData>("POST", "/login", payload);
-      if (data?.data?.access_token) {
-        try { localStorage.setItem("idp_access_token", data.data.access_token); } catch {}
-      }
-      if (data?.data?.refresh_token) {
-        try { localStorage.setItem("idp_refresh_token", data.data.refresh_token); } catch {}
-      }
+      // Tokens are delivered as httpOnly cookies by the API; nothing is stored
+      // in JS-accessible storage on the client.
       syncUser((data?.data?.user || null) as AuthUser | null);
       initialized.value = true;
       return data.message || "Login successful";
@@ -142,12 +145,6 @@ export const useAuthStore = defineStore("auth", () => {
     processing.value = true;
     try {
       const data = await request<AuthData>("POST", "/register", payload);
-      if (data?.data?.access_token) {
-        try { localStorage.setItem("idp_access_token", data.data.access_token); } catch {}
-      }
-      if (data?.data?.refresh_token) {
-        try { localStorage.setItem("idp_refresh_token", data.data.refresh_token); } catch {}
-      }
       const createdUser = (data?.data?.user || null) as AuthUser | null;
       if (createdUser) {
         syncUser(createdUser);

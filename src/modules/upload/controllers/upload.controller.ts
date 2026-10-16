@@ -12,6 +12,12 @@ import { handleControllerError } from "@/framework/http/errors.js";
 import { handleAsyncEndpoint, isAsyncFlagEnabled } from "@/framework/queue/async-endpoint.js";
 import { round2 } from "@/utils/number.js";
 
+// Upload hardening: reject oversized or unexpected files before they reach the
+// XLSX parser (parsing is CPU/memory heavy and a crafted workbook is a DoS / it
+// historically carried prototype-pollution gadgets in older `xlsx` releases).
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_UPLOAD_EXTENSIONS = [".xlsx", ".xls", ".csv"];
+
 const parseNumber = (val: any): number => {
   if (val === undefined || val === null || val === "") return 0;
   const cleaned = String(val).replace(/,/g, "").trim();
@@ -92,6 +98,17 @@ export const processUpload: Handler = async (c: any) => {
 
     if (!file || !(file instanceof File)) {
       return c.json({ success: false, message: "No valid file uploaded." }, HttpStatusCodes.BAD_REQUEST);
+    }
+
+    const fileName = (file.name || "").toLowerCase();
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return c.json({ success: false, message: "File is too large. The maximum allowed size is 10 MB." }, HttpStatusCodes.BAD_REQUEST);
+    }
+    if (!ALLOWED_UPLOAD_EXTENSIONS.some((ext) => fileName.endsWith(ext))) {
+      return c.json(
+        { success: false, message: "Unsupported file type. Please upload an .xlsx, .xls or .csv file." },
+        HttpStatusCodes.BAD_REQUEST
+      );
     }
 
     const arrayBuffer = await file.arrayBuffer();

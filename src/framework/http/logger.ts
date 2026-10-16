@@ -77,5 +77,12 @@ export function onError(error: any, c: Context) {
     userAgent: c.req.header("user-agent") || null
   });
 
-  return c.json({ message: error?.message || "Internal Server Error" }, error?.status || 500);
+  // Only deliberately-authored client errors (4xx) surface their message.
+  // Internal failures (5xx) return a generic body so callers never receive
+  // database, constraint, filesystem or stack details.
+  const rawStatus = Number(error?.status);
+  const status = Number.isFinite(rawStatus) && rawStatus >= 400 && rawStatus <= 599 ? rawStatus : 500;
+  const message = status < 500 ? error?.message || "Request failed" : "Internal Server Error";
+
+  return c.json({ message }, status as any);
 }

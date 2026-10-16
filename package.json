@@ -62,13 +62,11 @@
     "ioredis": "^5.11.1",
     "lodash-es": "^4.18.1",
     "luxon": "^3.7.2",
-    "maildev": "^2.2.1",
     "mysql2": "^3.23.3",
     "nodemailer": "^9.0.5",
     "pinia": "^3.0.4",
     "pino": "^10.3.1",
     "postgres": "^3.4.9",
-    "redis-commander": "^0.9.0",
     "sass-embedded": "^1.100.0",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
@@ -77,7 +75,7 @@
     "vue": "^3.5.41",
     "vue-router": "^5.2.0",
     "vue-select": "^4.0.0-beta.6",
-    "xlsx": "^0.18.5",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -86,6 +84,8 @@
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^22.13.4",
     "drizzle-kit": "^0.31.10",
+    "maildev": "^2.2.1",
+    "redis-commander": "^0.9.0",
     "vitest": "^4.1.10"
   },
   "engines": {

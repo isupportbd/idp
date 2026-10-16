@@ -1,4 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { secureHeaders } from "hono/secure-headers";
 import { serveEmojiFavicon } from "stoker/middlewares";
 import { appConfig } from "@/config/index.js";
 import { corsMiddleware } from "@/framework/http/cors.js";
@@ -38,6 +39,25 @@ export function createHttpApp() {
   // `use()` only wraps routes registered after it, so previously /health,
   // /doc and /api-docs were registered first and silently bypassed CORS,
   // logging and rate limiting.
+  // Security headers (HSTS, X-Content-Type-Options, X-Frame-Options,
+  // Referrer-Policy, Permissions-Policy, ...) wrap every response. Registered
+  // first so it also decorates error/404 responses. CORP is relaxed to
+  // `cross-origin` because the app supports a UI on a different origin that
+  // loads public `/storage/*` assets. A strict CSP is intentionally NOT set
+  // here (the SPA, Scalar docs and BullBoard rely on inline scripts); see the
+  // security notes before enabling one.
+  app.use(
+    "*",
+    secureHeaders({
+      crossOriginResourcePolicy: "cross-origin",
+      permissionsPolicy: {
+        camera: [],
+        microphone: [],
+        geolocation: [],
+        payment: []
+      }
+    })
+  );
   app.use("*", sessionMiddleware);
   app.use("*", corsMiddleware);
   app.use("*", loggerMiddleware);

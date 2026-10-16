@@ -115,8 +115,15 @@ function dashboardAuth() {
     const email = String(normalized.email ?? "")
       .trim()
       .toLowerCase();
+    const role = String(normalized.role ?? "")
+      .trim()
+      .toLowerCase();
 
-    if (allowedEmails.size > 0 && !allowedEmails.has(email)) {
+    // Fail closed: an explicit email allow-list wins; when none is configured
+    // only platform superadmins may open the dashboard, because it exposes job
+    // payloads (SMS recipients, email addresses, etc.) to anyone authenticated.
+    const permitted = allowedEmails.size > 0 ? allowedEmails.has(email) : role === "superadmin";
+    if (!permitted) {
       return c.json({ message: "Unauthorized" }, 401);
     }
 
