@@ -6,8 +6,9 @@ import { clientManagers } from "@/modules/clients/database/models/client_manager
 import { vatSubmissions } from "@/modules/clients/database/models/vat_submissions.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { users } from "@/modules/auth/database/models/user.js";
-import { deriveSubmitters } from "../controllers/submissions.controller.js";
-import { and, eq } from "drizzle-orm";
+import { deriveSubmitters, recordSubmission, listSubmissions } from "../controllers/submissions.controller.js";
+import { companySettings } from "@/modules/firm/database/models/company_settings.js";
+import { and, eq, sql } from "drizzle-orm";
 
 describe("deriveSubmitters (Submitted By filter options)", () => {
   it("groups rows by submitter, counts them, and excludes pending (no submitter)", () => {
@@ -59,6 +60,13 @@ describe("Submissions Module Real Database Tests (PostgreSQL)", () => {
 
   beforeAll(async () => {
     await initDatabase();
+
+    // Tests only connect (`initDatabase`); the schema normally lands on app boot
+    // via `syncDatabaseSchemaAndSuperAdmin()` / migration 0009. Ensure the audit
+    // column exists before any `select()` expands the full model column set.
+    await db.execute(sql`
+      ALTER TABLE vat_submissions ADD COLUMN IF NOT EXISTS updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+    `);
 
     // Ensure user
     const existingUser = (await db.select().from(users).limit(1))[0];
@@ -214,5 +222,154 @@ describe("Submissions Module Real Database Tests (PostgreSQL)", () => {
     )[0];
 
     expect(remaining).toBeUndefined();
+  });
+});
+
+describe("recordSubmission: submittedBy stays immutable, editor audited in updated_by", () => {
+  const taxPeriod = "2026-12";
+  const stamp = Date.now();
+  const filerName = `Filer ${stamp}`;
+  const editorName = `Editor ${stamp}`;
+
+  // Minimal Hono context double: `recordSubmission` / `listSubmissions` only
+  // need `c.get("auth")`, `c.req.valid(...)` and `c.json(...)`.
+  const makeCtx = (opts: { auth?: any; json?: any; query?: any }): any => ({
+    get: (key: string) => (key === "auth" || key === "user" ? opts.auth : undefined),
+    req: {
+      valid: (type: string) => {
+        if (type === "json") return opts.json;
+        if (type === "query") return opts.query;
+        return undefined;
+      }
+    },
+    json: (body: any, status: any) => ({ body, status })
+  });
+
+  // `Handler`'s Hono type declares a second `next` argument the runtime does
+  // not require, so call it through an untyped indirection.
+  const invoke = (handler: any, ctx: any) => handler(ctx);
+
+  it("keeps the original filer on edit and records the editor in updated_by", async () => {
+    let ownerId: number | null = null;
+    let submitterId: number | null = null;
+    let editorId: number | null = null;
+    let clientId: number | null = null;
+    let settingsId: number | null = null;
+
+    try {
+      await initDatabase();
+      await db.execute(sql`
+        ALTER TABLE vat_submissions ADD COLUMN IF NOT EXISTS updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+      `);
+
+      const mkUser = async (name: string, adminId: number | null) => {
+        const [u] = await db
+          .insert(users)
+          .values({
+            name,
+            email: `${name.toLowerCase().replace(/\s+/g, "_")}_${stamp}@test.com`,
+            password: "hashed_password",
+            adminId
+          })
+          .returning();
+        return u.id;
+      };
+
+      ownerId = await mkUser(`Owner ${stamp}`, null);
+      submitterId = await mkUser(filerName, ownerId);
+      editorId = await mkUser(editorName, ownerId);
+
+      const [client] = await db
+        .insert(clients)
+        .values({
+          companyName: `Attribution Corp ${stamp}`,
+          binNumber: `ATTR-${stamp}`,
+          isActive: true,
+          createdBy: ownerId
+        })
+        .returning();
+      clientId = client.id;
+
+      await db.insert(clientManagers).values([
+        { clientId, managerId: submitterId },
+        { clientId, managerId: editorId }
+      ]);
+
+      // Firm Settings: VAT submission SMS off, so the controller never enqueues
+      // a real gateway send while this test runs.
+      const [settings] = await db
+        .insert(companySettings)
+        .values({
+          adminId: ownerId,
+          companyName: `Attribution Firm ${stamp}`,
+          smsOnSubmission: false
+        })
+        .returning();
+      settingsId = settings.id;
+
+      // ── 1. Fresh filing recorded by the submitter ─────────────────────
+      const createRes: any = await invoke(
+        recordSubmission,
+        makeCtx({
+          auth: { id: submitterId },
+          json: {
+            clientId,
+            taxPeriod,
+            submissionId: "NBR-ORIG-001",
+            submittedBy: submitterId,
+            remarks: "original filing"
+          }
+        })
+      );
+      expect(createRes.body.message).toBe("Submission ID recorded successfully");
+
+      const afterCreate = (await db.select().from(vatSubmissions).where(eq(vatSubmissions.clientId, clientId)))[0];
+      expect(afterCreate).toBeDefined();
+      expect(afterCreate.submittedBy).toBe(submitterId);
+      expect(afterCreate.updatedBy).toBeNull();
+
+      const createdList: any = await invoke(listSubmissions, makeCtx({ auth: { id: ownerId }, query: { month: taxPeriod } }));
+      const createdRow = createdList.body.data.find((r: any) => r.id === clientId);
+      expect(createdRow.isEdited).toBe(false);
+      expect(createdRow.submittedById).toBe(submitterId);
+      expect(createdRow.submittedByName).toBe(filerName);
+      expect(createdRow.updatedById).toBeNull();
+      expect(createdList.body.submitters).toEqual([{ id: submitterId, name: filerName, count: 1 }]);
+
+      // ── 2. A different user edits the same record ─────────────────────
+      const editRes: any = await invoke(
+        recordSubmission,
+        makeCtx({
+          auth: { id: editorId },
+          json: { clientId, taxPeriod, submissionId: "NBR-EDIT-999", remarks: "corrected by editor" }
+        })
+      );
+      expect(editRes.body.message).toBe("Submission ID recorded successfully");
+
+      const afterEdit = (await db.select().from(vatSubmissions).where(eq(vatSubmissions.clientId, clientId)))[0];
+      expect(afterEdit.submissionId).toBe("NBR-EDIT-999");
+      // Historical attribution must survive the edit:
+      expect(afterEdit.submittedBy).toBe(submitterId);
+      expect(afterEdit.updatedBy).toBe(editorId);
+
+      const editedList: any = await invoke(listSubmissions, makeCtx({ auth: { id: ownerId }, query: { month: taxPeriod } }));
+      const editedRow = editedList.body.data.find((r: any) => r.id === clientId);
+      expect(editedRow.isEdited).toBe(true);
+      expect(editedRow.submittedById).toBe(submitterId);
+      expect(editedRow.submittedByName).toBe(filerName);
+      expect(editedRow.updatedById).toBe(editorId);
+      expect(editedRow.updatedByName).toBe(editorName);
+      // Submitter counts stay keyed to the immutable filer, never the editor.
+      expect(editedList.body.submitters).toEqual([{ id: submitterId, name: filerName, count: 1 }]);
+      expect(editedList.body.submitters.some((s: any) => s.id === editorId)).toBe(false);
+    } finally {
+      if (clientId) await db.delete(vatSubmissions).where(eq(vatSubmissions.clientId, clientId));
+      if (clientId) await db.delete(clientManagers).where(eq(clientManagers.clientId, clientId));
+      if (settingsId) await db.delete(companySettings).where(eq(companySettings.id, settingsId));
+      if (clientId) await db.delete(clients).where(eq(clients.id, clientId));
+      if (editorId) await db.delete(users).where(eq(users.id, editorId));
+      if (submitterId) await db.delete(users).where(eq(users.id, submitterId));
+      if (ownerId) await db.delete(users).where(eq(users.id, ownerId));
+    }
   });
 });

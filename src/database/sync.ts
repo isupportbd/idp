@@ -211,6 +211,10 @@ export async function syncDatabaseSchemaAndSuperAdmin() {
     await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS due_reminder_days INTEGER NOT NULL DEFAULT 7`);
     await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS due_reminder_min_amount NUMERIC(14,2) NOT NULL DEFAULT 1000.00`);
 
+    // Ensure vat_submissions records who last edited a submission (audit trail).
+    // `submitted_by` is immutable (original filer); `updated_by` tracks the editor.
+    await executeSingleSql(`ALTER TABLE vat_submissions ADD COLUMN IF NOT EXISTS updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL`);
+
     // Copy legacy sender_id to sms_sender_id if it exists
     await executeSingleSql(`
       DO $$ 

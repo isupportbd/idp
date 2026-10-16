@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Handler } from "hono";
+import { alias } from "drizzle-orm/pg-core";
 import { db, getDefaultTaxPeriod, getSubmissionDeadline, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
 import { broadcast } from "@/framework/realtime/broadcast.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
@@ -99,6 +100,7 @@ export const listSubmissions: Handler = async (c: any) => {
     }
 
     // 2. Fetch existing vat_submissions for this tax period
+    const updatedUser = alias(users, "updatedUser");
     const existingSubmissions = await db
       .select({
         id: vatSubmissions.id,
@@ -108,11 +110,14 @@ export const listSubmissions: Handler = async (c: any) => {
         status: vatSubmissions.status,
         submittedBy: vatSubmissions.submittedBy,
         submittedByName: users.name,
+        updatedBy: vatSubmissions.updatedBy,
+        updatedByName: updatedUser.name,
         submittedAt: vatSubmissions.submittedAt,
         remarks: vatSubmissions.remarks
       })
       .from(vatSubmissions)
       .leftJoin(users, eq(vatSubmissions.submittedBy, users.id))
+      .leftJoin(updatedUser, eq(vatSubmissions.updatedBy, updatedUser.id))
       .where(
         and(
           eq(vatSubmissions.taxPeriod, taxPeriod),
@@ -156,6 +161,8 @@ export const listSubmissions: Handler = async (c: any) => {
       let remarks: string | null = null;
       let submittedById: number | null = null;
       let submittedByName: string | null = null;
+      let updatedById: number | null = null;
+      let updatedByName: string | null = null;
 
       if (sub) {
         submissionRecordId = sub.id;
@@ -164,6 +171,8 @@ export const listSubmissions: Handler = async (c: any) => {
         remarks = sub.remarks;
         submittedById = sub.submittedBy;
         submittedByName = sub.submittedByName;
+        updatedById = sub.updatedBy;
+        updatedByName = sub.updatedByName;
 
         const submitDate = new Date(sub.submittedAt);
         if (sub.status === "late_submitted" || submitDate > deadline) {
@@ -189,6 +198,9 @@ export const listSubmissions: Handler = async (c: any) => {
         status,
         submittedById,
         submittedByName,
+        updatedById,
+        updatedByName,
+        isEdited: updatedById != null,
         submittedAt,
         remarks,
         managers: assignedManagers
@@ -331,10 +343,11 @@ export const recordSubmission: Handler = async (c: any) => {
     const deadline = getSubmissionDeadline(taxPeriod);
     const status = submittedAt > deadline ? "late_submitted" : "submitted";
 
-    // Check if record already exists for this client and tax period
+    // Check if record already exists for this client and tax period.
+    // We also read the original submitter so an edit never rewrites it.
     const existing = (
       await db
-        .select({ id: vatSubmissions.id })
+        .select({ id: vatSubmissions.id, submittedBy: vatSubmissions.submittedBy })
         .from(vatSubmissions)
         .where(
           and(
@@ -345,6 +358,10 @@ export const recordSubmission: Handler = async (c: any) => {
         .limit(1)
     )[0];
 
+    // The immutable filer: original submitter on edit, resolved manager/current
+    // user on first insert. Later edits never overwrite this attribution.
+    const storedSubmittedBy = existing ? existing.submittedBy : managerId;
+
     let result: any = null;
     if (existing) {
       result = (
@@ -353,9 +370,11 @@ export const recordSubmission: Handler = async (c: any) => {
           .set({
             submissionId: submissionId.trim(),
             status,
-            submittedBy: managerId,
             submittedAt,
             remarks: remarks?.trim() || null,
+            // `submittedBy` is intentionally omitted: historical attribution is
+            // preserved. The editor is recorded in `updatedBy` instead.
+            updatedBy: currentUserId,
             updatedAt: new Date()
           })
           .where(eq(vatSubmissions.id, existing.id))
@@ -372,15 +391,17 @@ export const recordSubmission: Handler = async (c: any) => {
             status,
             submittedBy: managerId,
             submittedAt,
-            remarks: remarks?.trim() || null
+            remarks: remarks?.trim() || null,
+            updatedBy: null
           })
           .returning()
       )[0];
     }
 
-    // Resolve submitter name for real-time dispatch
+    // Resolve submitter name for real-time dispatch (the original filer, not
+    // necessarily the editor — an edit must not rewrite attribution)
     let submitterName: string | null = currentUser?.name || null;
-    const targetUserId = managerId || currentUserId;
+    const targetUserId = storedSubmittedBy || currentUserId;
     if (targetUserId) {
       if (!submitterName || targetUserId !== currentUserId) {
         const submitterUser = (
@@ -422,7 +443,7 @@ export const recordSubmission: Handler = async (c: any) => {
         taxPeriod,
         submissionId: submissionId.trim(),
         status,
-        submittedBy: managerId,
+        submittedBy: storedSubmittedBy,
         submittedByName: submitterName,
         submittedAt,
         remarks: remarks?.trim() || null

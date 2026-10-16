@@ -666,8 +666,8 @@ const printReport = () => {
             <!-- 2. BIN & Mobile (Stacked) -->
             <td>
               <div class="mb-1">
-                <span v-if="item.binNumber" class="badge bg-dark border border-secondary text-info font-monospace" style="font-size: 0.78rem;">
-                  BIN: {{ item.binNumber }}
+                <span v-if="item.binNumber" class="text-info font-monospace" style="font-size: 0.8rem;">
+                  <i class="bi bi-upc-scan me-1 text-secondary"></i>{{ item.binNumber }}
                 </span>
                 <span v-else class="text-muted small">—</span>
               </div>
@@ -691,9 +691,27 @@ const printReport = () => {
 
             <!-- Submission ID -->
             <td>
-              <span v-if="item.submissionId" class="badge bg-dark border border-success border-opacity-50 text-success font-monospace px-2.5 py-1 fw-semibold" style="font-size: 0.84rem;">
+              <!-- Edited record: blue/info badge + pencil marker + hover tooltip -->
+              <span
+                v-if="item.submissionId && (item.isEdited || item.updatedByName)"
+                class="badge bg-dark border border-info border-opacity-50 text-info font-monospace px-2.5 py-1 fw-semibold"
+                style="font-size: 0.84rem;"
+                :title="`Submitted by: ${item.submittedByName || '—'} | Edited by: ${item.updatedByName || '—'}`"
+              >
+                <i class="bi bi-pencil-fill me-1" style="font-size: 0.75rem;"></i>{{ item.submissionId }}
+              </span>
+
+              <!-- Original submission: green badge + hover tooltip -->
+              <span
+                v-else-if="item.submissionId"
+                class="badge bg-dark border border-success border-opacity-50 text-success font-monospace px-2.5 py-1 fw-semibold"
+                style="font-size: 0.84rem;"
+                :title="`Submitted by: ${item.submittedByName || '—'}`"
+              >
                 <i class="bi bi-check-circle me-1"></i>{{ item.submissionId }}
               </span>
+
+              <!-- Pending: unchanged warning badge -->
               <span v-else class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-1 font-monospace" style="font-size: 0.78rem;">
                 <i class="bi bi-hourglass-split me-1"></i>Pending
               </span>

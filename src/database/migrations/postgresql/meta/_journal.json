@@ -64,6 +64,13 @@
       "when": 1793000000000,
       "tag": "0008_sms_event_toggles",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794000000000,
+      "tag": "0009_vat_submission_updated_by",
+      "breakpoints": true
     }
   ]
 }

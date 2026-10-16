@@ -14,6 +14,7 @@ export const vatSubmissions = pgTable(
     submissionId: varchar("submission_id", { length: 100 }).notNull(), // NBR ack number
     status: varchar("status", { length: 50 }).default("submitted").notNull(), // "submitted" | "late_submitted"
     submittedBy: integer("submitted_by").references(() => users.id, { onUpdate: "cascade", onDelete: "set null" }),
+    updatedBy: integer("updated_by").references(() => users.id, { onUpdate: "cascade", onDelete: "set null" }),
     submittedAt: timestamp("submitted_at", { withTimezone: true }).defaultNow().notNull(),
     remarks: text("remarks"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -23,6 +24,7 @@ export const vatSubmissions = pgTable(
     uniqueIndex("vat_submissions_client_tax_period_idx").on(table.clientId, table.taxPeriod),
     index("vat_submissions_tax_period_idx").on(table.taxPeriod),
     index("vat_submissions_submitted_by_idx").on(table.submittedBy),
+    index("vat_submissions_updated_by_idx").on(table.updatedBy),
     index("vat_submissions_status_idx").on(table.status)
   ]
 );
@@ -34,6 +36,10 @@ export const vatSubmissionsRelations = relations(vatSubmissions, ({ one }) => ({
   }),
   submitter: one(users, {
     fields: [vatSubmissions.submittedBy],
+    references: [users.id]
+  }),
+  editor: one(users, {
+    fields: [vatSubmissions.updatedBy],
     references: [users.id]
   })
 }));

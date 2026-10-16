@@ -16,6 +16,9 @@ export interface SubmissionItem {
   status: "submitted" | "pending" | "late_submitted";
   submittedById?: number | null;
   submittedByName?: string | null;
+  updatedById?: number | null;
+  updatedByName?: string | null;
+  isEdited?: boolean;
   submittedAt?: string | null;
   remarks?: string | null;
   managers: Array<{ id: number; name: string }>;
