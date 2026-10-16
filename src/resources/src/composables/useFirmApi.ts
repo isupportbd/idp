@@ -34,6 +34,9 @@ export interface CompanySettings {
   smsSenderId?: string | null;
   smsProvider?: string | null;
   smsEndpointUrl?: string | null;
+  smsOnBill?: boolean;
+  smsOnCollection?: boolean;
+  smsOnSubmission?: boolean;
   autoDueReminder?: boolean;
   dueReminderDays?: number;
   dueReminderMinAmount?: number;
@@ -93,6 +96,9 @@ export function useFirmApi() {
     smsSenderId: "",
     smsProvider: "",
     smsEndpointUrl: "",
+    smsOnBill: true,
+    smsOnCollection: true,
+    smsOnSubmission: true,
     autoDueReminder: false,
     dueReminderDays: 7,
     dueReminderMinAmount: 1000,

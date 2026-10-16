@@ -45,14 +45,26 @@ const clientOverview = ref<any>(null);
 const allowedMonths = ref<any[]>([]);
 const items = ref<BillItem[]>([]);
 
+// De-duplication guard. The (clientId, month) overview used to be requested up
+// to three times on mount: the explicit call in `onMounted`, the
+// `watch(selectedClientId)` fire from hydrating the route query, and the
+// `watch(billingMonth)` fire (plus the auto-fill of an empty month below).
+// Remembering the last loaded pair collapses all of those into one request.
+let lastLoadedOverviewKey = "";
+
 // Load Client Overview when selectedClientId or billingMonth changes
 const loadClientData = async () => {
   if (!selectedClientId.value) {
     clientOverview.value = null;
     allowedMonths.value = [];
+    lastLoadedOverviewKey = "";
     if (!isEditMode.value) items.value = [];
     return;
   }
+
+  const overviewKey = `${selectedClientId.value}::${billingMonth.value}`;
+  if (overviewKey === lastLoadedOverviewKey) return;
+  lastLoadedOverviewKey = overviewKey;
 
   try {
     const data = await fetchClientBillingOverview(selectedClientId.value, billingMonth.value);
@@ -79,12 +91,19 @@ const loadClientData = async () => {
       }));
     }
   } catch (err: any) {
+    // Let a later change retry if this request failed.
+    lastLoadedOverviewKey = "";
     toast.error("Failed to load client billing details");
   }
 };
 
 onMounted(async () => {
-  await fetchClients();
+  // Load the client list in parallel. It only feeds the searchable client
+  // picker and is NOT required to compute the billing overview, so it must not
+  // block (or be blocked by) the overview fetch any more.
+  const clientsLoaded = fetchClients().catch(() => {
+    toast.error("Failed to load clients");
+  });
 
   // If in edit mode, load existing invoice
   if (editBillId.value) {
@@ -116,13 +135,17 @@ onMounted(async () => {
         }));
       }
       await loadClientData();
-      return;
     } catch (err) {
       toast.error("Failed to load invoice for editing");
+    } finally {
+      await clientsLoaded;
     }
+    return;
   }
 
-  // If query parameter has clientId or month (create mode)
+  // Create mode: hydrate state from the route query, then fetch the overview
+  // once. The watchers below still cover later, user-driven changes; the
+  // de-dup guard in `loadClientData` absorbs the hydration-time fires.
   if (route.query.clientId) {
     selectedClientId.value = Number(route.query.clientId);
   }
@@ -133,6 +156,8 @@ onMounted(async () => {
   if (selectedClientId.value) {
     await loadClientData();
   }
+
+  await clientsLoaded;
 });
 
 watch(selectedClientId, () => {

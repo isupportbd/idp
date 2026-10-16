@@ -22,6 +22,8 @@ export interface Bill {
   clientId: number;
   clientName: string;
   clientBin?: string;
+  clientMobile?: string;
+  clientAlternativeMobile?: string;
   customerTypeId?: number;
   customerTypeName?: string;
   referenceId?: number;
@@ -50,6 +52,8 @@ export interface Collection {
   clientId: number;
   clientName: string;
   clientBin?: string;
+  clientMobile?: string;
+  clientAlternativeMobile?: string;
   collectionDate: string;
   amount: number;
   paymentMethod: "cash" | "bank" | "cheque" | "bkash" | "nagad" | "rocket" | "other";

@@ -130,7 +130,7 @@ const handleWhatsAppShare = async () => {
   isSharingWa.value = true;
 
   try {
-    const targetNumber = formatWhatsAppNumber(collection.value.clientMobile);
+    const targetNumber = formatWhatsAppNumber(collection.value.clientAlternativeMobile || collection.value.clientMobile);
 
     const companyName = collection.value.companySettings?.companyName || "VAT & Tax Consultancy";
     const clientName = collection.value.clientName || "Valued Client";
@@ -378,7 +378,7 @@ const handleCloseTab = () => {
           style="background-color: #25D366; border-color: #25D366; color: #ffffff;"
           :disabled="isSharingWa || loading || !collection"
           @click="handleWhatsAppShare"
-          :title="collection?.clientMobile ? `Send via WhatsApp (${collection.clientMobile})` : 'Send via WhatsApp'"
+          :title="collection?.clientAlternativeMobile || collection?.clientMobile ? `Send via WhatsApp (${collection?.clientAlternativeMobile || collection?.clientMobile})` : 'Send via WhatsApp'"
         >
           <span v-if="isSharingWa" class="spinner-border spinner-border-sm"></span>
           <i v-else class="bi bi-whatsapp fs-6"></i>

@@ -30,6 +30,9 @@ export const getCompanySettings: Handler = async (c: any) => {
           tradeLicenseNo: "",
           invoicePrefix: "INV",
           receiptPrefix: "RCP",
+          smsOnBill: true,
+          smsOnCollection: true,
+          smsOnSubmission: true,
           autoDueReminder: false,
           dueReminderDays: 7,
           dueReminderMinAmount: 1000
@@ -64,6 +67,9 @@ export const getCompanySettings: Handler = async (c: any) => {
             binNumber: "",
             tinNumber: "",
             tradeLicenseNo: "",
+            smsOnBill: true,
+            smsOnCollection: true,
+            smsOnSubmission: true,
             autoDueReminder: false,
             dueReminderDays: 7,
             dueReminderMinAmount: 1000

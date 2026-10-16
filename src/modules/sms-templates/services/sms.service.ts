@@ -34,7 +34,7 @@ export interface SendTransactionalSmsPayload {
 
 export type TransactionalSmsResult = {
   ok: boolean;
-  status: "SENT" | "FAILED";
+  status: "SENT" | "FAILED" | "SKIPPED";
   /** Raw (truncated) gateway response, or a friendly failure reason. */
   response: string;
   /** The rendered message — exactly what is/was sent or attempted. */
@@ -42,6 +42,64 @@ export type TransactionalSmsResult = {
   /** True when a retry can plausibly succeed (transient failure only). */
   retryable: boolean;
 };
+
+/**
+ * Whether a transactional event is governed by a per-event toggle. Only the
+ * three event families exposed in Firm Settings are gated; `mushak_submission`
+ * and `due_reminder` have their own controls and are always allowed here.
+ */
+export function isSmsToggleGated(templateKey: TransactionalSmsTemplateKey): boolean {
+  return templateKey === "bill_notification" || templateKey === "collection_receipt" || templateKey === "vat_submission";
+}
+
+/**
+ * Why: A firm may enable SMS for some events but not others (e.g. VAT return
+ *      submissions on, invoices/receipts off).
+ * When: Before enqueuing or delivering any transactional SMS.
+ * Where: `enqueueTransactionalSms` call-sites (billing/submissions controllers)
+ *        and the fail-safe delivery gate in `sendTransactionalSms`.
+ * How: Maps the template key to its `company_settings` toggle. Rows created
+ *      before these columns existed (or a missing settings row) default to
+ *      enabled, preserving the historical "SMS on for every event" behaviour.
+ */
+export function isSmsEventEnabled(
+  settings: { smsOnBill?: boolean | null; smsOnCollection?: boolean | null; smsOnSubmission?: boolean | null } | null | undefined,
+  templateKey: TransactionalSmsTemplateKey
+): boolean {
+  if (!settings) return true;
+  switch (templateKey) {
+    case "bill_notification":
+      return settings.smsOnBill !== false;
+    case "collection_receipt":
+      return settings.smsOnCollection !== false;
+    case "vat_submission":
+      return settings.smsOnSubmission !== false;
+    default:
+      return true;
+  }
+}
+
+/**
+ * Loads the owning tenant's settings and resolves the per-event toggle. Fails
+ * OPEN (returns true) so a transient settings-lookup error never silently
+ * swallows a legitimate notification.
+ */
+export async function isTenantSmsEventEnabled(
+  tenantId: string | number | null | undefined,
+  templateKey: TransactionalSmsTemplateKey
+): Promise<boolean> {
+  if (!isSmsToggleGated(templateKey)) return true;
+  const adminIdNum = Number(tenantId);
+  const adminId = Number.isFinite(adminIdNum) && adminIdNum > 0 ? adminIdNum : null;
+  try {
+    const settings = await db.query.companySettings.findFirst({
+      where: adminId ? eq(companySettings.adminId, adminId) : isNull(companySettings.adminId)
+    });
+    return isSmsEventEnabled(settings, templateKey);
+  } catch {
+    return true;
+  }
+}
 
 /** Gateway codes that will never succeed on a retry — fail fast, no backoff burn. */
 const PERMANENT_GATEWAY_CODES = new Set([1001, 1002, 1003, 1004, 1005, 1006, 1007, 1011]);
@@ -279,6 +337,20 @@ export async function sendTransactionalSms(payload: SendTransactionalSmsPayload)
       companyName = settings.companyName || companyName;
     }
   } catch {}
+
+  // 1b. Fail-safe per-event gate: a firm may enable SMS for only some events.
+  //     A disabled event is a deliberate no-op — no gateway call and no FAILED
+  //     audit row (the controllers already skip enqueuing; this also covers
+  //     jobs queued before the toggle was switched off).
+  if (!isSmsEventEnabled(settings, templateKey)) {
+    return {
+      ok: false,
+      status: "SKIPPED",
+      response: "SMS disabled for this event type in Firm Settings",
+      message: "",
+      retryable: false
+    };
+  }
 
   // 2. Effective template (DB override → built-in default) + variables.
   const tpl = await getEffectiveTemplate(templateKey, adminId);

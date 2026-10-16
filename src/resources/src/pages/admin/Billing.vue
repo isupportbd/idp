@@ -19,6 +19,36 @@ const openInvoiceInNewTab = (billId: number) => {
   window.open(`/admin/billing/invoices/${billId}`, "_blank");
 };
 
+// ── Invoice row actions ("..." dropdown) ──────────────────────────────
+// The invoices table sits inside `.table-card`, which sets `overflow: hidden`
+// (to clip its rounded corners), so a normally-positioned dropdown would be cut
+// off. We therefore teleport the menu to <body> and position it with
+// `position: fixed` from the trigger button's viewport rect.
+const openActionsBillId = ref<number | null>(null);
+const actionsMenuStyle = ref<Record<string, string>>({});
+
+const closeInvoiceActions = () => {
+  openActionsBillId.value = null;
+};
+
+const toggleInvoiceActions = (event: MouseEvent, billId: number) => {
+  if (openActionsBillId.value === billId) {
+    closeInvoiceActions();
+    return;
+  }
+
+  const trigger = event.currentTarget as HTMLElement | null;
+  const rect = trigger?.getBoundingClientRect();
+  const menuWidth = 190;
+  const left = rect
+    ? Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8))
+    : 8;
+  const top = rect ? rect.bottom + 4 : 8;
+
+  actionsMenuStyle.value = { top: `${top}px`, left: `${left}px` };
+  openActionsBillId.value = billId;
+};
+
 const {
   bills,
   collections,
@@ -199,6 +229,10 @@ const loadLookups = async () => {
 onMounted(() => {
   loadLookups();
   loadData();
+  // Dismiss the row-actions dropdown on any outside click / scroll / resize.
+  document.addEventListener("click", closeInvoiceActions);
+  window.addEventListener("scroll", closeInvoiceActions, true);
+  window.addEventListener("resize", closeInvoiceActions);
 });
 
 // Debounce filter-driven reloads so typing in the search box no longer fires
@@ -214,6 +248,9 @@ const scheduleLoadData = () => {
 
 onBeforeUnmount(() => {
   if (loadTimer) clearTimeout(loadTimer);
+  document.removeEventListener("click", closeInvoiceActions);
+  window.removeEventListener("scroll", closeInvoiceActions, true);
+  window.removeEventListener("resize", closeInvoiceActions);
 });
 
 watch([selectedMonth, selectedCustomerTypeId, selectedReferenceId, selectedStatusFilter, selectedPaymentMethod, searchQuery], () => {
@@ -714,42 +751,70 @@ const printReport = () => {
               <StatusBadge :status="bill.status" />
             </td>
 
-            <!-- Actions (Icon Only) -->
+            <!-- Actions (Horizontal "..." dropdown) -->
             <td style="text-align: right;" class="d-print-none">
-              <div class="d-inline-flex align-items-center gap-1">
-                <!-- Edit Invoice Button -->
-                <button
-                  v-if="can('billing.edit')"
-                  type="button"
-                  class="btn btn-sm btn-outline-primary p-1"
-                  title="Edit Invoice"
-                  @click="goToEditBill(bill.id)"
-                >
-                  <i class="bi bi-pencil"></i>
-                </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary p-1"
+                title="Invoice Actions"
+                aria-haspopup="true"
+                :aria-expanded="openActionsBillId === bill.id"
+                @click.stop="toggleInvoiceActions($event, bill.id)"
+              >
+                <i class="bi bi-three-dots"></i>
+              </button>
 
-                <!-- Collect Payment Button (If due exists) -->
-                <button
-                  v-if="bill.dueAmount > 0 && can('collections.create')"
-                  type="button"
-                  class="btn btn-sm btn-outline-success p-1"
-                  title="Receive Payment"
-                  @click="goToCreateCollection(bill.clientId, bill.id)"
+              <Teleport to="body">
+                <div
+                  v-if="openActionsBillId === bill.id"
+                  class="dropdown-menu show invoice-actions-menu"
+                  :style="actionsMenuStyle"
+                  @click.stop
                 >
-                  <i class="bi bi-cash-coin"></i>
-                </button>
+                  <!-- View Invoice -->
+                  <button
+                    type="button"
+                    class="dropdown-item d-flex align-items-center gap-2"
+                    @click="closeInvoiceActions(); openInvoiceInNewTab(bill.id)"
+                  >
+                    <i class="bi bi-eye"></i>
+                    <span>View Invoice</span>
+                  </button>
 
-                <!-- Delete Button -->
-                <button
-                  v-if="can('billing.delete')"
-                  type="button"
-                  class="btn btn-sm btn-outline-danger p-1"
-                  title="Delete Invoice"
-                  @click="handleDeleteBill(bill)"
-                >
-                  <i class="bi bi-trash"></i>
-                </button>
-              </div>
+                  <!-- Edit Invoice -->
+                  <button
+                    v-if="can('billing.edit')"
+                    type="button"
+                    class="dropdown-item d-flex align-items-center gap-2"
+                    @click="closeInvoiceActions(); goToEditBill(bill.id)"
+                  >
+                    <i class="bi bi-pencil"></i>
+                    <span>Edit Invoice</span>
+                  </button>
+
+                  <!-- Receive Payment (only when a balance is outstanding) -->
+                  <button
+                    v-if="bill.dueAmount > 0 && can('collections.create')"
+                    type="button"
+                    class="dropdown-item d-flex align-items-center gap-2"
+                    @click="closeInvoiceActions(); goToCreateCollection(bill.clientId, bill.id)"
+                  >
+                    <i class="bi bi-cash-coin"></i>
+                    <span>Receive Payment</span>
+                  </button>
+
+                  <!-- Delete Invoice -->
+                  <button
+                    v-if="can('billing.delete')"
+                    type="button"
+                    class="dropdown-item d-flex align-items-center gap-2 text-danger"
+                    @click="closeInvoiceActions(); handleDeleteBill(bill)"
+                  >
+                    <i class="bi bi-trash"></i>
+                    <span>Delete Invoice</span>
+                  </button>
+                </div>
+              </Teleport>
             </td>
           </tr>
         </tbody>
@@ -1036,6 +1101,26 @@ const printReport = () => {
 <style scoped>
 .billing-page {
   width: 100%;
+}
+
+/* Teleported invoice row-actions menu: fixed so the table's `overflow: hidden`
+   can't clip it. The dynamic top/left are applied inline. */
+.invoice-actions-menu {
+  position: fixed;
+  min-width: 190px;
+  z-index: 1080;
+}
+
+/* The global `.dropdown-item` rule forces a light colour with !important, so the
+   danger action needs an equally important, more specific rule to stay red. */
+.invoice-actions-menu .text-danger {
+  color: #ff6b6b !important;
+}
+
+.invoice-actions-menu .text-danger:hover,
+.invoice-actions-menu .text-danger:focus {
+  color: #ff8787 !important;
+  background-color: rgba(220, 53, 69, 0.14) !important;
 }
 
 .stat-pill {

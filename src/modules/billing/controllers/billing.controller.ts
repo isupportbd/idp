@@ -5,7 +5,7 @@ import { handleControllerError } from "@/framework/http/errors.js";
 import { handleAsyncEndpoint, isAsyncFlagEnabled } from "@/framework/queue/async-endpoint.js";
 import { billingScope, collectionReceivedPayload, invoiceCreatedPayload } from "@/framework/realtime/event-builders.js";
 import { enqueueTransactionalSms } from "@/modules/sms-templates/services/sms-queue.service.js";
-import { formatPeriodLabel, normalizeBdMobile } from "@/modules/sms-templates/services/sms.service.js";
+import { formatPeriodLabel, isTenantSmsEventEnabled, normalizeBdMobile } from "@/modules/sms-templates/services/sms.service.js";
 import { bills } from "../database/models/bills.js";
 import { billItems } from "../database/models/bill_items.js";
 import { collections } from "../database/models/collections.js";
@@ -323,6 +323,8 @@ export const listBills: Handler = async (c: any) => {
         clientId: bills.clientId,
         clientName: clients.companyName,
         clientBin: clients.binNumber,
+        clientMobile: clients.mobile,
+        clientAlternativeMobile: clients.alternativeMobile,
         customerTypeId: clients.customerTypeId,
         customerTypeName: customerTypes.typeName,
         referenceId: clients.referenceId,
@@ -444,6 +446,7 @@ export const getBillDetails: Handler = async (c: any) => {
           clientProprietor: clients.proprietorName,
           clientBin: clients.binNumber,
           clientMobile: clients.mobile,
+          clientAlternativeMobile: clients.alternativeMobile,
           clientEmail: clients.email,
           clientAddress: clients.address,
           customerTypeName: customerTypes.typeName,
@@ -970,21 +973,25 @@ export const createBill: Handler = async (c: any) => {
     // excluded: they are not yet issued to the client.
     const billSmsPhone = normalizeBdMobile(client.mobile) || normalizeBdMobile(client.alternativeMobile);
     if (billSmsPhone && newBill.status !== "draft") {
-      void enqueueTransactionalSms({
-        tenantId: String(client.createdBy ?? creatorId ?? ""),
-        templateKey: "bill_notification",
-        recipientPhone: billSmsPhone,
-        variables: {
-          customer_name: client.companyName,
-          month: formatPeriodLabel(taxPeriod),
-          current_bill: r2(subtotal - discount),
-          due: Number(previousDue),
-          grand_total: Number(grandTotal)
-        },
-        referenceType: "invoice",
-        referenceId: String(newBill.id),
-        triggeredByUserId: auth?.id ? String(auth.id) : undefined
-      });
+      // Gate on the firm's per-event SMS toggle (bill/invoice notifications).
+      const billSmsTenantId = String(client.createdBy ?? creatorId ?? "");
+      if (await isTenantSmsEventEnabled(billSmsTenantId, "bill_notification")) {
+        void enqueueTransactionalSms({
+          tenantId: billSmsTenantId,
+          templateKey: "bill_notification",
+          recipientPhone: billSmsPhone,
+          variables: {
+            customer_name: client.companyName,
+            month: formatPeriodLabel(taxPeriod),
+            current_bill: r2(subtotal - discount),
+            due: Number(previousDue),
+            grand_total: Number(grandTotal)
+          },
+          referenceType: "invoice",
+          referenceId: String(newBill.id),
+          triggeredByUserId: auth?.id ? String(auth.id) : undefined
+        });
+      }
     }
 
     return c.json(
@@ -1137,6 +1144,18 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
     .groupBy(purchases.clientId);
 
   const clientPurchaseMap = new Map<string, number>(purchaseRows.map((p) => [p.clientId, Number(p.totalNetWtKg) || 0]));
+
+  // Resolve the firm's bill-notification toggle once per tenant for the whole
+  // batch so a 100-invoice run does not issue 100 settings queries.
+  const billSmsToggleCache = new Map<string, boolean>();
+  const isBillSmsEnabled = async (tenantKey: string): Promise<boolean> => {
+    let enabled = billSmsToggleCache.get(tenantKey);
+    if (enabled === undefined) {
+      enabled = await isTenantSmsEventEnabled(tenantKey, "bill_notification");
+      billSmsToggleCache.set(tenantKey, enabled);
+    }
+    return enabled;
+  };
 
   for (const client of targetClients) {
     // Skip if already billed
@@ -1291,21 +1310,25 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
     // worker so the batch loop never waits on the gateway.
     const batchBillSmsPhone = normalizeBdMobile(client.mobile) || normalizeBdMobile(client.alternativeMobile);
     if (batchBillSmsPhone) {
-      void enqueueTransactionalSms({
-        tenantId: String(client.createdBy ?? creatorId ?? ""),
-        templateKey: "bill_notification",
-        recipientPhone: batchBillSmsPhone,
-        variables: {
-          customer_name: client.companyName,
-          month: formatPeriodLabel(taxPeriod),
-          current_bill: Number(subtotal),
-          due: Number(previousDue),
-          grand_total: Number(grandTotal)
-        },
-        referenceType: "invoice",
-        referenceId: String(billRecord.id),
-        triggeredByUserId: creatorId ? String(creatorId) : undefined
-      });
+      // Gate on the firm's per-event SMS toggle (bill/invoice notifications).
+      const batchSmsTenantId = String(client.createdBy ?? creatorId ?? "");
+      if (await isBillSmsEnabled(batchSmsTenantId)) {
+        void enqueueTransactionalSms({
+          tenantId: batchSmsTenantId,
+          templateKey: "bill_notification",
+          recipientPhone: batchBillSmsPhone,
+          variables: {
+            customer_name: client.companyName,
+            month: formatPeriodLabel(taxPeriod),
+            current_bill: Number(subtotal),
+            due: Number(previousDue),
+            grand_total: Number(grandTotal)
+          },
+          referenceType: "invoice",
+          referenceId: String(billRecord.id),
+          triggeredByUserId: creatorId ? String(creatorId) : undefined
+        });
+      }
     }
 
     processedCount++;
@@ -1778,6 +1801,8 @@ export const listCollections: Handler = async (c: any) => {
         clientId: collections.clientId,
         clientName: clients.companyName,
         clientBin: clients.binNumber,
+        clientMobile: clients.mobile,
+        clientAlternativeMobile: clients.alternativeMobile,
         collectionDate: collections.collectionDate,
         amount: collections.amount,
         paymentMethod: collections.paymentMethod,
@@ -1937,20 +1962,24 @@ export const createCollection: Handler = async (c: any) => {
         remainingDue = Number(await getClientRunningDue(clientId));
       }
 
-      void enqueueTransactionalSms({
-        tenantId: String(receiptClient?.createdBy ?? tenantAdminId ?? ""),
-        templateKey: "collection_receipt",
-        recipientPhone: receiptPhone,
-        variables: {
-          customer_name: receiptClient?.companyName || "",
-          paid: Number(newCollection.amount),
-          due: remainingDue,
-          receipt_no: newCollection.receiptNo
-        },
-        referenceType: "collection",
-        referenceId: String(newCollection.id),
-        triggeredByUserId: userId ? String(userId) : undefined
-      });
+      const receiptSmsTenantId = String(receiptClient?.createdBy ?? tenantAdminId ?? "");
+      // Gate on the firm's per-event SMS toggle (payment receipt/collection).
+      if (await isTenantSmsEventEnabled(receiptSmsTenantId, "collection_receipt")) {
+        void enqueueTransactionalSms({
+          tenantId: receiptSmsTenantId,
+          templateKey: "collection_receipt",
+          recipientPhone: receiptPhone,
+          variables: {
+            customer_name: receiptClient?.companyName || "",
+            paid: Number(newCollection.amount),
+            due: remainingDue,
+            receipt_no: newCollection.receiptNo
+          },
+          referenceType: "collection",
+          referenceId: String(newCollection.id),
+          triggeredByUserId: userId ? String(userId) : undefined
+        });
+      }
     }
 
     return c.json(
@@ -2041,6 +2070,7 @@ export const getCollectionDetails: Handler = async (c: any) => {
           clientProprietor: clients.proprietorName,
           clientBin: clients.binNumber,
           clientMobile: clients.mobile,
+          clientAlternativeMobile: clients.alternativeMobile,
           clientEmail: clients.email,
           clientAddress: clients.address,
           collectionDate: collections.collectionDate,
