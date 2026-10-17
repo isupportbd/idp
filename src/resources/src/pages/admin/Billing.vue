@@ -613,15 +613,15 @@ const printReport = () => {
         </button>
       </div>
 
-      <!-- Right: Search & Month Navigator (Fixed 38px heights, locked widths) -->
-      <div class="d-flex align-items-center gap-2 flex-nowrap ms-auto flex-shrink-0">
+      <!-- Right: Search & Month Navigator (Fixed 38px heights) -->
+      <div class="d-flex align-items-center gap-1 flex-nowrap ms-auto flex-shrink-0">
         <div class="search-slot">
           <SearchInput
             v-model="searchQuery"
             placeholder="Search invoice, client, receipt..."
             size="md"
-            max-width="190px"
-            min-width="170px"
+            max-width="260px"
+            min-width="220px"
           />
         </div>
 
