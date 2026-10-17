@@ -65,6 +65,7 @@ export const listCollectionsQuerySchema = z.object({
   month: z.string().optional(),
   clientId: z.string().optional(),
   paymentMethod: z.string().optional(),
+  referenceId: z.string().optional(),
   search: z.string().optional()
 });
 

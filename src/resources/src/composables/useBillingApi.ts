@@ -284,6 +284,7 @@ export function useBillingApi() {
     month?: string;
     clientId?: number | string;
     paymentMethod?: string;
+    referenceId?: number | string;
     search?: string;
   } = {}) => {
     loading.value = true;

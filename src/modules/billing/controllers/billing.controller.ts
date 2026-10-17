@@ -1853,6 +1853,9 @@ export const listCollections: Handler = async (c: any) => {
     if (query.paymentMethod && query.paymentMethod !== "all") {
       conditions.push(eq(collections.paymentMethod, query.paymentMethod));
     }
+    if (query.referenceId && query.referenceId !== "all") {
+      conditions.push(eq(clients.referenceId, Number(query.referenceId)));
+    }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 

@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
+import IdpSelect from "@/components/common/IdpSelect.vue";
 import StatusBadge from "@/components/common/StatusBadge.vue";
 import { useBillingApi, type Bill, type Collection } from "@/composables/useBillingApi";
 import { useServicesApi } from "@/composables/useServicesApi";
@@ -82,7 +83,7 @@ const getSavedFilters = () => {
 const savedFilters = getSavedFilters();
 
 // Active View Tab
-const validTabs = ["invoices", "collections", "billed", "dues", "missing"] as const;
+const validTabs = ["invoices", "collections", "dues", "missing"] as const;
 type TabType = typeof validTabs[number];
 
 const initialTab = (route.query.tab as TabType) || savedFilters.activeTab || "invoices";
@@ -180,6 +181,7 @@ const loadData = async () => {
       fetchCollections({
         month: selectedMonth.value,
         paymentMethod: selectedPaymentMethod.value,
+        referenceId: selectedReferenceId.value,
         search: searchQuery.value
       }),
       fetchMissingBills({
@@ -233,11 +235,12 @@ watch([selectedMonth, selectedCustomerTypeId, selectedReferenceId, selectedStatu
   scheduleLoadData();
 });
 
-// Filtered Lists for Tabs
-const billedClientsList = computed(() => {
-  return bills.value;
-});
+const referenceOptions = computed(() => [
+  { value: "all", label: `All References (${references.value.length})` },
+  ...references.value.map((r: any) => ({ value: r.id, label: r.name }))
+]);
 
+// Filtered Lists for Tabs
 const dueClientsList = computed(() => {
   return bills.value.filter((b) => b.dueAmount > 0);
 });
@@ -368,7 +371,7 @@ const handleCancelReceipt = async (col: Collection) => {
 // Excel Export
 const exportToExcel = async () => {
   let exportRows: any[] = [];
-  if (activeTab.value === "invoices" || activeTab.value === "billed" || activeTab.value === "dues") {
+  if (activeTab.value === "invoices" || activeTab.value === "dues") {
     const source = activeTab.value === "dues" ? dueClientsList.value : bills.value;
     exportRows = source.map((b) => ({
       "Invoice No": b.billNo,
@@ -552,8 +555,8 @@ const printReport = () => {
             <span class="text-muted stat-label">Missing Bills</span>
             <i class="bi bi-clock-history text-warning"></i>
           </div>
-          <div class="stat-val text-warning">{{ missingBills.length }} <span class="fs-6 fw-normal text-muted">Clients</span></div>
-          <div class="text-secondary small mt-1 font-monospace">{{ missingBills.filter(m => m.isSubmitted).length }} Ready to Bill</div>
+          <div class="stat-val text-warning">{{ filteredMissingBills.length }} <span class="fs-6 fw-normal text-muted">Clients</span></div>
+          <div class="text-secondary small mt-1 font-monospace">{{ filteredMissingBills.filter(m => m.isSubmitted).length }} Ready to Bill</div>
         </div>
       </div>
     </div>
@@ -585,16 +588,6 @@ const printReport = () => {
         <button
           type="button"
           class="btn tab-btn"
-          :class="activeTab === 'billed' ? 'tab-btn-active' : 'tab-btn-inactive'"
-          @click="activeTab = 'billed'"
-        >
-          <i class="bi bi-check2-all"></i>
-          <span>Billed ({{ billedClientsList.length }})</span>
-        </button>
-
-        <button
-          type="button"
-          class="btn tab-btn"
           :class="activeTab === 'dues' ? 'tab-btn-active' : 'tab-btn-inactive'"
           @click="activeTab = 'dues'"
         >
@@ -613,15 +606,24 @@ const printReport = () => {
         </button>
       </div>
 
-      <!-- Right: Search & Month Navigator (Fixed 38px heights) -->
+      <!-- Right: Reference Filter, Search & Month Navigator (Fixed 38px heights) -->
       <div class="d-flex align-items-center gap-1 flex-nowrap ms-auto flex-shrink-0">
+        <div class="ref-filter-slot">
+          <IdpSelect
+            v-model="selectedReferenceId"
+            :options="referenceOptions"
+            min-width="180px"
+            placeholder="All References"
+          />
+        </div>
+
         <div class="search-slot">
           <SearchInput
             v-model="searchQuery"
             placeholder="Search invoice, client, receipt..."
             size="md"
-            max-width="260px"
-            min-width="220px"
+            max-width="240px"
+            min-width="200px"
           />
         </div>
 
@@ -631,8 +633,8 @@ const printReport = () => {
       </div>
     </div>
 
-    <!-- TAB 1 & 3 & 4: INVOICES TABLE (Active for 'invoices', 'billed', 'dues') -->
-    <div v-if="activeTab === 'invoices' || activeTab === 'billed' || activeTab === 'dues'" class="table-card shadow-sm">
+    <!-- TAB 1 & 3: INVOICES TABLE (Active for 'invoices', 'dues') -->
+    <div v-if="activeTab === 'invoices' || activeTab === 'dues'" class="table-card shadow-sm">
       <table class="table-custom">
         <thead>
           <tr>
