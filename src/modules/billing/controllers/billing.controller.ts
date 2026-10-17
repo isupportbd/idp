@@ -19,10 +19,55 @@ import { clientManagers } from "@/modules/clients/database/models/client_manager
 import { users } from "@/modules/auth/database/models/user.js";
 import { purchases } from "@/modules/clients/database/models/purchases.js";
 import { companySettings } from "@/modules/firm/database/models/company_settings.js";
+import { bankAccounts } from "@/modules/firm/database/models/bank_accounts.js";
 
 // Helper: Round to 2 decimal places
 function r2(num: number): number {
   return Math.round((num + Number.EPSILON) * 100) / 100;
+}
+
+/**
+ * Why: The invoice's "Payment Details" card must show the tenant's own bKash /
+ *      bank info. The bank-accounts endpoint sits behind FIRM_READERS, which a
+ *      billing clerk may lack, so resolving it here (same request) keeps the
+ *      invoice self-contained, permission-safe and snapshot-consistent.
+ */
+async function resolvePaymentInfo(tenantAdminId: number | null) {
+  try {
+    // Hard tenant scoping: without a tenant admin we return nothing rather than
+    // risk leaking another tenant's bank details onto this invoice.
+    if (!tenantAdminId) return null;
+
+    const rows = await db
+      .select({
+        bankName: bankAccounts.bankName,
+        accountName: bankAccounts.accountName,
+        accountNumber: bankAccounts.accountNumber,
+        branchName: bankAccounts.branchName,
+        routingNumber: bankAccounts.routingNumber,
+        bkashNumber: bankAccounts.bkashNumber,
+        nagadNumber: bankAccounts.nagadNumber,
+        isDefault: bankAccounts.isDefault
+      })
+      .from(bankAccounts)
+      .where(and(eq(bankAccounts.isActive, true), eq(bankAccounts.adminId, Number(tenantAdminId))))
+      .orderBy(desc(bankAccounts.isDefault), asc(bankAccounts.id))
+      .limit(1);
+
+    const row = rows[0];
+    if (!row) return null;
+    return {
+      bkashNumber: row.bkashNumber || null,
+      nagadNumber: row.nagadNumber || null,
+      bankName: row.bankName || null,
+      accountName: row.accountName || null,
+      accountNumber: row.accountNumber || null,
+      branchName: row.branchName || null,
+      routingNumber: row.routingNumber || null
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -449,6 +494,7 @@ export const getBillDetails: Handler = async (c: any) => {
           clientAlternativeMobile: clients.alternativeMobile,
           clientEmail: clients.email,
           clientAddress: clients.address,
+          clientOwner: clients.createdBy,
           customerTypeName: customerTypes.typeName,
           referenceName: clientReferences.name,
           taxPeriod: bills.taxPeriod,
@@ -501,24 +547,41 @@ export const getBillDetails: Handler = async (c: any) => {
         .limit(1)
     )[0];
 
-    // Fetch tenant/company branding settings
+    // Branding and payment channels both belong to the owning tenant (the
+    // client's owner = tenant admin). Resolve them from that tenant's Firm
+    // Settings ONLY — there is deliberately no cross-tenant or platform
+    // fallback, so one firm's clients can never be shown another firm's (or the
+    // superadmin's) account details.
+    const tenantAdminId = bill.clientOwner ? Number(bill.clientOwner) : null;
     let firmSetting: any = null;
     try {
-      if (bill.createdBy) {
+      if (tenantAdminId) {
         firmSetting = await db.query.companySettings.findFirst({
-          where: eq(companySettings.adminId, bill.createdBy)
+          where: eq(companySettings.adminId, tenantAdminId)
         });
       }
-      if (!firmSetting) {
-        firmSetting = await db.query.companySettings.findFirst();
-      }
     } catch { }
+
+    // Payment details for the printable invoice / WhatsApp notice, resolved for
+    // the owning tenant (client owner) so clerks without FIRM_READERS still see it.
+    const bankInfo = await resolvePaymentInfo(tenantAdminId);
+    const paymentInfo = {
+      bkashNumber: firmSetting?.bkashNumber?.trim() || bankInfo?.bkashNumber || null,
+      nagadNumber: firmSetting?.nagadNumber?.trim() || bankInfo?.nagadNumber || null,
+      rocketNumber: firmSetting?.rocketNumber?.trim() || null,
+      bankName: bankInfo?.bankName || null,
+      accountName: bankInfo?.accountName || null,
+      accountNumber: bankInfo?.accountNumber || null,
+      branchName: bankInfo?.branchName || null,
+      routingNumber: bankInfo?.routingNumber || null
+    };
+    const { clientOwner: _clientOwner, ...billData } = bill;
 
     return c.json(
       {
         message: "Bill details fetched successfully",
         data: {
-          ...bill,
+          ...billData,
           submissionId: submission?.submissionId || null,
           submittedAt: submission?.submittedAt || null,
           companySettings: firmSetting ? {
@@ -534,7 +597,8 @@ export const getBillDetails: Handler = async (c: any) => {
             invoiceTerms: firmSetting.invoiceTerms
           } : null,
           items,
-          collections: linkedCollections
+          collections: linkedCollections,
+          payment: paymentInfo
         }
       },
       HttpStatusCodes.OK
@@ -2115,16 +2179,14 @@ export const getCollectionDetails: Handler = async (c: any) => {
     const totalCollected = clientCollectedSum[0]?.totalCollected || 0;
     const currentOutstandingDue = r2(Math.max(0, totalBilled - totalCollected));
 
-    // Fetch tenant company branding settings
+    // Tenant-scoped company branding — resolved from the client owner's Firm
+    // Settings only, with no cross-tenant fallback.
     let firmSetting: any = null;
     try {
       if (col.createdBy) {
         firmSetting = await db.query.companySettings.findFirst({
           where: eq(companySettings.adminId, col.createdBy)
         });
-      }
-      if (!firmSetting) {
-        firmSetting = await db.query.companySettings.findFirst();
       }
     } catch { }
 

@@ -166,6 +166,30 @@ export const routes = [
         meta: { title: "Record Payment", permission: ["collections.create"] }
       },
       {
+        path: "admin/payouts",
+        name: "payouts",
+        component: () => import("@/pages/admin/Payouts.vue"),
+        meta: { title: "Payouts & Staff Earnings" }
+      },
+      {
+        path: "admin/payouts/create",
+        name: "payout-create",
+        component: () => import("@/pages/admin/PayoutCreate.vue"),
+        meta: { title: "Record Payout", permission: ["payouts.create"] }
+      },
+      {
+        path: "admin/payouts/:id",
+        name: "payout-view",
+        component: () => import("@/pages/admin/PayoutView.vue"),
+        meta: { title: "Payout Details" }
+      },
+      {
+        path: "admin/my-earnings",
+        name: "my-earnings",
+        component: () => import("@/pages/admin/MyEarnings.vue"),
+        meta: { title: "My Earnings" }
+      },
+      {
         path: "admin/settings",
         name: "admin-settings",
         component: () => import("@/pages/admin/AdminSettings.vue"),
@@ -365,6 +389,7 @@ router.beforeEach(async (to: RouteLocationNormalized) => {
     "/admin/sales-rates": "sales_rates",
     "/admin/reports": "reports",
     "/admin/billing": "billing",
+    "/admin/payouts": "payouts",
     "/admin/settings": "settings"
   };
 

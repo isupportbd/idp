@@ -133,6 +133,16 @@ const clearAllFilters = () => {
   } catch {}
 };
 
+// Clicking a top KPI card resets every lower toolbar filter so the two never conflict.
+const selectCardFilter = (filter: typeof statusFilter.value) => {
+  statusFilter.value = filter;
+  searchQuery.value = "";
+  selectedCustomerTypeId.value = "all";
+  selectedReferenceId.value = "all";
+  selectedSubmitterId.value = "all";
+  currentPage.value = 1;
+};
+
 // Multi-Selection State
 const selectedIds = ref<number[]>([]);
 
@@ -484,7 +494,7 @@ const printReport = () => {
         <div
           class="stat-pill cursor-pointer"
           :class="{ 'stat-pill-active': statusFilter === 'all' }"
-          @click="statusFilter = 'all'"
+          @click="selectCardFilter('all')"
         >
           <div class="d-flex justify-content-between align-items-center mb-1">
             <span class="text-muted stat-label">All Active Clients</span>
@@ -498,7 +508,7 @@ const printReport = () => {
         <div
           class="stat-pill cursor-pointer"
           :class="{ 'stat-pill-active': statusFilter === 'submitted' }"
-          @click="statusFilter = 'submitted'"
+          @click="selectCardFilter('submitted')"
         >
           <div class="d-flex justify-content-between align-items-center mb-1">
             <span class="text-muted stat-label">Submitted</span>
@@ -512,7 +522,7 @@ const printReport = () => {
         <div
           class="stat-pill cursor-pointer"
           :class="{ 'stat-pill-active': statusFilter === 'pending' }"
-          @click="statusFilter = 'pending'"
+          @click="selectCardFilter('pending')"
         >
           <div class="d-flex justify-content-between align-items-center mb-1">
             <span class="text-muted stat-label">Pending</span>
@@ -526,7 +536,7 @@ const printReport = () => {
         <div
           class="stat-pill cursor-pointer"
           :class="{ 'stat-pill-active': statusFilter === 'late_submitted' }"
-          @click="statusFilter = 'late_submitted'"
+          @click="selectCardFilter('late_submitted')"
         >
           <div class="d-flex justify-content-between align-items-center mb-1">
             <span class="text-muted stat-label">Late Submitted</span>

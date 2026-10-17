@@ -254,8 +254,10 @@ const deleteServiceRateRoute = createRoute({
 
 // ── ROUTER EXPORT ───────────────────────────────────────────────────
 
+import { denyRole } from "@/middlewares/role-middleware.js";
+
 export default createRouter()
-  .group(authMiddleware, subscriptionMiddleware)
+  .group(authMiddleware, denyRole("superadmin"), subscriptionMiddleware)
   .api(getCustomerTypesRoute, [], listCustomerTypes)
   .api(postCustomerTypeRoute, [requirePermission("settings.edit")], createCustomerType)
   .api(toggleCustomerTypeRoute, [requirePermission("settings.edit")], toggleCustomerType)

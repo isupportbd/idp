@@ -28,21 +28,37 @@ async function superAdminOnlyMiddleware(c: Context, next: Next) {
 }
 
 /**
- * Authenticated users (superadmin + admin + staff).
+ * Block regular staff/sub-users from accessing SMS gateway management.
+ * Allow: superadmin OR tenant admin (role === 'admin').
+ * Block: staff/sub-users (role !== 'admin').
+ */
+async function blockStaffMiddleware(c: Context, next: Next) {
+  const auth = c.get("auth") || c.get("user") || (c.req as any).user;
+  const roleName = typeof auth?.role === "string" ? auth.role.toLowerCase() : auth?.role?.name?.toLowerCase();
+  const isSuperAdmin = roleName === "superadmin";
+  const isTenantAdmin = roleName === "admin";
+  if (isSuperAdmin || isTenantAdmin) {
+    return await next();
+  }
+  return c.json({ success: false, message: "Forbidden: Insufficient permissions" }, 403);
+}
+
+/**
+ * Authenticated users.
  * Each user sees only their own tenant's data via resolveTenantAdminId() in the controller.
- * - SuperAdmin  → adminId = null  → global gateway & templates
- * - Admin       → adminId = user.id → own gateway & templates
- * - Staff       → adminId = user.adminId → admin's gateway & templates
+ * - SuperAdmin: adminId = null — global gateway & templates
+ * - Admin: adminId = user.id — own gateway & templates
+ * - Staff: blocked from gateway management
  */
 smsTemplatesRouter.use("*", authMiddleware);
 
-// ── Gateway settings & actions: accessible by all authenticated roles ──
+// ── Gateway settings & actions: superadmin and tenant admin only ──
 // Controller isolates data per tenant via resolveTenantAdminId()
-smsTemplatesRouter.get("/gateway", getGatewaySettings);
-smsTemplatesRouter.put("/gateway", updateGatewaySettings);
-smsTemplatesRouter.get("/gateway/balance", checkGatewayBalance);
-smsTemplatesRouter.post("/test", sendTestSms);
-smsTemplatesRouter.get("/logs", listSmsLogs);
+smsTemplatesRouter.get("/gateway", blockStaffMiddleware, getGatewaySettings);
+smsTemplatesRouter.put("/gateway", blockStaffMiddleware, updateGatewaySettings);
+smsTemplatesRouter.get("/gateway/balance", blockStaffMiddleware, checkGatewayBalance);
+smsTemplatesRouter.post("/test", blockStaffMiddleware, sendTestSms);
+smsTemplatesRouter.get("/logs", blockStaffMiddleware, listSmsLogs);
 
 // ── Template management: SuperAdmin only ──────────────────────────────────
 // Admins use global templates for SMS sending; they do NOT manage templates.

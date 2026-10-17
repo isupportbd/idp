@@ -14,7 +14,7 @@ const BULKSMSBD_ENDPOINT = "http://bulksmsbd.net/api/smsapi";
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 /** Transactional SMS event keys (one template row per key in `sms_templates`). */
-export type TransactionalSmsTemplateKey = "bill_notification" | "collection_receipt" | "vat_submission" | "mushak_submission" | "due_reminder";
+export type TransactionalSmsTemplateKey = "bill_notification" | "collection_receipt" | "vat_submission" | "mushak_submission" | "due_reminder" | "staff_payout";
 
 /**
  * Why: One stable wire format for every transactional SMS so controllers only
@@ -27,7 +27,7 @@ export interface SendTransactionalSmsPayload {
   templateKey: TransactionalSmsTemplateKey;
   recipientPhone: string;
   variables: Record<string, string | number | null | undefined>;
-  referenceType?: "invoice" | "collection" | "submission";
+  referenceType?: "invoice" | "collection" | "submission" | "payout";
   referenceId?: string;
   triggeredByUserId?: string;
 }
@@ -169,6 +169,24 @@ export const DEFAULT_TEMPLATES = [
       { name: "customer_name", label: "Client Name", sample: "ABC Traders", description: "Client Company Name" },
       { name: "date", label: "Date", sample: "10/08/2026", description: "Current Date" },
       { name: "due", label: "Due Amount", sample: "3500", description: "Total Outstanding Due" },
+      { name: "company_name", label: "Firm Name", sample: "One Associate", description: "VAT Consultant Firm Name" }
+    ] as SmsTemplateVariable[]
+  },
+  {
+    key: "staff_payout",
+    name: "Staff Payout",
+    description: null,
+    body: "প্রিয় {{staff_name}}, আপনার {{period_month}} মাসের বিল হিসাব: চলতি বিল: {{current_bill}}/-, পূর্বের বকেয়া: {{previous_due}}/-, মোট প্রদেয়: {{total_payable}}/-, আজ পরিশোধ: {{paid_amount}}/- ({{payment_method}}), অবশিষ্ট বকেয়া: {{closing_due}}/-{{advance_note}}। ধন্যবাদ— {{company_name}}",
+    variables: [
+      { name: "staff_name", label: "Staff Name", sample: "Rahim Uddin", description: "Staff Member Name" },
+      { name: "period_month", label: "Period Month", sample: "July-2026", description: "Payout Period Month & Year" },
+      { name: "current_bill", label: "Current Bill", sample: "5000", description: "Current Month Accrued Earnings" },
+      { name: "previous_due", label: "Previous Due", sample: "1500", description: "Carried-forward Due" },
+      { name: "total_payable", label: "Total Payable", sample: "6500", description: "Total Payable This Month" },
+      { name: "paid_amount", label: "Paid Amount", sample: "6500", description: "Amount Paid Now" },
+      { name: "payment_method", label: "Payment Method", sample: "BKASH", description: "BKASH / BANK / CASH" },
+      { name: "closing_due", label: "Closing Due", sample: "0", description: "Remaining Due After Payment" },
+      { name: "advance_note", label: "Advance Note", sample: " [বা অগ্রিম জমা: 500/-]", description: "Optional advance suffix" },
       { name: "company_name", label: "Firm Name", sample: "One Associate", description: "VAT Consultant Firm Name" }
     ] as SmsTemplateVariable[]
   }

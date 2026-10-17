@@ -108,7 +108,7 @@ onUnmounted(() => {
       @keydown="handleKeyDown"
     />
     <button
-      v-if="internalValue"
+      v-show="internalValue"
       type="button"
       class="idp-clear-btn"
       :class="[`clear-${size}`]"
@@ -150,7 +150,7 @@ onUnmounted(() => {
   color: #f8f9fa !important;
   border-radius: 6px;
   width: 100%;
-  transition: all 0.15s ease-in-out;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out, background-color 0.15s ease-in-out;
   padding-left: 34px !important;
   padding-right: 32px !important;
 }
@@ -205,7 +205,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   z-index: 10;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
   font-size: 0.95rem;
 }
 

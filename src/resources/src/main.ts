@@ -7,6 +7,7 @@ import { GumPlugin } from "@/plugins/gum";
 import { PulsePlugin } from "@/plugins/pulse";
 import App from "./App.vue";
 import router from "./router";
+import { prefetch } from "./directives/prefetch";
 
 import "bootstrap-icons/font/bootstrap-icons.css";
 // NOTE: Bootstrap's CSS is compiled by custom.scss (`@use "bootstrap/scss/bootstrap"`),
@@ -22,6 +23,7 @@ const head = createHead({ titleTemplate: (title) => (title ? `${title} - IDP` : 
 app.use(pinia);
 app.use(router);
 app.use(head);
+app.directive("prefetch", prefetch);
 app.use(DialogPlugin);
 app.use(GumPlugin);
 // Globally prevent accidental mouse wheel scrolling / incrementing / decrementing on number inputs

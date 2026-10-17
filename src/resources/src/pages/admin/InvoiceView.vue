@@ -28,7 +28,19 @@ const paymentDueDate = computed(() => {
   return "";
 });
 
+// Warm the (heavy) capture engine while the browser is idle so Share/Download
+// feel instant on first use instead of paying a cold chunk fetch.
+const prefetchCaptureEngine = () => {
+  const run = () => { import("html2canvas-pro").catch(() => {}); };
+  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+    (window as any).requestIdleCallback(run, { timeout: 2500 });
+  } else {
+    setTimeout(run, 800);
+  }
+};
+
 onMounted(async () => {
+  prefetchCaptureEngine();
   if (!billId || isNaN(billId)) {
     loading.value = false;
     return;
@@ -56,53 +68,78 @@ const formatWhatsAppNumber = (rawNumber?: string) => {
   return digits;
 };
 
-// Render invoice DOM into high-res JPG Blob
-const captureInvoiceBlob = async (): Promise<{ blob: Blob; filename: string } | null> => {
+const paymentInfo = computed(() => (bill.value?.payment as any) || null);
+
+// Channels are rendered strictly from what the tenant actually configured in
+// Firm Settings (falling back to their bank account / the platform default),
+// so unconfigured methods never produce empty rows on the invoice.
+const paymentChannels = computed<{ label: string; value: string; mono?: boolean }[]>(() => {
+  const p = paymentInfo.value || {};
+  const channels: { label: string; value: string; mono?: boolean }[] = [];
+  if (p.bkashNumber) channels.push({ label: "bKash (Send Money)", value: String(p.bkashNumber), mono: true });
+  if (p.nagadNumber) channels.push({ label: "Nagad (Send Money)", value: String(p.nagadNumber), mono: true });
+  if (p.rocketNumber) channels.push({ label: "Rocket (Send Money)", value: String(p.rocketNumber), mono: true });
+  if (p.bankName) channels.push({ label: "Bank Name", value: String(p.bankName) });
+  if (p.accountName) channels.push({ label: "Account Name", value: String(p.accountName) });
+  if (p.accountNumber) channels.push({ label: "A/C Number", value: String(p.accountNumber), mono: true });
+  if (p.branchName) channels.push({ label: "Branch", value: String(p.branchName) });
+  if (p.routingNumber) channels.push({ label: "Routing No", value: String(p.routingNumber), mono: true });
+  return channels;
+});
+
+// Short header hint listing only the available methods (e.g. "bKash • Bank Transfer").
+const paymentHint = computed(() => {
+  const p = paymentInfo.value || {};
+  const names: string[] = [];
+  if (p.bkashNumber) names.push("bKash");
+  if (p.nagadNumber) names.push("Nagad");
+  if (p.rocketNumber) names.push("Rocket");
+  if (p.bankName || p.accountNumber) names.push("Bank Transfer");
+  return names.join(" • ");
+});
+
+// Render the invoice DOM into a single canvas; both JPG and PNG are derived from
+// it, so the (expensive) html2canvas pass runs at most once per action.
+const renderInvoiceCanvas = async (): Promise<HTMLCanvasElement | null> => {
   const el = document.getElementById("printable-invoice");
   if (!el) return null;
 
   try {
+    // Make sure webfonts / icon fonts are laid out before rasterizing.
+    const fonts = (document as any).fonts;
+    if (fonts?.ready) {
+      try { await fonts.ready; } catch { /* fonts API unavailable */ }
+    }
     const html2canvas = (await import("html2canvas-pro")).default;
-    const canvas = await html2canvas(el, {
+    return await html2canvas(el, {
       scale: 2.5,
       backgroundColor: "#ffffff",
       useCORS: true,
       logging: false,
       windowWidth: 860
     });
-    const blob: Blob = await new Promise((resolve, reject) => {
-      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Image blob creation failed"))), "image/jpeg", 0.95);
-    });
-    const filename = `${(bill.value?.billNo || "invoice").replace(/[/\\]/g, "-")}.jpg`;
-    return { blob, filename };
   } catch (err) {
     console.error("html2canvas error:", err);
     return null;
   }
 };
 
-const jpgToPng = async (jpgBlob: Blob): Promise<Blob> => {
-  const url = URL.createObjectURL(jpgBlob);
+const canvasToBlob = (canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob> =>
+  new Promise((resolve, reject) => {
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Image blob creation failed"))), type, quality);
+  });
+
+// Render invoice DOM into high-res JPG Blob
+const captureInvoiceBlob = async (): Promise<{ blob: Blob; filename: string } | null> => {
+  const canvas = await renderInvoiceCanvas();
+  if (!canvas) return null;
   try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const im = new Image();
-      im.onload = () => resolve(im);
-      im.onerror = reject;
-      im.src = url;
-    });
-    const canvas = document.createElement("canvas");
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Canvas 2D context unavailable");
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0);
-    return await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("PNG blob failed"))), "image/png");
-    });
-  } finally {
-    URL.revokeObjectURL(url);
+    const blob = await canvasToBlob(canvas, "image/jpeg", 0.95);
+    const filename = `${(bill.value?.billNo || "invoice").replace(/[/\\]/g, "-")}.jpg`;
+    return { blob, filename };
+  } catch (err) {
+    console.error("Invoice blob error:", err);
+    return null;
   }
 };
 
@@ -147,6 +184,22 @@ const handleWhatsAppShare = async () => {
     const grandTotal = Number(bill.value.grandTotal || 0).toFixed(2);
     const netDue = Number(bill.value.dueAmount || 0).toFixed(2);
 
+    // Payment options — list only the channels the firm actually configured, so
+    // the message never advertises a method the firm does not accept.
+    const pay = paymentInfo.value || {};
+    const paymentLines: string[] = [];
+    if (pay.bkashNumber) paymentLines.push(`• bKash: ${pay.bkashNumber} (Send Money)`);
+    if (pay.nagadNumber) paymentLines.push(`• Nagad: ${pay.nagadNumber} (Send Money)`);
+    if (pay.rocketNumber) paymentLines.push(`• Rocket: ${pay.rocketNumber} (Send Money)`);
+    if (pay.accountNumber) {
+      paymentLines.push(
+        `• Bank: ${pay.bankName || "Bank"} | A/C: ${pay.accountNumber}${pay.accountName ? ` (${pay.accountName})` : ""}${pay.branchName ? `, ${pay.branchName}` : ""}`
+      );
+    }
+    const paymentBlock = paymentLines.length
+      ? `💳 *Payment Options:*\n${paymentLines.join("\n")}\n`
+      : "";
+
     const text = `*INVOICE / BILL NOTICE*
 ━━━━━━━━━━━━━━━━━━━━
 Dear *${clientName}*,
@@ -162,7 +215,7 @@ Your invoice for Tax Period *${period}* has been issued.
 💰 *Total Payable:* ${grandTotal} Tk
 ⚠️ *Net Due:* ${netDue} Tk
 
-Thank you for your business!
+${paymentBlock}Thank you for your business!
 *${companyName}*`;
 
     const encodedText = encodeURIComponent(text);
@@ -170,13 +223,15 @@ Thank you for your business!
       ? `whatsapp://send?phone=${targetNumber}&text=${encodedText}`
       : `whatsapp://send?text=${encodedText}`;
 
-    // Capture Invoice image
-    const captured = await captureInvoiceBlob();
+    // Capture once; derive both the share JPG and the clipboard PNG from it.
+    const canvas = await renderInvoiceCanvas();
+    const filename = `${(billNo || "invoice").replace(/[/\\]/g, "-")}.jpg`;
+    const jpgBlob = canvas ? await canvasToBlob(canvas, "image/jpeg", 0.95).catch(() => null) : null;
     const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     // 1) Mobile Native Share
-    if (isMobileDevice && captured && navigator.share && navigator.canShare) {
-      const file = new File([captured.blob], captured.filename, { type: "image/jpeg" });
+    if (isMobileDevice && jpgBlob && navigator.share && navigator.canShare) {
+      const file = new File([jpgBlob], filename, { type: "image/jpeg" });
       if (navigator.canShare({ files: [file] })) {
         try {
           await navigator.share({
@@ -194,9 +249,9 @@ Thank you for your business!
 
     // 2) Desktop: Copy image to Clipboard and launch WhatsApp Desktop
     let copiedToClipboard = false;
-    if (captured && navigator.clipboard && typeof ClipboardItem !== "undefined") {
+    if (canvas && navigator.clipboard && typeof ClipboardItem !== "undefined") {
       try {
-        const pngBlob = await jpgToPng(captured.blob);
+        const pngBlob = await canvasToBlob(canvas, "image/png");
         const item = new ClipboardItem({ "image/png": pngBlob });
         await navigator.clipboard.write([item]);
         copiedToClipboard = true;
@@ -284,6 +339,27 @@ const handlePrint = () => {
       background-color: #f8f9fa !important;
       border: 1px solid #dee2e6 !important;
       border-radius: 6px;
+    }
+    .payment-box {
+      background-color: #f8f9fa !important;
+      border: 1px solid #dee2e6 !important;
+      border-radius: 6px;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .payment-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px 16px;
+    }
+    .payment-label {
+      color: #6c757d !important;
+      font-size: 0.66rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .payment-value {
+      color: #111417 !important;
     }
     .invoice-table-wrapper {
       border: 1px solid #dee2e6 !important;
@@ -537,15 +613,29 @@ const handleCloseTab = () => {
 
       <!-- 4. Summary & Totals Calculation Grid -->
       <div class="row g-3 mb-4 align-items-stretch">
-        <!-- Terms & Payment Notes -->
-        <div class="col-7">
-          <div class="terms-box p-3 rounded border bg-light h-100">
-            <div class="fw-bold small text-dark mb-1">Terms & Conditions:</div>
-            <div class="text-secondary small font-monospace" style="white-space: pre-line; line-height: 1.5;">
+        <!-- Terms & Payment Details -->
+        <div class="col-7 d-flex flex-column gap-3">
+          <div class="terms-box p-3 rounded border bg-light">
+            <div class="fw-bold small text-dark mb-1">Terms &amp; Conditions:</div>
+            <div class="terms-text text-secondary small" style="white-space: pre-line; line-height: 1.45;">
               {{ bill.companySettings?.invoiceTerms || '1. Payment is due within 7 days of invoice date.\n2. Please mention invoice number as payment reference.\n3. Thank you for your business!' }}
             </div>
             <div v-if="bill.notes" class="mt-2 pt-2 border-top small text-muted">
               <strong>Remarks:</strong> {{ bill.notes }}
+            </div>
+          </div>
+
+          <!-- Payment Details Card — renders only channels that exist in settings -->
+          <div v-if="paymentChannels.length" class="payment-box p-3 rounded border bg-light">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="fw-bold small text-dark text-uppercase" style="letter-spacing: 0.5px;">Payment Details</div>
+              <div v-if="paymentHint" class="payment-hint small text-muted">{{ paymentHint }}</div>
+            </div>
+            <div class="payment-grid">
+              <div v-for="ch in paymentChannels" :key="ch.label" class="payment-item">
+                <div class="payment-label">{{ ch.label }}</div>
+                <div class="payment-value" :class="{ 'font-monospace': ch.mono }">{{ ch.value }}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -673,6 +763,40 @@ const handleCloseTab = () => {
   border-bottom: none;
 }
 
+.payment-box {
+  background-color: #f8f9fa;
+  border-color: #e9ecef !important;
+}
+
+.payment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 1rem;
+}
+
+.payment-item {
+  min-width: 0;
+}
+
+.payment-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #6c757d;
+}
+
+.payment-value {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #111417;
+  word-break: break-word;
+}
+
+.terms-text {
+  word-break: break-word;
+}
+
 @page {
   size: A4 portrait;
   margin: 10mm 12mm;
@@ -705,6 +829,7 @@ const handleCloseTab = () => {
   .section-box,
   .terms-box,
   .calculation-box,
+  .payment-box,
   .invoice-table-wrapper,
   .signature-section {
     page-break-inside: avoid;

@@ -13,6 +13,9 @@ export interface CompanySettings {
   binNumber?: string | null;
   tinNumber?: string | null;
   tradeLicenseNo?: string | null;
+  bkashNumber?: string | null;
+  nagadNumber?: string | null;
+  rocketNumber?: string | null;
   invoicePrefix?: string;
   startingInvoiceNumber?: number;
   currentInvoiceSequence?: number;
@@ -77,6 +80,9 @@ export function useFirmApi() {
     binNumber: "",
     tinNumber: "",
     tradeLicenseNo: "",
+    bkashNumber: "",
+    nagadNumber: "",
+    rocketNumber: "",
     invoicePrefix: "INV",
     startingInvoiceNumber: 1001,
     currentInvoiceSequence: 1001,

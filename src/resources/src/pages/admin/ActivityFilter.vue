@@ -261,9 +261,13 @@ const { currentPage, itemsPerPage, totalPages, paginateList } = usePagination("a
 
 const paginatedClients = computed(() => paginateList(filteredClients.value));
 
-// Card click filter function
+// Card click filter function — also resets every lower toolbar filter so
+// clicking a top card never conflicts with the dropdown/search state.
 const selectCardFilter = (filter: typeof statusFilter.value) => {
   statusFilter.value = filter;
+  searchQuery.value = "";
+  selectedClientType.value = "all";
+  selectedReference.value = "all";
   currentPage.value = 1;
 };
 

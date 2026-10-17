@@ -678,6 +678,9 @@ const handleResetToDefault = async () => {
       binNumber: "",
       tinNumber: "",
       tradeLicenseNo: "",
+      bkashNumber: "",
+      nagadNumber: "",
+      rocketNumber: "",
       invoicePrefix: "INV",
       startingInvoiceNumber: 1001,
       currentInvoiceSequence: 1001,
@@ -949,6 +952,53 @@ onMounted(async () => {
                 class="form-control idp-input"
                 :disabled="!isEditingProfile"
                 placeholder="TRAD/DSCC/038291"
+              />
+            </div>
+          </div>
+
+          <h5 class="text-white fw-bold mt-4 mb-3 d-flex align-items-center gap-2 border-top border-secondary pt-3">
+            <i class="bi bi-phone text-success"></i> Mobile Money Collection
+          </h5>
+
+          <p class="text-muted small mb-3">
+            These numbers are printed on invoices and shared over WhatsApp so clients can pay directly. Leave blank to fall back to the default bank account.
+          </p>
+
+          <p class="text-muted small mb-3">
+            These numbers are printed on invoices and shared over WhatsApp so clients can pay directly. Only the numbers you fill in are shown; leave the rest blank to fall back to the default bank account.
+          </p>
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label text-light small fw-medium">bKash Number</label>
+              <input
+                v-model="form.bkashNumber"
+                type="text"
+                class="form-control idp-input"
+                :disabled="!isEditingProfile"
+                placeholder="01XXXXXXXXX"
+              />
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label text-light small fw-medium">Nagad Number</label>
+              <input
+                v-model="form.nagadNumber"
+                type="text"
+                class="form-control idp-input"
+                :disabled="!isEditingProfile"
+                placeholder="01XXXXXXXXX"
+              />
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label text-light small fw-medium">Rocket Number</label>
+              <input
+                v-model="form.rocketNumber"
+                type="text"
+                class="form-control idp-input"
+                :disabled="!isEditingProfile"
+                placeholder="01XXXXXXXXX"
               />
             </div>
           </div>

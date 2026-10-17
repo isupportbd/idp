@@ -603,7 +603,16 @@ export async function getPaymentSettings(c: Context) {
         bkashCharge: 1.8
       }).returning();
     }
-    return c.json({ success: true, data: config });
+    const sanitized = {
+      id: config.id,
+      bkashNumber: config.bkashNumber,
+      bkashCharge: config.bkashCharge,
+      nagadNumber: config.nagadNumber,
+      rocketNumber: config.rocketNumber,
+      createdAt: config.createdAt,
+      updatedAt: config.updatedAt
+    };
+    return c.json({ success: true, data: sanitized });
   } catch (error: any) {
     console.error("Error fetching payment settings:", error);
     return c.json({ success: false, error: "Failed to fetch payment settings" }, 500);

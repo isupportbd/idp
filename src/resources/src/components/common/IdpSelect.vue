@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 
 export type OptionItem = {
   value: string | number | null;
@@ -20,6 +20,8 @@ const props = withDefaults(
     height?: string;
     size?: "sm" | "md" | "lg";
     icon?: string;
+    searchable?: boolean;
+    searchPlaceholder?: string;
   }>(),
   {
     modelValue: null,
@@ -29,7 +31,9 @@ const props = withDefaults(
     width: "auto",
     height: "38px",
     size: "md",
-    icon: ""
+    icon: "",
+    searchable: false,
+    searchPlaceholder: "Search..."
   }
 );
 
@@ -40,6 +44,8 @@ const emit = defineEmits<{
 
 const isOpen = ref(false);
 const selectRef = ref<HTMLElement | null>(null);
+const searchTerm = ref("");
+const searchInput = ref<HTMLInputElement | null>(null);
 
 // Normalize options to OptionItem[]
 const normalizedOptions = computed<OptionItem[]>(() => {
@@ -54,6 +60,13 @@ const normalizedOptions = computed<OptionItem[]>(() => {
   });
 });
 
+// Optional type-ahead filtering (enabled via the `searchable` prop).
+const filteredOptions = computed<OptionItem[]>(() => {
+  const term = searchTerm.value.trim().toLowerCase();
+  if (!props.searchable || !term) return normalizedOptions.value;
+  return normalizedOptions.value.filter((opt) => opt.label.toLowerCase().includes(term));
+});
+
 const selectedOption = computed(() => {
   return normalizedOptions.value.find((opt) => String(opt.value) === String(props.modelValue)) || null;
 });
@@ -65,9 +78,14 @@ const displayText = computed(() => {
   return props.placeholder;
 });
 
-const toggleDropdown = () => {
+const toggleDropdown = async () => {
   if (props.disabled) return;
   isOpen.value = !isOpen.value;
+  if (isOpen.value && props.searchable) {
+    searchTerm.value = "";
+    await nextTick();
+    searchInput.value?.focus();
+  }
 };
 
 const selectOption = (opt: OptionItem) => {
@@ -75,6 +93,7 @@ const selectOption = (opt: OptionItem) => {
   emit("update:modelValue", opt.value);
   emit("change", opt.value);
   isOpen.value = false;
+  searchTerm.value = "";
 };
 
 const handleClickOutside = (e: MouseEvent) => {
@@ -129,9 +148,22 @@ onUnmounted(() => {
     <!-- Dropdown Menu -->
     <transition name="dropdown-fade">
       <div v-if="isOpen" class="idp-custom-select-menu shadow-lg">
+        <div v-if="searchable" class="idp-select-search" @click.stop>
+          <i class="bi bi-search"></i>
+          <input
+            ref="searchInput"
+            v-model="searchTerm"
+            type="text"
+            :placeholder="searchPlaceholder"
+            @keydown.enter.prevent
+          />
+        </div>
         <div class="menu-inner custom-scrollbar">
+          <div v-if="searchable && filteredOptions.length === 0" class="idp-select-empty">
+            No matching options
+          </div>
           <div
-            v-for="opt in normalizedOptions"
+            v-for="opt in filteredOptions"
             :key="String(opt.value)"
             class="idp-custom-select-option"
             :class="{
@@ -249,6 +281,43 @@ onUnmounted(() => {
   max-height: 240px;
   overflow-y: auto;
   padding: 4px;
+}
+
+/* Optional type-ahead search (see `searchable` prop) */
+.idp-select-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-bottom: 1px solid #3b424b;
+  background-color: #1a1e23;
+}
+
+.idp-select-search i.bi-search {
+  font-size: 0.78rem;
+  color: #6c757d;
+  flex-shrink: 0;
+}
+
+.idp-select-search input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f8f9fa;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.idp-select-search input::placeholder {
+  color: #6c757d;
+}
+
+.idp-select-empty {
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  color: #adb5bd;
 }
 
 /* Option Items */

@@ -110,6 +110,17 @@ export const PERMISSION_MODULES: PermissionModule[] = [
     ]
   },
   {
+    id: "payouts",
+    name: "Payouts & Staff Earnings",
+    description: "Pay staff, track monthly earnings/dues and record firm expenses",
+    icon: "bi-cash-stack",
+    actions: [
+      { key: "payouts.view", label: "View" },
+      { key: "payouts.create", label: "Record Payout / Expense" },
+      { key: "payouts.edit", label: "Manage Rate Cards" }
+    ]
+  },
+  {
     id: "settings",
     name: "Firm Settings",
     description: "Configure organization profile and preferences",

@@ -284,13 +284,15 @@ onMounted(async () => {
         <span class="text-muted small">Manage staff access, roles, mobile contacts, and track live activity</span>
       </div>
 
-      <router-link
-        to="/admin/users/create"
-        target="_blank"
-        class="btn btn-idp-primary btn-sm d-flex align-items-center gap-2 text-decoration-none"
-      >
-        <i class="bi bi-person-plus-fill"></i> Add Sub-User
-      </router-link>
+      <div class="d-flex align-items-center gap-2">
+        <router-link
+          to="/admin/users/create"
+          target="_blank"
+          class="btn btn-idp-primary btn-sm d-flex align-items-center gap-2 text-decoration-none"
+        >
+          <i class="bi bi-person-plus-fill"></i> Add Sub-User
+        </router-link>
+      </div>
     </div>
 
     <!-- 3 Summary KPI Cards -->

@@ -706,6 +706,22 @@ onUnmounted(() => {
             <i class="bi bi-building-gear text-primary"></i> Firm Settings
           </router-link>
           <router-link
+            v-if="isTenantAdmin"
+            to="/admin/payouts"
+            class="dropdown-item d-flex align-items-center gap-2"
+            @click="isDropdownOpen = false"
+          >
+            <i class="bi bi-cash-stack text-success"></i> Payouts &amp; Expenses
+          </router-link>
+          <router-link
+            v-else-if="!isSuperAdmin"
+            to="/admin/my-earnings"
+            class="dropdown-item d-flex align-items-center gap-2"
+            @click="isDropdownOpen = false"
+          >
+            <i class="bi bi-cash-coin text-success"></i> My Earnings
+          </router-link>
+          <router-link
             to="/profile"
             class="dropdown-item d-flex align-items-center gap-2"
             @click="isDropdownOpen = false"

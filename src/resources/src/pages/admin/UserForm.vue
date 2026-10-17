@@ -4,6 +4,8 @@ import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
+import IdpSelect from "@/components/common/IdpSelect.vue";
+import ServiceItemSearchSelect from "@/components/common/ServiceItemSearchSelect.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -231,10 +233,35 @@ const handleSubmit = async () => {
     payload.password = form.value.password;
   }
 
+  let rateSaveError: string | null = null;
   try {
     if (isEditMode.value) {
       await axios.put(`/api/users/${userId.value}`, payload);
-      toast.success("Sub-user updated successfully!");
+
+      // Persist the service rate card in the same action. The card is submitted
+      // whenever it was loaded OR the admin touched a row — so a failed initial
+      // fetch can never silently drop the assignments again.
+      if (userId.value && (ratesLoaded.value || ratesDirty.value)) {
+        try {
+          await axios.post(`/api/payouts/users/${userId.value}/rates`, {
+            rates: rates.value
+              .filter((r) => Number(r.rate) > 0)
+              .map((r) => ({
+                serviceItemId: r.serviceItemId,
+                rate: Number(r.rate),
+                effectiveFrom: r.effectiveFrom || new Date().toISOString().slice(0, 10)
+              }))
+          });
+          ratesDirty.value = false;
+        } catch (rateErr: any) {
+          // Surface the reason (e.g. an immutable historical date) and abort the
+          // redirect so the admin keeps their entered rates on screen to fix it.
+          rateSaveError = rateErr.response?.data?.message || "Service rates could not be saved.";
+          throw rateErr;
+        }
+      }
+
+      toast.success("Sub-user and service rates updated successfully!");
     } else {
       await axios.post("/api/users", payload);
       toast.success("Sub-user created successfully and saved to database!");
@@ -249,11 +276,144 @@ const handleSubmit = async () => {
       router.push("/admin/users");
     }, 1000);
   } catch (err: any) {
-    const errorMsg = err.response?.data?.message || err.response?.data?.error || "Failed to save user. Please try again.";
+    const errorMsg =
+      rateSaveError ||
+      err.response?.data?.message ||
+      err.response?.data?.error ||
+      "Failed to save user. Please try again.";
     toast.error(errorMsg);
   } finally {
     isSubmitting.value = false;
   }
+};
+
+// ── Service assignment & rates (edit mode only) ─────────────────────
+// Staff don't perform every service, so we only persist the specific
+// service items they are assigned to (see `user_service_rates`).
+type ServiceItem = { id: number; itemName: string };
+type RateVersion = { rate: number; effectiveFrom: string; effectiveTo?: string; isActive?: boolean };
+type AssignedRate = {
+  serviceItemId: number;
+  itemName: string;
+  rate: number;
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  isActive?: boolean;
+  versionCount?: number;
+  history?: RateVersion[];
+};
+
+const serviceCatalog = ref<ServiceItem[]>([]);
+const rates = ref<AssignedRate[]>([]);
+// Retired (unassigned) items. They are intentionally NOT editable — their rates
+// are immutable history kept so past months still calculate correctly.
+const retiredRates = ref<AssignedRate[]>([]);
+const selectedServiceItemId = ref<number | string | null>(null);
+const newRate = ref<number | string>("");
+const newEffectiveFrom = ref<string>(new Date().toISOString().slice(0, 10));
+const ratesLoading = ref(false);
+// True once the existing rate card has been read back successfully. Kept only to
+// avoid submitting an empty card (which would retire history) when nothing loaded.
+const ratesLoaded = ref(false);
+// True whenever the admin adds, removes, or edits a rate row. Combined with
+// `ratesLoaded`, this guarantees the submit always persists the changes — the
+// old hard `ratesLoaded` guard would silently drop every assignment whenever the
+// initial fetch happened to fail.
+const ratesDirty = ref(false);
+
+const assignedIds = computed(() => new Set(rates.value.map((r) => r.serviceItemId)));
+
+// Only unassigned items are offered for selection
+const assignableItems = computed(() =>
+  serviceCatalog.value.filter((item) => !assignedIds.value.has(item.id))
+);
+
+const totalRate = computed(() => rates.value.reduce((sum, r) => sum + (Number(r.rate) || 0), 0));
+
+// Human-readable rate history for the "N versions" tooltip (newest first).
+const versionTooltip = (history?: RateVersion[]) => {
+  if (!history || history.length === 0) return "";
+  return history
+    .map((h) => {
+      const range = h.effectiveTo ? `${h.effectiveFrom} → ${h.effectiveTo}` : `${h.effectiveFrom} → now`;
+      return `${range}: ${h.rate.toFixed(2)} Tk`;
+    })
+    .join("\n");
+};
+
+const mapRate = (r: any): AssignedRate => ({
+  serviceItemId: Number(r.serviceItemId),
+  itemName: r.itemName,
+  rate: Number(r.rate) || 0,
+  effectiveFrom: r.effectiveFrom ? String(r.effectiveFrom).slice(0, 10) : new Date().toISOString().slice(0, 10),
+  effectiveTo: r.effectiveTo ? String(r.effectiveTo).slice(0, 10) : "",
+  isActive: r.isActive !== false,
+  versionCount: Number(r.versionCount) || 1,
+  history: Array.isArray(r.history)
+    ? r.history.map((h: any) => ({
+        rate: Number(h.rate) || 0,
+        effectiveFrom: h.effectiveFrom ? String(h.effectiveFrom).slice(0, 10) : "",
+        effectiveTo: h.effectiveTo ? String(h.effectiveTo).slice(0, 10) : "",
+        isActive: h.isActive !== false
+      }))
+    : []
+});
+
+const fetchRates = async () => {
+  if (!isEditMode.value || !userId.value) return;
+  ratesLoading.value = true;
+  try {
+    const res = await axios.get(`/api/payouts/users/${userId.value}/rates`);
+    serviceCatalog.value = (res.data?.catalog || []).map((i: any) => ({
+      id: Number(i.id),
+      itemName: i.itemName
+    }));
+    rates.value = (res.data?.data || []).map(mapRate);
+    retiredRates.value = (res.data?.retired || []).map(mapRate);
+    ratesLoaded.value = true;
+    ratesDirty.value = false;
+  } catch {
+    serviceCatalog.value = [];
+    rates.value = [];
+    retiredRates.value = [];
+    ratesLoaded.value = false;
+    toast.error("Failed to load the service rate card. Reload the page and try again.");
+  } finally {
+    ratesLoading.value = false;
+  }
+};
+
+const assignService = () => {
+  const id = Number(selectedServiceItemId.value);
+  if (!id) {
+    toast.warning("Pick a service item to assign first.");
+    return;
+  }
+  if (assignedIds.value.has(id)) {
+    toast.warning("That service item is already assigned to this staff member.");
+    return;
+  }
+  const rate = Number(newRate.value);
+  if (!Number.isFinite(rate) || rate <= 0) {
+    toast.warning("Enter a rate greater than zero.");
+    return;
+  }
+  const item = serviceCatalog.value.find((i) => i.id === id);
+  const next: AssignedRate = {
+    serviceItemId: id,
+    itemName: item?.itemName || "",
+    rate: Math.round(rate * 100) / 100,
+    effectiveFrom: newEffectiveFrom.value || new Date().toISOString().slice(0, 10)
+  };
+  rates.value = [...rates.value, next].sort((a, b) => a.itemName.localeCompare(b.itemName));
+  selectedServiceItemId.value = null;
+  newRate.value = "";
+  ratesDirty.value = true;
+};
+
+const removeService = (serviceItemId: number) => {
+  rates.value = rates.value.filter((r) => r.serviceItemId !== serviceItemId);
+  ratesDirty.value = true;
 };
 
 onMounted(async () => {
@@ -261,6 +421,7 @@ onMounted(async () => {
   await fetchCatalog();
   isLoading.value = false;
   fetchUserData();
+  fetchRates();
 });
 </script>
 
@@ -289,6 +450,13 @@ onMounted(async () => {
         <router-link to="/admin/users" class="btn btn-outline-secondary btn-sm px-3">
           <i class="bi bi-x me-1"></i> Cancel
         </router-link>
+        <span
+          v-if="isEditMode && ratesDirty"
+          class="badge pending-badge"
+          title="Service rate changes are pending — click Update Sub-User to save"
+        >
+          <i class="bi bi-exclamation-circle me-1"></i>Unsaved rate changes
+        </span>
         <button
           type="button"
           class="btn btn-primary btn-sm px-4 d-flex align-items-center gap-2 fw-semibold"
@@ -561,7 +729,9 @@ onMounted(async () => {
             <span class="text-muted small">
               Enabled Modules: <strong class="text-white">{{ enabledModuleCount }} / {{ availableModules.length }}</strong>
             </span>
+            <!-- If not edit mode (create mode), show Save Sub-User here as rates only exist in edit mode -->
             <button
+              v-if="!isEditMode"
               type="button"
               class="btn btn-primary px-4 fw-semibold d-flex align-items-center gap-2"
               :disabled="isSubmitting || isLoading"
@@ -569,8 +739,202 @@ onMounted(async () => {
             >
               <span v-if="isSubmitting" class="spinner-border spinner-border-sm"></span>
               <i v-else class="bi bi-check2-circle"></i>
-              {{ isEditMode ? 'Update Sub-User' : 'Save Sub-User' }}
+              Save Sub-User
             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom: Service assignment & rates (edit mode only, below permissions matrix) -->
+      <div v-if="isEditMode" class="col-12">
+        <div class="card idp-form-card shadow-sm">
+          <div class="card-header bg-transparent border-secondary border-opacity-25 py-3">
+            <h5 class="card-title text-white mb-0 d-flex align-items-center gap-2 fs-6 fw-bold">
+              <i class="bi bi-cash-stack text-primary"></i> Service Assignment &amp; Rates
+            </h5>
+            <span class="text-muted small">
+              Assign only the service items this staff member works on — Payouts uses these rates to accrue monthly earnings
+            </span>
+            <div v-if="ratesDirty" class="mt-2">
+              <span class="badge pending-badge">
+                <i class="bi bi-exclamation-circle me-1"></i>Pending changes — click <strong>Update Sub-User</strong> to save
+              </span>
+            </div>
+          </div>
+
+          <div class="card-body p-4">
+            <div v-if="ratesLoading" class="text-center text-muted py-4">
+              <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+              Loading service items...
+            </div>
+
+            <template v-else>
+              <!-- Top assignment bar -->
+              <div class="assign-bar">
+                <div class="assign-field assign-item">
+                  <label class="form-label text-muted small fw-semibold mb-1">SERVICE ITEM</label>
+                  <ServiceItemSearchSelect
+                    v-model="selectedServiceItemId"
+                    :items="assignableItems"
+                    placeholder="Type to search Service Item..."
+                    :min-chars="1"
+                    :disabled="assignableItems.length === 0"
+                  />
+                </div>
+                <div class="assign-field assign-rate">
+                  <label class="form-label text-muted small fw-semibold mb-1">RATE PER UNIT (TK)</label>
+                  <div class="rate-input-wrap">
+                    <input
+                      v-model.number="newRate"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      class="form-control idp-field rate-input"
+                      placeholder="0.00"
+                      @keydown.enter.prevent="assignService"
+                    />
+                    <span class="rate-suffix">Tk</span>
+                  </div>
+                </div>
+                <div class="assign-field assign-date">
+                  <label class="form-label text-muted small fw-semibold mb-1">EFFECTIVE FROM</label>
+                  <input
+                    v-model="newEffectiveFrom"
+                    type="date"
+                    class="form-control idp-field effective-date-input"
+                    onkeydown="return false"
+                  />
+                </div>
+                <div class="assign-field assign-action">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-primary fw-semibold d-flex align-items-center gap-2 assign-btn"
+                    :disabled="assignableItems.length === 0"
+                    @click="assignService"
+                  >
+                    <i class="bi bi-plus-lg"></i> Assign Service Rate
+                  </button>
+                </div>
+              </div>
+
+              <!-- Assigned services table -->
+              <div v-if="rates.length === 0" class="rate-empty text-center">
+                <i class="bi bi-clipboard-x fs-3 d-block mb-2 text-secondary"></i>
+                <span class="text-muted">
+                  <template v-if="serviceCatalog.length === 0">
+                    No active service items found. Add them in Firm Settings first.
+                  </template>
+                  <template v-else>
+                    No assigned services yet. Pick a service above to assign commission rates to this staff member.
+                  </template>
+                </span>
+              </div>
+
+              <div v-else class="table-responsive">
+                <div class="rate-version-hint text-muted small mb-2">
+                  <i class="bi bi-info-circle me-1"></i>
+                  Only the <strong>current</strong> rate is editable. Set a
+                  <strong>new</strong> effective date to publish a change: the previous rate is frozen on record
+                  and still applies to the months it was in force. Removing an item retires it — history is never deleted.
+                </div>
+                <table class="table-custom rate-table">
+                  <thead>
+                    <tr>
+                      <th class="col-item">Assigned Service Item</th>
+                      <th class="col-rate text-end">Rate (Tk)</th>
+                      <th class="col-date text-center">Effective From</th>
+                      <th class="col-action text-end">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="row in rates" :key="row.serviceItemId">
+                      <td class="col-item">
+                        <div class="d-flex align-items-center gap-2">
+                          <i class="bi bi-receipt text-primary module-icon"></i>
+                          <span class="text-white fw-semibold">{{ row.itemName }}</span>
+                          <span class="badge current-badge">Current</span>
+                          <span
+                            v-if="(row.versionCount ?? 1) > 1"
+                            class="badge version-badge"
+                            :title="versionTooltip(row.history)"
+                          >
+                            {{ row.versionCount }} versions
+                          </span>
+                        </div>
+                      </td>
+                      <td class="col-rate">
+                        <div class="rate-input-wrap">
+                          <input
+                            v-model.number="row.rate"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            class="form-control idp-field rate-input"
+                            placeholder="0.00"
+                            @input="ratesDirty = true"
+                          />
+                          <span class="rate-suffix">Tk</span>
+                        </div>
+                      </td>
+                      <td class="col-date text-center">
+                        <input
+                          v-model="row.effectiveFrom"
+                          type="date"
+                          :min="row.effectiveFrom"
+                          class="form-control idp-field effective-date-input mx-auto"
+                          style="max-width: 140px; height: 36px; font-size: 0.82rem;"
+                          onkeydown="return false"
+                          @input="ratesDirty = true"
+                        />
+                      </td>
+                      <td class="col-action">
+                        <button
+                          type="button"
+                          class="btn-icon-danger"
+                          title="Retire this service (past rates are kept)"
+                          @click="removeService(row.serviceItemId)"
+                        >
+                          <i class="bi bi-trash3"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr class="rate-total-row">
+                      <td class="col-item">
+                        <i class="bi bi-calculator me-1"></i> Total combined rate
+                      </td>
+                      <td class="col-rate">
+                        <div class="rate-input-wrap">
+                          <strong class="rate-total">{{ totalRate.toFixed(2) }}</strong>
+                          <span class="rate-suffix">Tk</span>
+                        </div>
+                      </td>
+                      <td class="col-date"></td>
+                      <td class="col-action"></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <!-- Retired services: read-only history, never editable -->
+              <div v-if="retiredRates.length" class="retired-block mt-3">
+                <div class="retired-title text-muted small fw-semibold mb-2">
+                  <i class="bi bi-lock me-1"></i>
+                  Retired rates — kept for past-month calculations, no longer accruing
+                </div>
+                <div v-for="row in retiredRates" :key="row.serviceItemId" class="retired-row">
+                  <i class="bi bi-receipt text-secondary module-icon"></i>
+                  <span class="text-muted">{{ row.itemName }}</span>
+                  <span class="retired-meta">
+                    {{ Number(row.rate).toFixed(2) }} Tk · ended {{ row.effectiveTo || '—' }}
+                  </span>
+                  <span class="badge version-badge" :title="versionTooltip(row.history)">
+                    {{ row.versionCount }} versions
+                  </span>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -785,5 +1149,213 @@ onMounted(async () => {
 .matrix-hint {
   font-size: 0.75rem;
   border-top: 1px solid var(--idp-border);
+}
+
+/* Per-service-item assignment table (mirrors the permissions matrix above) */
+.rate-table .col-item {
+  min-width: 220px;
+}
+
+.rate-table .col-rate {
+  width: 240px;
+}
+
+.rate-table .col-action {
+  width: 84px;
+  text-align: right;
+}
+
+.rate-table td {
+  height: 56px;
+}
+
+/* Top assignment bar */
+.assign-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--idp-border);
+}
+
+.assign-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.assign-item {
+  flex: 0 1 380px;
+  max-width: 420px;
+  min-width: 240px;
+}
+
+.assign-rate {
+  flex: 0 0 150px;
+  max-width: 150px;
+}
+
+.assign-date {
+  flex: 0 0 155px;
+  max-width: 155px;
+}
+
+.effective-date-input {
+  height: 38px;
+  padding: 6px 10px !important;
+  color: var(--idp-text-main);
+  background-color: var(--idp-bg);
+  cursor: pointer;
+}
+
+.rate-table .col-date {
+  width: 160px;
+}
+
+.assign-action {
+  flex: 0 0 auto;
+}
+
+.assign-btn {
+  height: 38px;
+  padding: 0 18px;
+}
+
+/* Append-only rate version badge */
+.version-badge {
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(13, 110, 253, 0.15);
+  color: #6ea8fe;
+  border: 1px solid rgba(13, 110, 253, 0.35);
+  cursor: help;
+}
+
+/* Marks the single editable (current) version of an item */
+.current-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(25, 135, 84, 0.16);
+  color: #75d1a0;
+  border: 1px solid rgba(25, 135, 84, 0.4);
+}
+
+/* Amber cue: rate edits exist on screen but are not saved yet */
+.pending-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 193, 7, 0.16);
+  color: #ffca2c;
+  border: 1px solid rgba(255, 193, 7, 0.45);
+}
+
+/* Retired (unassigned) rates — read-only history that is never deleted */
+.retired-block {
+  border: 1px dashed var(--idp-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(148, 163, 184, 0.04);
+}
+
+.retired-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 0.82rem;
+}
+
+.retired-meta {
+  margin-left: auto;
+  color: var(--idp-text-muted);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.rate-version-hint {
+  padding: 0 2px 6px;
+  line-height: 1.4;
+}
+
+/* Empty state */
+.rate-empty {
+  padding: 32px 16px;
+  font-size: 0.85rem;
+}
+
+/* Row remove button */
+.btn-icon-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--idp-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--idp-text-muted);
+  font-size: 0.9rem;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+.btn-icon-danger:hover {
+  color: #fff;
+  background: rgba(220, 53, 69, 0.18);
+  border-color: rgba(220, 53, 69, 0.55);
+}
+
+.rate-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.rate-input {
+  width: 100% !important;
+  height: 38px !important;
+  padding: 6px 38px 6px 12px !important;
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.rate-suffix {
+  position: absolute;
+  right: 12px;
+  pointer-events: none;
+  color: var(--idp-text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.rate-total {
+  color: var(--idp-text-main);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rate-total-row td {
+  height: auto;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  background: var(--idp-bg);
+  border-top: 1px solid var(--idp-border);
+  border-bottom: none;
+  color: var(--idp-text-muted);
+  font-size: 0.82rem;
 }
 </style>

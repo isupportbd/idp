@@ -11,6 +11,7 @@ import { clientReferences } from "@/modules/services/database/models/references.
 import { users } from "@/modules/auth/database/models/user.js";
 import { enqueueTransactionalSms } from "@/modules/sms-templates/services/sms-queue.service.js";
 import { buildVatSubmissionSmsPayload, isTenantSmsEventEnabled } from "@/modules/sms-templates/services/sms.service.js";
+import { calculateStaffEarnings, computeSubmissionEarning } from "@/modules/payouts/services/payouts.service.js";
 
 // ── 1. LIST SUBMISSIONS FOR A TAX PERIOD ──────────────────────────────
 
@@ -478,6 +479,32 @@ export const recordSubmission: Handler = async (c: any) => {
             sentByUserId: currentUser?.id ?? null
           })
         );
+      }
+    }
+
+    // Payouts: accrue the filer's earning for the month in real time. Only a
+    // fresh filing creates new earnings — an edit must never double-count.
+    if (!existing && storedSubmittedBy && targetAdminId) {
+      try {
+        const [earning, totals] = await Promise.all([
+          computeSubmissionEarning(Number(targetAdminId), Number(storedSubmittedBy), taxPeriod, Number(clientId)),
+          calculateStaffEarnings(Number(targetAdminId), Number(storedSubmittedBy), taxPeriod)
+        ]);
+        broadcast(
+          "payout:earning-accrued",
+          {
+            userId: Number(storedSubmittedBy),
+            staffName: submitterName,
+            taxPeriod,
+            amount: earning.amount,
+            classification: earning.classification,
+            monthTotalEarned: totals.currentBill,
+            timestamp: Date.now()
+          },
+          { tenant: targetAdminId }
+        );
+      } catch (payoutErr) {
+        console.warn("[Payouts] Failed to broadcast earning accrual:", payoutErr);
       }
     }
 

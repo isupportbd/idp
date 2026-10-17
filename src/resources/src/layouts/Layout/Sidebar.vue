@@ -150,7 +150,17 @@
               </router-link>
             </li>
 
-            <!-- 4. Firm Settings -->
+            <!-- 4. Payouts & Expenses -->
+            <li v-if="canAccessModule('payouts')" class="list-group-item" :class="{ active: isActive('/admin/payouts') }">
+              <router-link to="/admin/payouts">
+                <div class="menu-icon">
+                  <i class="bi bi-cash-stack"></i>
+                </div>
+                <span>Payouts &amp; Expenses</span>
+              </router-link>
+            </li>
+
+            <!-- 5. Firm Settings -->
             <li v-if="canAccessModule('settings')" class="list-group-item" :class="{ active: isActive('/admin/settings') }">
               <router-link to="/admin/settings">
                 <div class="menu-icon">
@@ -286,7 +296,12 @@ const route = useRoute();
 const isSuperAdmin = computed(() => hasRole("superadmin"));
 
 const hasAnyAdminPlatformItem = computed(() => {
-  return isTenantAdmin() || (hasAccountsAccess() && canAccessModule('billing')) || canAccessModule('settings');
+  return (
+    isTenantAdmin() ||
+    (hasAccountsAccess() && canAccessModule('billing')) ||
+    canAccessModule('payouts') ||
+    canAccessModule('settings')
+  );
 });
 
 function isActive(path: string) {

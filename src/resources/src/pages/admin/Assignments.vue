@@ -47,6 +47,11 @@ const mainTab = ref<"customers" | "shared">("customers");
 const searchQuery = ref(savedFilters.searchQuery || "");
 const selectedTypeFilter = ref<number | "all">(savedFilters.selectedTypeFilter ?? "all");
 const selectedReferenceFilter = ref<number | "all">(savedFilters.selectedReferenceFilter ?? "all");
+const selectedManagerFilter = ref<number | "all">(
+  savedFilters.selectedManagerFilter && savedFilters.selectedManagerFilter !== "unassigned"
+    ? savedFilters.selectedManagerFilter
+    : "all"
+);
 const activeFilter = ref<"all" | "assigned" | "shared" | "unassigned">(savedFilters.activeFilter ?? "all");
 
 const saveFilters = () => {
@@ -58,6 +63,7 @@ const saveFilters = () => {
           searchQuery: searchQuery.value,
           selectedTypeFilter: selectedTypeFilter.value,
           selectedReferenceFilter: selectedReferenceFilter.value,
+          selectedManagerFilter: selectedManagerFilter.value,
           activeFilter: activeFilter.value
         })
       );
@@ -65,7 +71,7 @@ const saveFilters = () => {
   } catch {}
 };
 
-watch([searchQuery, selectedTypeFilter, selectedReferenceFilter, activeFilter], saveFilters);
+watch([searchQuery, selectedTypeFilter, selectedReferenceFilter, selectedManagerFilter, activeFilter], saveFilters);
 
 onBeforeRouteLeave((to) => {
   if (!to.path.startsWith("/admin/assignments") && !to.path.startsWith("/admin/clients")) {
@@ -87,30 +93,13 @@ const referenceOptions = computed(() => [
   ...references.value.map((r) => ({ value: r.id, label: r.name }))
 ]);
 
+const managerOptions = computed(() => [
+  { value: "all", label: "All Managers / Users" },
+  ...assignableUsers.value.map((u) => ({ value: u.id, label: u.name }))
+]);
+
 const pendingAssignments = ref<Record<number, number[]>>({});
 const savingIds = ref<Record<number, boolean>>({});
-
-const hasActiveFilters = computed(() => {
-  return (
-    searchQuery.value.trim() !== "" ||
-    selectedTypeFilter.value !== "all" ||
-    selectedReferenceFilter.value !== "all" ||
-    activeFilter.value !== "all"
-  );
-});
-
-const clearAllFilters = () => {
-  searchQuery.value = "";
-  selectedTypeFilter.value = "all";
-  selectedReferenceFilter.value = "all";
-  activeFilter.value = "all";
-  currentPage.value = 1;
-  try {
-    if (typeof window !== "undefined" && window.sessionStorage) {
-      sessionStorage.removeItem(ASSIGNMENTS_FILTER_KEY);
-    }
-  } catch {}
-};
 
 const loadData = async () => {
   try {
@@ -123,6 +112,16 @@ const loadData = async () => {
   } catch (err: any) {
     toast.error("Failed to load assignments");
   }
+};
+
+// Clicking a top KPI card resets every lower toolbar filter so the two never conflict.
+const selectCardFilter = (key: "all" | "assigned" | "shared" | "unassigned") => {
+  activeFilter.value = key;
+  searchQuery.value = "";
+  selectedTypeFilter.value = "all";
+  selectedReferenceFilter.value = "all";
+  selectedManagerFilter.value = "all";
+  currentPage.value = 1;
 };
 
 // Static lookups don't depend on the filters, so they are loaded once.
@@ -202,6 +201,11 @@ const filteredAssignments = computed(() => {
       list = list.filter((a) => a.referenceId === selectedReferenceFilter.value || a.referenceName === refObj.name);
     }
   }
+  // Assigned Manager / User filter (client-side, so it stays instant).
+  if (selectedManagerFilter.value !== "all") {
+    const managerId = Number(selectedManagerFilter.value);
+    list = list.filter((a) => (a.managerIds || []).includes(managerId));
+  }
   return list;
 });
 
@@ -248,7 +252,7 @@ const {
 const paginatedSharedClients = computed(() => paginateSharedList(sharedClientsList.value));
 
 // Reset page on filter changes
-watch([selectedTypeFilter, selectedReferenceFilter, activeFilter, searchQuery, mainTab], () => {
+watch([selectedTypeFilter, selectedReferenceFilter, selectedManagerFilter, activeFilter, searchQuery, mainTab], () => {
   currentPage.value = 1;
   sharedCurrentPage.value = 1;
 });
@@ -322,7 +326,7 @@ watch([selectedTypeFilter, selectedReferenceFilter, activeFilter, searchQuery, m
           <div
             class="stat-pill p-3 cursor-pointer"
             :class="{ 'stat-pill-active': activeFilter === 'all' }"
-            @click="activeFilter = 'all'"
+            @click="selectCardFilter('all')"
           >
             <div class="d-flex justify-content-between align-items-center mb-1">
               <span class="text-muted small text-uppercase fw-bold">All Clients</span>
@@ -336,7 +340,7 @@ watch([selectedTypeFilter, selectedReferenceFilter, activeFilter, searchQuery, m
           <div
             class="stat-pill p-3 cursor-pointer"
             :class="{ 'stat-pill-active': activeFilter === 'assigned' }"
-            @click="activeFilter = 'assigned'"
+            @click="selectCardFilter('assigned')"
           >
             <div class="d-flex justify-content-between align-items-center mb-1">
               <span class="text-muted small text-uppercase fw-bold">Assigned</span>
@@ -350,7 +354,7 @@ watch([selectedTypeFilter, selectedReferenceFilter, activeFilter, searchQuery, m
           <div
             class="stat-pill p-3 cursor-pointer"
             :class="{ 'stat-pill-active': activeFilter === 'shared' }"
-            @click="activeFilter = 'shared'"
+            @click="selectCardFilter('shared')"
           >
             <div class="d-flex justify-content-between align-items-center mb-1">
               <span class="text-muted small text-uppercase fw-bold">Shared (2+ Users)</span>
@@ -364,7 +368,7 @@ watch([selectedTypeFilter, selectedReferenceFilter, activeFilter, searchQuery, m
           <div
             class="stat-pill p-3 cursor-pointer"
             :class="{ 'stat-pill-active': activeFilter === 'unassigned' }"
-            @click="activeFilter = 'unassigned'"
+            @click="selectCardFilter('unassigned')"
           >
             <div class="d-flex justify-content-between align-items-center mb-1">
               <span class="text-muted small text-uppercase fw-bold">Unassigned</span>
@@ -376,77 +380,37 @@ watch([selectedTypeFilter, selectedReferenceFilter, activeFilter, searchQuery, m
       </div>
 
       <!-- Filters & Search Toolbar -->
-      <div class="filter-panel p-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
-          <!-- Integrated Search Box -->
+      <div class="filter-panel p-3 mb-3 d-flex flex-wrap align-items-center gap-2">
+        <!-- Integrated Search Box (grows to fill the remaining width) -->
+        <div class="assign-search-grow">
           <SearchInput
             v-model="searchQuery"
             placeholder="Search by client name, BIN, or mobile..."
-            max-width="300px"
-            min-width="220px"
-          />
-
-          <!-- Customer Type Filter -->
-          <IdpSelect
-            v-model="selectedTypeFilter"
-            :options="customerTypeOptions"
-            min-width="160px"
-          />
-
-          <!-- Reference Filter -->
-          <IdpSelect
-            v-model="selectedReferenceFilter"
-            :options="referenceOptions"
-            min-width="160px"
+            max-width="100%"
+            min-width="0"
           />
         </div>
 
-        <!-- Filter Buttons -->
-        <div class="btn-group btn-group-sm">
-          <button
-            type="button"
-            class="btn"
-            :class="activeFilter === 'all' ? 'btn-primary' : 'btn-dark border-secondary text-light'"
-            @click="activeFilter = 'all'"
-          >
-            All
-          </button>
-          <button
-            type="button"
-            class="btn"
-            :class="activeFilter === 'assigned' ? 'btn-primary' : 'btn-dark border-secondary text-light'"
-            @click="activeFilter = 'assigned'"
-          >
-            Assigned
-          </button>
-          <button
-            type="button"
-            class="btn"
-            :class="activeFilter === 'shared' ? 'btn-primary' : 'btn-dark border-secondary text-light'"
-            @click="activeFilter = 'shared'"
-          >
-            Shared
-          </button>
-          <button
-            type="button"
-            class="btn"
-            :class="activeFilter === 'unassigned' ? 'btn-primary' : 'btn-dark border-secondary text-light'"
-            @click="activeFilter = 'unassigned'"
-          >
-            Unassigned
-          </button>
-        </div>
+        <!-- Customer Type Filter -->
+        <IdpSelect
+          v-model="selectedTypeFilter"
+          :options="customerTypeOptions"
+          min-width="180px"
+        />
 
-        <!-- Clear Filters Icon Button -->
-        <button
-          v-if="hasActiveFilters"
-          type="button"
-          class="btn btn-outline-danger btn-sm px-2 d-flex align-items-center justify-content-center clear-filter-btn"
-          title="Clear all filters"
-          @click="clearAllFilters"
-        >
-          <i class="bi bi-x-lg"></i>
-        </button>
+        <!-- Reference Filter -->
+        <IdpSelect
+          v-model="selectedReferenceFilter"
+          :options="referenceOptions"
+          min-width="180px"
+        />
+
+        <!-- Assigned Manager / User Filter -->
+        <IdpSelect
+          v-model="selectedManagerFilter"
+          :options="managerOptions"
+          min-width="200px"
+        />
       </div>
 
       <!-- Assignments Table with Searchable Multi-Select Dropdown -->
@@ -930,11 +894,8 @@ watch([selectedTypeFilter, selectedReferenceFilter, activeFilter, searchQuery, m
   color: #3b8eed !important;
 }
 
-.clear-filter-btn {
-  height: 31px;
-  min-height: 31px;
-  max-height: 31px;
-  border-radius: 4px;
-  transition: all 0.15s ease;
+.assign-search-grow {
+  flex: 1 1 280px;
+  min-width: 240px;
 }
 </style>

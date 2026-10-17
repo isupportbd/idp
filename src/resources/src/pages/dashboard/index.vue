@@ -46,7 +46,7 @@ const hasAnyAdminTools = computed(() => {
           <h5 class="text-white fw-bold mb-0">Super Admin Platform</h5>
         </div>
 
-        <div class="dashboard-cards-grid">
+        <div class="dashboard-cards-grid" v-prefetch>
           <!-- Tenants -->
           <router-link to="/superadmin/tenants" class="dash-card">
             <div class="dash-card-icon text-primary">
@@ -123,7 +123,7 @@ const hasAnyAdminTools = computed(() => {
           <h5 class="text-white fw-bold mb-0">Modules</h5>
         </div>
 
-        <div class="dashboard-cards-grid">
+        <div class="dashboard-cards-grid" v-prefetch>
           <!-- 1. Clients -->
           <router-link v-if="canAccessModule('clients')" to="/admin/clients" class="dash-card">
             <div class="dash-card-icon text-primary">
@@ -195,6 +195,15 @@ const hasAnyAdminTools = computed(() => {
             <h5 class="dash-card-title">Reports</h5>
             <p class="dash-card-desc">Client breakdown, monthly VAT totals, and Excel export.</p>
           </router-link>
+
+          <!-- 9. My Earnings (staff self-service) -->
+          <router-link v-if="!isTenantAdmin()" to="/admin/my-earnings" class="dash-card">
+            <div class="dash-card-icon text-success">
+              <i class="bi bi-cash-coin"></i>
+            </div>
+            <h5 class="dash-card-title">My Earnings</h5>
+            <p class="dash-card-desc">Your monthly commissions, carried dues and payment history.</p>
+          </router-link>
         </div>
       </div>
 
@@ -205,7 +214,7 @@ const hasAnyAdminTools = computed(() => {
           <h5 class="text-white fw-bold mb-0">Admin Platform</h5>
         </div>
 
-        <div class="dashboard-cards-grid">
+        <div class="dashboard-cards-grid" v-prefetch>
           <!-- 1. User & Staff (Tenant Admin only) -->
           <router-link v-if="isTenantAdmin()" to="/admin/users" class="dash-card">
             <div class="dash-card-icon text-primary">
@@ -245,7 +254,16 @@ const hasAnyAdminTools = computed(() => {
             <p class="dash-card-desc text-muted">Client invoices, payments, collections, and dues tracking.</p>
           </div>
 
-          <!-- 4. Firm Settings -->
+          <!-- 4. Payouts & Expenses -->
+          <router-link v-if="canAccessModule('payouts')" to="/admin/payouts" class="dash-card">
+            <div class="dash-card-icon text-success">
+              <i class="bi bi-cash-stack"></i>
+            </div>
+            <h5 class="dash-card-title">Payouts &amp; Expenses</h5>
+            <p class="dash-card-desc">Staff earnings, payouts, dues carry-forward and firm expense accounting.</p>
+          </router-link>
+
+          <!-- 5. Firm Settings -->
           <router-link v-if="canAccessModule('settings')" to="/admin/settings" class="dash-card">
             <div class="dash-card-icon text-info">
               <i class="bi bi-sliders"></i>
@@ -342,6 +360,13 @@ const hasAnyAdminTools = computed(() => {
   border-color: #495057;
   transform: translateY(-3px);
   color: #f8f9fa;
+}
+
+.dash-card:active {
+  background-color: #262b31;
+  border-color: #0d6efd;
+  transform: scale(0.98);
+  transition-duration: 0.05s;
 }
 
 .dash-card-icon {

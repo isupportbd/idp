@@ -5,6 +5,7 @@ import { sql, eq } from "drizzle-orm";
 import { db } from "@/framework/facade.js";
 import { users } from "@/modules/auth/database/models/user.js";
 import { roles } from "@/modules/auth/database/models/role.js";
+import { ensurePayoutTables } from "@/modules/payouts/database/ensure-tables.js";
 
 async function executeSingleSql(rawSql: string) {
   const clean = rawSql.trim();
@@ -211,6 +212,12 @@ export async function syncDatabaseSchemaAndSuperAdmin() {
     await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS due_reminder_days INTEGER NOT NULL DEFAULT 7`);
     await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS due_reminder_min_amount NUMERIC(14,2) NOT NULL DEFAULT 1000.00`);
 
+    // Ensure company_settings carries the tenant's mobile-money collection
+    // numbers (printed on invoices / shared over WhatsApp and editable any time).
+    await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS bkash_number VARCHAR(50) DEFAULT ''`);
+    await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS nagad_number VARCHAR(50) DEFAULT ''`);
+    await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS rocket_number VARCHAR(50) DEFAULT ''`);
+
     // Ensure vat_submissions records who last edited a submission (audit trail).
     // `submitted_by` is immutable (original filer); `updated_by` tracks the editor.
     await executeSingleSql(`ALTER TABLE vat_submissions ADD COLUMN IF NOT EXISTS updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL`);
@@ -269,6 +276,10 @@ export async function syncDatabaseSchemaAndSuperAdmin() {
     await executeSingleSql(`CREATE INDEX IF NOT EXISTS sms_logs_admin_id_idx ON sms_logs (admin_id)`);
     await executeSingleSql(`CREATE INDEX IF NOT EXISTS sms_logs_sent_at_idx ON sms_logs (sent_at)`);
     await executeSingleSql(`CREATE INDEX IF NOT EXISTS sms_logs_status_idx ON sms_logs (status)`);
+
+    // Payouts module tables (staff rates, payouts journal, monthly ledgers).
+    // Money columns are created directly as NUMERIC(14,2).
+    await ensurePayoutTables();
   } catch (rErr) {
     console.warn("[DB Roles/Schema Warning]", rErr);
   }

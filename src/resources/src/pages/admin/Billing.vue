@@ -137,30 +137,6 @@ onBeforeRouteLeave((to) => {
   }
 });
 
-const hasActiveFilters = computed(() => {
-  return (
-    searchQuery.value.trim() !== "" ||
-    selectedCustomerTypeId.value !== "all" ||
-    selectedReferenceId.value !== "all" ||
-    selectedStatusFilter.value !== "all" ||
-    selectedPaymentMethod.value !== "all"
-  );
-});
-
-const clearAllFilters = () => {
-  searchQuery.value = "";
-  selectedCustomerTypeId.value = "all";
-  selectedReferenceId.value = "all";
-  selectedStatusFilter.value = "all";
-  selectedPaymentMethod.value = "all";
-  try {
-    if (typeof window !== "undefined" && window.sessionStorage) {
-      sessionStorage.removeItem(BILLING_FILTER_KEY);
-    }
-  } catch {}
-  updateUrlParams();
-};
-
 // Update URL parameters when tab, month, or search changes without refreshing
 const updateUrlParams = () => {
   const q: any = { ...route.query };
@@ -637,25 +613,17 @@ const printReport = () => {
         </button>
       </div>
 
-      <!-- Right: Search & Month Navigator (Equal 38px Heights & Always Side-by-Side) -->
-      <div class="d-flex align-items-center gap-2 flex-nowrap ms-auto">
-        <SearchInput
-          v-model="searchQuery"
-          placeholder="Search invoice, client, receipt..."
-          max-width="220px"
-          min-width="160px"
-        />
-
-        <!-- Clear Filter Icon Button -->
-        <button
-          v-if="hasActiveFilters"
-          type="button"
-          class="btn btn-outline-danger btn-sm px-2 d-flex align-items-center justify-content-center clear-filter-btn"
-          title="Clear search filter"
-          @click="clearAllFilters"
-        >
-          <i class="bi bi-x-lg"></i>
-        </button>
+      <!-- Right: Search & Month Navigator (Fixed 38px heights, locked widths) -->
+      <div class="d-flex align-items-center gap-2 flex-nowrap ms-auto flex-shrink-0">
+        <div class="search-slot">
+          <SearchInput
+            v-model="searchQuery"
+            placeholder="Search invoice, client, receipt..."
+            size="md"
+            max-width="220px"
+            min-width="220px"
+          />
+        </div>
 
         <div class="month-nav-container" style="width: 185px; flex-shrink: 0;">
           <MonthNavigator v-model="selectedMonth" />
@@ -1174,7 +1142,7 @@ const printReport = () => {
   font-size: 0.84rem;
   font-weight: 600;
   border-radius: 6px;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   white-space: nowrap;
 }
 
@@ -1288,11 +1256,10 @@ const printReport = () => {
   background-color: #242930;
 }
 
-.clear-filter-btn {
-  height: 38px;
-  min-height: 38px;
-  max-height: 38px;
-  border-radius: 6px;
-  transition: all 0.15s ease;
+.search-slot {
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
+  flex-shrink: 0;
 }
 </style>
