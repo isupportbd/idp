@@ -70,22 +70,27 @@ const formatWhatsAppNumber = (rawNumber?: string) => {
 
 const paymentInfo = computed(() => (bill.value?.payment as any) || null);
 
-// Channels are rendered strictly from what the tenant actually configured in
-// Firm Settings (falling back to their bank account / the platform default),
-// so unconfigured methods never produce empty rows on the invoice.
-const paymentChannels = computed<{ label: string; value: string; mono?: boolean }[]>(() => {
+const mfsChannels = computed<{ label: string; value: string }[]>(() => {
   const p = paymentInfo.value || {};
-  const channels: { label: string; value: string; mono?: boolean }[] = [];
-  if (p.bkashNumber) channels.push({ label: "bKash (Send Money)", value: String(p.bkashNumber), mono: true });
-  if (p.nagadNumber) channels.push({ label: "Nagad (Send Money)", value: String(p.nagadNumber), mono: true });
-  if (p.rocketNumber) channels.push({ label: "Rocket (Send Money)", value: String(p.rocketNumber), mono: true });
-  if (p.bankName) channels.push({ label: "Bank Name", value: String(p.bankName) });
-  if (p.accountName) channels.push({ label: "Account Name", value: String(p.accountName) });
-  if (p.accountNumber) channels.push({ label: "A/C Number", value: String(p.accountNumber), mono: true });
-  if (p.branchName) channels.push({ label: "Branch", value: String(p.branchName) });
-  if (p.routingNumber) channels.push({ label: "Routing No", value: String(p.routingNumber), mono: true });
-  return channels;
+  const list: { label: string; value: string }[] = [];
+  if (p.bkashNumber) list.push({ label: "Bkash (Send Money)", value: String(p.bkashNumber) });
+  if (p.nagadNumber) list.push({ label: "Nagad (Send Money)", value: String(p.nagadNumber) });
+  if (p.rocketNumber) list.push({ label: "Rocket (Send Money)", value: String(p.rocketNumber) });
+  return list;
 });
+
+const bankChannels = computed<{ label: string; value: string }[]>(() => {
+  const p = paymentInfo.value || {};
+  const list: { label: string; value: string }[] = [];
+  if (p.accountName) list.push({ label: "A/C Name", value: String(p.accountName) });
+  if (p.accountNumber) list.push({ label: "A/C No", value: String(p.accountNumber) });
+  if (p.bankName) list.push({ label: "Bank Name", value: String(p.bankName) });
+  if (p.branchName) list.push({ label: "Branch", value: String(p.branchName) });
+  if (p.routingNumber) list.push({ label: "Routing No", value: String(p.routingNumber) });
+  return list;
+});
+
+const hasPaymentDetails = computed(() => mfsChannels.value.length > 0 || bankChannels.value.length > 0);
 
 // Short header hint listing only the available methods (e.g. "bKash • Bank Transfer").
 const paymentHint = computed(() => {
@@ -626,15 +631,35 @@ const handleCloseTab = () => {
           </div>
 
           <!-- Payment Details Card — renders only channels that exist in settings -->
-          <div v-if="paymentChannels.length" class="payment-box p-3 rounded border bg-light">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <div class="fw-bold small text-dark text-uppercase" style="letter-spacing: 0.5px;">Payment Details</div>
-              <div v-if="paymentHint" class="payment-hint small text-muted">{{ paymentHint }}</div>
+          <div v-if="hasPaymentDetails" class="payment-box p-3 rounded border bg-light">
+            <div class="fw-bold small text-dark border-bottom pb-1 mb-2 payment-header-title">
+              Payment Details
             </div>
-            <div class="payment-grid">
-              <div v-for="ch in paymentChannels" :key="ch.label" class="payment-item">
-                <div class="payment-label">{{ ch.label }}</div>
-                <div class="payment-value" :class="{ 'font-monospace': ch.mono }">{{ ch.value }}</div>
+            
+            <div class="row g-3">
+              <!-- Column 1: MFS -->
+              <div v-if="mfsChannels.length" :class="bankChannels.length ? 'col-5' : 'col-12'">
+                <div class="channel-group-title text-warning fw-bold mb-1.5">MFS</div>
+                <div v-for="ch in mfsChannels" :key="ch.label" class="mb-2">
+                  <div class="fw-bold text-dark mfs-name">{{ ch.label }}</div>
+                  <div class="font-monospace text-dark mfs-number">{{ ch.value }}</div>
+                </div>
+              </div>
+
+              <!-- Column 2: Bank -->
+              <div v-if="bankChannels.length" :class="mfsChannels.length ? 'col-7' : 'col-12'">
+                <div class="channel-group-title text-warning fw-bold mb-1.5">Bank</div>
+                <table class="bank-details-table">
+                  <tbody>
+                    <tr v-for="ch in bankChannels" :key="ch.label">
+                      <td class="bank-lbl text-dark">{{ ch.label }}</td>
+                      <td class="bank-colon text-dark">:</td>
+                      <td class="bank-val text-dark" :class="{ 'font-monospace': ch.label.includes('No') }">
+                        {{ ch.value }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -768,28 +793,53 @@ const handleCloseTab = () => {
   border-color: #e9ecef !important;
 }
 
-.payment-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem 1rem;
-}
-
-.payment-item {
-  min-width: 0;
-}
-
-.payment-label {
-  font-size: 0.66rem;
+.payment-header-title {
+  font-size: 0.92rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: #6c757d;
+  letter-spacing: 0.2px;
 }
 
-.payment-value {
+.channel-group-title {
+  color: #d97706 !important; /* amber/brownish orange accent */
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.mfs-name {
+  font-size: 0.85rem;
+  line-height: 1.25;
+}
+
+.mfs-number {
   font-size: 0.86rem;
-  font-weight: 700;
-  color: #111417;
+  letter-spacing: 0.3px;
+}
+
+.bank-details-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.bank-details-table td {
+  padding: 1.5px 0;
+  font-size: 0.85rem;
+  vertical-align: top;
+}
+
+.bank-lbl {
+  font-weight: 500;
+  white-space: nowrap;
+  width: 78px;
+}
+
+.bank-colon {
+  width: 14px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.bank-val {
+  font-weight: 500;
   word-break: break-word;
 }
 
