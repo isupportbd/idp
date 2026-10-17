@@ -800,9 +800,11 @@ const handleCloseTab = () => {
 }
 
 .channel-group-title {
-  color: #ea9a44 !important; /* soft, light peach-amber matching scratch */
-  font-size: 0.9rem;
+  color: #c97a3e !important;
+  opacity: 0.65;
+  font-size: 0.86rem;
   font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
 .mfs-name {
