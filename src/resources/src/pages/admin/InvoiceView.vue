@@ -639,7 +639,7 @@ const handleCloseTab = () => {
             <div class="row g-3">
               <!-- Column 1: MFS -->
               <div v-if="mfsChannels.length" :class="bankChannels.length ? 'col-5' : 'col-12'">
-                <div class="channel-group-title text-warning fw-bold mb-1.5">MFS</div>
+                <div class="channel-group-title fw-bold mb-1.5">MFS</div>
                 <div v-for="ch in mfsChannels" :key="ch.label" class="mb-2">
                   <div class="fw-bold text-dark mfs-name">{{ ch.label }}</div>
                   <div class="font-monospace text-dark mfs-number">{{ ch.value }}</div>
@@ -648,7 +648,7 @@ const handleCloseTab = () => {
 
               <!-- Column 2: Bank -->
               <div v-if="bankChannels.length" :class="mfsChannels.length ? 'col-7' : 'col-12'">
-                <div class="channel-group-title text-warning fw-bold mb-1.5">Bank</div>
+                <div class="channel-group-title fw-bold mb-1.5">Bank</div>
                 <table class="bank-details-table">
                   <tbody>
                     <tr v-for="ch in bankChannels" :key="ch.label">
@@ -800,9 +800,9 @@ const handleCloseTab = () => {
 }
 
 .channel-group-title {
-  color: #d97706 !important; /* amber/brownish orange accent */
-  font-size: 0.88rem;
-  font-weight: 700;
+  color: #ea9a44 !important; /* soft, light peach-amber matching scratch */
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .mfs-name {
