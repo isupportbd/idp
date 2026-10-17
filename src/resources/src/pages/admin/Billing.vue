@@ -559,9 +559,9 @@ const printReport = () => {
     </div>
 
     <!-- Navigation Tabs & Toolbar -->
-    <div class="filter-panel p-2 mb-3 d-print-none d-flex align-items-center justify-content-between gap-3 flex-wrap">
+    <div class="filter-panel p-2 mb-3 d-print-none d-flex align-items-center justify-content-between gap-2">
       <!-- Left: Navigation Tabs with matching 38px height -->
-      <div class="d-flex align-items-center gap-1 flex-wrap">
+      <div class="d-flex align-items-center gap-1 flex-nowrap overflow-x-auto custom-scrollbar pe-1">
         <button
           type="button"
           class="btn tab-btn"
@@ -569,7 +569,7 @@ const printReport = () => {
           @click="activeTab = 'invoices'"
         >
           <i class="bi bi-receipt"></i>
-          <span>Invoices / Bills ({{ bills.length }})</span>
+          <span>Invoices ({{ bills.length }})</span>
         </button>
 
         <button
@@ -589,7 +589,7 @@ const printReport = () => {
           @click="activeTab = 'billed'"
         >
           <i class="bi bi-check2-all"></i>
-          <span>Billed Clients ({{ billedClientsList.length }})</span>
+          <span>Billed ({{ billedClientsList.length }})</span>
         </button>
 
         <button
@@ -599,7 +599,7 @@ const printReport = () => {
           @click="activeTab = 'dues'"
         >
           <i class="bi bi-exclamation-circle"></i>
-          <span>Due Clients ({{ dueClientsList.length }})</span>
+          <span>Due ({{ dueClientsList.length }})</span>
         </button>
 
         <button
@@ -609,7 +609,7 @@ const printReport = () => {
           @click="activeTab = 'missing'"
         >
           <i class="bi bi-file-earmark-plus"></i>
-          <span>Missing Bills ({{ searchQuery ? filteredMissingBills.length : missingBills.length }})</span>
+          <span>Missing ({{ searchQuery ? filteredMissingBills.length : missingBills.length }})</span>
         </button>
       </div>
 
@@ -620,12 +620,12 @@ const printReport = () => {
             v-model="searchQuery"
             placeholder="Search invoice, client, receipt..."
             size="md"
-            max-width="220px"
-            min-width="220px"
+            max-width="190px"
+            min-width="170px"
           />
         </div>
 
-        <div class="month-nav-container" style="width: 185px; flex-shrink: 0;">
+        <div class="month-nav-container" style="width: 175px; flex-shrink: 0;">
           <MonthNavigator v-model="selectedMonth" />
         </div>
       </div>
@@ -1137,13 +1137,22 @@ const printReport = () => {
   height: 38px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 12px;
-  font-size: 0.84rem;
+  gap: 5px;
+  padding: 0 10px;
+  font-size: 0.82rem;
   font-weight: 600;
   border-radius: 6px;
   transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  height: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
 }
 
 .tab-btn-active {
