@@ -641,8 +641,8 @@ const handleCloseTab = () => {
               <div v-if="mfsChannels.length" :class="bankChannels.length ? 'col-5' : 'col-12'">
                 <div class="channel-group-title fw-bold mb-1.5">MFS</div>
                 <div v-for="ch in mfsChannels" :key="ch.label" class="mb-2">
-                  <div class="fw-bold text-dark mfs-name">{{ ch.label }}</div>
-                  <div class="font-monospace text-dark mfs-number">{{ ch.value }}</div>
+                  <div class="mfs-name text-secondary fw-semibold">{{ ch.label }}</div>
+                  <div class="font-monospace mfs-number text-muted">{{ ch.value }}</div>
                 </div>
               </div>
 
@@ -652,9 +652,9 @@ const handleCloseTab = () => {
                 <table class="bank-details-table">
                   <tbody>
                     <tr v-for="ch in bankChannels" :key="ch.label">
-                      <td class="bank-lbl text-dark">{{ ch.label }}</td>
-                      <td class="bank-colon text-dark">:</td>
-                      <td class="bank-val text-dark" :class="{ 'font-monospace': ch.label.includes('No') }">
+                      <td class="bank-lbl text-secondary">{{ ch.label }}</td>
+                      <td class="bank-colon text-secondary">:</td>
+                      <td class="bank-val text-muted" :class="{ 'font-monospace': ch.label.includes('No') }">
                         {{ ch.value }}
                       </td>
                     </tr>
@@ -800,21 +800,24 @@ const handleCloseTab = () => {
 }
 
 .channel-group-title {
-  color: #c97a3e !important;
-  opacity: 0.65;
-  font-size: 0.86rem;
+  color: #e59850 !important;
+  opacity: 0.75;
+  font-size: 0.88rem;
   font-weight: 600;
   letter-spacing: 0.3px;
 }
 
 .mfs-name {
-  font-size: 0.85rem;
-  line-height: 1.25;
+  font-size: 0.84rem;
+  color: #4b5563 !important;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
 .mfs-number {
-  font-size: 0.86rem;
-  letter-spacing: 0.3px;
+  font-size: 0.84rem;
+  color: #6b7280 !important;
+  letter-spacing: 0.2px;
 }
 
 .bank-details-table {
@@ -824,12 +827,13 @@ const handleCloseTab = () => {
 
 .bank-details-table td {
   padding: 1.5px 0;
-  font-size: 0.85rem;
+  font-size: 0.84rem;
   vertical-align: top;
 }
 
 .bank-lbl {
   font-weight: 500;
+  color: #4b5563 !important;
   white-space: nowrap;
   width: 78px;
 }
@@ -838,10 +842,12 @@ const handleCloseTab = () => {
   width: 14px;
   text-align: center;
   font-weight: 500;
+  color: #6b7280 !important;
 }
 
 .bank-val {
   font-weight: 500;
+  color: #4b5563 !important;
   word-break: break-word;
 }
 
