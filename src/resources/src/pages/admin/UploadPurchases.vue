@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { useRouter } from "vue-router";
 import axios from "axios";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import { useToast } from "@/composables/useToast";
 import { can } from "@/composables/useAuth";
 
-const router = useRouter();
 const toast = useToast();
 
 // Global Measurement Units

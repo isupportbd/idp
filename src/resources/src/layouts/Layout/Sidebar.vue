@@ -150,7 +150,17 @@
               </router-link>
             </li>
 
-            <!-- 4. Payouts & Expenses -->
+            <!-- 4. Statements -->
+            <li v-if="canAccessModule('statements')" class="list-group-item" :class="{ active: isActive('/admin/statements') }">
+              <router-link to="/admin/statements">
+                <div class="menu-icon">
+                  <i class="bi bi-journal-text"></i>
+                </div>
+                <span>Statements</span>
+              </router-link>
+            </li>
+
+            <!-- 5. Payouts & Expenses -->
             <li v-if="canAccessModule('payouts')" class="list-group-item" :class="{ active: isActive('/admin/payouts') }">
               <router-link to="/admin/payouts">
                 <div class="menu-icon">
@@ -160,7 +170,7 @@
               </router-link>
             </li>
 
-            <!-- 5. Firm Settings -->
+            <!-- 6. Firm Settings -->
             <li v-if="canAccessModule('settings')" class="list-group-item" :class="{ active: isActive('/admin/settings') }">
               <router-link to="/admin/settings">
                 <div class="menu-icon">

@@ -169,7 +169,7 @@ export const routes = [
         path: "admin/statements",
         name: "statements",
         component: () => import("@/pages/admin/Statements.vue"),
-        meta: { title: "Statements" }
+        meta: { title: "Statements", permission: ["statements.view", "reports.view", "purchases.view"] }
       },
       {
         path: "admin/payouts",
