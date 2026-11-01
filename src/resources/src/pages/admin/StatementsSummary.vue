@@ -214,8 +214,10 @@ const exportToExcel = async () => {
     ? ` (${selectedUnitConversion.value.salesUnit})`
     : "";
 
+  let sl = 1;
   for (const cs of clientSummaries.value) {
     rows.push({
+      "SL": sl++,
       "Client Name": cs.client.companyName,
       "BIN Number": cs.client.binNumber || "BIN Not Set",
       "Tax Period": `${cs.rows.length} Months`,
@@ -228,6 +230,7 @@ const exportToExcel = async () => {
 
   // Grand Total Row
   rows.push({
+    "SL": "",
     "Client Name": "GRAND TOTAL",
     "BIN Number": "",
     "Tax Period": `${clientSummaries.value.length} Clients`,
@@ -241,6 +244,7 @@ const exportToExcel = async () => {
 
   // Set explicit generous column widths (no compressed text)
   ws["!cols"] = [
+    { wch: 8 },  // SL
     { wch: 38 }, // Client Name
     { wch: 20 }, // BIN Number
     { wch: 15 }, // Tax Period

@@ -198,8 +198,10 @@ const exportToExcel = async () => {
   const clientName = statementRows.value[0]?.companyName || "Client";
   const clientBin = statementRows.value[0]?.binNumber || "BIN Not Set";
 
+  let sl = 1;
   for (const r of statementRows.value) {
     rows.push({
+      "SL": sl++,
       "Client Name": r.companyName,
       "BIN Number": r.binNumber || "BIN Not Set",
       "Month": formatMonthDisplay(r.month),
@@ -211,6 +213,7 @@ const exportToExcel = async () => {
 
   // Subtotal / Total Row
   rows.push({
+    "SL": "",
     "Client Name": `TOTAL (${clientName})`,
     "BIN Number": clientBin,
     "Month": `${statementRows.value.length} Months`,
@@ -223,6 +226,7 @@ const exportToExcel = async () => {
 
   // Set explicit generous column widths (no compressed text)
   ws["!cols"] = [
+    { wch: 8 },  // SL
     { wch: 38 }, // Client Name
     { wch: 20 }, // BIN Number
     { wch: 16 }, // Month
