@@ -220,11 +220,11 @@ const exportToExcel = async () => {
       "SL": sl++,
       "Client Name": cs.client.companyName,
       "BIN Number": cs.client.binNumber || "BIN Not Set",
-      "Tax Period": `${cs.rows.length} Months`,
-      "Activity Months": `${cs.activityMonths ?? cs.rows.filter((r) => (r.totalQty > 0 || r.beCount > 0)).length} Months`,
+      "Tax Period": cs.rows.length,
+      "Activity Months": cs.activityMonths ?? cs.rows.filter((r) => (r.totalQty > 0 || r.beCount > 0)).length,
       [`Total Qty${unitLabel}`]: Number(((Number(cs.totalQty) || 0) * currentConvFactor.value).toFixed(3)),
       "Total B/E Count": cs.totalBeCount,
-      "Submissions": `${cs.submittedCount} / ${cs.rows.length} Submitted`
+      "Submitted Months": cs.submittedCount
     });
   }
 
@@ -233,11 +233,11 @@ const exportToExcel = async () => {
     "SL": "",
     "Client Name": "GRAND TOTAL",
     "BIN Number": "",
-    "Tax Period": `${clientSummaries.value.length} Clients`,
-    "Activity Months": "-", 
+    "Tax Period": "",
+    "Activity Months": "", 
     [`Total Qty${unitLabel}`]: Number((grandTotalQty.value * currentConvFactor.value).toFixed(3)),
     "Total B/E Count": grandTotalBeCount.value,
-    "Submissions": `${grandTotalSubmissions.value} Total Submissions`
+    "Submitted Months": grandTotalSubmissions.value
   });
 
   const ws = XLSX.utils.json_to_sheet(rows);
@@ -247,11 +247,11 @@ const exportToExcel = async () => {
     { wch: 8 },  // SL
     { wch: 38 }, // Client Name
     { wch: 20 }, // BIN Number
-    { wch: 15 }, // Tax Period
-    { wch: 18 }, // Activity Months
-    { wch: 20 }, // Total Qty
+    { wch: 14 }, // Tax Period
+    { wch: 16 }, // Activity Months
+    { wch: 18 }, // Total Qty
     { wch: 16 }, // Total B/E Count
-    { wch: 26 }  // Submissions
+    { wch: 18 }  // Submitted Months
   ];
 
   // Configure A4 Landscape page setup for clean printing
