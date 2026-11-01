@@ -220,6 +220,25 @@ const exportToExcel = async () => {
   });
 
   const ws = XLSX.utils.json_to_sheet(rows);
+
+  // Set explicit generous column widths (no compressed text)
+  ws["!cols"] = [
+    { wch: 38 }, // Client Name
+    { wch: 20 }, // BIN Number
+    { wch: 16 }, // Month
+    { wch: 20 }, // Total Qty
+    { wch: 16 }, // B/E Count
+    { wch: 26 }  // Submission ID
+  ];
+
+  // Configure A4 Landscape page setup for clean printing
+  ws["!pageSetup"] = {
+    orientation: "landscape",
+    paperSize: 9, // A4
+    fitToWidth: 1,
+    fitToHeight: 0
+  };
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Statement");
 
