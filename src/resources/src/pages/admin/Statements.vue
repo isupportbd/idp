@@ -388,12 +388,12 @@ onMounted(() => {
         <table class="table table-dark table-hover mb-0 align-middle statement-table">
           <thead>
             <tr class="table-header-row text-uppercase">
-              <th style="width: 30%; min-width: 250px;">ক্লায়েন্ট নাম</th>
-              <th style="width: 17%; min-width: 160px;">বিন নম্বর</th>
-              <th style="width: 15%; min-width: 130px;">মাস</th>
-              <th class="text-end" style="width: 18%; min-width: 150px;">টোটাল কোয়ান্টিটি</th>
-              <th class="text-center" style="width: 15%; min-width: 140px;">বিল অব এন্টির সংখ্যা</th>
-              <th style="width: 18%; min-width: 160px;">সাবমিশন আইডি</th>
+              <th style="width: 30%; min-width: 250px;">Client Name</th>
+              <th style="width: 17%; min-width: 160px;">BIN Number</th>
+              <th style="width: 15%; min-width: 130px;">Month</th>
+              <th class="text-end" style="width: 18%; min-width: 150px;">Total Quantity</th>
+              <th class="text-center" style="width: 15%; min-width: 140px;">B/E Count</th>
+              <th style="width: 18%; min-width: 160px;">Submission ID</th>
             </tr>
           </thead>
           <tbody>

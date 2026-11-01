@@ -250,40 +250,20 @@ onMounted(() => {
       </div>
 
       <div class="d-flex align-items-center gap-2">
-        <!-- 1. Back to Single Statement -->
         <router-link
           to="/admin/statements"
           class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2 px-3 text-decoration-none"
         >
           <i class="bi bi-arrow-left"></i> Client Statement
         </router-link>
-
-        <!-- 2. Reset Filters -->
-        <button
-          type="button"
-          class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2 px-3"
-          @click="resetFilters"
-        >
-          <i class="bi bi-arrow-counterclockwise"></i> Reset Filters
-        </button>
-
-        <!-- 3. Export Summary Excel -->
-        <button
-          type="button"
-          class="btn btn-sm btn-success d-flex align-items-center gap-2 px-3 fw-medium"
-          :disabled="clientSummaries.length === 0 || isLoading"
-          @click="exportToExcel"
-        >
-          <i class="bi bi-file-earmark-excel"></i> Export Summary Excel
-        </button>
       </div>
     </div>
 
-    <!-- Toolbar / Filter Bar (No individual client selector needed here) -->
-    <div class="filter-panel p-3 rounded-3 mb-4">
+    <!-- Toolbar / Filter Bar with Action Buttons inline -->
+    <div class="filter-panel p-2 px-3 rounded-3 mb-4">
       <div class="d-flex align-items-center flex-wrap gap-2">
         <!-- 1. From Month Navigator -->
-        <div style="width: 155px; flex-shrink: 0;">
+        <div style="width: 150px; flex-shrink: 0;">
           <MonthNavigator v-model="fromMonth" />
         </div>
 
@@ -293,12 +273,12 @@ onMounted(() => {
         </div>
 
         <!-- 3. To Month Navigator -->
-        <div style="width: 155px; flex-shrink: 0;">
+        <div style="width: 150px; flex-shrink: 0;">
           <MonthNavigator v-model="toMonth" />
         </div>
 
         <!-- 4. Unit Conversion Dropdown -->
-        <div style="width: 145px; flex-shrink: 0;">
+        <div style="width: 140px; flex-shrink: 0;">
           <div class="position-relative">
             <div
               class="form-select unit-selector-btn d-flex align-items-center justify-content-between px-2 cursor-pointer"
@@ -343,14 +323,38 @@ onMounted(() => {
           </select>
         </div>
 
-        <!-- 6. Reference Filter -->
-        <div style="width: 175px; flex-shrink: 0;">
+        <!-- 6. Reference Filter (expands to balance line) -->
+        <div class="flex-grow-1" style="min-width: 160px;">
           <select v-model="selectedReferenceId" class="form-select filter-select w-100">
             <option value="all">All References</option>
             <option v-for="refItem in clientReferences" :key="refItem.id" :value="refItem.id">
               {{ refItem.name }}
             </option>
           </select>
+        </div>
+
+        <!-- 7. Compact Action Buttons (Reset & Excel) aligned inline -->
+        <div class="d-flex align-items-center gap-2 ms-auto flex-shrink-0">
+          <button
+            type="button"
+            class="btn btn-outline-secondary d-flex align-items-center justify-content-center p-0"
+            style="width: 38px; height: 38px; border-radius: 6px;"
+            title="Reset Filters"
+            @click="resetFilters"
+          >
+            <i class="bi bi-arrow-counterclockwise fs-6"></i>
+          </button>
+          <button
+            type="button"
+            class="btn btn-success d-flex align-items-center gap-2 px-3 fw-medium"
+            style="height: 38px; border-radius: 6px;"
+            :disabled="clientSummaries.length === 0 || isLoading"
+            title="Download Summary as Excel"
+            @click="exportToExcel"
+          >
+            <i class="bi bi-file-earmark-excel"></i>
+            <span>Excel</span>
+          </button>
         </div>
       </div>
 
@@ -384,11 +388,11 @@ onMounted(() => {
         <table class="table table-dark table-hover mb-0 align-middle statement-table">
           <thead>
             <tr class="table-header-row text-uppercase">
-              <th style="width: 32%; min-width: 260px;">ক্লায়েন্ট নাম</th>
-              <th style="width: 18%; min-width: 160px;">বিন নম্বর</th>
-              <th class="text-center" style="width: 14%; min-width: 120px;">মোট মাস</th>
-              <th class="text-end" style="width: 18%; min-width: 150px;">টোটাল কোয়ান্টিটি</th>
-              <th class="text-center" style="width: 18%; min-width: 150px;">বিল অব এন্টির সংখ্যা</th>
+              <th style="width: 32%; min-width: 260px;">Client Name</th>
+              <th style="width: 18%; min-width: 160px;">BIN Number</th>
+              <th class="text-center" style="width: 14%; min-width: 120px;">Total Months</th>
+              <th class="text-end" style="width: 18%; min-width: 150px;">Total Quantity</th>
+              <th class="text-center" style="width: 18%; min-width: 150px;">B/E Count</th>
             </tr>
           </thead>
           <tbody>
@@ -400,7 +404,7 @@ onMounted(() => {
                 {{ cs.client.binNumber || 'BIN Not Set' }}
               </td>
               <td class="text-center text-light small fw-medium">
-                {{ cs.rows.length }} মাস
+                {{ cs.rows.length }} Months
               </td>
               <td class="text-end fw-bold text-white">
                 {{ formatQty(cs.totalQty) }}
