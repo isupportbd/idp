@@ -516,15 +516,18 @@ const resetUpload = () => {
 
         <!-- 2. 2-Segment Choose File Box -->
         <div
-          class="choose-file-group d-flex align-items-center cursor-pointer flex-grow-1"
+          class="choose-file-group d-flex align-items-center flex-grow-1"
           :class="{ 'has-file-active': selectedFile }"
-          @click="triggerFileInput"
         >
           <!-- Left Button Part -->
-          <div class="choose-file-btn-part d-flex align-items-center gap-2 px-3">
+          <button
+            type="button"
+            class="choose-file-btn-part d-flex align-items-center gap-2 px-3 border-0 cursor-pointer"
+            @click="triggerFileInput"
+          >
             <i class="bi bi-cloud-arrow-up text-primary fs-5"></i>
             <span class="choose-file-title fw-semibold">Choose File</span>
-          </div>
+          </button>
 
           <!-- Right Display Part -->
           <div class="choose-file-display-part flex-grow-1 px-3 d-flex align-items-center justify-content-between text-truncate">
@@ -1132,21 +1135,27 @@ const resetUpload = () => {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.choose-file-group:hover,
 .choose-file-group.has-file-active {
   border-color: #3b8eed;
 }
 
 .choose-file-btn-part {
   background: rgba(255, 255, 255, 0.05);
-  border-right: 1px solid #3b424b;
+  border-right: 1px solid #3b424b !important;
   height: 100%;
   flex-shrink: 0;
-  transition: background-color 0.15s ease;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.choose-file-group:hover .choose-file-btn-part {
-  background: rgba(59, 142, 237, 0.12);
+.choose-file-btn-part:hover,
+.choose-file-btn-part:focus-visible {
+  background: rgba(59, 142, 237, 0.2);
+}
+
+.choose-file-btn-part:active {
+  background: rgba(59, 142, 237, 0.3);
 }
 
 .choose-file-title {
