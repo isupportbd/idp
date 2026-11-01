@@ -220,8 +220,8 @@ const exportToExcel = async () => {
       "SL": sl++,
       "Client Name": cs.client.companyName,
       "BIN Number": cs.client.binNumber || "BIN Not Set",
-      "Tax Period": cs.rows.length,
-      "Activity Months": cs.activityMonths ?? cs.rows.filter((r) => (r.totalQty > 0 || r.beCount > 0)).length,
+      "Total Tax Period": cs.rows.length,
+      "Total Activity Months": cs.activityMonths ?? cs.rows.filter((r) => (r.totalQty > 0 || r.beCount > 0)).length,
       [`Total Qty${unitLabel}`]: Number(((Number(cs.totalQty) || 0) * currentConvFactor.value).toFixed(3)),
       "Total B/E Count": cs.totalBeCount,
       "Submitted Months": cs.submittedCount
@@ -233,8 +233,8 @@ const exportToExcel = async () => {
     "SL": "",
     "Client Name": "GRAND TOTAL",
     "BIN Number": "",
-    "Tax Period": "",
-    "Activity Months": "", 
+    "Total Tax Period": "",
+    "Total Activity Months": "", 
     [`Total Qty${unitLabel}`]: Number((grandTotalQty.value * currentConvFactor.value).toFixed(3)),
     "Total B/E Count": grandTotalBeCount.value,
     "Submitted Months": grandTotalSubmissions.value
@@ -247,8 +247,8 @@ const exportToExcel = async () => {
     { wch: 8 },  // SL
     { wch: 38 }, // Client Name
     { wch: 20 }, // BIN Number
-    { wch: 14 }, // Tax Period
-    { wch: 16 }, // Activity Months
+    { wch: 18 }, // Total Tax Period
+    { wch: 22 }, // Total Activity Months
     { wch: 18 }, // Total Qty
     { wch: 16 }, // Total B/E Count
     { wch: 18 }  // Submitted Months
@@ -427,12 +427,12 @@ onMounted(() => {
         <table class="table table-dark table-hover mb-0 align-middle statement-table">
           <thead>
             <tr class="table-header-row text-uppercase">
-              <th style="width: 32%; min-width: 260px;">Client Name</th>
-              <th style="width: 18%; min-width: 160px;">BIN Number</th>
-              <th class="text-center" style="width: 13%; min-width: 110px;">Tax Period</th>
-              <th class="text-center" style="width: 14%; min-width: 130px;">Activity Months</th>
-              <th class="text-end" style="width: 18%; min-width: 150px;">Total Quantity</th>
-              <th class="text-center" style="width: 18%; min-width: 150px;">B/E Count</th>
+              <th style="width: 30%; min-width: 250px;">Client Name</th>
+              <th style="width: 16%; min-width: 150px;">BIN Number</th>
+              <th class="text-center" style="width: 14%; min-width: 120px;">Total Tax Period</th>
+              <th class="text-center" style="width: 14%; min-width: 130px;">Total Activity Months</th>
+              <th class="text-end" style="width: 14%; min-width: 140px;">Total Quantity</th>
+              <th class="text-center" style="width: 12%; min-width: 120px;">Total B/E Count</th>
             </tr>
           </thead>
           <tbody>
