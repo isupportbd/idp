@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
+import { usePagination } from "@/composables/usePagination";
 import axios from "axios";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import { pulse } from "@/plugins/pulse";
@@ -91,6 +92,15 @@ const formatMonthDisplay = (m: string): string => {
   return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 };
 
+// Pagination Setup
+const totalSummariesCount = computed(() => clientSummaries.value.length);
+const { currentPage, itemsPerPage, totalPages, paginateList } = usePagination("statements_summary", {
+  defaultPerPage: 10,
+  totalItems: totalSummariesCount
+});
+
+const paginatedSummaries = computed(() => paginateList(clientSummaries.value));
+
 // Grand Totals
 const grandTotalQty = computed(() => {
   return clientSummaries.value.reduce((acc, cs) => acc + (Number(cs.totalQty) || 0), 0);
@@ -174,6 +184,7 @@ const resetFilters = () => {
   selectedCustomerTypeId.value = "all";
   selectedReferenceId.value = "all";
   selectedUnitId.value = null;
+  currentPage.value = 1;
   loadSummaryData();
 };
 
@@ -218,6 +229,7 @@ const exportToExcel = async () => {
 
 // Watchers
 watch([fromMonth, toMonth, selectedCustomerTypeId, selectedReferenceId], () => {
+  currentPage.value = 1;
   loadSummaryData();
 });
 
@@ -396,7 +408,7 @@ onMounted(() => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="cs in clientSummaries" :key="cs.client.id" class="statement-row">
+            <tr v-for="cs in paginatedSummaries" :key="cs.client.id" class="statement-row">
               <td class="fw-semibold text-white">
                 {{ cs.client.companyName }}
               </td>
@@ -434,6 +446,66 @@ onMounted(() => {
             </tr>
           </tfoot>
         </table>
+      </div>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div v-if="clientSummaries.length > 0" class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-2">
+      <div class="d-flex align-items-center gap-2">
+        <span class="text-muted small">
+          Showing <strong>{{ (currentPage - 1) * itemsPerPage + 1 }}</strong> to
+          <strong>{{ Math.min(currentPage * itemsPerPage, clientSummaries.length) }}</strong> of
+          <strong>{{ clientSummaries.length }}</strong> clients
+        </span>
+        <select
+          v-model="itemsPerPage"
+          class="form-select form-select-sm bg-dark border-secondary text-white ms-2"
+          style="width: 80px;"
+        >
+          <option :value="10">10</option>
+          <option :value="25">25</option>
+          <option :value="50">50</option>
+          <option :value="100">100</option>
+        </select>
+      </div>
+
+      <div v-if="totalPages > 1" class="d-flex align-items-center gap-1">
+        <button
+          type="button"
+          class="btn btn-dark border-secondary btn-sm"
+          :disabled="currentPage <= 1"
+          @click="currentPage--"
+        >
+          <i class="bi bi-chevron-left"></i> Prev
+        </button>
+
+        <template v-for="p in totalPages" :key="p">
+          <button
+            v-if="p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2)"
+            type="button"
+            class="btn btn-sm"
+            :class="currentPage === p ? 'btn-primary' : 'btn-dark border-secondary text-muted'"
+            style="min-width: 32px;"
+            @click="currentPage = p"
+          >
+            {{ p }}
+          </button>
+          <span
+            v-else-if="p === currentPage - 3 || p === currentPage + 3"
+            class="text-muted px-1"
+          >
+            ...
+          </span>
+        </template>
+
+        <button
+          type="button"
+          class="btn btn-dark border-secondary btn-sm"
+          :disabled="currentPage >= totalPages"
+          @click="currentPage++"
+        >
+          Next <i class="bi bi-chevron-right"></i>
+        </button>
       </div>
     </div>
   </div>
