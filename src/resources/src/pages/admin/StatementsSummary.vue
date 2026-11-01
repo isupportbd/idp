@@ -341,15 +341,12 @@ onMounted(() => {
           min-width="140px"
         />
 
-        <!-- 6. Reference Filter (expands to balance line) -->
-        <div class="flex-grow-1" style="min-width: 170px;">
-          <IdpSelect
-            v-model="selectedReferenceId"
-            :options="referenceOptions"
-            min-width="100%"
-            width="100%"
-          />
-        </div>
+        <!-- 6. Reference Filter -->
+        <IdpSelect
+          v-model="selectedReferenceId"
+          :options="referenceOptions"
+          min-width="170px"
+        />
 
         <!-- 7. Compact Action Buttons (Reset & Excel) aligned inline -->
         <div class="d-flex align-items-center gap-2 ms-auto flex-shrink-0">
