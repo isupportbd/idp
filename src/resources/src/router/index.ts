@@ -166,6 +166,12 @@ export const routes = [
         meta: { title: "Record Payment", permission: ["collections.create"] }
       },
       {
+        path: "admin/statements",
+        name: "statements",
+        component: () => import("@/pages/admin/Statements.vue"),
+        meta: { title: "Statements" }
+      },
+      {
         path: "admin/payouts",
         name: "payouts",
         component: () => import("@/pages/admin/Payouts.vue"),

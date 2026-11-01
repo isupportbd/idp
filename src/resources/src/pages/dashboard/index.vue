@@ -21,7 +21,7 @@ const hasAccountsAccess = computed(() => {
 });
 
 const hasAnyAdminTools = computed(() => {
-  return isTenantAdmin() || canAccessModule('settings') || canAccessModule('billing');
+  return isTenantAdmin() || canAccessModule('settings') || canAccessModule('billing') || canAccessModule('statements');
 });
 </script>
 
@@ -254,7 +254,16 @@ const hasAnyAdminTools = computed(() => {
             <p class="dash-card-desc text-muted">Client invoices, payments, collections, and dues tracking.</p>
           </div>
 
-          <!-- 4. Payouts & Expenses -->
+          <!-- 4. Statement -->
+          <router-link v-if="canAccessModule('statements')" to="/admin/statements" class="dash-card">
+            <div class="dash-card-icon text-info">
+              <i class="bi bi-journal-text"></i>
+            </div>
+            <h5 class="dash-card-title">Statement</h5>
+            <p class="dash-card-desc">Client-wise monthly purchase quantities, B/E counts, and submission records.</p>
+          </router-link>
+
+          <!-- 5. Payouts & Expenses -->
           <router-link v-if="canAccessModule('payouts')" to="/admin/payouts" class="dash-card">
             <div class="dash-card-icon text-success">
               <i class="bi bi-cash-stack"></i>
@@ -263,7 +272,7 @@ const hasAnyAdminTools = computed(() => {
             <p class="dash-card-desc">Staff earnings, payouts, dues carry-forward and firm expense accounting.</p>
           </router-link>
 
-          <!-- 5. Firm Settings -->
+          <!-- 6. Firm Settings -->
           <router-link v-if="canAccessModule('settings')" to="/admin/settings" class="dash-card">
             <div class="dash-card-icon text-info">
               <i class="bi bi-sliders"></i>

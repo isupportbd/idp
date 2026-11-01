@@ -94,6 +94,16 @@ export const PERMISSION_MODULES: PermissionModule[] = [
     ]
   },
   {
+    id: "statements",
+    name: "Statements",
+    description: "Client monthly purchase quantities, B/E counts, and return submissions",
+    icon: "bi-journal-text",
+    actions: [
+      { key: "statements.view", label: "View" },
+      { key: "statements.export", label: "Export" }
+    ]
+  },
+  {
     id: "billing",
     name: "Billing & Invoices",
     description: "Create bills, track payments and ledger",
