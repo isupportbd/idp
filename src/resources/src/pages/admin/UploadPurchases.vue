@@ -379,9 +379,6 @@ const saveToDatabase = async () => {
       ) {
         toast.success(`${data.totalRowsProcessed || tempData.value.length} records saved to database successfully!`);
         resetUpload();
-        setTimeout(() => {
-          router.push("/admin/purchases");
-        }, 1500);
       }
     } else {
       toast.error(data.message || "Failed to save data.");
@@ -400,9 +397,6 @@ const handleIgnoreDuplicate = (index: number) => {
   if (duplicateList.value.length === 0) {
     showCompareModal.value = false;
     resetUpload();
-    setTimeout(() => {
-      router.push("/admin/purchases");
-    }, 800);
   }
 };
 
@@ -415,9 +409,6 @@ const handleReplaceDuplicate = async (item: any, index: number) => {
     if (duplicateList.value.length === 0) {
       showCompareModal.value = false;
       resetUpload();
-      setTimeout(() => {
-        router.push("/admin/purchases");
-      }, 800);
     }
   } catch (err: any) {
     toast.error(err?.response?.data?.message || "Failed to replace duplicate record.");
@@ -440,9 +431,6 @@ const handleReplaceAll = async () => {
     duplicateList.value = [];
     showCompareModal.value = false;
     resetUpload();
-    setTimeout(() => {
-      router.push("/admin/purchases");
-    }, 800);
   } catch (err: any) {
     toast.error(err?.response?.data?.message || "Failed to replace all duplicate records.");
   } finally {
@@ -456,9 +444,6 @@ const handleIgnoreAll = () => {
   showCompareModal.value = false;
   resetUpload();
   toast.info(`Skipped ${count} duplicate record(s).`);
-  setTimeout(() => {
-    router.push("/admin/purchases");
-  }, 800);
 };
 
 // FFS Resolution Modal Handlers
