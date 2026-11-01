@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { usePagination } from "@/composables/usePagination";
 import axios from "axios";
 import MonthNavigator from "@/components/MonthNavigator.vue";
+import IdpSelect from "@/components/common/IdpSelect.vue";
 import { pulse } from "@/plugins/pulse";
 
 interface UnitConversion {
@@ -24,6 +25,7 @@ interface ClientSummaryItem {
   totalBeCount: number;
   submittedCount: number;
   monthCount: number;
+  activityMonths?: number;
   rows: any[];
 }
 
@@ -44,6 +46,18 @@ const fromMonth = ref(getDefaultFromMonth());
 const toMonth = ref(getCurrentMonth());
 const selectedCustomerTypeId = ref<string>("all");
 const selectedReferenceId = ref<string>("all");
+
+
+// Dropdown Options for IdpSelect
+const customerTypeOptions = computed(() => [
+  { value: "all", label: "All Types" },
+  ...customerTypes.value.map((ct) => ({ value: ct.id, label: ct.typeName }))
+]);
+
+const referenceOptions = computed(() => [
+  { value: "all", label: "All References" },
+  ...clientReferences.value.map((ref) => ({ value: ref.id, label: ref.name }))
+]);
 
 // Options Data
 const customerTypes = ref<any[]>([]);
@@ -204,7 +218,8 @@ const exportToExcel = async () => {
     rows.push({
       "Client Name": cs.client.companyName,
       "BIN Number": cs.client.binNumber || "BIN Not Set",
-      "Total Months": cs.rows.length,
+      "Tax Period": `${cs.rows.length} Months`,
+      "Activity Months": `${cs.activityMonths ?? cs.rows.filter((r) => (r.totalQty > 0 || r.beCount > 0)).length} Months`,
       [`Total Qty${unitLabel}`]: Number(((Number(cs.totalQty) || 0) * currentConvFactor.value).toFixed(3)),
       "Total B/E Count": cs.totalBeCount,
       "Submissions": `${cs.submittedCount} / ${cs.rows.length} Submitted`
@@ -215,7 +230,8 @@ const exportToExcel = async () => {
   rows.push({
     "Client Name": "GRAND TOTAL",
     "BIN Number": "",
-    "Total Months": `${clientSummaries.value.length} Clients`,
+    "Tax Period": `${clientSummaries.value.length} Clients`,
+    "Activity Months": "-", 
     [`Total Qty${unitLabel}`]: Number((grandTotalQty.value * currentConvFactor.value).toFixed(3)),
     "Total B/E Count": grandTotalBeCount.value,
     "Submissions": `${grandTotalSubmissions.value} Total Submissions`
@@ -326,23 +342,20 @@ onMounted(() => {
         </div>
 
         <!-- 5. Client Type Filter -->
-        <div style="width: 135px; flex-shrink: 0;">
-          <select v-model="selectedCustomerTypeId" class="form-select filter-select w-100">
-            <option value="all">All Types</option>
-            <option v-for="ct in customerTypes" :key="ct.id" :value="ct.id">
-              {{ ct.typeName }}
-            </option>
-          </select>
-        </div>
+        <IdpSelect
+          v-model="selectedCustomerTypeId"
+          :options="customerTypeOptions"
+          min-width="140px"
+        />
 
         <!-- 6. Reference Filter (expands to balance line) -->
-        <div class="flex-grow-1" style="min-width: 160px;">
-          <select v-model="selectedReferenceId" class="form-select filter-select w-100">
-            <option value="all">All References</option>
-            <option v-for="refItem in clientReferences" :key="refItem.id" :value="refItem.id">
-              {{ refItem.name }}
-            </option>
-          </select>
+        <div class="flex-grow-1" style="min-width: 170px;">
+          <IdpSelect
+            v-model="selectedReferenceId"
+            :options="referenceOptions"
+            min-width="100%"
+            width="100%"
+          />
         </div>
 
         <!-- 7. Compact Action Buttons (Reset & Excel) aligned inline -->
@@ -402,7 +415,8 @@ onMounted(() => {
             <tr class="table-header-row text-uppercase">
               <th style="width: 32%; min-width: 260px;">Client Name</th>
               <th style="width: 18%; min-width: 160px;">BIN Number</th>
-              <th class="text-center" style="width: 14%; min-width: 120px;">Total Months</th>
+              <th class="text-center" style="width: 13%; min-width: 110px;">Tax Period</th>
+              <th class="text-center" style="width: 14%; min-width: 130px;">Activity Months</th>
               <th class="text-end" style="width: 18%; min-width: 150px;">Total Quantity</th>
               <th class="text-center" style="width: 18%; min-width: 150px;">B/E Count</th>
             </tr>
@@ -417,6 +431,14 @@ onMounted(() => {
               </td>
               <td class="text-center text-light small fw-medium">
                 {{ cs.rows.length }} Months
+              </td>
+              <td class="text-center small fw-semibold">
+                <span
+                  class="badge px-2 py-1"
+                  :class="(cs.activityMonths ?? cs.rows.filter((r) => (r.totalQty > 0 || r.beCount > 0)).length) > 0 ? 'bg-info bg-opacity-25 text-info border border-info border-opacity-25' : 'text-muted border border-secondary border-opacity-25'"
+                >
+                  {{ cs.activityMonths ?? cs.rows.filter((r) => (r.totalQty > 0 || r.beCount > 0)).length }} Months
+                </span>
               </td>
               <td class="text-end fw-bold text-white">
                 {{ formatQty(cs.totalQty) }}
@@ -436,6 +458,9 @@ onMounted(() => {
               </td>
               <td class="text-center text-muted small fw-bold">
                 {{ clientSummaries.length }} Clients
+              </td>
+              <td class="text-center text-muted small fw-bold">
+                -
               </td>
               <td class="text-end fw-bolder text-warning fs-6">
                 {{ formatQty(grandTotalQty) }}

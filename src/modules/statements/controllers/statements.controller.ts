@@ -170,6 +170,7 @@ export const getStatementReport: Handler = async (c: any) => {
       let clientTotalQty = 0;
       let clientTotalBeCount = 0;
       let clientSubmittedCount = 0;
+      let clientActivityMonths = 0;
       const clientMonthRows: any[] = [];
 
       for (const m of months) {
@@ -178,6 +179,9 @@ export const getStatementReport: Handler = async (c: any) => {
 
         clientTotalQty += pData.totalQty;
         clientTotalBeCount += pData.beCount;
+        if (pData.totalQty > 0 || pData.beCount > 0) {
+          clientActivityMonths++;
+        }
         if (sData?.submissionId) {
           clientSubmittedCount++;
         }
@@ -205,6 +209,7 @@ export const getStatementReport: Handler = async (c: any) => {
         totalBeCount: clientTotalBeCount,
         submittedCount: clientSubmittedCount,
         monthCount: months.length,
+        activityMonths: clientActivityMonths,
         rows: clientMonthRows
       });
     }
