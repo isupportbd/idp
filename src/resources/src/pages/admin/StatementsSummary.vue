@@ -425,22 +425,14 @@ onMounted(() => {
               <td class="text-center text-light small fw-medium">
                 {{ cs.rows.length }} Months
               </td>
-              <td class="text-center small fw-semibold">
-                <span
-                  class="badge px-2 py-1"
-                  :class="(cs.activityMonths ?? cs.rows.filter((r) => (r.totalQty > 0 || r.beCount > 0)).length) > 0 ? 'bg-info bg-opacity-25 text-info border border-info border-opacity-25' : 'text-muted border border-secondary border-opacity-25'"
-                >
-                  {{ cs.activityMonths ?? cs.rows.filter((r) => (r.totalQty > 0 || r.beCount > 0)).length }} Months
-                </span>
+              <td class="text-center text-light small fw-medium">
+                {{ cs.activityMonths ?? cs.rows.filter((r) => (r.totalQty > 0 || r.beCount > 0)).length }} Months
               </td>
               <td class="text-end fw-bold text-white">
                 {{ formatQty(cs.totalQty) }}
               </td>
-              <td class="text-center fw-bold text-white">
-                <span v-if="cs.totalBeCount > 0" class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-25 px-2 py-1">
-                  {{ cs.totalBeCount }} B/E
-                </span>
-                <span v-else class="text-muted small">-</span>
+              <td class="text-center text-light small fw-medium">
+                {{ cs.totalBeCount > 0 ? cs.totalBeCount + ' B/E' : '-' }}
               </td>
             </tr>
           </tbody>
