@@ -317,8 +317,8 @@ onMounted(() => {
     <!-- Toolbar / Filter Bar -->
     <div class="filter-panel p-3 rounded-3 mb-4">
       <div class="row g-2 align-items-center">
-        <!-- 1. Client / BIN Search -->
-        <div class="col-xl-3 col-lg-4 col-md-6">
+        <!-- 1. Client / BIN Search (Flex-grow prominent input) -->
+        <div class="col-xl-3 col-lg-4 col-md-12">
           <ClientSearchSelect
             v-model="selectedClientId"
             placeholder="Type to search Client or BIN..."
@@ -327,25 +327,25 @@ onMounted(() => {
         </div>
 
         <!-- 2. From Month Navigator -->
-        <div class="col-xl-2 col-lg-3 col-md-3">
+        <div class="col-xl-2 col-lg-2 col-md-5 col-sm-5">
           <MonthNavigator v-model="fromMonth" />
         </div>
 
         <!-- 3. 'to' separator -->
-        <div class="col-auto text-center px-1 d-none d-md-block">
+        <div class="col-auto text-center px-1">
           <span class="text-muted small fw-medium">to</span>
         </div>
 
         <!-- 4. To Month Navigator -->
-        <div class="col-xl-2 col-lg-3 col-md-3">
+        <div class="col-xl-2 col-lg-2 col-md-5 col-sm-5">
           <MonthNavigator v-model="toMonth" />
         </div>
 
         <!-- 5. Unit Conversion Dropdown -->
-        <div class="col-xl-2 col-lg-3 col-md-4">
+        <div class="col-xl-1 col-lg-1 col-md-4 col-sm-4" style="min-width: 130px;">
           <div class="position-relative">
             <div
-              class="form-select unit-selector-btn d-flex align-items-center justify-content-between px-3 cursor-pointer"
+              class="form-select unit-selector-btn d-flex align-items-center justify-content-between px-2 cursor-pointer"
               @click="showUnitDropdown = !showUnitDropdown"
               tabindex="0"
             >
@@ -378,8 +378,8 @@ onMounted(() => {
         </div>
 
         <!-- 6. Client Type Filter -->
-        <div class="col-xl-1 col-lg-2 col-md-4">
-          <select v-model="selectedCustomerTypeId" class="form-select filter-select">
+        <div class="col-xl-2 col-lg-2 col-md-4 col-sm-4">
+          <select v-model="selectedCustomerTypeId" class="form-select filter-select w-100">
             <option value="all">All Types</option>
             <option v-for="ct in customerTypes" :key="ct.id" :value="ct.id">
               {{ ct.typeName }}
@@ -388,8 +388,8 @@ onMounted(() => {
         </div>
 
         <!-- 7. Reference Filter -->
-        <div class="col-xl-1 col-lg-2 col-md-4">
-          <select v-model="selectedReferenceId" class="form-select filter-select">
+        <div class="col-xl-1 col-lg-1 col-md-4 col-sm-4 flex-grow-1" style="min-width: 140px;">
+          <select v-model="selectedReferenceId" class="form-select filter-select w-100">
             <option value="all">All References</option>
             <option v-for="refItem in clientReferences" :key="refItem.id" :value="refItem.id">
               {{ refItem.name }}
