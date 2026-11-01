@@ -109,7 +109,7 @@ const formatMonthDisplay = (m: string): string => {
 // Pagination Setup
 const totalSummariesCount = computed(() => clientSummaries.value.length);
 const { currentPage, itemsPerPage, totalPages, paginateList } = usePagination("statements_summary", {
-  defaultPerPage: 10,
+  defaultPerPage: 15,
   totalItems: totalSummariesCount
 });
 
@@ -277,14 +277,7 @@ onMounted(() => {
         <h4 class="text-white fw-bold mb-0">Clients Purchase &amp; Submission Summary</h4>
       </div>
 
-      <div class="d-flex align-items-center gap-2">
-        <router-link
-          to="/admin/statements"
-          class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2 px-3 text-decoration-none"
-        >
-          <i class="bi bi-arrow-left"></i> Client Statement
-        </router-link>
-      </div>
+
     </div>
 
     <!-- Toolbar / Filter Bar with Action Buttons inline -->
@@ -487,7 +480,7 @@ onMounted(() => {
           class="form-select form-select-sm bg-dark border-secondary text-white ms-2"
           style="width: 80px;"
         >
-          <option :value="10">10</option>
+          <option :value="15">15</option>
           <option :value="25">25</option>
           <option :value="50">50</option>
           <option :value="100">100</option>
