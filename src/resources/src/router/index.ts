@@ -172,6 +172,12 @@ export const routes = [
         meta: { title: "Statements", permission: ["statements.view", "reports.view", "purchases.view"] }
       },
       {
+        path: "admin/statements/summary",
+        name: "statements-summary",
+        component: () => import("@/pages/admin/StatementsSummary.vue"),
+        meta: { title: "Statement Summary", permission: ["statements.view", "reports.view", "purchases.view"] }
+      },
+      {
         path: "admin/payouts",
         name: "payouts",
         component: () => import("@/pages/admin/Payouts.vue"),
