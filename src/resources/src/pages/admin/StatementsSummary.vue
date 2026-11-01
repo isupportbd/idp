@@ -428,7 +428,7 @@ onMounted(() => {
               <td class="text-center text-light small fw-medium">
                 {{ cs.activityMonths ?? cs.rows.filter((r) => (r.totalQty > 0 || r.beCount > 0)).length }} Months
               </td>
-              <td class="text-end fw-bold text-white">
+              <td class="text-end text-light small fw-medium">
                 {{ formatQty(cs.totalQty) }}
               </td>
               <td class="text-center text-light small fw-medium">
