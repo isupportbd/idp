@@ -284,7 +284,7 @@ onMounted(() => {
     <div class="filter-panel p-2 px-3 rounded-3 mb-4">
       <div class="d-flex align-items-center flex-wrap gap-2">
         <!-- 1. From Month Navigator -->
-        <div style="width: 150px; flex-shrink: 0;">
+        <div style="width: 175px; flex-shrink: 0;">
           <MonthNavigator v-model="fromMonth" />
         </div>
 
@@ -294,7 +294,7 @@ onMounted(() => {
         </div>
 
         <!-- 3. To Month Navigator -->
-        <div style="width: 150px; flex-shrink: 0;">
+        <div style="width: 175px; flex-shrink: 0;">
           <MonthNavigator v-model="toMonth" />
         </div>
 

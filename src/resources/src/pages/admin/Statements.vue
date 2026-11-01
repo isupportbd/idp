@@ -298,7 +298,7 @@ onMounted(() => {
         </div>
 
         <!-- 2. From Month Navigator -->
-        <div style="width: 155px; flex-shrink: 0;">
+        <div style="width: 175px; flex-shrink: 0;">
           <MonthNavigator v-model="fromMonth" />
         </div>
 
@@ -308,7 +308,7 @@ onMounted(() => {
         </div>
 
         <!-- 4. To Month Navigator -->
-        <div style="width: 155px; flex-shrink: 0;">
+        <div style="width: 175px; flex-shrink: 0;">
           <MonthNavigator v-model="toMonth" />
         </div>
 
