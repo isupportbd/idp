@@ -39,6 +39,15 @@ onMounted(() => {
   loadGlobalUnits();
 });
 
+const formatBin = (raw?: string): string => {
+  if (!raw) return "";
+  const digits = String(raw).replace(/\D/g, "");
+  if (digits.length >= 13) {
+    return `${digits.slice(0, 9)}-${digits.slice(9, 13)}`;
+  }
+  return String(raw).trim();
+};
+
 // Top Upload Bar State
 const selectedFile = ref<File | null>(null);
 const fileName = ref("");
@@ -191,7 +200,10 @@ const processFile = async (silent: boolean | Event = false) => {
       }));
       showMissingItemsModal.value = true;
     } else if (data.requiresClientMapping) {
-      missingClients.value = data.missingClients || [];
+      missingClients.value = (data.missingClients || []).map((c: any) => ({
+        ...c,
+        bin: formatBin(c.bin)
+      }));
       showMissingClientsModal.value = true;
     } else {
       toast.error(data.message || "Failed to process file.");
@@ -205,7 +217,10 @@ const processFile = async (silent: boolean | Event = false) => {
       }));
       showMissingItemsModal.value = true;
     } else if (data?.requiresClientMapping) {
-      missingClients.value = data.missingClients || [];
+      missingClients.value = (data.missingClients || []).map((c: any) => ({
+        ...c,
+        bin: formatBin(c.bin)
+      }));
       showMissingClientsModal.value = true;
     } else {
       toast.error(data?.message || error.message || "An error occurred during file processing.");
@@ -309,7 +324,13 @@ const saveMissingClients = async () => {
 
   isSaving.value = true;
   try {
-    const res = await axios.post("/api/clients/bulk", { clients: missingClients.value });
+    const clientsPayload = missingClients.value.map((c) => ({
+      ...c,
+      bin: formatBin(c.bin),
+      binNumber: formatBin(c.bin),
+      companyName: c.name
+    }));
+    const res = await axios.post("/api/clients/bulk", { clients: clientsPayload });
     if (res.data?.success || res.status === 200) {
       toast.success(res.data?.message || "Missing clients registered successfully!");
       showMissingClientsModal.value = false;
@@ -833,7 +854,7 @@ const resetUpload = () => {
                   <div class="col-md-4">
                     <label class="form-label small text-muted">BIN</label>
                     <div class="form-control form-control-sm idp-input bg-dark text-white font-monospace">
-                      {{ client.bin }}
+                      {{ formatBin(client.bin) }}
                     </div>
                   </div>
                   <div class="col-md-5">

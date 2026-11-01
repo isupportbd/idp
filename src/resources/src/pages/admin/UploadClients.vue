@@ -22,6 +22,15 @@ const searchQuery = ref("");
 const currentPage = ref(1);
 const pageSize = ref(15);
 
+const formatBinNumber = (raw?: string): string => {
+  if (!raw) return "";
+  const digits = String(raw).replace(/\D/g, "");
+  if (digits.length >= 13) {
+    return `${digits.slice(0, 9)}-${digits.slice(9, 13)}`;
+  }
+  return String(raw).trim();
+};
+
 // ── Sample Template Download ─────────────────────────────────
 const downloadSampleTemplate = async () => {
   const sampleData = [
@@ -184,7 +193,7 @@ const parseFile = (file: File) => {
         return {
           companyName: getVal("company", "organization", "clientname", "name"),
           proprietorName: getVal("proprietor", "owner", "director", "contactperson"),
-          binNumber: getVal("binnumber", "bin", "vatreg"),
+          binNumber: formatBinNumber(getVal("binnumber", "bin", "vatreg")),
           tinNumber: getVal("tinnumber", "tin"),
           tradeLicenseNo: getVal("tradelicense", "trade", "licenseno", "license"),
           address: getVal("fullofficeaddress", "officeaddress", "address", "location"),

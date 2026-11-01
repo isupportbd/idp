@@ -63,6 +63,15 @@ function formatStandardHsCode(code: string | null | undefined): string {
   return clean;
 }
 
+function formatStandardBin(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const digits = String(raw).replace(/\D/g, "");
+  if (digits.length >= 13) {
+    return `${digits.slice(0, 9)}-${digits.slice(9, 13)}`;
+  }
+  return String(raw).trim();
+}
+
 const DEFAULT_SYSTEM_COLUMN_MAPPINGS = [
   { dbColumn: "office", label: "office", excelHeader: "Office", isCalculated: false, isFromDb: false, isRegexExtracted: false },
   { dbColumn: "be_no", label: "be_no", excelHeader: "BE_NO", isCalculated: false, isFromDb: false, isRegexExtracted: false },
@@ -242,6 +251,26 @@ export const processUpload: Handler = async (c: any) => {
         });
         if (descKey && row[descKey] !== undefined && row[descKey] !== null && String(row[descKey]).trim() !== "") {
           mappedRow.itemName = String(row[descKey]).trim();
+        }
+      }
+
+      // Auto-extract client/importer name from Excel columns (e.g. "Importer's Name", "Importer Name", "Client Name")
+      if (!mappedRow.clientName || String(mappedRow.clientName).trim() === "") {
+        const importerKey = rowKeys.find((k) => {
+          const cleanK = k.trim().toLowerCase().replace(/[\s\.\_\-\/'"`]+/g, "");
+          return (
+            cleanK.includes("importername") ||
+            cleanK.includes("importersname") ||
+            cleanK.includes("clientname") ||
+            cleanK.includes("companyname") ||
+            cleanK.includes("buyername") ||
+            cleanK.includes("organizationname") ||
+            cleanK === "importer" ||
+            cleanK === "client"
+          );
+        });
+        if (importerKey && row[importerKey] !== undefined && row[importerKey] !== null && String(row[importerKey]).trim() !== "") {
+          mappedRow.clientName = String(row[importerKey]).trim();
         }
       }
 
@@ -432,12 +461,15 @@ export const processUpload: Handler = async (c: any) => {
         row.clientId = matchedClient.id;
         row.clientName = matchedClient.companyName;
         if (matchedClient.binNumber) {
-          row.bin = matchedClient.binNumber;
+          row.bin = formatStandardBin(matchedClient.binNumber);
         }
       } else if (row.bin && String(row.bin).trim()) {
+        const stdBin = formatStandardBin(row.bin);
+        row.bin = stdBin;
         const cleanDigits = String(row.bin).trim().replace(/[^0-9]/g, "");
-        if (!unmappedBins.has(cleanDigits || String(row.bin).trim())) {
-          unmappedBins.set(cleanDigits || String(row.bin).trim(), row.clientName || "Unknown Client");
+        const mapKey = stdBin || cleanDigits || String(row.bin).trim();
+        if (!unmappedBins.has(mapKey)) {
+          unmappedBins.set(mapKey, row.clientName || "Unknown Client");
         }
       }
     }
@@ -653,17 +685,19 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
         clientId = cachedClient.id;
       } else {
         // Create new client for tenant
+        const formattedNewBin = formatStandardBin(bin);
         const [newClient] = await db
           .insert(clients)
           .values({
             companyName: mappedRow.clientName || "Unknown Client",
-            binNumber: bin || null,
+            binNumber: formattedNewBin || null,
             createdBy: tenantAdminId,
             isActive: true
           })
           .returning();
         clientId = newClient.id;
         if (bin) clientByBin.set(bin, newClient);
+        if (formattedNewBin) clientByBin.set(formattedNewBin, newClient);
         if (cleanBinDigits) clientByBin.set(cleanBinDigits, newClient);
       }
     }

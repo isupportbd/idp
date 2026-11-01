@@ -959,6 +959,15 @@ export const listAssignableUsers: Handler = async (c: any) => {
   }
 };
 
+function formatStandardBin(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const digits = String(raw).replace(/\D/g, "");
+  if (digits.length >= 13) {
+    return `${digits.slice(0, 9)}-${digits.slice(9, 13)}`;
+  }
+  return String(raw).trim() || null;
+}
+
 // ── 12. BULK CREATE CLIENTS ──────────────────────────────────────────
 
 export const bulkCreateClients: Handler = async (c: any) => {
@@ -1018,6 +1027,32 @@ export const bulkCreateClients: Handler = async (c: any) => {
     const allTypes = await db.select().from(customerTypes);
     const allRefs = await db.select().from(clientReferences);
 
+    // Existing client lookup: fetch existing BINs & company names for this tenant to strictly skip duplicates
+    const existingClientRows = await db
+      .select({
+        id: clients.id,
+        binNumber: clients.binNumber,
+        companyName: clients.companyName
+      })
+      .from(clients)
+      .where(
+        isSuperAdmin
+          ? undefined
+          : or(
+              eq(clients.createdBy, tenantAdminId),
+              sql`${clients.createdBy} IS NULL`
+            )
+      );
+
+    const existingBinSet = new Set<string>();
+    for (const cl of existingClientRows) {
+      if (cl.binNumber) {
+        const clean = cl.binNumber.replace(/\D/g, "");
+        if (clean) existingBinSet.add(clean);
+      }
+    }
+
+    const seenBatchBinSet = new Set<string>();
     const toInsert: any[] = [];
     let skippedCount = 0;
 
@@ -1026,6 +1061,20 @@ export const bulkCreateClients: Handler = async (c: any) => {
       if (!companyName) {
         skippedCount++;
         continue;
+      }
+
+      // Format and validate BIN
+      const rawBin = item.binNumber?.trim() || item.bin?.trim() || null;
+      const formattedBin = formatStandardBin(rawBin);
+      const cleanBinDigits = formattedBin ? formattedBin.replace(/\D/g, "") : "";
+
+      // Strict duplicate prevention: if this BIN already exists in database or earlier in this upload, SKIP IT
+      if (cleanBinDigits) {
+        if (existingBinSet.has(cleanBinDigits) || seenBatchBinSet.has(cleanBinDigits)) {
+          skippedCount++;
+          continue;
+        }
+        seenBatchBinSet.add(cleanBinDigits);
       }
 
       // Customer Type Matching
@@ -1091,7 +1140,7 @@ export const bulkCreateClients: Handler = async (c: any) => {
         alternativeMobile: item.alternativeMobile?.trim() || null,
         email: item.email?.trim() || null,
         address: item.address?.trim() || null,
-        binNumber: item.binNumber?.trim() || item.bin?.trim() || null,
+        binNumber: formattedBin,
         tinNumber: item.tinNumber?.trim() || item.tin?.trim() || null,
         tradeLicenseNo: item.tradeLicenseNo?.trim() || null,
         customerTypeId: resolvedTypeId,
