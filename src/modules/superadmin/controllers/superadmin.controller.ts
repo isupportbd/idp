@@ -2810,8 +2810,14 @@ export async function restoreDatabaseBackup(c: AppContext) {
 
     // Execute restore inside transaction
     await db.transaction(async (tx) => {
+      // Temporarily disable foreign key constraint and trigger checks during dump restore
+      await tx.execute(sql.raw("SET session_replication_role = 'replica';"));
+
       // Execute the uploaded SQL backup (multi-statement via unsafe)
       await tx.execute(sql.raw(cleanedSql));
+
+      // Re-enable foreign key constraints and normal trigger checks
+      await tx.execute(sql.raw("SET session_replication_role = 'origin';"));
 
       // Synchronize PostgreSQL primary key sequences safely (handling empty tables with is_called = false)
       await tx.execute(sql.raw(`
