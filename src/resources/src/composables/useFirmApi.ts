@@ -43,8 +43,8 @@ export interface CompanySettings {
   autoDueReminder?: boolean;
   dueReminderDays?: number;
   dueReminderMinAmount?: number;
-  services?: any[];
-  expenseHeads?: any[];
+  services?: Array<{ id?: number; itemName?: string; [key: string]: unknown }>;
+  expenseHeads?: ExpenseHead[];
 }
 
 export interface BankAccount {

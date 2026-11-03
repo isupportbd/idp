@@ -1,3 +1,4 @@
+import type { Context } from "hono";
 import { eq } from "drizzle-orm";
 import { db } from "@/framework/facade.js";
 import { users } from "@/modules/auth/database/models/user.js";
@@ -10,8 +11,12 @@ export class UnauthenticatedTenantError extends Error {
   }
 }
 
+export type UserRecord = typeof users.$inferSelect & {
+  role?: { id: number; name: string } | null;
+};
+
 export interface TenantContext {
-  currentUser: any;
+  currentUser: UserRecord;
   isSuperAdmin: boolean;
   isTenantAdmin: boolean;
   tenantAdminId: number | null;
@@ -22,7 +27,7 @@ export interface TenantContext {
  * Resolves the authenticated user and tenant context from Hono Context.
  * Fails closed (throws UnauthenticatedTenantError) when auth is missing or invalid.
  */
-export async function resolveTenantContext(c: any): Promise<TenantContext> {
+export async function resolveTenantContext(c: Context | any): Promise<TenantContext> {
   const auth = c.get("auth") || c.get("user");
   if (!auth?.id) {
     throw new UnauthenticatedTenantError();

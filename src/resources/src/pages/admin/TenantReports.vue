@@ -8,6 +8,10 @@ import { can, canAccessModule } from "@/composables/useAuth";
 import { usePulseListener } from "@/composables/usePulseListener";
 import { useExcelExport } from "@/composables/useExcelExport";
 import { pulse } from "@/plugins/pulse";
+import PurchaseSummarySection from "./reports/PurchaseSummarySection.vue";
+import SalesSummarySection from "./reports/SalesSummarySection.vue";
+import MushakReturnSection from "./reports/MushakReturnSection.vue";
+import BalanceStatementSection from "./reports/BalanceStatementSection.vue";
 
 // Types
 interface Client {
@@ -1535,592 +1539,64 @@ onMounted(async () => {
 
       <div v-else>
         <!-- ==================== TAB 1: PURCHASE REPORT ==================== -->
-        <div v-if="currentTab === 'purchases'" class="space-y-4">
-          <!-- Summary Table -->
-          <div v-if="purchases.length > 0" class="idp-card p-4 mb-4">
-            <h5 class="text-white fw-bold mb-3 d-flex align-items-center gap-2">
-              <i class="bi bi-pie-chart text-primary"></i> Overall Purchase Summary
-            </h5>
-            <div class="idp-table-wrapper">
-              <table class="table idp-table mb-0 align-middle text-nowrap" style="font-size: 1.02rem;">
-                <thead>
-                  <tr style="color: #94a3b8 !important; border-bottom: 1px solid #334155;">
-                    <th class="text-center" style="width: 45px; color: #94a3b8; font-weight: 600;">#</th>
-                    <th class="text-start" style="color: #94a3b8; font-weight: 600;">Item & HS Code</th>
-                    <th class="text-end" style="color: #94a3b8; font-weight: 600;">Total Qty</th>
-                    <th class="text-end" style="color: #94a3b8; font-weight: 600;">Ass. Value</th>
-                    <th class="text-end" style="color: #38bdf8; font-weight: 600;">Base Value</th>
-                    <th class="text-end" style="color: #94a3b8; font-weight: 600;">SD</th>
-                    <th class="text-end" style="color: #94a3b8; font-weight: 600;">VAT</th>
-                    <th class="text-end" style="color: #94a3b8; font-weight: 600;">AT</th>
-                    <th class="text-end" style="color: #94a3b8; font-weight: 600;">Purchase Rate</th>
-                    <th class="text-end" style="color: #f59e0b; font-weight: 700;">Max Sales Rate</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(s, idx) in getPurchaseSummary(purchases)" :key="idx">
-                    <td class="text-center font-monospace" style="color: #64748b;">{{ idx + 1 }}</td>
-                    <td class="text-start">
-                      <div class="fw-medium" style="font-size: 0.82rem; color: #cbd5e1;">{{ s.itemName }}</div>
-                      <div v-if="s.hsCode" class="font-monospace fw-semibold" style="font-size: 0.9rem; color: #94a3b8;">[{{ s.hsCode }}]</div>
-                    </td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(s.netQty * currentConvFactor) }}</td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(s.assValue) }}</td>
-                    <td class="text-end font-monospace fw-medium" style="color: #38bdf8;">{{ fmt(s.baseValueOfVat) }}</td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(s.sd) }}</td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(s.vat) }}</td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(s.at) }}</td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(s.purchaseRate / currentConvFactor) }}</td>
-                    <td class="text-end font-monospace fw-bold" style="font-size: 1.15rem; color: #f59e0b;">{{ fmt(s.maxSalesRate / currentConvFactor) }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Note 13 Table (Zero VAT / Exempted) -->
-          <div v-if="vatNote13.length > 0" class="idp-card p-4 mb-4">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-              <h5 class="text-info fw-bold mb-0">
-                Purchase Details: Note 13 (Exempted / Zero VAT)
-              </h5>
-              <span class="badge-record-pill pill-primary">
-                {{ vatNote13.length }} Records
-              </span>
-            </div>
-            <div class="idp-table-wrapper">
-              <table class="table idp-table mb-0 align-middle text-nowrap" style="font-size: 0.98rem;">
-                <thead>
-                  <tr style="color: #94a3b8 !important; border-bottom: 1px solid #334155;">
-                    <th class="text-center" style="width: 45px; color: #94a3b8;">#</th>
-                    <th class="text-start" style="color: #94a3b8;">Item</th>
-                    <th class="text-end" style="color: #94a3b8;">Total Qty</th>
-                    <th class="text-start" style="color: #94a3b8;">BE No</th>
-                    <th class="text-start" style="color: #94a3b8;">BE Date</th>
-                    <th class="text-center" style="color: #94a3b8;">Station</th>
-                    <th class="text-end" style="color: #94a3b8;">Ass. Value</th>
-                    <th class="text-end" style="color: #38bdf8;">Base Value</th>
-                    <th class="text-end" style="color: #94a3b8;">SD</th>
-                    <th class="text-end" style="color: #94a3b8;">VAT</th>
-                    <th class="text-end" style="color: #94a3b8;">AT</th>
-                    <th class="text-center" style="width: 45px; color: #94a3b8;">Edit</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(p, idx) in vatNote13" :key="p.id">
-                    <td class="text-center font-monospace" style="color: #64748b;">{{ idx + 1 }}</td>
-                    <td class="text-start">
-                      <div class="fw-medium" style="font-size: 0.82rem; color: #cbd5e1;">{{ p.itemName || '-' }}</div>
-                      <div v-if="p.hsCode" class="font-monospace fw-semibold" style="font-size: 0.9rem; color: #94a3b8;">[{{ p.hsCode }}]</div>
-                    </td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(p.totalQty * currentConvFactor) }}</td>
-                    <td class="text-start font-monospace fw-medium" style="color: #7da0c4;">{{ p.beNo || '-' }}</td>
-                    <td class="text-start font-monospace" style="color: #64748b;">{{ formatBeDate(p.beDate) }}</td>
-                    <td class="text-center" style="color: #64748b;">{{ p.office || '-' }}</td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(p.assValue) }}</td>
-                    <td class="text-end font-monospace fw-medium" style="color: #38bdf8;">{{ fmt(p.baseValueOfVat) }}</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">{{ fmt(p.sd) }}</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">{{ fmt(p.vat) }}</td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(p.at) }}</td>
-                    <td class="text-center">
-                      <button class="btn btn-sm btn-link text-muted p-0 hover-white" title="Change Month" @click="openChangeMonthModal(p)">
-                        <i class="bi bi-pencil-square"></i>
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Note 15 Table (Rebateable) -->
-          <div v-if="vatNote15.length > 0" class="idp-card p-4 mb-4">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-              <h5 class="text-success fw-bold mb-0">
-                Purchase Details: Note 15 (Rebateable 15%)
-              </h5>
-              <span class="badge-record-pill pill-success">
-                {{ vatNote15.length }} Records
-              </span>
-            </div>
-            <div class="idp-table-wrapper">
-              <table class="table idp-table mb-0 align-middle text-nowrap" style="font-size: 0.98rem;">
-                <thead>
-                  <tr style="color: #94a3b8 !important; border-bottom: 1px solid #334155;">
-                    <th class="text-center" style="width: 45px; color: #94a3b8;">#</th>
-                    <th class="text-start" style="color: #94a3b8;">Item</th>
-                    <th class="text-end" style="color: #94a3b8;">Total Qty</th>
-                    <th class="text-start" style="color: #94a3b8;">BE No</th>
-                    <th class="text-start" style="color: #94a3b8;">BE Date</th>
-                    <th class="text-center" style="color: #94a3b8;">Station</th>
-                    <th class="text-end" style="color: #94a3b8;">Ass. Value</th>
-                    <th class="text-end" style="color: #38bdf8;">Base Value</th>
-                    <th class="text-end" style="color: #94a3b8;">SD</th>
-                    <th class="text-end" style="color: #94a3b8;">VAT</th>
-                    <th class="text-end" style="color: #94a3b8;">AT</th>
-                    <th class="text-center" style="width: 45px; color: #94a3b8;">Edit</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(p, idx) in vatNote15" :key="p.id">
-                    <td class="text-center font-monospace" style="color: #64748b;">{{ idx + 1 }}</td>
-                    <td class="text-start">
-                      <div class="fw-medium" style="font-size: 0.82rem; color: #cbd5e1;">{{ p.itemName || '-' }}</div>
-                      <div v-if="p.hsCode" class="font-monospace fw-semibold" style="font-size: 0.9rem; color: #94a3b8;">[{{ p.hsCode }}]</div>
-                    </td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(p.totalQty * currentConvFactor) }}</td>
-                    <td class="text-start font-monospace fw-medium" style="color: #7da0c4;">{{ p.beNo || '-' }}</td>
-                    <td class="text-start font-monospace" style="color: #64748b;">{{ formatBeDate(p.beDate) }}</td>
-                    <td class="text-center" style="color: #64748b;">{{ p.office || '-' }}</td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(p.assValue) }}</td>
-                    <td class="text-end font-monospace fw-medium" style="color: #38bdf8;">{{ fmt(p.baseValueOfVat) }}</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">{{ fmt(p.sd) }}</td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(p.vat) }}</td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(p.at) }}</td>
-                    <td class="text-center">
-                      <button class="btn btn-sm btn-link text-muted p-0 hover-white" title="Change Month" @click="openChangeMonthModal(p)">
-                        <i class="bi bi-pencil-square"></i>
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Note 22 Table (Non-Rebateable) -->
-          <div v-if="vatNote22.length > 0" class="idp-card p-4 mb-4">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-              <h5 class="text-warning fw-bold mb-0">
-                Purchase Details: Note 22 (Non-Rebateable)
-              </h5>
-              <span class="badge-record-pill pill-warning">
-                {{ vatNote22.length }} Records
-              </span>
-            </div>
-            <div class="idp-table-wrapper">
-              <table class="table idp-table mb-0 align-middle text-nowrap" style="font-size: 0.98rem;">
-                <thead>
-                  <tr style="color: #94a3b8 !important; border-bottom: 1px solid #334155;">
-                    <th class="text-center" style="width: 45px; color: #94a3b8;">#</th>
-                    <th class="text-start" style="color: #94a3b8;">Item</th>
-                    <th class="text-end" style="color: #94a3b8;">Total Qty</th>
-                    <th class="text-start" style="color: #94a3b8;">BE No</th>
-                    <th class="text-start" style="color: #94a3b8;">BE Date</th>
-                    <th class="text-center" style="color: #94a3b8;">Station</th>
-                    <th class="text-end" style="color: #94a3b8;">Ass. Value</th>
-                    <th class="text-end" style="color: #38bdf8;">Base Value</th>
-                    <th class="text-end" style="color: #94a3b8;">SD</th>
-                    <th class="text-end" style="color: #94a3b8;">VAT</th>
-                    <th class="text-end" style="color: #94a3b8;">AT</th>
-                    <th class="text-center" style="width: 45px; color: #94a3b8;">Edit</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(p, idx) in vatNote22" :key="p.id">
-                    <td class="text-center font-monospace" style="color: #64748b;">{{ idx + 1 }}</td>
-                    <td class="text-start">
-                      <div class="fw-medium" style="font-size: 0.82rem; color: #cbd5e1;">{{ p.itemName || '-' }}</div>
-                      <div v-if="p.hsCode" class="font-monospace fw-semibold" style="font-size: 0.9rem; color: #94a3b8;">[{{ p.hsCode }}]</div>
-                    </td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(p.totalQty * currentConvFactor) }}</td>
-                    <td class="text-start font-monospace fw-medium" style="color: #7da0c4;">{{ p.beNo || '-' }}</td>
-                    <td class="text-start font-monospace" style="color: #64748b;">{{ formatBeDate(p.beDate) }}</td>
-                    <td class="text-center" style="color: #64748b;">{{ p.office || '-' }}</td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(p.assValue) }}</td>
-                    <td class="text-end font-monospace fw-medium" style="color: #38bdf8;">{{ fmt(p.baseValueOfVat) }}</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">{{ fmt(p.sd) }}</td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(p.vat) }}</td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(p.at) }}</td>
-                    <td class="text-center">
-                      <button class="btn btn-sm btn-link text-muted p-0 hover-white" title="Change Month" @click="openChangeMonthModal(p)">
-                        <i class="bi bi-pencil-square"></i>
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Empty Purchases State -->
-          <div v-if="purchases.length === 0" class="idp-card p-5 text-center text-muted">
-            No purchase records found for this period.
-          </div>
-        </div>
+        <PurchaseSummarySection
+          v-if="currentTab === 'purchases'"
+          :purchases="purchases"
+          :vat-note13="vatNote13"
+          :vat-note15="vatNote15"
+          :vat-note22="vatNote22"
+          :current-conv-factor="currentConvFactor"
+          :get-purchase-summary="getPurchaseSummary"
+          :fmt="fmt"
+          :format-be-date="formatBeDate"
+          @open-change-month-modal="openChangeMonthModal"
+        />
 
         <!-- ==================== TAB 2: SALES REPORT ==================== -->
-        <div v-else-if="currentTab === 'sales'" class="space-y-4">
-          <!-- Missing Rates Warning -->
-          <div v-if="hasMissingRates" class="alert alert-warning d-flex align-items-center gap-2 mb-3">
-            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
-            <div>
-              <strong>Warning:</strong> Some items do not have an active Sales Rate configured. Please configure them in the <strong>Sales Rates</strong> tab.
-            </div>
-          </div>
-
-          <!-- Grouped Sales Tables -->
-          <div v-for="(items, noteKey) in groupedSales" :key="noteKey" class="idp-card p-4 mb-4">
-            <h5 class="fw-bold mb-3 d-flex align-items-center justify-content-between">
-              <span class="d-flex align-items-center gap-2" :class="noteKey === '4' ? 'text-info' : noteKey === '3' ? 'text-warning' : 'text-success'">
-                <i class="bi" :class="noteKey === '4' ? 'bi-shield-check' : noteKey === '3' ? 'bi-slash-circle' : 'bi-bag-check-fill'"></i>
-                <span>Sales Summary: (Note {{ noteKey }})</span>
-              </span>
-              <span class="badge-record-pill" :class="noteKey === '4' ? 'pill-primary' : noteKey === '3' ? 'pill-warning' : 'pill-success'">
-                {{ items.length }} Items
-              </span>
-            </h5>
-            <div class="idp-table-wrapper" style="max-height: 380px; overflow: auto;">
-              <table class="table idp-table mb-0 align-middle text-nowrap" style="font-size: 0.98rem;">
-                <thead>
-                  <tr style="color: #94a3b8 !important; border-bottom: 1px solid #334155;">
-                    <th class="text-center" style="width: 45px; color: #94a3b8;">#</th>
-                    <th class="text-start" style="color: #94a3b8;">Item</th>
-                    <th class="text-end" style="color: #94a3b8;">Total Qty</th>
-                    <th class="text-end" style="color: #94a3b8;">Rate</th>
-                    <th class="text-end" style="color: #94a3b8;">Unit Value</th>
-                    <th class="text-end" style="color: #34d399; font-weight: 600;">Total Value</th>
-                    <th class="text-end" style="color: #94a3b8; font-weight: 600;">VAT</th>
-                    <th class="text-end" style="color: #94a3b8; font-weight: 600;">Addition %</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(item, idx) in items" :key="idx">
-                    <td class="text-center font-monospace" style="color: #64748b;">{{ idx + 1 }}</td>
-                    <td class="text-start">
-                      <div class="fw-medium" style="font-size: 0.82rem; color: #cbd5e1;">{{ item.itemName }}</div>
-                      <div v-if="item.hsCode" class="font-monospace fw-semibold" style="font-size: 0.9rem; color: #94a3b8;">[{{ item.hsCode || '-' }}]</div>
-                    </td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(item.totalQty * currentConvFactor) }}</td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt(item.rate / currentConvFactor) }}</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">{{ fmt(item.unitValue / currentConvFactor) }}</td>
-                    <td class="text-end font-monospace fw-medium" style="color: #34d399;">{{ fmt(item.totalValue) }}</td>
-                    <td class="text-end font-monospace" style="color: #94a3b8;">{{ fmt((item.totalValue * item.vatRate) / 100) }}</td>
-                    <td class="text-end font-monospace" style="color: #f59e0b;">{{ fmt(item.addition) }}%</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div v-if="salesReport.length === 0" class="idp-card p-5 text-center text-muted">
-            No sales data calculated for this period.
-          </div>
-        </div>
+        <SalesSummarySection
+          v-else-if="currentTab === 'sales'"
+          :has-missing-rates="hasMissingRates"
+          :grouped-sales="groupedSales"
+          :sales-report="salesReport"
+          :current-conv-factor="currentConvFactor"
+          :fmt="fmt"
+        />
 
         <!-- ==================== TAB 3: MUSHAK 9.1 REPORT ==================== -->
-        <div v-else-if="currentTab === 'return'" class="space-y-4">
-          <!-- Return Form Header Controls -->
-          <div class="idp-card px-4 py-3 mb-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
-            <div>
-              <h5 class="text-white fw-bold mb-1 d-flex align-items-center gap-2">
-                <i class="bi bi-file-earmark-text text-primary"></i>
-                NBR Mushak-9.1 Value Added Tax Return
-              </h5>
-              <div class="text-muted small d-flex flex-wrap align-items-center gap-2">
-                <span>Tax Period: <strong class="text-warning">{{ formatMonth(selectedMonthYear) }}</strong></span>
-                <span class="text-secondary">|</span>
-                <span>BIN: <strong class="text-light font-monospace">{{ selectedClient.bin }}</strong></span>
-                <span class="text-secondary">|</span>
-
-                <!-- Submission ID Inline Link -->
-                <span class="d-inline-flex align-items-center gap-1">
-                  <span>Sub ID:</span>
-                  <template v-if="submissionId">
-                    <span class="text-emerald-400 font-monospace fw-bold">{{ submissionId }}</span>
-                    <button
-                      type="button"
-                      class="btn btn-link btn-sm text-muted p-0 hover-white"
-                      title="Edit Submission ID"
-                      @click="openSubIdModal"
-                    >
-                      <i class="bi bi-pencil-square ms-0.5"></i>
-                    </button>
-                  </template>
-                  <template v-else>
-                    <a
-                      href="javascript:void(0)"
-                      class="text-info text-decoration-none fw-semibold"
-                      @click="openSubIdModal"
-                    >
-                      Enter Submission ID
-                    </a>
-                  </template>
-                </span>
-
-                <!-- Bill No / Create Bill Inline Link: Only visible if user plan has billing permission -->
-                <template v-if="canAccessModule('billing')">
-                  <span class="text-secondary">|</span>
-                  <span class="d-inline-flex align-items-center gap-1">
-                    <span>Bill:</span>
-                    <template v-if="currentMonthBill">
-                      <router-link
-                        to="/admin/billing"
-                        target="_blank"
-                        class="text-warning font-monospace fw-bold text-decoration-none"
-                        title="View Bill in Billing Module (New Tab)"
-                      >
-                        {{ currentMonthBill.billNo }}
-                      </router-link>
-                    </template>
-                    <!-- ONLY show Create Bill if submissionId is present -->
-                    <template v-else-if="submissionId">
-                      <router-link
-                        :to="'/admin/billing/create?clientId=' + selectedClientId + '&month=' + selectedMonthYear"
-                        target="_blank"
-                        class="text-info text-decoration-none fw-semibold"
-                        title="Create Bill for this tax month in New Tab"
-                      >
-                        Create Bill
-                      </router-link>
-                    </template>
-                    <template v-else>
-                      <span class="text-muted small" title="Submission required before creating bill">—</span>
-                    </template>
-                  </span>
-                </template>
-              </div>
-            </div>
-            <div class="form-check form-switch d-flex align-items-center gap-2">
-              <input id="hideEmptySwitch" v-model="hideEmptyNotes" class="form-check-input cursor-pointer m-0" type="checkbox" />
-              <label for="hideEmptySwitch" class="form-check-label text-white small cursor-pointer">
-                Hide Empty Notes
-              </label>
-            </div>
-          </div>
-
-          <!-- PART 3: SUPPLY - OUTPUT TAX -->
-          <div class="idp-card p-4 mb-4">
-            <h5 class="text-emerald-400 fw-bold mb-3 text-center border-bottom border-secondary border-opacity-25 pb-2.5 fs-5">
-              PART - 3: SUPPLY - OUTPUT TAX
-            </h5>
-            <div class="idp-table-wrapper" style="max-height: 440px; overflow: auto;">
-              <table class="table idp-table mushak-table mb-0 align-middle text-nowrap">
-                <thead>
-                  <tr>
-                    <th class="text-start" style="width: 40%;">Nature of Supply</th>
-                    <th class="text-center" style="width: 110px;">Note</th>
-                    <th class="text-end">Value (a)</th>
-                    <th class="text-end">SD (b)</th>
-                    <th class="text-end">VAT (c)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-if="showReturnRow(returnNote3Value)">
-                    <td class="text-start" style="color: #cbd5e1;">Exempted Goods/Service</td>
-                    <td class="text-center font-monospace mushak-note-cell" style="color: #7da0c4;">Note: 3</td>
-                    <td class="text-end font-monospace fw-medium" style="color: #cbd5e1;">{{ fmt(returnNote3Value) }}</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">0.00</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">0.00</td>
-                  </tr>
-                  <tr v-if="showReturnRow(returnNote4.value, returnNote4.sd, returnNote4.vat)">
-                    <td class="text-start" style="color: #cbd5e1;">Standard Rated Goods/Service</td>
-                    <td class="text-center font-monospace mushak-note-cell" style="color: #7da0c4;">Note: 4</td>
-                    <td class="text-end font-monospace fw-medium" style="color: #cbd5e1;">{{ fmt(returnNote4.value) }}</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">{{ fmt(returnNote4.sd) }}</td>
-                    <td class="text-end font-monospace fw-medium" style="color: #6ee7b7;">{{ fmt(returnNote4.vat) }}</td>
-                  </tr>
-                  <tr v-if="showReturnRow(returnNote8.value, returnNote8.sd, returnNote8.vat)">
-                    <td class="text-start" style="color: #cbd5e1;">Retail/Wholesale/Trade Based Supply</td>
-                    <td class="text-center font-monospace mushak-note-cell" style="color: #7da0c4;">Note: 8</td>
-                    <td class="text-end font-monospace fw-medium" style="color: #cbd5e1;">{{ fmt(returnNote8.value) }}</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">{{ fmt(returnNote8.sd) }}</td>
-                    <td class="text-end font-monospace fw-medium" style="color: #6ee7b7;">{{ fmt(returnNote8.vat) }}</td>
-                  </tr>
-                  <tr v-if="showReturnRow(returnNote9.value, returnNote9.sd, returnNote9.vat)" class="fw-bold" style="background: rgba(59, 130, 246, 0.12);">
-                    <td class="text-start" style="color: #93c5fd;">Total Sales Value & Total Payable Taxes</td>
-                    <td class="text-center font-monospace mushak-note-cell" style="color: #f59e0b;">Note: 9</td>
-                    <td class="text-end font-monospace fw-bold" style="color: #93c5fd;">{{ fmt(returnNote9.value) }}</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">{{ fmt(returnNote9.sd) }}</td>
-                    <td class="text-end font-monospace fw-bold" style="color: #6ee7b7;">{{ fmt(returnNote9.vat) }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- PART 4: PURCHASE - INPUT TAX -->
-          <div class="idp-card p-4 mb-4">
-            <h5 class="text-emerald-400 fw-bold mb-3 text-center border-bottom border-secondary border-opacity-25 pb-2.5 fs-5">
-              PART - 4: PURCHASE - INPUT TAX
-            </h5>
-            <div class="idp-table-wrapper" style="max-height: 440px; overflow: auto;">
-              <table class="table idp-table mushak-table mb-0 align-middle text-nowrap">
-                <thead>
-                  <tr style="color: #94a3b8 !important; border-bottom: 1px solid #334155;">
-                    <th class="text-start" style="width: 40%; color: #94a3b8;">Nature of Supply</th>
-                    <th class="text-center" style="width: 110px; color: #94a3b8;">Note</th>
-                    <th class="text-end" style="color: #94a3b8;">Value (a)</th>
-                    <th class="text-end" style="color: #94a3b8;">VAT (b)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-if="showReturnRow(returnNote13Value)">
-                    <td class="text-start" style="color: #cbd5e1;">Exempted Goods/Service (Import)</td>
-                    <td class="text-center font-monospace mushak-note-cell" style="color: #7da0c4;">Note: 13</td>
-                    <td class="text-end font-monospace fw-medium" style="color: #cbd5e1;">{{ fmt(returnNote13Value) }}</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">0.00</td>
-                  </tr>
-                  <tr v-if="showReturnRow(returnNote15.value, returnNote15.vat)">
-                    <td class="text-start" style="color: #cbd5e1;">Standard Rated Goods/Service (Import)</td>
-                    <td class="text-center font-monospace mushak-note-cell" style="color: #7da0c4;">Note: 15</td>
-                    <td class="text-end font-monospace fw-medium" style="color: #cbd5e1;">{{ fmt(returnNote15.value) }}</td>
-                    <td class="text-end font-monospace fw-medium" style="color: #6ee7b7;">{{ fmt(returnNote15.vat) }}</td>
-                  </tr>
-                  <tr v-if="showReturnRow(returnNote22.value)">
-                    <td class="text-start" style="color: #cbd5e1;">Goods/Service Not Admissible for Credit (Import)</td>
-                    <td class="text-center font-monospace mushak-note-cell" style="color: #7da0c4;">Note: 22</td>
-                    <td class="text-end font-monospace fw-medium" style="color: #cbd5e1;">{{ fmt(returnNote22.value) }}</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">0.00</td>
-                  </tr>
-                  <tr v-if="showReturnRow(returnNote23.value, returnNote23.vat)" class="fw-bold" style="background: rgba(59, 130, 246, 0.12);">
-                    <td class="text-start" style="color: #93c5fd;">Total Input Tax Credit</td>
-                    <td class="text-center font-monospace mushak-note-cell" style="color: #f59e0b;">Note: 23</td>
-                    <td class="text-end font-monospace fw-bold" style="color: #93c5fd;">{{ fmt(returnNote23.value) }}</td>
-                    <td class="text-end font-monospace fw-bold" style="color: #6ee7b7;">{{ fmt(returnNote23.vat) }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- PART 5: INCREASING ADJUSTMENTS -->
-          <div class="idp-card p-4 mb-4">
-            <h5 class="text-emerald-400 fw-bold mb-3 text-center border-bottom border-secondary border-opacity-25 pb-2.5 fs-5">
-              PART - 5: INCREASING ADJUSTMENTS
-            </h5>
-            <div class="idp-table-wrapper" style="max-height: 440px; overflow: auto;">
-              <table class="table idp-table mushak-table mb-0 align-middle text-nowrap">
-                <thead>
-                  <tr style="color: #94a3b8 !important; border-bottom: 1px solid #334155;">
-                    <th class="text-start" style="width: 40%; color: #94a3b8;">Nature of Supply</th>
-                    <th class="text-center" style="width: 110px; color: #94a3b8;">Note</th>
-                    <th class="text-end" style="color: #94a3b8;">Value</th>
-                    <th class="text-end" style="color: #94a3b8;">VAT</th>
-                    <th class="text-end" style="color: #94a3b8;">SD</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-if="showReturnRow(returnNote27VAT)">
-                    <td class="text-start" style="color: #cbd5e1;">Any Other Adjustments</td>
-                    <td class="text-center font-monospace mushak-note-cell" style="color: #7da0c4;">Note: 27</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">0.00</td>
-                    <td class="text-end font-monospace fw-medium" style="color: #f59e0b;">{{ fmt(returnNote27VAT) }}</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">0.00</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- PART 6: DECREASING ADJUSTMENTS -->
-          <div class="idp-card p-4 mb-4">
-            <h5 class="text-emerald-400 fw-bold mb-3 text-center border-bottom border-secondary border-opacity-25 pb-2.5 fs-5">
-              PART - 6: DECREASING ADJUSTMENTS
-            </h5>
-            <div class="idp-table-wrapper" style="max-height: 440px; overflow: auto;">
-              <table class="table idp-table mushak-table mb-0 align-middle text-nowrap">
-                <thead>
-                  <tr style="color: #94a3b8 !important; border-bottom: 1px solid #334155;">
-                    <th class="text-start" style="width: 40%; color: #94a3b8;">Nature of Supply</th>
-                    <th class="text-center" style="width: 110px; color: #94a3b8;">Note</th>
-                    <th class="text-end" style="color: #94a3b8;">Value</th>
-                    <th class="text-end" style="color: #94a3b8;">VAT</th>
-                    <th class="text-end" style="color: #94a3b8;">SD</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-if="showReturnRow(returnNote30VAT)">
-                    <td class="text-start" style="color: #cbd5e1;">Advance Tax Paid at Import Stage</td>
-                    <td class="text-center font-monospace mushak-note-cell" style="color: #7da0c4;">Note: 30</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">0.00</td>
-                    <td class="text-end font-monospace fw-medium" style="color: #6ee7b7;">{{ fmt(returnNote30VAT) }}</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">0.00</td>
-                  </tr>
-                  <tr v-if="showReturnRow(returnNote32VAT)">
-                    <td class="text-start" style="color: #cbd5e1;">Any Other Adjustments</td>
-                    <td class="text-center font-monospace mushak-note-cell" style="color: #7da0c4;">Note: 32</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">0.00</td>
-                    <td class="text-end font-monospace fw-medium" style="color: #6ee7b7;">{{ fmt(returnNote32VAT) }}</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">0.00</td>
-                  </tr>
-                  <tr v-if="showReturnRow(returnNote33VAT)" class="fw-bold" style="background: rgba(59, 130, 246, 0.12);">
-                    <td class="text-start" style="color: #93c5fd;">Total Decreasing Adjustment</td>
-                    <td class="text-center font-monospace mushak-note-cell" style="color: #f59e0b;">Note: 33</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">0.00</td>
-                    <td class="text-end font-monospace fw-bold" style="color: #6ee7b7;">{{ fmt(returnNote33VAT) }}</td>
-                    <td class="text-end font-monospace" style="color: #64748b;">0.00</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- PART 7: NET TAX CALCULATION -->
-          <div class="idp-card p-4 mb-4" style="border: 1px solid rgba(217, 70, 239, 0.4); background: rgba(112, 26, 117, 0.08);">
-            <h5 class="text-emerald-400 fw-bold mb-3 text-center border-bottom border-secondary border-opacity-25 pb-2.5 fs-5">
-              PART - 7: NET TAX CALCULATION
-            </h5>
-            <div class="idp-table-wrapper" style="max-height: 440px; overflow: auto;">
-              <table class="table idp-table mushak-table mushak-table-net mb-0 align-middle text-nowrap">
-                <thead>
-                  <tr style="color: #94a3b8 !important;">
-                    <th class="text-start" style="width: 50%; color: #94a3b8;">Nature of Supply</th>
-                    <th class="text-center" style="width: 110px; color: #94a3b8;">Note</th>
-                    <th class="text-end" style="color: #94a3b8;">VAT</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr class="fw-bold" style="background: rgba(217, 70, 239, 0.15);">
-                    <td class="text-start" style="color: #cbd5e1;">Net Payable VAT for the Tax Period</td>
-                    <td class="text-center font-monospace mushak-note-cell" style="color: #f59e0b;">Note: 34</td>
-                    <td class="text-end font-monospace fw-bold fs-4" style="color: #f59e0b;">{{ fmt(returnNote34VAT) }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <MushakReturnSection
+          v-else-if="currentTab === 'return'"
+          v-model:hide-empty-notes="hideEmptyNotes"
+          :selected-client="selectedClient!"
+          :selected-client-id="selectedClientId!"
+          :selected-month-year="selectedMonthYear"
+          :submission-id="submissionId"
+          :current-month-bill="currentMonthBill"
+          :return-note3-value="returnNote3Value"
+          :return-note4="returnNote4"
+          :return-note8="returnNote8"
+          :return-note9="returnNote9"
+          :return-note13-value="returnNote13Value"
+          :return-note15="returnNote15"
+          :return-note22="returnNote22"
+          :return-note23="returnNote23"
+          :return-note27-v-a-t="returnNote27VAT"
+          :return-note30-v-a-t="returnNote30VAT"
+          :return-note32-v-a-t="returnNote32VAT"
+          :return-note33-v-a-t="returnNote33VAT"
+          :return-note34-v-a-t="returnNote34VAT"
+          :format-month="formatMonth"
+          :fmt="fmt"
+          @open-sub-id-modal="openSubIdModal"
+        />
 
         <!-- ==================== TAB 4: STATEMENT REPORT ==================== -->
-        <div v-else-if="currentTab === 'statement'" class="idp-card p-4">
-          <h5 class="text-white fw-bold mb-3 d-flex align-items-center gap-2">
-            <i class="bi bi-clock-history text-primary"></i> Mid-Month Rate Change Statement Breakdown
-          </h5>
-          <div class="idp-table-wrapper" style="max-height: 420px; overflow: auto;">
-            <table class="table idp-table mb-0 align-middle text-nowrap" style="font-size: 0.95rem;">
-              <thead>
-                <tr style="color: #94a3b8 !important; border-bottom: 1px solid #334155;">
-                  <th class="text-center py-2.5 font-semibold" style="color: #94a3b8;">Active Period</th>
-                  <th class="text-start py-2.5 font-semibold" style="color: #94a3b8;">Item</th>
-                  <th class="text-end py-2.5 font-semibold" style="color: #94a3b8;">Qty</th>
-                  <th class="text-end py-2.5 font-semibold" style="color: #94a3b8;">Rate</th>
-                  <th class="text-end py-2.5 font-semibold" style="color: #38bdf8;">Total Price</th>
-                  <th class="text-end py-2.5 font-semibold" style="color: #94a3b8;">Vatable Value</th>
-                  <th class="text-end py-2.5 font-semibold" style="color: #94a3b8;">VAT</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(st, idx) in statementReport" :key="idx">
-                  <td class="text-center font-monospace py-2.5" style="color: #64748b;">
-                    {{ formatDate(st.startDate) }} <span style="color: #475569;">➔</span> {{ formatDate(st.endDate) }}
-                  </td>
-                  <td class="text-start fw-medium py-2.5" style="color: #cbd5e1;">{{ st.itemName }}</td>
-                  <td class="text-end font-monospace py-2.5" style="color: #94a3b8;">{{ fmt(st.qty * currentConvFactor) }}</td>
-                  <td class="text-end font-monospace fw-medium py-2.5" style="color: #94a3b8;">{{ fmt(st.salesRate / currentConvFactor) }}</td>
-                  <td class="text-end font-monospace fw-medium py-2.5" style="color: #38bdf8;">{{ fmt(st.totalSalesValue) }}</td>
-                  <td class="text-end font-monospace py-2.5" style="color: #64748b;">{{ fmt(st.vatableValue) }}</td>
-                  <td class="text-end font-monospace py-2.5" style="color: #94a3b8;">{{ fmt(st.vat) }}</td>
-                </tr>
-                <tr v-if="statementReport.length === 0">
-                  <td colspan="7" class="text-center py-5 text-muted">
-                    No statement records available for this period.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <BalanceStatementSection
+          v-else-if="currentTab === 'statement'"
+          :statement-report="statementReport"
+          :current-conv-factor="currentConvFactor"
+          :format-date="formatDate"
+          :fmt="fmt"
+        />
       </div>
     </div>
 

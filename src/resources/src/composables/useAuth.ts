@@ -35,12 +35,23 @@ export function useAuth() {
   };
 }
 
+export type RoleItem = {
+  id?: string | number;
+  name?: string;
+  title?: string;
+  slug?: string;
+} | string;
+
 export function hasRole(...wanted: string[]): boolean {
-  const subject = userRef.value as any;
+  const subject = userRef.value as (AuthUser & { adminId?: number | null }) | null;
   if (!subject) return false;
 
-  const current = (subject.roles ?? (subject.role ? [subject.role] : []))
-    .map((item: any) => (item.name || item.title || item.slug || (typeof item === 'string' ? item : "")).toLowerCase().trim())
+  const rolesList: RoleItem[] = (subject.roles ?? (subject.role ? [subject.role] : [])) as RoleItem[];
+  const current = rolesList
+    .map((item: RoleItem) => {
+      if (typeof item === "string") return item.toLowerCase().trim();
+      return (item?.name || item?.title || item?.slug || "").toLowerCase().trim();
+    })
     .filter(Boolean);
 
   if (!wanted.length) return current.length > 0;
@@ -50,7 +61,7 @@ export function hasRole(...wanted: string[]): boolean {
 }
 
 export function isTenantAdmin(): boolean {
-  const subject = userRef.value as any;
+  const subject = userRef.value as (AuthUser & { adminId?: number | null }) | null;
   if (!subject) return false;
   if (hasRole("superadmin")) return false;
   const roleName = (typeof subject.role === "object" ? subject.role?.name : subject.role) || "";
