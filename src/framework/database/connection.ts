@@ -89,8 +89,8 @@ export async function initDatabase() {
   }
 
   pool = postgres(databaseConfig.url, {
-    max: 25,
-    idle_timeout: 30,
+    max: 50,
+    idle_timeout: 20,
     connect_timeout: 10,
     max_lifetime: 1800
   });

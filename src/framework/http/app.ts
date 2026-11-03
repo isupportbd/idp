@@ -2,6 +2,7 @@ import { db } from "@/framework/facade.js";
 import { sql } from "drizzle-orm";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { Context } from "hono";
+import { compress } from "hono/compress";
 import { secureHeaders } from "hono/secure-headers";
 import { serveEmojiFavicon } from "stoker/middlewares";
 import { appConfig } from "@/config/index.js";
@@ -61,6 +62,7 @@ export function createHttpApp() {
       }
     })
   );
+  app.use("*", compress());
   app.use("*", sessionMiddleware);
   app.use("*", corsMiddleware);
   app.use("*", loggerMiddleware);

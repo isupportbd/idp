@@ -75,31 +75,41 @@ export async function getTenants(c: AppContext) {
       )
       .orderBy(desc(users.createdAt));
 
-    // Attach client counts and plan details
-    const tenantList = await Promise.all(
-      allUsers.map(async (t) => {
-        const [clientCountResult] = await db
-          .select({ count: sql<number>`count(*)` })
-          .from(clients)
-          .where(eq(clients.createdBy, t.id));
+    // Batch fetch plans and client counts in single aggregated queries to prevent N+1 overhead
+    const allPlans = await db.select().from(plans);
+    const plansMap = new Map<number, typeof allPlans[number]>();
+    for (const p of allPlans) {
+      plansMap.set(p.id, p);
+    }
 
-        let plan = null;
-        if (t.planId) {
-          const [foundPlan] = await db.select().from(plans).where(eq(plans.id, t.planId));
-          plan = foundPlan;
-        }
-
-        return {
-          ...t,
-          clientsCount: Number(clientCountResult?.count || 0),
-          planName: plan?.name || "Standard Firm Plan",
-          planMaxUsers: plan?.maxUsers || 5,
-          planMaxClients: plan?.maxClients || 50,
-          planMaxStorageMB: plan?.maxStorageMB || 1024,
-          planHasAccounts: plan?.hasAccounts ?? false
-        };
+    // Group client counts by createdBy in 1 single query
+    const clientCounts = await db
+      .select({
+        createdBy: clients.createdBy,
+        count: sql<number>`count(*)`
       })
-    );
+      .from(clients)
+      .groupBy(clients.createdBy);
+
+    const clientCountMap = new Map<number, number>();
+    for (const row of clientCounts) {
+      if (row.createdBy !== null) {
+        clientCountMap.set(row.createdBy, Number(row.count || 0));
+      }
+    }
+
+    const tenantList = allUsers.map((t) => {
+      const plan = t.planId ? plansMap.get(t.planId) : null;
+      return {
+        ...t,
+        clientsCount: clientCountMap.get(t.id) || 0,
+        planName: plan?.name || "Standard Firm Plan",
+        planMaxUsers: plan?.maxUsers || 5,
+        planMaxClients: plan?.maxClients || 50,
+        planMaxStorageMB: plan?.maxStorageMB || 1024,
+        planHasAccounts: plan?.hasAccounts ?? false
+      };
+    });
 
     return c.json({ success: true, data: tenantList });
   } catch (error: unknown) {
@@ -132,42 +142,42 @@ export async function getPendingSignups(c: AppContext) {
     const [paymentConfig] = await db.select().from(paymentSettings).limit(1);
     const chargePercent = paymentConfig?.bkashCharge ?? 1.8;
 
-    const enriched = await Promise.all(
-      pendingUsers.map(async (u) => {
-        let plan = null;
-        if (u.planId) {
-          const [foundPlan] = await db.select().from(plans).where(eq(plans.id, u.planId));
-          plan = foundPlan;
-        }
+    const allPlans = await db.select().from(plans);
+    const plansMap = new Map<number, typeof allPlans[number]>();
+    for (const p of allPlans) {
+      plansMap.set(p.id, p);
+    }
 
-        const isYearly = u.billingCycle === "yearly" || (u.trxId
-          ? (u.trxId.toLowerCase().includes("yearly") || u.trxId.toLowerCase().includes("(y)"))
-          : false);
-        const planPrice = isYearly ? (plan?.rateYearly || 15000) : (plan?.rateMonthly || 1500);
-        const grossAmount = u.paidAmount || planPrice;
-        const gatewayCharge = Math.round((grossAmount * chargePercent) / 100);
-        const netAmount = grossAmount - gatewayCharge;
-        const willActivate = netAmount >= planPrice;
-        const shortage = willActivate ? 0 : (planPrice - netAmount);
-        const excessCredit = willActivate ? (netAmount - planPrice) : 0;
+    const enriched = pendingUsers.map((u) => {
+      const plan = u.planId ? plansMap.get(u.planId) : null;
 
-        return {
-          ...u,
-          planName: plan?.name || "Standard Plan",
-          rateMonthly: plan?.rateMonthly || 1500,
-          rateYearly: plan?.rateYearly || 15000,
-          planPrice,
-          grossAmount,
-          chargePercent,
-          gatewayCharge,
-          netAmount,
-          willActivate,
-          shortage,
-          excessCredit,
-          requiredFee: planPrice
-        };
-      })
-    );
+      const isYearly = u.billingCycle === "yearly" || (u.trxId
+        ? (u.trxId.toLowerCase().includes("yearly") || u.trxId.toLowerCase().includes("(y)"))
+        : false);
+      const planPrice = isYearly ? (plan?.rateYearly || 15000) : (plan?.rateMonthly || 1500);
+      const grossAmount = u.paidAmount || planPrice;
+      const gatewayCharge = Math.round((grossAmount * chargePercent) / 100);
+      const netAmount = grossAmount - gatewayCharge;
+      const willActivate = netAmount >= planPrice;
+      const shortage = willActivate ? 0 : (planPrice - netAmount);
+      const excessCredit = willActivate ? (netAmount - planPrice) : 0;
+
+      return {
+        ...u,
+        planName: plan?.name || "Standard Plan",
+        rateMonthly: plan?.rateMonthly || 1500,
+        rateYearly: plan?.rateYearly || 15000,
+        planPrice,
+        grossAmount,
+        chargePercent,
+        gatewayCharge,
+        netAmount,
+        willActivate,
+        shortage,
+        excessCredit,
+        requiredFee: planPrice
+      };
+    });
 
     return c.json({ success: true, data: enriched });
   } catch (error: unknown) {

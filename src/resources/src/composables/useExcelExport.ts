@@ -1,5 +1,3 @@
-import * as XLSX from "xlsx";
-
 export interface ExcelSheetData {
   name: string;
   data: Record<string, unknown>[];
@@ -9,9 +7,11 @@ export interface ExcelSheetData {
 export function useExcelExport() {
   /**
    * Export a single sheet of JSON rows to an XLSX workbook file.
+   * Lazily imports XLSX to keep the initial client bundle lightweight.
    */
-  const exportSingleSheet = <T extends Record<string, unknown>>(rows: T[], sheetName: string, fileName: string) => {
+  const exportSingleSheet = async <T extends Record<string, unknown>>(rows: T[], sheetName: string, fileName: string) => {
     if (!rows || rows.length === 0) return;
+    const XLSX = await import("xlsx");
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, sheetName.slice(0, 31));
@@ -21,9 +21,11 @@ export function useExcelExport() {
 
   /**
    * Export multiple sheets to a single XLSX workbook file.
+   * Lazily imports XLSX to keep the initial client bundle lightweight.
    */
-  const exportMultipleSheets = (sheets: ExcelSheetData[], fileName: string) => {
+  const exportMultipleSheets = async (sheets: ExcelSheetData[], fileName: string) => {
     if (!sheets || sheets.length === 0) return;
+    const XLSX = await import("xlsx");
     const wb = XLSX.utils.book_new();
     for (const sheet of sheets) {
       const opts = sheet.headers ? { header: sheet.headers } : undefined;
