@@ -145,7 +145,7 @@ export const getPayoutMeta: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to fetch payout metadata" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -284,7 +284,7 @@ export const getPayoutsDashboard: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to fetch payouts dashboard" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -337,7 +337,7 @@ export const listPayouts: Handler = async (c: AppContext) => {
 
     const totalPaid = round2(rows.reduce((sum, r) => sum + round2(r.amount), 0));
     return c.json({ message: "Payouts fetched successfully", data: rows, total: rows.length, totalPaid }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to fetch payouts" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -393,7 +393,7 @@ export const getPayoutDetail: Handler = async (c: AppContext) => {
 
     if (!row) return c.json({ message: "Payout not found" }, HttpStatusCodes.NOT_FOUND);
     return c.json({ message: "Payout fetched successfully", data: row }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to fetch payout" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -413,7 +413,7 @@ export const getStaffLedger: Handler = async (c: AppContext) => {
     const month = isValidMonth(query.month) ? query.month : currentMonth();
     const ledger = await resolveStaffLedger(tenant, userId, month);
     return c.json({ message: "Staff ledger fetched successfully", data: ledger }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to fetch staff ledger" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -595,7 +595,7 @@ export const createPayout: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.CREATED
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to record payout" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -672,7 +672,7 @@ export const getUserRates: Handler = async (c: AppContext) => {
       { message: "User rates fetched successfully", data, retired, catalog: items, userId },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to fetch user rates" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -803,7 +803,7 @@ export const saveUserRates: Handler = async (c: AppContext) => {
 
     broadcast("payout:rates-updated", { userId }, { tenant });
     return c.json({ message: "Rates saved successfully", data: { userId, count: assignedItemIds.length } }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to save user rates" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -870,7 +870,7 @@ export const getMyEarnings: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to fetch your earnings" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };

@@ -54,7 +54,7 @@ export const getMonthlySummary = async (c: AppContext) => {
     }));
 
     return c.json({ success: true, data });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching monthly summary:", error);
     return c.json({ success: false, message: "Failed to fetch monthly summary" }, 500);
   }
@@ -196,7 +196,7 @@ export const getSalesReport = async (c: AppContext) => {
     });
 
     return c.json({ success: true, data: reportItems });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching sales report:", error);
     return c.json({ success: false, message: "Failed to generate sales report" }, 500);
   }

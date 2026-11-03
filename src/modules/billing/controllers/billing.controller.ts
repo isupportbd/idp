@@ -472,7 +472,7 @@ export const listBills: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json(
       { message: "Failed to fetch bills" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
@@ -618,7 +618,7 @@ export const getBillDetails: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json(
       { message: "Failed to fetch bill details" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
@@ -863,7 +863,7 @@ export const getClientBillingOverview: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json(
       { message: "Failed to fetch client billing overview" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
@@ -1080,7 +1080,7 @@ export const createBill: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.CREATED
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json(
       { message: "Failed to create bill" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
@@ -1470,7 +1470,7 @@ export const batchGenerateBills: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.CREATED
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return handleControllerError(c, err, "Failed to batch generate bills", { field: "message" });
   }
 };
@@ -1719,7 +1719,7 @@ export const getMissingBills: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json(
       { message: "Failed to fetch missing bills" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
@@ -1803,7 +1803,7 @@ export const updateBill: Handler = async (c: AppContext) => {
       { message: `Invoice ${existing.billNo} updated successfully`, data: result },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json(
       { message: "Failed to update bill" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
@@ -1847,7 +1847,7 @@ export const deleteBill: Handler = async (c: AppContext) => {
       { message: `Invoice ${existing.billNo} deleted successfully` },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json(
       { message: "Failed to delete bill" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
@@ -1929,7 +1929,7 @@ export const listCollections: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json(
       { message: "Failed to fetch collections" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
@@ -2075,7 +2075,7 @@ export const createCollection: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.CREATED
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json(
       { message: "Failed to record collection" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
@@ -2120,7 +2120,7 @@ export const cancelCollection: Handler = async (c: AppContext) => {
       { message: `Receipt ${col.receiptNo} cancelled successfully` },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json(
       { message: "Failed to cancel collection" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
@@ -2233,7 +2233,7 @@ export const getCollectionDetails: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json(
       { message: "Failed to fetch receipt details" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR

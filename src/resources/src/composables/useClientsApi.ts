@@ -172,7 +172,7 @@ export function useClientsApi() {
   const checkBinUnique = async (bin: string, excludeId?: number) => {
     try {
       const res = await axios.post("/api/clients/check-bin", { bin, excludeId });
-      return res.data as { unique: boolean; status?: string; message?: string; existingClient?: Client | null };
+      return res.data as { unique: boolean; status?: string; message?: string; existingClient?: ClientItem | null };
     } catch (err) {
       const msg = getErrorMessage(err, "Failed to verify BIN");
       return { unique: false, status: "ERROR", message: msg, existingClient: null };

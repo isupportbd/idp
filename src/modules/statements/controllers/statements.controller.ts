@@ -227,7 +227,7 @@ export const getStatementReport: Handler = async (c: AppContext) => {
         totalRows: statementRows.length
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error generating statements:", error);
     return c.json(
       { success: false, message: "Failed to generate statement" },

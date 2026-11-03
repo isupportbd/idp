@@ -802,7 +802,7 @@ export const rechargeWallet: Handler = async (c: AppContext) => {
       message: "Recharge request submitted successfully! SuperAdmin will verify your payment.",
       data: inserted
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error submitting recharge:", error);
     return c.json({ success: false, message: "Failed to submit recharge" }, 500);
   }
@@ -930,7 +930,7 @@ export const getUserStats: Handler = async (c: AppContext) => {
         users: formattedUsers
       }
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error fetching user stats:", err);
     return c.json({ success: false, message: "Failed to fetch stats" }, 500);
   }
@@ -1047,7 +1047,7 @@ export const sendTestSms: Handler = async (c: AppContext) => {
       message: "Test SMS triggered (No Gateway API Key configured in Firm Settings)",
       smsBalance: newSmsBalance
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("sendTestSms error:", err);
     return c.json({ success: false, message: "Failed to dispatch test SMS" }, 500);
   }
@@ -1121,7 +1121,7 @@ export const syncSmsBalance: Handler = async (c: AppContext) => {
       message: "SMS balance synced successfully!",
       smsBalance: liveBalance
     }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("syncSmsBalance error:", err);
     return c.json({ success: false, message: "Failed to sync SMS balance" }, 500);
   }
@@ -1278,7 +1278,7 @@ export const buyStorage: Handler = async (c: AppContext) => {
         transactionId: inserted.id
       });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("buyStorage error:", err);
     return c.json({ success: false, message: "Failed to process storage purchase" }, 500);
   }

@@ -9,6 +9,8 @@
   "scripts": {
     "build": "bun run build:ui",
     "build:ui": "bun src/framework/maker-cli/runtime/build-ui.mjs",
+    "typecheck": "bunx tsc --noEmit && bunx tsc -p src/resources/tsconfig.json --noEmit",
+    "typecheck:ui": "bunx tsc -p src/resources/tsconfig.json --noEmit",
     "start": "bun src/framework/server.ts",
     "dev": "bun src/framework/maker-cli/index.mjs dev",
     "backend": "bun src/framework/maker-cli/index.mjs serve --src",

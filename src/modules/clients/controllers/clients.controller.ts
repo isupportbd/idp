@@ -161,7 +161,7 @@ export const listClients: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to list clients" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -242,7 +242,7 @@ export const getClientById: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to get client" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -404,7 +404,7 @@ export const createClient: Handler = async (c: AppContext) => {
     }
 
     return c.json({ message: "Client created successfully", data: inserted }, HttpStatusCodes.CREATED);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to create client" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -490,7 +490,7 @@ export const updateClient: Handler = async (c: AppContext) => {
     }
 
     return c.json({ message: "Client updated successfully", data: updated }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to update client" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -567,7 +567,7 @@ export const toggleClientStatus: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to toggle client status" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -631,7 +631,7 @@ export const deleteClient: Handler = async (c: AppContext) => {
     await db.delete(clients).where(eq(clients.id, id));
 
     return c.json({ message: "Client deleted successfully", success: true }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to delete client" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -737,7 +737,7 @@ export const checkBinUnique: Handler = async (c: AppContext) => {
         HttpStatusCodes.OK
       );
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to check BIN" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -763,7 +763,7 @@ export const checkMobileExists: Handler = async (c: AppContext) => {
       .limit(3);
 
     return c.json({ matches }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to check mobile" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -858,7 +858,7 @@ export const listAssignments: Handler = async (c: AppContext) => {
     }
 
     return c.json({ message: "Assignments fetched", data: result, stats }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to list assignments" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -902,7 +902,7 @@ export const assignManagers: Handler = async (c: AppContext) => {
     });
 
     return c.json({ message: "Manager assignments updated successfully" }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to assign managers" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -957,7 +957,7 @@ export const listAssignableUsers: Handler = async (c: AppContext) => {
       .orderBy(asc(users.name));
 
     return c.json({ message: "Users fetched", data: list }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to fetch users" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -1189,7 +1189,7 @@ export const bulkCreateClients: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to bulk upload clients" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -1238,7 +1238,7 @@ export const getClientPurchasedItems: Handler = async (c: AppContext) => {
 
     const data = Array.from(uniqueItemsMap.values());
     return c.json({ message: "Client purchased items fetched successfully", data }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error fetching client purchased items:", err);
     return c.json({ message: "Failed to fetch client purchased items", data: [] }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }

@@ -118,7 +118,7 @@ export const listSalesRates: Handler = async (c: AppContext) => {
         totalPages: Math.ceil(total / limit)
       }
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error fetching sales rates:", err);
     return c.json({ success: false, message: "Failed to fetch sales rates", data: [] }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
@@ -200,7 +200,7 @@ export const createSalesRate: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.CREATED
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error creating sales rate:", err);
     return c.json({ success: false, message: "Failed to create sales rate" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
@@ -270,7 +270,7 @@ export const updateSalesRate: Handler = async (c: AppContext) => {
       message: "Sales rate updated successfully",
       data: updated
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error updating sales rate:", err);
     return c.json({ success: false, message: "Failed to update sales rate" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
@@ -337,7 +337,7 @@ export const deleteSalesRate: Handler = async (c: AppContext) => {
       success: true,
       message: "Sales rate deleted successfully"
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error deleting sales rate:", err);
     return c.json({ success: false, message: "Failed to delete sales rate" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
@@ -381,7 +381,7 @@ export const getRateHistory: Handler = async (c: AppContext) => {
       success: true,
       data: rows.map((r) => ({ ...r, unitName: r.unitName || "MT" }))
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error fetching rate history:", err);
     return c.json({ success: false, message: "Failed to fetch rate history", data: [] }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }

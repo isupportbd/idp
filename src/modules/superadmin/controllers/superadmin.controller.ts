@@ -102,7 +102,7 @@ export async function getTenants(c: AppContext) {
     );
 
     return c.json({ success: true, data: tenantList });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching tenants:", error);
     return c.json({ success: false, error: "Failed to fetch tenants" }, 500);
   }
@@ -170,7 +170,7 @@ export async function getPendingSignups(c: AppContext) {
     );
 
     return c.json({ success: true, data: enriched });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching pending signups:", error);
     return c.json({ success: false, error: "Failed to fetch pending signups" }, 500);
   }
@@ -304,7 +304,7 @@ export async function approveSignup(c: AppContext) {
       advanceBalance: finalAdvanceBalance,
       isPlanActivated
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error approving tenant:", error);
     return c.json({ success: false, error: "Failed to approve tenant" }, 500);
   }
@@ -318,7 +318,7 @@ export async function rejectSignup(c: AppContext) {
 
     await db.delete(users).where(eq(users.id, userId));
     return c.json({ success: true, message: "Pending registration rejected and removed" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error rejecting tenant:", error);
     return c.json({ success: false, error: "Failed to reject tenant" }, 500);
   }
@@ -371,7 +371,7 @@ export async function extendTenant(c: AppContext) {
     }
 
     return c.json({ success: true, message: `Subscription extended by ${days} days`, expDate: currentExp });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error extending tenant:", error);
     return c.json({ success: false, error: "Failed to extend subscription" }, 500);
   }
@@ -446,7 +446,7 @@ export async function getTenantTransactions(c: AppContext) {
         transactions: history
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching tenant transactions:", error);
     return c.json({ success: false, error: "Failed to fetch transaction history" }, 500);
   }
@@ -477,7 +477,7 @@ export async function toggleTenantStatus(c: AppContext) {
 
     await db.update(users).set({ status: nextStatus, updatedAt: new Date() }).where(eq(users.id, id));
     return c.json({ success: true, status: nextStatus, message: `Tenant status set to ${nextStatus}` });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error toggling tenant status:", error);
     return c.json({ success: false, error: "Failed to toggle status" }, 500);
   }
@@ -506,7 +506,7 @@ export async function deleteTenant(c: AppContext) {
 
     await db.delete(users).where(eq(users.id, id));
     return c.json({ success: true, message: `Tenant "${targetUser.name}" deleted permanently` });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting tenant:", error);
     return c.json({ success: false, error: "Failed to delete tenant. Please ensure associated client records are unassigned or handled first." }, 500);
   }
@@ -517,7 +517,7 @@ export async function getPlans(c: AppContext) {
   try {
     const allPlans = await db.select().from(plans).orderBy(plans.id);
     return c.json({ success: true, data: allPlans });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching plans:", error);
     return c.json({ success: false, error: "Failed to fetch plans" }, 500);
   }
@@ -541,7 +541,7 @@ export async function createPlan(c: AppContext) {
 
     notifySettingsUpdated("plans");
     return c.json({ success: true, message: "Plan created successfully", data: newPlan });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating plan:", error);
     return c.json({ success: false, error: "Failed to create plan" }, 500);
   }
@@ -569,7 +569,7 @@ export async function updatePlan(c: AppContext) {
 
     notifySettingsUpdated("plans");
     return c.json({ success: true, message: "Plan updated successfully", data: updatedPlan });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating plan:", error);
     return c.json({ success: false, error: "Failed to update plan" }, 500);
   }
@@ -583,7 +583,7 @@ export async function deletePlan(c: AppContext) {
     await db.delete(plans).where(eq(plans.id, id));
     notifySettingsUpdated("plans");
     return c.json({ success: true, message: "Plan deleted successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting plan:", error);
     return c.json({ success: false, error: "Failed to delete plan" }, 500);
   }
@@ -609,7 +609,7 @@ export async function getPaymentSettings(c: AppContext) {
       updatedAt: config.updatedAt
     };
     return c.json({ success: true, data: sanitized });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching payment settings:", error);
     return c.json({ success: false, error: "Failed to fetch payment settings" }, 500);
   }
@@ -640,7 +640,7 @@ export async function savePaymentSettings(c: AppContext) {
       notifySettingsUpdated("payment-settings");
       return c.json({ success: true, message: "Payment settings saved", data: created });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error saving payment settings:", error);
     return c.json({ success: false, error: "Failed to save payment settings" }, 500);
   }
@@ -820,7 +820,7 @@ export async function getStorageStats(c: AppContext) {
         tenantBreakdown
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching storage stats:", error);
     return c.json({ success: false, error: "Failed to fetch storage stats" }, 500);
   }
@@ -831,7 +831,7 @@ export async function getClientTypes(c: AppContext) {
   try {
     const list = await db.select().from(customerTypes).orderBy(desc(customerTypes.id));
     return c.json({ success: true, data: list });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching client types:", error);
     return c.json({ success: false, error: "Failed to fetch client types" }, 500);
   }
@@ -855,7 +855,7 @@ export async function createClientType(c: AppContext) {
 
     notifySettingsUpdated("client-types");
     return c.json({ success: true, data: created, message: "Client type created successfully" }, 201);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating client type:", error);
     return c.json({ success: false, error: "Failed to create client type" }, 500);
   }
@@ -882,7 +882,7 @@ export async function updateClientType(c: AppContext) {
 
     notifySettingsUpdated("client-types");
     return c.json({ success: true, data: updated, message: "Client type updated successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating client type:", error);
     return c.json({ success: false, error: "Failed to update client type" }, 500);
   }
@@ -906,7 +906,7 @@ export async function toggleClientTypeStatus(c: AppContext) {
 
     notifySettingsUpdated("client-types");
     return c.json({ success: true, data: updated, message: "Status updated" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error toggling client type status:", error);
     return c.json({ success: false, error: "Failed to toggle status" }, 500);
   }
@@ -918,7 +918,7 @@ export async function deleteClientType(c: AppContext) {
     await db.delete(customerTypes).where(eq(customerTypes.id, id));
     notifySettingsUpdated("client-types");
     return c.json({ success: true, message: "Client type deleted successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting client type:", error);
     return c.json({ success: false, error: "Failed to delete client type" }, 500);
   }
@@ -936,7 +936,7 @@ export async function getLocations(c: AppContext) {
     }));
 
     return c.json({ success: true, data: enriched });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching locations:", error);
     return c.json({ success: false, error: "Failed to fetch locations" }, 500);
   }
@@ -959,7 +959,7 @@ export async function createLocation(c: AppContext) {
 
     notifySettingsUpdated("locations");
     return c.json({ success: true, data: created, message: "Location created successfully" }, 201);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating location:", error);
     return c.json({ success: false, error: "Failed to create location" }, 500);
   }
@@ -985,7 +985,7 @@ export async function updateLocation(c: AppContext) {
 
     notifySettingsUpdated("locations");
     return c.json({ success: true, data: updated, message: "Location updated successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating location:", error);
     return c.json({ success: false, error: "Failed to update location" }, 500);
   }
@@ -1005,7 +1005,7 @@ export async function toggleLocationStatus(c: AppContext) {
 
     notifySettingsUpdated("locations");
     return c.json({ success: true, data: updated, message: "Status updated" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error toggling location status:", error);
     return c.json({ success: false, error: "Failed to toggle status" }, 500);
   }
@@ -1017,7 +1017,7 @@ export async function deleteLocation(c: AppContext) {
     await db.delete(locations).where(eq(locations.id, id));
     notifySettingsUpdated("locations");
     return c.json({ success: true, message: "Location deleted successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting location:", error);
     return c.json({ success: false, error: "Failed to delete location" }, 500);
   }
@@ -1042,7 +1042,7 @@ export async function getCommercialAreas(c: AppContext) {
       .orderBy(desc(commercialAreas.id));
 
     return c.json({ success: true, data: areaList });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching commercial areas:", error);
     return c.json({ success: false, error: "Failed to fetch areas" }, 500);
   }
@@ -1076,7 +1076,7 @@ export async function createCommercialArea(c: AppContext) {
       data: { ...created, locationName: loc?.name || "—" },
       message: "Commercial area created successfully"
     }, 201);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating commercial area:", error);
     return c.json({ success: false, error: "Failed to create area" }, 500);
   }
@@ -1109,7 +1109,7 @@ export async function updateCommercialArea(c: AppContext) {
       data: { ...updated, locationName: loc?.name || "—" },
       message: "Commercial area updated successfully"
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating commercial area:", error);
     return c.json({ success: false, error: "Failed to update area" }, 500);
   }
@@ -1129,7 +1129,7 @@ export async function toggleCommercialAreaStatus(c: AppContext) {
 
     notifySettingsUpdated("commercial-areas");
     return c.json({ success: true, data: updated, message: "Status updated" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error toggling area status:", error);
     return c.json({ success: false, error: "Failed to toggle status" }, 500);
   }
@@ -1141,7 +1141,7 @@ export async function deleteCommercialArea(c: AppContext) {
     await db.delete(commercialAreas).where(eq(commercialAreas.id, id));
     notifySettingsUpdated("commercial-areas");
     return c.json({ success: true, message: "Commercial area deleted successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting commercial area:", error);
     return c.json({ success: false, error: "Failed to delete commercial area" }, 500);
   }
@@ -1159,7 +1159,7 @@ export async function getClientReferences(c: AppContext) {
     }));
 
     return c.json({ success: true, data: enriched });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching client references:", error);
     return c.json({ success: false, error: "Failed to fetch references" }, 500);
   }
@@ -1184,7 +1184,7 @@ export async function createClientReference(c: AppContext) {
 
     notifySettingsUpdated("references");
     return c.json({ success: true, data: created, message: "Reference created successfully" }, 201);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating reference:", error);
     return c.json({ success: false, error: "Failed to create reference" }, 500);
   }
@@ -1212,7 +1212,7 @@ export async function updateClientReference(c: AppContext) {
 
     notifySettingsUpdated("references");
     return c.json({ success: true, data: updated, message: "Reference updated successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating reference:", error);
     return c.json({ success: false, error: "Failed to update reference" }, 500);
   }
@@ -1232,7 +1232,7 @@ export async function toggleClientReferenceStatus(c: AppContext) {
 
     notifySettingsUpdated("references");
     return c.json({ success: true, data: updated, message: "Status updated" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error toggling reference status:", error);
     return c.json({ success: false, error: "Failed to toggle status" }, 500);
   }
@@ -1244,7 +1244,7 @@ export async function deleteClientReference(c: AppContext) {
     await db.delete(clientReferences).where(eq(clientReferences.id, id));
     notifySettingsUpdated("references");
     return c.json({ success: true, message: "Reference deleted successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting reference:", error);
     return c.json({ success: false, error: "Failed to delete reference" }, 500);
   }
@@ -1280,7 +1280,7 @@ export async function getColumnMappings(c: AppContext) {
       return c.json({ success: true, data: DEFAULT_SYSTEM_COLUMN_MAPPINGS });
     }
     return c.json({ success: true, data: list });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching column mappings:", error);
     return c.json({ success: false, error: "Failed to fetch column mappings" }, 500);
   }
@@ -1323,7 +1323,7 @@ export async function saveColumnMappings(c: AppContext) {
     const updatedList = await db.select().from(columnMappings).orderBy(asc(columnMappings.id));
     notifySettingsUpdated("column-mappings");
     return c.json({ success: true, data: updatedList, message: "Column mappings saved to database successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error saving column mappings:", error);
     return c.json({ success: false, error: "Failed to save column mappings" }, 500);
   }
@@ -1336,7 +1336,7 @@ export async function getGlobalItems(c: AppContext) {
       return await db.select().from(globalItems).orderBy(asc(globalItems.hsCode));
     });
     return c.json({ success: true, data: list });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching global items:", error);
     return c.json({ success: false, error: "Failed to fetch global items" }, 500);
   }
@@ -1383,9 +1383,9 @@ export async function createGlobalItem(c: AppContext) {
 
     notifySettingsUpdated("global-items");
     return c.json({ success: true, data: inserted, message: "Item added successfully" }, 201);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating global item:", error);
-    if (error?.code === "23505") {
+    if ((error as { code?: string })?.code === "23505") {
       return c.json({ success: false, error: "This HS Code already exists in the database." }, 400);
     }
     return c.json({ success: false, error: "Failed to create global item" }, 500);
@@ -1438,9 +1438,9 @@ export async function updateGlobalItem(c: AppContext) {
 
     notifySettingsUpdated("global-items");
     return c.json({ success: true, data: updated, message: "Item updated successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating global item:", error);
-    if (error?.code === "23505") {
+    if ((error as { code?: string })?.code === "23505") {
       return c.json({ success: false, error: "This HS Code already exists in the database." }, 400);
     }
     return c.json({ success: false, error: "Failed to update global item" }, 500);
@@ -1461,7 +1461,7 @@ export async function toggleGlobalItemStatus(c: AppContext) {
 
     notifySettingsUpdated("global-items");
     return c.json({ success: true, data: updated, message: "Status updated" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error toggling global item status:", error);
     return c.json({ success: false, error: "Failed to toggle status" }, 500);
   }
@@ -1473,7 +1473,7 @@ export async function deleteGlobalItem(c: AppContext) {
     await db.delete(globalItems).where(eq(globalItems.id, id));
     notifySettingsUpdated("global-items");
     return c.json({ success: true, message: "Item deleted successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting global item:", error);
     return c.json({ success: false, error: "Failed to delete item" }, 500);
   }
@@ -1486,7 +1486,7 @@ export async function getMeasurementUnits(c: AppContext) {
       return await db.select().from(measurementUnits).orderBy(asc(measurementUnits.id));
     });
     return c.json({ success: true, data: list });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching measurement units:", error);
     return c.json({ success: false, error: "Failed to fetch measurement units" }, 500);
   }
@@ -1530,9 +1530,9 @@ export async function createMeasurementUnit(c: AppContext) {
 
     notifySettingsUpdated("measurement-units");
     return c.json({ success: true, data: inserted, message: "Unit created successfully" }, 201);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating measurement unit:", error);
-    if (error?.code === "23505") {
+    if ((error as { code?: string })?.code === "23505") {
       return c.json({ success: false, error: "This Unit Code already exists in the database." }, 400);
     }
     return c.json({ success: false, error: "Failed to create measurement unit" }, 500);
@@ -1582,9 +1582,9 @@ export async function updateMeasurementUnit(c: AppContext) {
 
     notifySettingsUpdated("measurement-units");
     return c.json({ success: true, data: updated, message: "Unit updated successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating measurement unit:", error);
-    if (error?.code === "23505") {
+    if ((error as { code?: string })?.code === "23505") {
       return c.json({ success: false, error: "This Unit Code already exists in the database." }, 400);
     }
     return c.json({ success: false, error: "Failed to update measurement unit" }, 500);
@@ -1605,7 +1605,7 @@ export async function toggleMeasurementUnitStatus(c: AppContext) {
 
     notifySettingsUpdated("measurement-units");
     return c.json({ success: true, data: updated, message: "Unit status updated" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error toggling measurement unit status:", error);
     return c.json({ success: false, error: "Failed to toggle status" }, 500);
   }
@@ -1617,7 +1617,7 @@ export async function deleteMeasurementUnit(c: AppContext) {
     await db.delete(measurementUnits).where(eq(measurementUnits.id, id));
     notifySettingsUpdated("measurement-units");
     return c.json({ success: true, message: "Unit deleted successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting measurement unit:", error);
     return c.json({ success: false, error: "Failed to delete measurement unit" }, 500);
   }
@@ -1630,7 +1630,7 @@ export async function getVatNotes(c: AppContext) {
       return await db.select().from(vatNotes).orderBy(asc(vatNotes.vatRate));
     });
     return c.json({ success: true, data: list });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching VAT notes:", error);
     return c.json({ success: false, error: "Failed to fetch VAT notes" }, 500);
   }
@@ -1679,9 +1679,9 @@ export async function createVatNote(c: AppContext) {
 
     notifySettingsUpdated("vat-notes");
     return c.json({ success: true, data: inserted, message: "VAT Note mapping created successfully" }, 201);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating VAT note mapping:", error);
-    if (error?.code === "23505") {
+    if ((error as { code?: string })?.code === "23505") {
       return c.json({ success: false, error: "A mapping for this VAT Rate already exists." }, 400);
     }
     return c.json({ success: false, error: "Failed to create VAT note mapping" }, 500);
@@ -1731,9 +1731,9 @@ export async function updateVatNote(c: AppContext) {
 
     notifySettingsUpdated("vat-notes");
     return c.json({ success: true, data: updated, message: "VAT note updated successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating VAT note mapping:", error);
-    if (error?.code === "23505") {
+    if ((error as { code?: string })?.code === "23505") {
       return c.json({ success: false, error: "A mapping for this VAT Rate already exists." }, 400);
     }
     return c.json({ success: false, error: "Failed to update VAT note mapping" }, 500);
@@ -1757,7 +1757,7 @@ export async function toggleVatNoteStatus(c: AppContext) {
 
     notifySettingsUpdated("vat-notes");
     return c.json({ success: true, data: updated, message: "VAT note status updated" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error toggling VAT note status:", error);
     return c.json({ success: false, error: "Failed to toggle status" }, 500);
   }
@@ -1769,7 +1769,7 @@ export async function deleteVatNote(c: AppContext) {
     await db.delete(vatNotes).where(eq(vatNotes.id, id));
     notifySettingsUpdated("vat-notes");
     return c.json({ success: true, message: "VAT note deleted successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting VAT note:", error);
     return c.json({ success: false, error: "Failed to delete VAT note" }, 500);
   }
@@ -1809,7 +1809,7 @@ export async function getUnitConversions(c: AppContext) {
       return uniquePairs;
     });
     return c.json({ success: true, data });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching unit conversions:", error);
     return c.json({ success: false, error: "Failed to fetch unit conversions" }, 500);
   }
@@ -1891,7 +1891,7 @@ export async function createUnitConversion(c: AppContext) {
       },
       message: "Unit conversion pair created successfully"
     }, 201);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating unit conversion:", error);
     return c.json({ success: false, error: "Failed to create unit conversion" }, 500);
   }
@@ -2009,7 +2009,7 @@ export async function updateUnitConversion(c: AppContext) {
       },
       message: "Unit conversion pair updated successfully"
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating unit conversion:", error);
     return c.json({ success: false, error: "Failed to update unit conversion" }, 500);
   }
@@ -2035,7 +2035,7 @@ export async function deleteUnitConversion(c: AppContext) {
 
     notifySettingsUpdated("unit-conversions");
     return c.json({ success: true, message: "Unit conversion pair deleted successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting unit conversion:", error);
     return c.json({ success: false, error: "Failed to delete unit conversion" }, 500);
   }
@@ -2091,7 +2091,7 @@ export async function getPlatformPublicStats(c: AppContext) {
         clients: totalClients > 0 ? `${totalClients}+` : "0"
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return c.json({
       success: true,
       data: {
@@ -2149,7 +2149,7 @@ export async function getGlobalMetrics(c: AppContext) {
         totalVatVolume: Number(purchaseTotals?.vatVolume || 0)
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return c.json({ success: false, message: "Failed to load metrics" }, 500);
   }
 }
@@ -2239,7 +2239,7 @@ export async function getNotifications(c: AppContext) {
     });
 
     return c.json({ success: true, data: [...signupNotifs, ...rechargeNotifs] });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching notifications:", error);
     return c.json({ success: true, data: [] });
   }
@@ -2278,7 +2278,7 @@ export async function getPendingRecharges(c: AppContext) {
       .orderBy(desc(subscriptionTransactions.createdAt));
 
     return c.json({ success: true, data: list });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching pending recharges:", error);
     return c.json({ success: false, error: "Failed to fetch pending recharges" }, 500);
   }
@@ -2459,7 +2459,7 @@ export async function approveRecharge(c: AppContext) {
         expDate: newExpDate
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error approving recharge:", error);
     return c.json({ success: false, message: "Failed to approve recharge" }, 500);
   }
@@ -2506,7 +2506,7 @@ export async function rejectRecharge(c: AppContext) {
       .where(eq(subscriptionTransactions.id, transactionId));
 
     return c.json({ success: true, message: "Recharge request rejected" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error rejecting recharge:", error);
     return c.json({ success: false, message: "Failed to reject recharge" }, 500);
   }
@@ -2521,7 +2521,7 @@ export async function getServiceUnits(c: AppContext) {
       .orderBy(desc(serviceUnits.id));
 
     return c.json({ success: true, data: list });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching service units:", error);
     return c.json({ success: false, error: "Failed to fetch service units" }, 500);
   }
@@ -2563,9 +2563,9 @@ export async function createServiceUnit(c: AppContext) {
 
     notifySettingsUpdated("service-units");
     return c.json({ success: true, data: inserted, message: "Service unit created successfully" }, 201);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating service unit:", error);
-    if (error?.code === "23505") {
+    if ((error as { code?: string })?.code === "23505") {
       return c.json({ success: false, error: "This Unit Code already exists." }, 400);
     }
     return c.json({ success: false, error: "Failed to create service unit" }, 500);
@@ -2612,9 +2612,9 @@ export async function updateServiceUnit(c: AppContext) {
 
     notifySettingsUpdated("service-units");
     return c.json({ success: true, data: updated, message: "Service unit updated successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating service unit:", error);
-    if (error?.code === "23505") {
+    if ((error as { code?: string })?.code === "23505") {
       return c.json({ success: false, error: "This Unit Code already exists." }, 400);
     }
     return c.json({ success: false, error: "Failed to update service unit" }, 500);
@@ -2635,7 +2635,7 @@ export async function toggleServiceUnitStatus(c: AppContext) {
 
     notifySettingsUpdated("service-units");
     return c.json({ success: true, data: updated, message: "Service unit status updated" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error toggling service unit status:", error);
     return c.json({ success: false, error: "Failed to toggle status" }, 500);
   }
@@ -2647,7 +2647,7 @@ export async function deleteServiceUnit(c: AppContext) {
     await db.delete(serviceUnits).where(eq(serviceUnits.id, id));
     notifySettingsUpdated("service-units");
     return c.json({ success: true, message: "Service unit deleted successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting service unit:", error);
     return c.json({ success: false, error: "Failed to delete service unit" }, 500);
   }
@@ -2709,8 +2709,8 @@ export async function exportDatabaseBackup(c: AppContext) {
           }
         }
         sqlDump += `\n`;
-      } catch (err: any) {
-        sqlDump += `-- Error dumping table "${table}": ${err.message}\n\n`;
+      } catch (err: unknown) {
+        sqlDump += `-- Error dumping table "${table}": ${(err as Error)?.message || String(err)}\n\n`;
       }
     }
 
@@ -2729,7 +2729,7 @@ export async function exportDatabaseBackup(c: AppContext) {
         "Content-Disposition": `attachment; filename="${filename}"`
       }
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Database backup failed:", err);
     return c.json({ success: false, error: "Failed to generate database backup" }, 500);
   }

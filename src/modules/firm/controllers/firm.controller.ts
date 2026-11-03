@@ -104,7 +104,7 @@ export const getCompanySettings: Handler = async (c: AppContext) => {
     };
 
     return c.json({ message: "Company settings retrieved", data: sanitizedData }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to fetch company settings" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -199,7 +199,7 @@ export const updateCompanySettings: Handler = async (c: AppContext) => {
     };
 
     return c.json({ message: "Company settings updated successfully", data: sanitizedResult }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to update company settings" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -223,7 +223,7 @@ export const listBankAccounts: Handler = async (c: AppContext) => {
       .orderBy(desc(bankAccounts.isDefault), asc(bankAccounts.id));
 
     return c.json({ message: "Bank accounts fetched successfully", data: list }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to fetch bank accounts" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -253,7 +253,7 @@ export const createBankAccount: Handler = async (c: AppContext) => {
     )[0];
 
     return c.json({ message: "Bank account added successfully", data: inserted }, HttpStatusCodes.CREATED);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to create bank account" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -301,7 +301,7 @@ export const updateBankAccount: Handler = async (c: AppContext) => {
     )[0];
 
     return c.json({ message: "Bank account updated successfully", data: updated }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to update bank account" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -334,7 +334,7 @@ export const deleteBankAccount: Handler = async (c: AppContext) => {
 
     await db.delete(bankAccounts).where(eq(bankAccounts.id, id));
     return c.json({ message: "Bank account removed successfully" }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to delete bank account" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -358,7 +358,7 @@ export const listExpenseHeads: Handler = async (c: AppContext) => {
       .orderBy(asc(expenseHeads.id));
 
     return c.json({ message: "Expense heads fetched successfully", data: list }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to fetch expense heads" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -402,7 +402,7 @@ export const createExpenseHead: Handler = async (c: AppContext) => {
     )[0];
 
     return c.json({ message: "Expense head created successfully", data: inserted }, HttpStatusCodes.CREATED);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to create expense head" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -468,7 +468,7 @@ export const updateExpenseHead: Handler = async (c: AppContext) => {
     )[0];
 
     return c.json({ message: "Expense head updated successfully", data: updated }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to update expense head" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -508,7 +508,7 @@ export const toggleExpenseHead: Handler = async (c: AppContext) => {
     )[0];
 
     return c.json({ message: "Expense head status updated", data: updated }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to toggle expense head" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -541,7 +541,7 @@ export const deleteExpenseHead: Handler = async (c: AppContext) => {
 
     await db.delete(expenseHeads).where(eq(expenseHeads.id, id));
     return c.json({ message: "Expense head deleted successfully" }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to delete expense head" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };

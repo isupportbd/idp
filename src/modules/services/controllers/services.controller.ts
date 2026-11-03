@@ -27,7 +27,7 @@ export const listCustomerTypes: Handler = async (c: AppContext) => {
       return await db.select().from(customerTypes).orderBy(desc(customerTypes.id));
     });
     return c.json({ message: "Customer types fetched successfully", data: list }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to fetch customer types" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -48,7 +48,7 @@ export const createCustomerType: Handler = async (c: AppContext) => {
 
     notifySettingsUpdated("client-types");
     return c.json({ message: "Customer type created successfully", data: inserted }, HttpStatusCodes.CREATED);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to create customer type" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -68,7 +68,7 @@ export const toggleCustomerType: Handler = async (c: AppContext) => {
 
     notifySettingsUpdated("client-types");
     return c.json({ message: "Customer type status updated", data: updated }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to toggle customer type" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -81,7 +81,7 @@ export const listReferences: Handler = async (c: AppContext) => {
       return await db.select().from(clientReferences).orderBy(asc(clientReferences.id));
     });
     return c.json({ message: "References fetched successfully", data: list }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to fetch references" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -104,7 +104,7 @@ export const createReference: Handler = async (c: AppContext) => {
 
     notifySettingsUpdated("references");
     return c.json({ message: "Reference created successfully", data: inserted }, HttpStatusCodes.CREATED);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to create reference" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -132,7 +132,7 @@ export const updateReference: Handler = async (c: AppContext) => {
 
     notifySettingsUpdated("references");
     return c.json({ message: "Reference updated successfully", data: updated }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to update reference" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -148,7 +148,7 @@ export const deleteReference: Handler = async (c: AppContext) => {
     await db.delete(clientReferences).where(eq(clientReferences.id, id));
     notifySettingsUpdated("references");
     return c.json({ message: "Reference deleted successfully" }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to delete reference" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -168,7 +168,7 @@ export const toggleReference: Handler = async (c: AppContext) => {
 
     notifySettingsUpdated("references");
     return c.json({ message: "Reference status updated", data: updated }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to toggle reference" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -181,7 +181,7 @@ export const listServiceItems: Handler = async (c: AppContext) => {
       return await db.select().from(serviceItems).orderBy(asc(serviceItems.id));
     });
     return c.json({ message: "Service items fetched successfully", data: list }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to fetch service items" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -201,7 +201,7 @@ export const createServiceItem: Handler = async (c: AppContext) => {
 
     notifySettingsUpdated("service-items");
     return c.json({ message: "Service item created successfully", data: inserted }, HttpStatusCodes.CREATED);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to create service item" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -221,7 +221,7 @@ export const toggleServiceItem: Handler = async (c: AppContext) => {
 
     notifySettingsUpdated("service-items");
     return c.json({ message: "Service item status updated", data: updated }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to toggle service item" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -246,7 +246,7 @@ export const updateServiceItem: Handler = async (c: AppContext) => {
 
     notifySettingsUpdated("service-items");
     return c.json({ message: "Service item updated successfully", data: updated }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to update service item" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -262,7 +262,7 @@ export const deleteServiceItem: Handler = async (c: AppContext) => {
     await db.delete(serviceItems).where(eq(serviceItems.id, id));
     notifySettingsUpdated("service-items");
     return c.json({ message: "Service item deleted successfully" }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to delete service item" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -282,7 +282,7 @@ export const listServiceRates: Handler = async (c: AppContext) => {
     });
 
     return c.json({ message: "Service rates fetched successfully", data: rates }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to fetch service rates" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -316,7 +316,7 @@ export const createServiceRate: Handler = async (c: AppContext) => {
 
     notifySettingsUpdated("service-rates");
     return c.json({ message: "Service rate saved successfully", data: inserted }, HttpStatusCodes.CREATED);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to save service rate" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -340,7 +340,7 @@ export const updateServiceRate: Handler = async (c: AppContext) => {
     const updated = (await db.update(serviceRates).set(updateData).where(eq(serviceRates.id, id)).returning())[0];
     notifySettingsUpdated("service-rates");
     return c.json({ message: "Service rate updated successfully", data: updated }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to update service rate" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -356,7 +356,7 @@ export const deleteServiceRate: Handler = async (c: AppContext) => {
     await db.delete(serviceRates).where(eq(serviceRates.id, id));
     notifySettingsUpdated("service-rates");
     return c.json({ message: "Service rate deleted successfully" }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to delete service rate" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };

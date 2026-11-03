@@ -67,7 +67,7 @@ export async function listTemplates(c: AppContext) {
         updatedAt: new Date().toISOString()
       }))
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return c.json({
       success: true,
       data: DEFAULT_TEMPLATES.map((t, idx) => ({
@@ -132,7 +132,7 @@ export async function updateTemplate(c: AppContext) {
       message: "Template updated successfully",
       data: updated
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return c.json({ success: false, message: "Failed to update template" }, 500);
   }
 }
@@ -178,7 +178,7 @@ export async function resetTemplate(c: AppContext) {
       message: "Template reset to default successfully",
       data: updated
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return c.json({ success: false, message: "Failed to reset template" }, 500);
   }
 }
@@ -254,7 +254,7 @@ export async function sendTestSms(c: AppContext) {
       return c.json({ success: true, message: "Test SMS sent successfully!", response: result.raw });
     }
     return c.json({ success: false, message: `Failed to send SMS: ${result.raw}`, response: result.raw }, 400);
-  } catch (error: any) {
+  } catch (error: unknown) {
     return c.json({ success: false, message: "Error sending test SMS" }, 500);
   }
 }
@@ -274,7 +274,7 @@ export async function listSmsLogs(c: AppContext) {
       success: true,
       data: logs
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return c.json({ success: false, message: "Failed to fetch SMS logs" }, 500);
   }
 }
@@ -308,7 +308,7 @@ export async function getGatewaySettings(c: AppContext) {
         endpoint: settings?.smsEndpointUrl || ""
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return c.json({ success: false, message: "Failed to fetch gateway settings" }, 500);
   }
 }
@@ -374,7 +374,7 @@ export async function updateGatewaySettings(c: AppContext) {
       success: true,
       message: "Gateway settings updated successfully!"
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return c.json({ success: false, message: "Failed to update gateway settings" }, 500);
   }
 }
@@ -454,7 +454,7 @@ export async function checkGatewayBalance(c: AppContext) {
       success: true,
       balance
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return c.json({ success: false, message: "Failed to check balance" }, 500);
   }
 }

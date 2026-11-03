@@ -24,3 +24,4 @@ declare module "bootstrap/js/dist/toast.js" {
 declare module "luxon";
 declare module "nodemailer";
 declare module "vue-select";
+declare module "bootstrap/dist/js/bootstrap.bundle.min.js";

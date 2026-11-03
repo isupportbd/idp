@@ -483,7 +483,7 @@ export const processUpload: Handler = async (c: AppContext) => {
       message: `File processed successfully. ${processedData.length} records ready for preview.`,
       data: processedData
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error processing upload file:", error);
     return handleControllerError(c, error, "Failed to process file.", { field: "message", success: false });
   }
@@ -860,7 +860,7 @@ export const savePurchases: Handler = async (c: AppContext) => {
       duplicatesList: result.duplicatesList,
       ffsPendingList: result.ffsPendingList
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error saving purchases:", error);
     return handleControllerError(c, error, "Failed to save purchases", { field: "message", success: false });
   }
@@ -971,7 +971,7 @@ export const replaceDuplicate: Handler = async (c: AppContext) => {
     });
 
     return c.json({ success: true, message: "Duplicate record replaced successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return handleControllerError(c, error, "Failed to replace record", { field: "message", success: false });
   }
 };
@@ -1017,7 +1017,7 @@ export const savePendingFfs: Handler = async (c: AppContext) => {
     });
 
     return c.json({ success: true, message: `${toInsert.length} FFS records saved successfully!` });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return handleControllerError(c, error, "Failed to save FFS items", { field: "message", success: false });
   }
 };

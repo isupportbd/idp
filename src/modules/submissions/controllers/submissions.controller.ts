@@ -267,7 +267,7 @@ export const listSubmissions: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json(
       { message: "Failed to fetch submissions" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
@@ -516,7 +516,7 @@ export const recordSubmission: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json(
       { message: "Failed to record submission" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
@@ -565,7 +565,7 @@ export const deleteSubmission: Handler = async (c: AppContext) => {
     );
 
     return c.json({ message: "Submission record deleted successfully" }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json(
       { message: "Failed to delete submission" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
@@ -613,7 +613,7 @@ export const batchDeleteSubmissions: Handler = async (c: AppContext) => {
     );
 
     return c.json({ message: `${deletableIds.length} submission records deleted` }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json(
       { message: "Failed to batch delete submissions" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
@@ -675,7 +675,7 @@ export const getSingleSubmission: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.OK
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json(
       { message: "Failed to fetch submission", data: null },
       HttpStatusCodes.INTERNAL_SERVER_ERROR

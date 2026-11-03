@@ -22,7 +22,7 @@ export const getItems: Handler = async (c: AppContext) => {
   try {
     const list = await db.select().from(globalItems).orderBy(asc(globalItems.hsCode));
     return c.json({ success: true, data: list });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error fetching items:", err);
     return c.json({ success: false, message: "Failed to fetch items" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
@@ -90,7 +90,7 @@ export const bulkCreateItems: Handler = async (c: AppContext) => {
       message: `${inserted.length} item(s) mapped and saved successfully.`,
       data: inserted
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error bulk creating items:", err);
     return c.json({ success: false, message: "Failed to save items" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }

@@ -114,7 +114,7 @@ export const listUsers: Handler = async (c: AppContext) => {
     });
 
     return c.json({ success: true, message: "Users fetched", data }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Failed to list users:", err);
     return c.json({ success: false, message: "Failed to list users", data: [] }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
@@ -226,7 +226,7 @@ export const createUser: Handler = async (c: AppContext) => {
       },
       HttpStatusCodes.CREATED
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Failed to create user:", err);
     return c.json({ message: "Failed to create user" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
@@ -295,7 +295,7 @@ export const updateUser: Handler = async (c: AppContext) => {
     };
 
     return c.json({ success: true, message: "User updated successfully", data }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Failed to update user:", err);
     return c.json({ message: "Failed to update user" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
@@ -330,7 +330,7 @@ export const resetUserPassword: Handler = async (c: AppContext) => {
     await db.update(users).set({ password: hashedPassword, updatedAt: new Date() }).where(eq(users.id, userId));
 
     return c.json({ success: true, message: "Password updated successfully" }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to reset password" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -392,7 +392,7 @@ export const updateUserStatus: Handler = async (c: AppContext) => {
     await db.update(users).set({ status: newStatus, updatedAt: new Date() }).where(eq(users.id, userId));
 
     return c.json({ success: true, message: `User status changed to ${newStatus}`, status: newStatus }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to update status" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
@@ -424,7 +424,7 @@ export const deleteUser: Handler = async (c: AppContext) => {
     await db.delete(users).where(eq(users.id, userId));
 
     return c.json({ success: true, message: "User deleted successfully" }, HttpStatusCodes.OK);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({ message: "Failed to delete user" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
