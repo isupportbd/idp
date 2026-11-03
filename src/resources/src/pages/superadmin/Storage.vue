@@ -97,7 +97,12 @@ const handleRestoreFileUpload = async (event: Event) => {
     }
   } catch (err: unknown) {
     console.error("Restore failed:", err);
-    toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Database restore failed");
+    const serverMsg =
+      (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data?.message ||
+      (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data?.error ||
+      (err as Error)?.message ||
+      "Database restore failed";
+    toast.error(`Restore Error: ${serverMsg}`);
   } finally {
     isRestoringBackup.value = false;
     target.value = "";
