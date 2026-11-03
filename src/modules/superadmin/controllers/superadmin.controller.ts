@@ -2793,10 +2793,15 @@ export async function restoreDatabaseBackup(c: AppContext) {
     const auth = c.get("auth") || c.get("user");
     const superAdminId = (auth as { id?: number })?.id || "unknown";
 
+    const cleanedSql = sqlContent
+      .split(/\r?\n/)
+      .filter((line) => !/^\s*(BEGIN|COMMIT|ROLLBACK)\s*;?\s*$/i.test(line))
+      .join("\n");
+
     // Execute restore inside transaction
     await db.transaction(async (tx) => {
-      // Execute the uploaded SQL backup
-      await tx.execute(sql.raw(sqlContent));
+      // Execute the uploaded SQL backup (multi-statement via unsafe)
+      await tx.execute(sql.raw(cleanedSql));
 
       // Synchronize PostgreSQL primary key sequences safely (handling empty tables with is_called = false)
       await tx.execute(sql.raw(`
