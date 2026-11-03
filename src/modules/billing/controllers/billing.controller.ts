@@ -976,7 +976,7 @@ export const createBill: Handler = async (c: any) => {
                 grandTotal,
                 paidAmount: 0,
                 dueAmount,
-                status: status === "draft" ? "draft" : "unpaid",
+                status: status === "draft" ? "draft" : (dueAmount <= 0 ? "paid" : "unpaid"),
                 createdBy: creatorId,
                 notes: notes?.trim() || null
               })
@@ -1340,7 +1340,7 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
           grandTotal,
           paidAmount: 0,
           dueAmount: grandTotal,
-          status: "unpaid",
+          status: grandTotal <= 0 ? "paid" : "unpaid",
           createdBy: creatorId,
           notes: `Batch generated monthly bill for ${taxPeriod}`
         })
@@ -1751,8 +1751,9 @@ export const updateBill: Handler = async (c: any) => {
       updatedData.dueAmount = dueAmount;
 
       if (!payload.status) {
-        if (grandTotal > 0 && dueAmount === 0) updatedData.status = "paid";
+        if (dueAmount <= 0) updatedData.status = "paid";
         else if (existing.paidAmount > 0) updatedData.status = "partial";
+        else updatedData.status = "unpaid";
       }
     }
 
