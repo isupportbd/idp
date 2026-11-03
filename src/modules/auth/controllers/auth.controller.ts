@@ -39,7 +39,7 @@ import { companySettings } from "@/modules/firm/database/models/company_settings
  */
 export const register: Handler = async (c: any) => {
   try {
-    const body = c.req.valid("json");
+    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
     const email = String(body.email || "").trim().toLowerCase();
 
     const defaultRole = (await db.query.roles.findFirst({
@@ -260,7 +260,7 @@ export const register: Handler = async (c: any) => {
  */
 export const login: Handler = async (c: any) => {
   try {
-    const body = c.req.valid("json");
+    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
     const email = String(body.email || "").trim().toLowerCase();
     const user = await db.query.users.findFirst({
       where: sql`lower(${users.email}) = ${email}`,
@@ -390,7 +390,7 @@ export const logout: Handler = async (c: any) => {
  */
 export const forgotPassword: Handler = async (c: any) => {
   try {
-    const body = c.req.valid("json");
+    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
     await db
       .delete(passwordResetTokens)
       .where(and(eq(passwordResetTokens.email, body.email), lt(passwordResetTokens.expiresAt, new Date())));
@@ -519,7 +519,7 @@ If you did not make this request, please ignore this email.
  */
 export const resetPassword: Handler = async (c: any) => {
   try {
-    const body = c.req.valid("json");
+    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
     const inputToken = (body.token || body.otp || "").toString().trim();
     const newPass = body.password || body.newPassword;
 
@@ -564,7 +564,7 @@ export const resetPassword: Handler = async (c: any) => {
  */
 export const verifyEmail: Handler = async (c: any) => {
   try {
-    const body = c.req.valid("json");
+    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
 
     if (!authConfig.requireEmailVerification) {
       return c.json({ message: "Email verification is not required" }, HttpStatusCodes.OK);
@@ -599,7 +599,7 @@ export const verifyEmail: Handler = async (c: any) => {
  */
 export const refreshToken: Handler = async (c: any) => {
   try {
-    const body = c.req.valid("json");
+    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
     const payload = await jwt.verifyToken(body.refresh_token, "refresh");
 
     if (!payload?.jti) return c.json({ message: "Invalid refresh token" }, HttpStatusCodes.UNAUTHORIZED);
@@ -735,7 +735,7 @@ export const rechargeWallet: Handler = async (c: any) => {
       return c.json({ success: false, message: "Unauthorized" }, HttpStatusCodes.UNAUTHORIZED);
     }
 
-    const body = c.req.valid ? c.req.valid("json") : await c.req.json();
+    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
     const paidAmount = Number(body?.paidAmount);
     const trxId = body?.trxId ? String(body.trxId).trim() : "";
 
@@ -965,7 +965,7 @@ export const sendTestSms: Handler = async (c: any) => {
       return c.json({ success: false, message: "Admin account not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
-    const body = await c.req.json().catch(() => ({}));
+    const body = (c.req as any).valid ? (c.req as any).valid("json") : await c.req.json().catch(() => ({}));
     const firmSetting = (
       await db
         .select()
@@ -1163,7 +1163,7 @@ export const buyStorage: Handler = async (c: any) => {
       );
     }
 
-    const body = c.req.valid ? c.req.valid("json") : await c.req.json();
+    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
     const gigabytes = Math.max(1, Number(body?.gigabytes) || 1);
     const ratePerGb = 1000;
     const totalRequiredAmount = gigabytes * ratePerGb;

@@ -92,12 +92,19 @@ import {
 
 export const superAdminRouter = createRouter();
 
-// Public endpoints (used by the Landing / registration page before login)
+/**
+ * ── 1. PUBLIC ENDPOINTS (Landing Page / Pre-login) ────────────────────────
+ * Explicitly open for prospective tenants to view available plans and pricing
+ * before registering an account.
+ */
 superAdminRouter.get("/public-stats", getPlatformPublicStats);
 superAdminRouter.get("/plans", getPlans);
 superAdminRouter.get("/payment-settings", getPaymentSettings);
 
-// Shared master data (any logged-in user: tenants read it, superadmin manages it)
+/**
+ * ── 2. SHARED MASTER DATA (Authenticated Read-Only for Tenants) ───────────
+ * Any authenticated user in good standing can read global dropdown definitions.
+ */
 superAdminRouter.get("/client-types", authMiddleware, getClientTypes);
 superAdminRouter.get("/locations", authMiddleware, getLocations);
 superAdminRouter.get("/commercial-areas", authMiddleware, getCommercialAreas);
@@ -109,7 +116,10 @@ superAdminRouter.get("/service-units", authMiddleware, getServiceUnits);
 superAdminRouter.get("/vat-notes", authMiddleware, getVatNotes);
 superAdminRouter.get("/unit-conversions", authMiddleware, getUnitConversions);
 
-// Guard all subsequent SuperAdmin management endpoints
+/**
+ * ── 3. STRICT SUPERADMIN-ONLY MANAGEMENT ZONE ─────────────────────────────
+ * All subsequent endpoints require valid token AND role = 'superadmin'.
+ */
 superAdminRouter.use("/notifications*", authMiddleware, requireRole("superadmin"));
 superAdminRouter.use("/tenants*", authMiddleware, requireRole("superadmin"));
 superAdminRouter.use("/pending-signups*", authMiddleware, requireRole("superadmin"));

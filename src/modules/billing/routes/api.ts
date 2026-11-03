@@ -1,5 +1,4 @@
-import { createRouter } from "@/framework/facade.js";
-import { zValidator } from "@hono/zod-validator";
+import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
 import { denyRole } from "@/middlewares/role-middleware.js";
 import { requirePermission } from "@/middlewares/permission-middleware.js";
@@ -38,30 +37,142 @@ billingRouter.use("*", authMiddleware, denyRole("superadmin"), subscriptionMiddl
 // Bills are also read by the collection screens (outstanding dues) and tenant reports.
 const BILL_READERS = ["billing.view", "collections.view", "collections.create", "reports.view"];
 
-// ── COLLECTIONS ENDPOINTS (Register before /:id wildcard) ─────────────
-billingRouter.get("/collections", requirePermission("collections.view", "reports.view"), zValidator("query", listCollectionsQuerySchema), listCollections);
-billingRouter.get("/collections/:id", requirePermission(...BILL_READERS), getCollectionDetails);
-billingRouter.post("/collections", requirePermission("collections.create"), zValidator("json", createCollectionSchema), createCollection);
-billingRouter.delete("/collections/:id", requirePermission("collections.delete"), cancelCollection);
+// ── COLLECTIONS ROUTE SCHEMAS ─────────────────────────────────────────
 
-// ── OVERVIEW & MISSING BILLS (Register before /:id wildcard) ──────────
-billingRouter.get("/overview", requirePermission(...BILL_READERS), zValidator("query", clientBillingSummaryQuerySchema), getClientBillingOverview);
-billingRouter.get("/missing", requirePermission(...BILL_READERS), zValidator("query", listBillsQuerySchema), getMissingBills);
+const listCollectionsRoute = createRoute({
+  path: "/collections",
+  method: "get",
+  tags: ["Billing - Collections"],
+  description: "List payment collections with filters",
+  request: { query: listCollectionsQuerySchema },
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Collections list") }
+});
 
-// ── BILL INVOICES ENDPOINTS ──────────────────────────────────────────
-billingRouter.get("/", requirePermission(...BILL_READERS), zValidator("query", listBillsQuerySchema), listBills);
-billingRouter.post("/", requirePermission("billing.create"), zValidator("json", createBillSchema), createBill);
-billingRouter.post("/batch", requirePermission("billing.create"), zValidator("json", batchGenerateBillsSchema), batchGenerateBills);
-// Async variant: returns 202 + jobId. Falls back to the sync handler when the
-// flag is off or Redis is unavailable, so the existing contract is preserved.
-billingRouter.post(
-  "/batch/async",
-  requirePermission("billing.create"),
-  zValidator("json", batchGenerateBillsSchema),
-  batchGenerateBillsAsync
-);
-billingRouter.get("/:id", requirePermission(...BILL_READERS), getBillDetails);
-billingRouter.put("/:id", requirePermission("billing.edit"), zValidator("json", updateBillSchema), updateBill);
-billingRouter.delete("/:id", requirePermission("billing.delete"), deleteBill);
+const getCollectionDetailsRoute = createRoute({
+  path: "/collections/{id}",
+  method: "get",
+  tags: ["Billing - Collections"],
+  description: "Get single payment collection details",
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Collection details") }
+});
+
+const createCollectionRoute = createRoute({
+  path: "/collections",
+  method: "post",
+  tags: ["Billing - Collections"],
+  description: "Record a new payment collection",
+  request: { body: jsonContent(createCollectionSchema, "Collection payload") },
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Collection created") }
+});
+
+const cancelCollectionRoute = createRoute({
+  path: "/collections/{id}",
+  method: "delete",
+  tags: ["Billing - Collections"],
+  description: "Cancel payment collection receipt",
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), message: z.string() }), "Cancellation result") }
+});
+
+// ── OVERVIEW & MISSING BILLS ROUTE SCHEMAS ────────────────────────────
+
+const overviewRoute = createRoute({
+  path: "/overview",
+  method: "get",
+  tags: ["Billing - Overview"],
+  description: "Client billing summary overview",
+  request: { query: clientBillingSummaryQuerySchema },
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Overview summary") }
+});
+
+const missingBillsRoute = createRoute({
+  path: "/missing",
+  method: "get",
+  tags: ["Billing - Invoices"],
+  description: "Find clients with pending bills for the month",
+  request: { query: listBillsQuerySchema },
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Missing bills list") }
+});
+
+// ── BILL INVOICES ROUTE SCHEMAS ───────────────────────────────────────
+
+const listBillsRoute = createRoute({
+  path: "/",
+  method: "get",
+  tags: ["Billing - Invoices"],
+  description: "List monthly bills and invoices",
+  request: { query: listBillsQuerySchema },
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Bills list") }
+});
+
+const createBillRoute = createRoute({
+  path: "/",
+  method: "post",
+  tags: ["Billing - Invoices"],
+  description: "Create single client bill invoice",
+  request: { body: jsonContent(createBillSchema, "Create bill payload") },
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Bill created") }
+});
+
+const batchGenerateBillsRoute = createRoute({
+  path: "/batch",
+  method: "post",
+  tags: ["Billing - Invoices"],
+  description: "Synchronously batch generate bills for month",
+  request: { body: jsonContent(batchGenerateBillsSchema, "Batch bill payload") },
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Batch generation result") }
+});
+
+const batchGenerateBillsAsyncRoute = createRoute({
+  path: "/batch/async",
+  method: "post",
+  tags: ["Billing - Invoices"],
+  description: "Queue batch bill generation job asynchronously",
+  request: { body: jsonContent(batchGenerateBillsSchema, "Batch bill payload") },
+  responses: { [HttpStatusCodes.ACCEPTED]: jsonContent(z.object({ success: z.boolean(), jobId: z.string() }), "Job queued") }
+});
+
+const getBillDetailsRoute = createRoute({
+  path: "/{id}",
+  method: "get",
+  tags: ["Billing - Invoices"],
+  description: "Get detailed invoice info with line items and payments",
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Bill details") }
+});
+
+const updateBillRoute = createRoute({
+  path: "/{id}",
+  method: "put",
+  tags: ["Billing - Invoices"],
+  description: "Update existing bill invoice",
+  request: { body: jsonContent(updateBillSchema, "Update bill payload") },
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Bill updated") }
+});
+
+const deleteBillRoute = createRoute({
+  path: "/{id}",
+  method: "delete",
+  tags: ["Billing - Invoices"],
+  description: "Delete bill invoice",
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), message: z.string() }), "Deletion result") }
+});
+
+// ── BIND ROUTERS WITH CREATE_ROUTE API ────────────────────────────────
+
+billingRouter.api(listCollectionsRoute, [requirePermission("collections.view", "reports.view")], listCollections);
+billingRouter.api(getCollectionDetailsRoute, [requirePermission(...BILL_READERS)], getCollectionDetails);
+billingRouter.api(createCollectionRoute, [requirePermission("collections.create")], createCollection);
+billingRouter.api(cancelCollectionRoute, [requirePermission("collections.delete")], cancelCollection);
+
+billingRouter.api(overviewRoute, [requirePermission(...BILL_READERS)], getClientBillingOverview);
+billingRouter.api(missingBillsRoute, [requirePermission(...BILL_READERS)], getMissingBills);
+
+billingRouter.api(listBillsRoute, [requirePermission(...BILL_READERS)], listBills);
+billingRouter.api(createBillRoute, [requirePermission("billing.create")], createBill);
+billingRouter.api(batchGenerateBillsRoute, [requirePermission("billing.create")], batchGenerateBills);
+billingRouter.api(batchGenerateBillsAsyncRoute, [requirePermission("billing.create")], batchGenerateBillsAsync);
+
+billingRouter.api(getBillDetailsRoute, [requirePermission(...BILL_READERS)], getBillDetails);
+billingRouter.api(updateBillRoute, [requirePermission("billing.edit")], updateBill);
+billingRouter.api(deleteBillRoute, [requirePermission("billing.delete")], deleteBill);
 
 export default billingRouter;
