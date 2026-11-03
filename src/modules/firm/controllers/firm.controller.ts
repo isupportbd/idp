@@ -208,7 +208,8 @@ export const updateCompanySettings: Handler = async (c: any) => {
 export const listBankAccounts: Handler = async (c: any) => {
   try {
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
-    const targetAdminId = tenantAdminId || 1;
+    if (!tenantAdminId && !isSuperAdmin) return c.json({ message: "Tenant context required" }, HttpStatusCodes.FORBIDDEN);
+    const targetAdminId = tenantAdminId!;
 
     const list = await db
       .select()
@@ -229,8 +230,9 @@ export const listBankAccounts: Handler = async (c: any) => {
 export const createBankAccount: Handler = async (c: any) => {
   try {
     const body = c.req.valid("json");
-    const { tenantAdminId } = await resolveTenantContext(c);
-    const targetAdminId = tenantAdminId || 1;
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+    if (!tenantAdminId) return c.json({ message: "Tenant context required" }, HttpStatusCodes.FORBIDDEN);
+    const targetAdminId = tenantAdminId;
 
     if (body.isDefault) {
       await db
@@ -260,7 +262,8 @@ export const updateBankAccount: Handler = async (c: any) => {
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
-    const targetAdminId = tenantAdminId || 1;
+    if (!tenantAdminId && !isSuperAdmin) return c.json({ message: "Tenant context required" }, HttpStatusCodes.FORBIDDEN);
+    const targetAdminId = tenantAdminId!;
 
     const existing = (
       await db
@@ -306,7 +309,8 @@ export const deleteBankAccount: Handler = async (c: any) => {
   try {
     const { id } = c.req.valid("param");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
-    const targetAdminId = tenantAdminId || 1;
+    if (!tenantAdminId && !isSuperAdmin) return c.json({ message: "Tenant context required" }, HttpStatusCodes.FORBIDDEN);
+    const targetAdminId = tenantAdminId!;
 
     const existing = (
       await db
@@ -339,7 +343,8 @@ export const deleteBankAccount: Handler = async (c: any) => {
 export const listExpenseHeads: Handler = async (c: any) => {
   try {
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
-    const targetAdminId = tenantAdminId || 1;
+    if (!tenantAdminId && !isSuperAdmin) return c.json({ message: "Tenant context required" }, HttpStatusCodes.FORBIDDEN);
+    const targetAdminId = tenantAdminId!;
 
     const list = await db
       .select()
@@ -361,8 +366,9 @@ export const createExpenseHead: Handler = async (c: any) => {
   try {
     const body = c.req.valid("json");
     const trimmedName = body.name.trim();
-    const { tenantAdminId } = await resolveTenantContext(c);
-    const targetAdminId = tenantAdminId || 1;
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+    if (!tenantAdminId) return c.json({ message: "Tenant context required" }, HttpStatusCodes.FORBIDDEN);
+    const targetAdminId = tenantAdminId;
 
     const existing = (
       await db
@@ -405,7 +411,8 @@ export const updateExpenseHead: Handler = async (c: any) => {
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
-    const targetAdminId = tenantAdminId || 1;
+    if (!tenantAdminId && !isSuperAdmin) return c.json({ message: "Tenant context required" }, HttpStatusCodes.FORBIDDEN);
+    const targetAdminId = tenantAdminId!;
 
     const existing = (
       await db
@@ -469,7 +476,8 @@ export const toggleExpenseHead: Handler = async (c: any) => {
   try {
     const { id } = c.req.valid("param");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
-    const targetAdminId = tenantAdminId || 1;
+    if (!tenantAdminId && !isSuperAdmin) return c.json({ message: "Tenant context required" }, HttpStatusCodes.FORBIDDEN);
+    const targetAdminId = tenantAdminId!;
 
     const existing = (
       await db
@@ -508,7 +516,8 @@ export const deleteExpenseHead: Handler = async (c: any) => {
   try {
     const { id } = c.req.valid("param");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
-    const targetAdminId = tenantAdminId || 1;
+    if (!tenantAdminId && !isSuperAdmin) return c.json({ message: "Tenant context required" }, HttpStatusCodes.FORBIDDEN);
+    const targetAdminId = tenantAdminId!;
 
     const existing = (
       await db
