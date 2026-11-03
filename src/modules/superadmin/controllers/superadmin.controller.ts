@@ -2152,7 +2152,7 @@ export async function getGlobalMetrics(c: Context) {
       }
     });
   } catch (error: any) {
-    return c.json({ success: false, message: error?.message || "Failed to load metrics" }, 500);
+    return c.json({ success: false, message: "Failed to load metrics" }, 500);
   }
 }
 
@@ -2472,7 +2472,7 @@ export async function approveRecharge(c: Context) {
     });
   } catch (error: any) {
     console.error("Error approving recharge:", error);
-    return c.json({ success: false, message: error?.message || "Failed to approve recharge" }, 500);
+    return c.json({ success: false, message: "Failed to approve recharge" }, 500);
   }
 }
 
@@ -2528,7 +2528,7 @@ export async function rejectRecharge(c: Context) {
     return c.json({ success: true, message: "Recharge request rejected" });
   } catch (error: any) {
     console.error("Error rejecting recharge:", error);
-    return c.json({ success: false, message: error?.message || "Failed to reject recharge" }, 500);
+    return c.json({ success: false, message: "Failed to reject recharge" }, 500);
   }
 }
 

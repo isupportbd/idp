@@ -283,34 +283,42 @@ onMounted(() => {
   // registered on two channels would fire its handler twice. The socket already
   // auto-joins its entitled rooms (auth / role:* / tenant:<id>) on connect, so a
   // single registration per event is enough.
-  pulse.channel("auth").listen("tenant:signup", () => {
-    if (isSuperAdmin.value) fetchNotifications();
-    fetchStats();
-  });
-  pulse.channel("auth").listen("tenant:recharge", () => {
-    if (isSuperAdmin.value) fetchNotifications();
-    fetchStats();
-  });
-  pulse.channel("auth").listen("user:subscription-updated", async () => {
-    await authStore.bootstrap(true);
-  });
-  pulse.channel("auth").listen("tenant:sms-updated", async (payload: any) => {
-    if (authStore.user) {
-      if (payload && typeof payload.smsBalance === "number") {
-        (authStore.user as any).smsBalance = payload.smsBalance;
-      } else {
-        await authStore.bootstrap(true);
-      }
-    }
-  });
+  pulse.channel("auth").listen("tenant:signup", onTenantSignup);
+  pulse.channel("auth").listen("tenant:recharge", onTenantRecharge);
+  pulse.channel("auth").listen("user:subscription-updated", onSubscriptionUpdated);
+  pulse.channel("auth").listen("tenant:sms-updated", onSmsUpdated);
 });
+
+const onTenantSignup = () => {
+  if (isSuperAdmin.value) fetchNotifications();
+  fetchStats();
+};
+
+const onTenantRecharge = () => {
+  if (isSuperAdmin.value) fetchNotifications();
+  fetchStats();
+};
+
+const onSubscriptionUpdated = async () => {
+  await authStore.bootstrap(true);
+};
+
+const onSmsUpdated = async (payload: any) => {
+  if (authStore.user) {
+    if (payload && typeof payload.smsBalance === "number") {
+      (authStore.user as any).smsBalance = payload.smsBalance;
+    } else {
+      await authStore.bootstrap(true);
+    }
+  }
+};
 
 onUnmounted(() => {
   window.removeEventListener("click", closeAllDropdowns);
-  pulse.channel("auth").stopListening("tenant:signup");
-  pulse.channel("auth").stopListening("tenant:recharge");
-  pulse.channel("auth").stopListening("user:subscription-updated");
-  pulse.channel("auth").stopListening("tenant:sms-updated");
+  pulse.channel("auth").stopListening("tenant:signup", onTenantSignup);
+  pulse.channel("auth").stopListening("tenant:recharge", onTenantRecharge);
+  pulse.channel("auth").stopListening("user:subscription-updated", onSubscriptionUpdated);
+  pulse.channel("auth").stopListening("tenant:sms-updated", onSmsUpdated);
 });
 </script>
 

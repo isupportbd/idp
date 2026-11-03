@@ -229,7 +229,7 @@ export const getStatementReport: Handler = async (c: any) => {
   } catch (error: any) {
     console.error("Error generating statements:", error);
     return c.json(
-      { success: false, message: "Failed to generate statement", error: error?.message },
+      { success: false, message: "Failed to generate statement" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
     );
   }
