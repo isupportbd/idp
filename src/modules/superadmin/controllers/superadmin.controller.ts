@@ -2717,7 +2717,7 @@ export async function exportDatabaseBackup(c: AppContext) {
               return `'${String(val).replace(/'/g, "''")}'`;
             });
 
-            sqlDump += `INSERT INTO "${table}" (${colsList}) VALUES (${values.join(", ")});\n`;
+            sqlDump += `INSERT INTO "${table}" (${colsList}) VALUES (${values.join(", ")}) ON CONFLICT DO NOTHING;\n`;
           }
         }
         sqlDump += `\n`;
@@ -2733,6 +2733,9 @@ export async function exportDatabaseBackup(c: AppContext) {
     const dateStr = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, "0")}_${String(now.getDate()).padStart(2, "0")}`;
     const timeStr = `${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`;
     const filename = `idp_backup_${dateStr}_${timeStr}.sql`;
+
+    const auth = c.get("auth") || c.get("user");
+    console.info(`[AUDIT] SuperAdmin #${(auth as { id?: number })?.id || "unknown"} exported database backup: ${filename} at ${now.toISOString()}`);
 
     return new Response(sqlDump, {
       status: 200,
@@ -2761,30 +2764,46 @@ export async function restoreDatabaseBackup(c: AppContext) {
       return c.json({ success: false, message: "Only .sql files can be restored" }, 400);
     }
 
+    // 500 MB max file size limit
+    const MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      return c.json({ success: false, message: "File exceeds maximum allowed restore size (500 MB)" }, 400);
+    }
+
     const sqlContent = await file.text();
     if (!sqlContent || sqlContent.trim().length === 0) {
       return c.json({ success: false, message: "Backup file is empty" }, 400);
     }
 
-    // Safety checks: allow only INSERT, SET, BEGIN, COMMIT, etc. Block DROP TABLE, DROP DATABASE
+    // Comprehensive safety checks: block arbitrary destructive statements
     const normalized = sqlContent.toUpperCase();
-    if (normalized.includes("DROP DATABASE") || normalized.includes("DROP SCHEMA")) {
+    if (
+      normalized.includes("DROP DATABASE") ||
+      normalized.includes("DROP SCHEMA") ||
+      normalized.includes("DROP TABLE") ||
+      normalized.includes("TRUNCATE ") ||
+      normalized.includes("ALTER TABLE")
+    ) {
       return c.json(
-        { success: false, message: "Security violation: Destructive DROP DATABASE / DROP SCHEMA queries detected" },
+        { success: false, message: "Security violation: Destructive DROP / TRUNCATE / ALTER queries detected in backup file" },
         400
       );
     }
+
+    const auth = c.get("auth") || c.get("user");
+    const superAdminId = (auth as { id?: number })?.id || "unknown";
 
     // Execute restore inside transaction
     await db.transaction(async (tx) => {
       // Execute the uploaded SQL backup
       await tx.execute(sql.raw(sqlContent));
 
-      // Synchronize PostgreSQL primary key sequences for all restored tables
+      // Synchronize PostgreSQL primary key sequences safely (handling empty tables with is_called = false)
       await tx.execute(sql.raw(`
         DO $$
         DECLARE
           r RECORD;
+          v_max BIGINT;
         BEGIN
           FOR r IN
             SELECT table_name, column_name, column_default
@@ -2792,12 +2811,18 @@ export async function restoreDatabaseBackup(c: AppContext) {
             WHERE table_schema = 'public'
               AND column_default LIKE 'nextval%'
           LOOP
-            EXECUTE format('SELECT setval(pg_get_serial_sequence(%L, %L), COALESCE(MAX(%I), 1)) FROM %I',
-              r.table_name, r.column_name, r.column_name, r.table_name);
+            EXECUTE format('SELECT COALESCE(MAX(%I), 0) FROM %I', r.column_name, r.table_name) INTO v_max;
+            IF v_max > 0 THEN
+              EXECUTE format('SELECT setval(pg_get_serial_sequence(%L, %L), %s, true)', r.table_name, r.column_name, v_max);
+            ELSE
+              EXECUTE format('SELECT setval(pg_get_serial_sequence(%L, %L), 1, false)', r.table_name, r.column_name);
+            END IF;
           END LOOP;
         END $$;
       `));
     });
+
+    console.info(`[AUDIT] SuperAdmin #${superAdminId} successfully restored database from file: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB) at ${new Date().toISOString()}`);
 
     return c.json({
       success: true,
