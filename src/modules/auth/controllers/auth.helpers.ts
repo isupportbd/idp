@@ -12,7 +12,7 @@ import { vatSubmissions } from "@/modules/clients/database/models/vat_submission
 import { bills } from "@/modules/billing/database/models/bills.js";
 import { subscriptionTransactions } from "@/modules/superadmin/database/models/subscription_transactions.js";
 import { companySettings } from "@/modules/firm/database/models/company_settings.js";
-import { fetchProviderBalance } from "@/framework/sms/index.js";
+import { fetchProviderBalance } from "@/framework/facade.js";
 import { normalizePermissions } from "@/modules/users/controllers/permissions.js";
 
 const storageCache = new Map<number, { records: number; expiresAt: number }>();

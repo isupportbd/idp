@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, isNull, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import { broadcast, db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
-import { fetchProviderBalance } from "@/framework/sms/index.js";
+import { fetchProviderBalance } from "@/framework/facade.js";
 import { users } from "@/modules/auth/database/models/user.js";
 import { companySettings } from "../database/models/company_settings.js";
 import { bankAccounts } from "../database/models/bank_accounts.js";

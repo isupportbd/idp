@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import { alias } from "drizzle-orm/pg-core";
 import { db, getDefaultTaxPeriod, getSubmissionDeadline, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
-import { broadcast } from "@/framework/realtime/broadcast.js";
+import { broadcast } from "@/framework/facade.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
 import { vatSubmissions } from "@/modules/clients/database/models/vat_submissions.js";

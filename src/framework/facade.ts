@@ -15,6 +15,12 @@ export { type PaginatedResult, paginate, paginateModel, paginateQuery, paginateT
 export { command, dispatchCommand, dispatchEvent } from "@/framework/events/dispatcher.js";
 export { createRouter, group } from "@/framework/http/router.js";
 export { validate } from "@/framework/http/validation.js";
+export { handleControllerError, type ControllerErrorOptions } from "@/framework/http/errors.js";
+export { loginLimiter } from "@/framework/http/ratelimiter.js";
+export { handleAsyncEndpoint, isAsyncFlagEnabled } from "@/framework/queue/async-endpoint.js";
+export { emitProgress } from "@/framework/queue/progress.js";
+export { redisClientIfReady } from "@/framework/redis/client.js";
+export { dispatchProviderSms, fetchProviderBalance } from "@/framework/sms/index.js";
 export { notify } from "@/framework/notification/index.js";
 export { queue, queueJob, shouldQueue } from "@/framework/queue/queue.js";
 export { broadcast } from "@/framework/realtime/index.js";

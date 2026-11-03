@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { db } from "@/framework/database/connection.js";
+import { db } from "@/framework/facade.js";
 import { resolveTenantContext } from "@/framework/facade.js";
 import { purchases } from "@/modules/clients/database/models/purchases.js";
 import { salesRates } from "@/modules/clients/database/models/sales_rates.js";

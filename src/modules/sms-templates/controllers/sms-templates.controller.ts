@@ -5,8 +5,7 @@ import { smsTemplates } from "../database/models/sms_templates.js";
 import { smsLogs } from "../database/models/sms_logs.js";
 import { companySettings } from "@/modules/firm/database/models/company_settings.js";
 import { users } from "@/modules/auth/database/models/user.js";
-import { fetchProviderBalance } from "@/framework/sms/index.js";
-import { broadcast } from "@/framework/realtime/broadcast.js";
+import { fetchProviderBalance, broadcast } from "@/framework/facade.js";
 import {
   DEFAULT_TEMPLATES,
   callBulkSmsBd,

@@ -8,8 +8,7 @@ import { globalItems } from "@/modules/superadmin/database/models/global_items.j
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { purchases } from "@/modules/clients/database/models/purchases.js";
 import { users } from "@/modules/auth/database/models/user.js";
-import { handleControllerError } from "@/framework/http/errors.js";
-import { handleAsyncEndpoint, isAsyncFlagEnabled } from "@/framework/queue/async-endpoint.js";
+import { handleControllerError, handleAsyncEndpoint, isAsyncFlagEnabled } from "@/framework/facade.js";
 import { round2 } from "@/utils/number.js";
 
 // Upload hardening: reject oversized or unexpected files before they reach the

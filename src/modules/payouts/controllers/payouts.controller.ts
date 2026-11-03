@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, ilike, ne, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import { db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
-import { broadcast } from "@/framework/realtime/broadcast.js";
+import { broadcast } from "@/framework/facade.js";
 import { round2 } from "@/utils/number.js";
 import { users } from "@/modules/auth/database/models/user.js";
 import { roles } from "@/modules/auth/database/models/role.js";

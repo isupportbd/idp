@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, ne, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import { HttpStatusCodes, password } from "@/framework/facade.js";
-import { db } from "@/framework/database/connection.js";
+import { db } from "@/framework/facade.js";
 import { refreshTokens, users } from "@/modules/auth/database/models/user.js";
 import { roles } from "@/modules/auth/database/models/role.js";
 import { plans } from "@/modules/superadmin/database/models/plans.js";

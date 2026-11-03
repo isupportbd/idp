@@ -1,8 +1,20 @@
 import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import { authConfig, jwtConfig } from "@/config/index.js";
-import { broadcast, cookie, db, dispatchEvent, HttpStatusCodes, jwt, mail, password, urls } from "@/framework/facade.js";
-import { redisClientIfReady } from "@/framework/redis/client.js";
+import {
+  broadcast,
+  cookie,
+  db,
+  dispatchEvent,
+  dispatchProviderSms,
+  fetchProviderBalance,
+  HttpStatusCodes,
+  jwt,
+  mail,
+  password,
+  redisClientIfReady,
+  urls
+} from "@/framework/facade.js";
 import { roles } from "@/modules/auth/database/models/role.js";
 import { emailVerificationTokens, passwordResetTokens, refreshTokens, users } from "@/modules/auth/database/models/user.js";
 import { plans } from "@/modules/superadmin/database/models/plans.js";
@@ -18,7 +30,6 @@ import {
   revokeCurrentRefreshToken,
   sanitizeUser
 } from "./auth.helpers.js";
-import { dispatchProviderSms, fetchProviderBalance } from "@/framework/sms/index.js";
 import { companySettings } from "@/modules/firm/database/models/company_settings.js";
 
 /**
