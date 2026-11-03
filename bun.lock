@@ -15,6 +15,7 @@
         "@socket.io/admin-ui": "^0.5.1",
         "@socket.io/bun-engine": "^0.1.1",
         "@socket.io/redis-adapter": "^8.3.0",
+        "@tanstack/vue-virtual": "^3.13.51",
         "@vitejs/plugin-vue": "^6.0.8",
         "@vuepic/vue-datepicker": "^14.0.0",
         "@vueuse/core": "^14.4.0",
@@ -379,6 +380,10 @@
     "@socket.io/redis-adapter": ["@socket.io/redis-adapter@8.3.0", "", { "dependencies": { "debug": "~4.3.1", "notepack.io": "~3.0.1", "uid2": "1.0.0" }, "peerDependencies": { "socket.io-adapter": "^2.5.4" } }, "sha512-ly0cra+48hDmChxmIpnESKrc94LjRL80TEmZVscuQ/WWkRP81nNj8W8cCGMqbI4L6NCuAaPRSzZF1a9GlAxxnA=="],
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
+
+    "@tanstack/virtual-core": ["@tanstack/virtual-core@3.19.10", "", {}, "sha512-/ltpH0qUCs5XQYE7fIhgA+aqgC5NzSfLTDQkC+N1wOOdvIYx1FH/kz2LGfSeanNbekqy3WBu6mNIbqXhxE/pew=="],
+
+    "@tanstack/vue-virtual": ["@tanstack/vue-virtual@3.13.51", "", { "dependencies": { "@tanstack/virtual-core": "3.19.10" }, "peerDependencies": { "vue": "^2.7.0 || ^3.0.0" } }, "sha512-0Q57TrTPrNBhQsURZzbDQ4HVC+ukhX/7Ma2h1UXNECyRAHFFRrrEiETtH6TyUHm6E1fmei4HHhu4yAYiTkuviQ=="],
 
     "@types/bcryptjs": ["@types/bcryptjs@2.4.6", "", {}, "sha512-9xlo6R2qDs5uixm0bcIqCeMCE6HiQsIyel9KQySStiyqNl2tnj2mP3DX1Nf56MD6KMenNNlBBsy3LJ7gUEQPXQ=="],
 
