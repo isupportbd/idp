@@ -2747,6 +2747,75 @@ export async function exportDatabaseBackup(c: AppContext) {
   }
 }
 
+// 23. Full Database SQL Restore (SuperAdmin Only)
+export async function restoreDatabaseBackup(c: AppContext) {
+  try {
+    const body = await c.req.parseBody();
+    const file = body["backupFile"];
+
+    if (!file || !(file instanceof File)) {
+      return c.json({ success: false, message: "A valid .sql backup file is required" }, 400);
+    }
+
+    if (!file.name.endsWith(".sql")) {
+      return c.json({ success: false, message: "Only .sql files can be restored" }, 400);
+    }
+
+    const sqlContent = await file.text();
+    if (!sqlContent || sqlContent.trim().length === 0) {
+      return c.json({ success: false, message: "Backup file is empty" }, 400);
+    }
+
+    // Safety checks: allow only INSERT, SET, BEGIN, COMMIT, etc. Block DROP TABLE, DROP DATABASE
+    const normalized = sqlContent.toUpperCase();
+    if (normalized.includes("DROP DATABASE") || normalized.includes("DROP SCHEMA")) {
+      return c.json(
+        { success: false, message: "Security violation: Destructive DROP DATABASE / DROP SCHEMA queries detected" },
+        400
+      );
+    }
+
+    // Execute restore inside transaction
+    await db.transaction(async (tx) => {
+      // Execute the uploaded SQL backup
+      await tx.execute(sql.raw(sqlContent));
+
+      // Synchronize PostgreSQL primary key sequences for all restored tables
+      await tx.execute(sql.raw(`
+        DO $$
+        DECLARE
+          r RECORD;
+        BEGIN
+          FOR r IN
+            SELECT table_name, column_name, column_default
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND column_default LIKE 'nextval%'
+          LOOP
+            EXECUTE format('SELECT setval(pg_get_serial_sequence(%L, %L), COALESCE(MAX(%I), 1)) FROM %I',
+              r.table_name, r.column_name, r.column_name, r.table_name);
+          END LOOP;
+        END $$;
+      `));
+    });
+
+    return c.json({
+      success: true,
+      message: `Database successfully restored from ${file.name}`
+    });
+  } catch (err: unknown) {
+    console.error("Database restore failed:", err);
+    return c.json(
+      {
+        success: false,
+        message: `Failed to restore database: ${(err as Error)?.message || String(err)}`
+      },
+      500
+    );
+  }
+}
+
+
 
 
 

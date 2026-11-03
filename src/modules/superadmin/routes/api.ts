@@ -69,7 +69,8 @@ import {
   getPendingRecharges,
   approveRecharge,
   rejectRecharge,
-  exportDatabaseBackup
+  exportDatabaseBackup,
+  restoreDatabaseBackup
 } from "../controllers/superadmin.controller.js";
 import {
   PlanSchema,
@@ -463,7 +464,18 @@ const databaseBackupRoute = createRoute({
   }
 });
 
+const databaseRestoreRoute = createRoute({
+  path: "/database-restore",
+  method: "post",
+  tags: ["SuperAdmin", "System"],
+  description: "Restore database from uploaded SQL backup",
+  responses: {
+    [HttpStatusCodes.OK]: jsonContent(OkMessage, "Database restore result")
+  }
+});
+
 superAdminRouter.api(databaseBackupRoute, superAdminMiddleware, exportDatabaseBackup);
+superAdminRouter.api(databaseRestoreRoute, superAdminMiddleware, restoreDatabaseBackup);
 
 const getNotificationsRoute = createRoute({
   path: "/notifications",

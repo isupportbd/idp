@@ -53,7 +53,56 @@ import { useToast } from "@/composables/useToast";
 const toast = useToast();
 const isLoading = ref(false);
 const isDownloadingBackup = ref(false);
+const isRestoringBackup = ref(false);
+const restoreFileInput = ref<HTMLInputElement | null>(null);
 const searchTerm = ref("");
+
+const triggerRestoreFileSelect = () => {
+  if (restoreFileInput.value) {
+    restoreFileInput.value.click();
+  }
+};
+
+const handleRestoreFileUpload = async (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (!file) return;
+
+  if (!file.name.endsWith(".sql")) {
+    toast.error("Please upload a valid .sql backup file.");
+    target.value = "";
+    return;
+  }
+
+  const confirmMsg = `WARNING: Restoring database from "${file.name}" will execute full transactional SQL data synchronization.\n\nAre you sure you want to proceed?`;
+  if (!window.confirm(confirmMsg)) {
+    target.value = "";
+    return;
+  }
+
+  isRestoringBackup.value = true;
+  try {
+    const formData = new FormData();
+    formData.append("backupFile", file);
+
+    const res = await axios.post("/api/superadmin/database-restore", formData, {
+      headers: { "Content-Type": "multipart/form-data" }
+    });
+
+    if (res.data?.success) {
+      toast.success(res.data?.message || "Database successfully restored!");
+      await fetchStorageStats();
+    } else {
+      toast.error(res.data?.message || "Failed to restore database");
+    }
+  } catch (err: unknown) {
+    console.error("Restore failed:", err);
+    toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Database restore failed");
+  } finally {
+    isRestoringBackup.value = false;
+    target.value = "";
+  }
+};
 
 const fetchStorageStats = async () => {
   isLoading.value = true;
@@ -162,17 +211,37 @@ onMounted(fetchStorageStats);
               <h4 class="text-white fw-bold mb-0 font-monospace">{{ stats.dbSizeMB }} MB</h4>
             </div>
           </div>
-          <button
-            type="button"
-            class="btn btn-outline-primary btn-sm rounded-circle p-2 d-flex align-items-center justify-content-center shadow-sm"
-            style="width: 38px; height: 38px; flex-shrink: 0;"
-            :disabled="isDownloadingBackup"
-            title="Download Full Database SQL Backup (.sql)"
-            @click="downloadDatabaseBackup"
-          >
-            <span v-if="isDownloadingBackup" class="spinner-border spinner-border-sm" role="status"></span>
-            <i v-else class="bi bi-download fs-6"></i>
-          </button>
+          <div class="d-flex align-items-center gap-1.5 flex-shrink-0">
+            <button
+              type="button"
+              class="btn btn-outline-primary btn-sm rounded-circle p-2 d-flex align-items-center justify-content-center shadow-sm"
+              style="width: 38px; height: 38px;"
+              :disabled="isDownloadingBackup"
+              title="Download Full Database SQL Backup (.sql)"
+              @click="downloadDatabaseBackup"
+            >
+              <span v-if="isDownloadingBackup" class="spinner-border spinner-border-sm" role="status"></span>
+              <i v-else class="bi bi-download fs-6"></i>
+            </button>
+            <input
+              ref="restoreFileInput"
+              type="file"
+              accept=".sql"
+              class="d-none"
+              @change="handleRestoreFileUpload"
+            />
+            <button
+              type="button"
+              class="btn btn-outline-warning btn-sm rounded-circle p-2 d-flex align-items-center justify-content-center shadow-sm"
+              style="width: 38px; height: 38px;"
+              :disabled="isRestoringBackup"
+              title="Restore Database from SQL Backup (.sql)"
+              @click="triggerRestoreFileSelect"
+            >
+              <span v-if="isRestoringBackup" class="spinner-border spinner-border-sm" role="status"></span>
+              <i v-else class="bi bi-upload fs-6"></i>
+            </button>
+          </div>
         </div>
       </div>
       <div class="col-md-3">
