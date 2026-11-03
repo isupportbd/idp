@@ -261,8 +261,6 @@ export async function sendTestSms(c: Context) {
 // 5. List Delivery Logs
 export async function listSmsLogs(c: Context) {
   try {
-    const user = getAuthUser(c);
-    const superAdmin = isSuperAdmin(user);
     const { isSuperAdmin: superAdmin, tenantAdminId: adminId } = await resolveTenantContext(c);
 
     const logs = await db.query.smsLogs.findMany({

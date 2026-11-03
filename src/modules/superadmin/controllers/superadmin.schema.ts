@@ -51,7 +51,7 @@ export const LocationSchema = z.object({
 
 export const CommercialAreaSchema = z.object({
   name: z.string().min(1, "Area name is required"),
-  locationId: z.coerce.number({ required_error: "Parent location is required" }),
+  locationId: z.coerce.number(),
   description: z.string().optional().nullable(),
   isActive: z.boolean().optional().default(true)
 });
@@ -98,7 +98,7 @@ export const ServiceUnitSchema = z.object({
 });
 
 export const VatNoteSchema = z.object({
-  vatRate: z.coerce.number({ required_error: "VAT Rate (%) is required" }),
+  vatRate: z.coerce.number(),
   noteName: z.string().min(1, "Note Name is required"),
   description: z.string().optional().nullable(),
   isActive: z.boolean().optional().default(true)
@@ -107,5 +107,5 @@ export const VatNoteSchema = z.object({
 export const UnitConversionSchema = z.object({
   purchaseUnit: z.string().min(1, "Purchase unit is required"),
   salesUnit: z.string().min(1, "Sales unit is required"),
-  factor: z.coerce.number({ required_error: "Factor is required" })
+  factor: z.coerce.number()
 });

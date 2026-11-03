@@ -129,11 +129,12 @@ export const createUser: Handler = async (c: any) => {
 
     const { currentUser, isSuperAdmin, tenantAdminId } = tenantInfo;
     const rawBody = await c.req.json();
-    const validation = validate(CreateUserSchema, rawBody);
-    if (!validation.success) {
-      return c.json({ message: "Validation error", errors: (validation as any).errors }, HttpStatusCodes.BAD_REQUEST);
+    let body: any;
+    try {
+      body = await validate(CreateUserSchema, rawBody);
+    } catch (vErr: any) {
+      return c.json({ message: "Validation error", errors: vErr?.errors }, HttpStatusCodes.BAD_REQUEST);
     }
-    const body = validation.data;
 
     const email = String(body.email || "").trim().toLowerCase();
     const name = String(body.name || "").trim();
@@ -261,11 +262,12 @@ export const updateUser: Handler = async (c: any) => {
     }
 
     const rawBody = await c.req.json();
-    const validation = validate(UpdateUserSchema, rawBody);
-    if (!validation.success) {
-      return c.json({ message: "Validation error", errors: (validation as any).errors }, HttpStatusCodes.BAD_REQUEST);
+    let body: any;
+    try {
+      body = await validate(UpdateUserSchema, rawBody);
+    } catch (vErr: any) {
+      return c.json({ message: "Validation error", errors: vErr?.errors }, HttpStatusCodes.BAD_REQUEST);
     }
-    const body = validation.data;
     const updateData: any = { updatedAt: new Date() };
     const isPrimaryAdmin = targetUser.id === tenantAdminId;
 
@@ -321,11 +323,12 @@ export const resetUserPassword: Handler = async (c: any) => {
     const { isSuperAdmin, tenantAdminId } = tenantInfo;
     const userId = Number(c.req.param("id"));
     const rawBody = await c.req.json();
-    const validation = validate(ResetPasswordSchema, rawBody);
-    if (!validation.success) {
+    let body: any;
+    try {
+      body = await validate(ResetPasswordSchema, rawBody);
+    } catch (vErr: any) {
       return c.json({ message: "Password must be at least 6 characters long." }, HttpStatusCodes.BAD_REQUEST);
     }
-    const body = validation.data;
 
     if (!body.newPassword || body.newPassword.length < 6) {
       return c.json({ message: "Password must be at least 6 characters long." }, HttpStatusCodes.BAD_REQUEST);

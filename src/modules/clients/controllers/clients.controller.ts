@@ -10,9 +10,9 @@ import { users } from "@/modules/auth/database/models/user.js";
 import { roles } from "@/modules/auth/database/models/role.js";
 import { companySettings } from "@/modules/firm/database/models/company_settings.js";
 import { plans } from "@/modules/superadmin/database/models/plans.js";
-import { purchases } from "../database/models/purchases.js";
-import { salesRates } from "../database/models/sales_rates.js";
-import { vatSubmissions } from "../database/models/vat_submissions.js";
+import { purchases } from "@/modules/purchases/database/models/purchases.js";
+import { salesRates } from "@/modules/sales-rates/database/models/sales_rates.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 import { bills } from "@/modules/billing/database/models/bills.js";
 import { collections } from "@/modules/billing/database/models/collections.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
@@ -975,7 +975,7 @@ function formatStandardBin(raw: string | null | undefined): string | null {
 export const bulkCreateClients: Handler = async (c: any) => {
   try {
     const rawBody = await c.req.json().catch(() => ({}));
-    const { clients: rawClients } = await validate(BulkCreateClientsSchema, rawBody);
+    const { clients: rawClients } = await validate(BulkCreateClientsSchema, rawBody) as { clients: any[] };
 
     const { currentUser, isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
     const tenantAdmin = currentUser.adminId
