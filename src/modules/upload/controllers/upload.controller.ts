@@ -809,15 +809,17 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
 
   if (toInsert.length > 0) {
     const CHUNK_SIZE = 500;
-    for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
-      const chunk = toInsert.slice(i, i + CHUNK_SIZE);
-      await db.insert(purchases).values(chunk);
+    await db.transaction(async (tx) => {
+      for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
+        const chunk = toInsert.slice(i, i + CHUNK_SIZE);
+        await tx.insert(purchases).values(chunk);
 
-      if (toInsert.length > 500) {
-        const processedCount = Math.min(toInsert.length, i + chunk.length);
-        onProgress?.({ total: toInsert.length, processed: processedCount });
+        if (toInsert.length > 500) {
+          const processedCount = Math.min(toInsert.length, i + chunk.length);
+          onProgress?.({ total: toInsert.length, processed: processedCount });
+        }
       }
-    }
+    });
   }
 
   return { totalRowsProcessed: toInsert.length, duplicatesList, ffsPendingList };

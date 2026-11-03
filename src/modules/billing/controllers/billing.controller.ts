@@ -1337,9 +1337,9 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
     // Generate sequential billNo
     const billNo = await generateNextBillNo(year);
 
-    // Insert Bill
-    const billRecord = (
-      await db
+    // Insert Bill and Items atomically in a transaction
+    const billRecord = await db.transaction(async (tx) => {
+      const [insertedBill] = await tx
         .insert(bills)
         .values({
           billNo,
@@ -1358,24 +1358,27 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
           createdBy: creatorId,
           notes: `Batch generated monthly bill for ${taxPeriod}`
         })
-        .returning()
-    )[0];
+        .returning();
 
-    // Insert Items
-    await db.insert(billItems).values(
-      itemsToInsert.map((it) => ({
-        billId: billRecord.id,
-        serviceItemId: it.serviceItemId,
-        itemName: it.itemName,
-        unit: it.unit,
-        qty: it.qty,
-        rateUsed: it.rateUsed,
-        minimumChargeUsed: it.minimumChargeUsed,
-        calculatedAmount: it.calculatedAmount,
-        finalAmount: it.finalAmount,
-        notes: it.notes
-      }))
-    );
+      if (itemsToInsert.length > 0) {
+        await tx.insert(billItems).values(
+          itemsToInsert.map((it) => ({
+            billId: insertedBill.id,
+            serviceItemId: it.serviceItemId,
+            itemName: it.itemName,
+            unit: it.unit,
+            qty: it.qty,
+            rateUsed: it.rateUsed,
+            minimumChargeUsed: it.minimumChargeUsed,
+            calculatedAmount: it.calculatedAmount,
+            finalAmount: it.finalAmount,
+            notes: it.notes
+          }))
+        );
+      }
+
+      return insertedBill;
+    });
 
     createdBillsList.push({
       id: billRecord.id,
