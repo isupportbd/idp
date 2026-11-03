@@ -77,7 +77,7 @@ import Checkbox from "@/components/Checkbox.vue";
 import Input from "@/components/Input.vue";
 import { useGum } from "@/plugins/gum";
 import Pagination from "./Pagination.vue";
-import SelectOption from "./SelectOpption.vue";
+import SelectOption from "./SelectOption.vue";
 
 interface DataRow {
   id: string | number;

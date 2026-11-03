@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { db } from "@/framework/facade.js";
+import { db, resolveTenantContext } from "@/framework/facade.js";
 import { eq, and, isNull, desc, sql } from "drizzle-orm";
 import { smsTemplates } from "../database/models/sms_templates.js";
 import { smsLogs } from "../database/models/sms_logs.js";
@@ -14,16 +14,6 @@ import {
 
 function getAuthUser(c: Context): any {
   return c.get("auth") || c.get("user") || (c.req as any).user;
-}
-
-function resolveTenantAdminId(user: any): number | null {
-  if (!user) return null;
-  const roleName = typeof user.role === "string" ? user.role : user.role?.name;
-  if (roleName === "superadmin") return null;
-  if (roleName === "admin" || !user.adminId) {
-    return user.id;
-  }
-  return user.adminId;
 }
 
 function isSuperAdmin(user: any): boolean {
@@ -208,7 +198,7 @@ export async function sendTestSms(c: Context) {
       return c.json({ success: false, message: "Invalid Bangladesh mobile number format (e.g. 017XXXXXXXX)" }, 400);
     }
 
-    const adminId = resolveTenantAdminId(user);
+    const { tenantAdminId: adminId } = await resolveTenantContext(c);
     const settings = await db.query.companySettings.findFirst({
       where: adminId ? eq(companySettings.adminId, adminId) : isNull(companySettings.adminId)
     });
@@ -273,7 +263,7 @@ export async function listSmsLogs(c: Context) {
   try {
     const user = getAuthUser(c);
     const superAdmin = isSuperAdmin(user);
-    const adminId = superAdmin ? null : resolveTenantAdminId(user);
+    const { isSuperAdmin: superAdmin, tenantAdminId: adminId } = await resolveTenantContext(c);
 
     const logs = await db.query.smsLogs.findMany({
       where: superAdmin || !adminId ? undefined : eq(smsLogs.adminId, adminId),
@@ -294,7 +284,7 @@ export async function listSmsLogs(c: Context) {
 export async function getGatewaySettings(c: Context) {
   try {
     const user = getAuthUser(c);
-    const adminId = resolveTenantAdminId(user);
+    const { tenantAdminId: adminId } = await resolveTenantContext(c);
 
     const settings = await db.query.companySettings.findFirst({
       where: adminId ? eq(companySettings.adminId, adminId) : isNull(companySettings.adminId)
@@ -328,7 +318,7 @@ export async function getGatewaySettings(c: Context) {
 export async function updateGatewaySettings(c: Context) {
   try {
     const user = getAuthUser(c);
-    const adminId = resolveTenantAdminId(user);
+    const { tenantAdminId: adminId } = await resolveTenantContext(c);
     const body = await c.req.json();
     const { smsApiKey, smsSenderId, provider, endpoint } = body;
 
@@ -394,7 +384,7 @@ export async function updateGatewaySettings(c: Context) {
 export async function checkGatewayBalance(c: Context) {
   try {
     const user = getAuthUser(c);
-    const adminId = resolveTenantAdminId(user);
+    const { tenantAdminId: adminId } = await resolveTenantContext(c);
 
     const settings = await db.query.companySettings.findFirst({
       where: adminId ? eq(companySettings.adminId, adminId) : isNull(companySettings.adminId)

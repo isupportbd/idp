@@ -302,7 +302,9 @@ export const login: Handler = async (c: any) => {
 
     try {
       await db.update(users).set({ updatedAt: new Date() }).where(eq(users.id, user.id));
-    } catch { }
+    } catch (err) {
+      console.warn("Failed to update user login timestamp:", err);
+    }
 
     return c.json(
       {
@@ -835,7 +837,9 @@ export const getUserStats: Handler = async (c: any) => {
     // Update current user's updatedAt as heartbeat
     try {
       await db.update(users).set({ updatedAt: new Date() }).where(eq(users.id, currentUserId));
-    } catch { }
+    } catch (err) {
+      console.warn("Failed to update user heartbeat timestamp:", err);
+    }
 
     let rawUsers: any[] = [];
     if (isSuperAdmin) {

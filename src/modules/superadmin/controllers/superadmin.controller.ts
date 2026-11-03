@@ -668,7 +668,9 @@ export async function getStorageStats(c: Context) {
         dbSizeMB = Number(rows[0].sizemb || rows[0].sizeMB || 0);
         tablesCount = Number(rows[0].tables_count || 0);
       }
-    } catch { }
+    } catch (err) {
+      console.warn("Failed to compute database storage size stats:", err);
+    }
 
     const [clientsTotal] = await db.select({ count: sql<number>`count(*)` }).from(clients);
     const [usersTotal] = await db.select({ count: sql<number>`count(*)` }).from(users);

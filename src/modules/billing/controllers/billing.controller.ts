@@ -140,7 +140,9 @@ async function generateNextBillNo(year: number, customPrefix?: string, tenantAdm
       if (firmSetting?.invoicePrefix) {
         prefixToUse = firmSetting.invoicePrefix.trim();
       }
-    } catch { }
+    } catch (err) {
+      console.warn("Failed to read firm invoice prefix:", err);
+    }
   }
   const cleanPrefix = (prefixToUse || "INV").replace(/-+$/, "").toUpperCase();
   const prefix = `${cleanPrefix}-${year}-`;
@@ -185,7 +187,9 @@ async function generateNextReceiptNo(year: number, customPrefix?: string, tenant
       if (firmSetting?.receiptPrefix) {
         prefixToUse = firmSetting.receiptPrefix.trim();
       }
-    } catch { }
+    } catch (err) {
+      console.warn("Failed to read firm receipt prefix:", err);
+    }
   }
   const cleanPrefix = (prefixToUse || "RCP").replace(/-+$/, "").toUpperCase();
   const prefix = `${cleanPrefix}-${year}-`;
@@ -568,7 +572,9 @@ export const getBillDetails: Handler = async (c: any) => {
           where: eq(companySettings.adminId, tenantAdminId)
         });
       }
-    } catch { }
+    } catch (err) {
+      console.warn("Failed to query company settings for bill print branding:", err);
+    }
 
     // Payment details for the printable invoice / WhatsApp notice, resolved for
     // the owning tenant (client owner) so clerks without FIRM_READERS still see it.

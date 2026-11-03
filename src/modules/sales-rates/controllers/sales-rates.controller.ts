@@ -1,7 +1,7 @@
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
-import { broadcast, db, HttpStatusCodes } from "@/framework/facade.js";
-import { salesRates } from "@/modules/clients/database/models/sales_rates.js";
+import { broadcast, db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
+import { salesRates } from "../database/models/sales_rates.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
 import { unitConversions } from "@/modules/superadmin/database/models/unit_conversions.js";
@@ -10,9 +10,7 @@ import { users } from "@/modules/auth/database/models/user.js";
 // ── 1. LIST SALES RATES ───────────────────────────────────────────────
 export const listSalesRates: Handler = async (c: any) => {
   try {
-    const auth = c.get("auth") || c.get("user");
-    const role = auth?.role;
-    const adminId = auth?.adminId || auth?.id;
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
     const query = c.req.valid("query") || {};
     const page = Number(query.page || 1);
@@ -21,8 +19,8 @@ export const listSalesRates: Handler = async (c: any) => {
 
     const conditions: any[] = [];
 
-    if (role && role !== "superadmin" && adminId) {
-      conditions.push(eq(salesRates.adminId, adminId));
+    if (!isSuperAdmin && tenantAdminId) {
+      conditions.push(eq(salesRates.adminId, tenantAdminId));
     }
 
     if (query.clientId) {
@@ -128,8 +126,8 @@ export const listSalesRates: Handler = async (c: any) => {
 // ── 2. CREATE SALES RATE ──────────────────────────────────────────────
 export const createSalesRate: Handler = async (c: any) => {
   try {
-    const auth = c.get("auth") || c.get("user");
-    let adminId = auth?.adminId || auth?.id;
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+    const adminId = tenantAdminId;
     if (!adminId) {
       return c.json({ success: false, message: "Unauthorized: tenant admin required" }, HttpStatusCodes.UNAUTHORIZED);
     }
@@ -215,9 +213,8 @@ export const updateSalesRate: Handler = async (c: any) => {
       return c.json({ success: false, message: "Invalid sales rate ID" }, HttpStatusCodes.BAD_REQUEST);
     }
 
-    const auth = c.get("auth") || c.get("user");
-    const isSuperAdmin = String(auth?.role || "").toLowerCase() === "superadmin";
-    const tenantId = Number(auth?.adminId || auth?.id || 0);
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+    const tenantId = tenantAdminId ?? 0;
 
     // Tenant guard: never allow editing another tenant's sales rate by id.
     const owned = (
@@ -294,9 +291,8 @@ export const deleteSalesRate: Handler = async (c: any) => {
 
     const rate = existing[0];
 
-    const auth = c.get("auth") || c.get("user");
-    const isSuperAdmin = String(auth?.role || "").toLowerCase() === "superadmin";
-    const tenantId = Number(auth?.adminId || auth?.id || 0);
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+    const tenantId = tenantAdminId ?? 0;
     if (!isSuperAdmin && Number(rate.adminId) !== tenantId) {
       // Same 404 as a missing row so ids cannot be probed across tenants.
       return c.json({ success: false, message: "Sales rate not found" }, HttpStatusCodes.NOT_FOUND);
