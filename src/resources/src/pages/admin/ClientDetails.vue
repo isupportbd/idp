@@ -38,6 +38,7 @@ const client = ref<ClientDetail | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const copiedField = ref<string | null>(null);
+const showVatPassword = ref(false);
 
 const fetchClientData = async () => {
   if (!clientId.value || isNaN(clientId.value)) {
@@ -432,11 +433,19 @@ onMounted(() => {
                   <span v-if="copiedField === 'vatPass'" class="text-success small fw-semibold">Copied!</span>
                 </div>
                 <div class="value d-flex align-items-center justify-content-between bg-dark p-2 rounded border border-secondary border-opacity-25">
-                  <span v-if="client.vatPassword" class="font-monospace text-warning fw-bold" style="letter-spacing: 2px;">
-                    ••••••••••••
+                  <span v-if="client.vatPassword" class="font-monospace text-warning fw-bold" :style="{ letterSpacing: showVatPassword ? 'normal' : '2px' }">
+                    {{ showVatPassword ? client.vatPassword : '••••••••••••' }}
                   </span>
                   <span v-else class="text-muted font-monospace small">Not Configured</span>
                   <div v-if="client.vatPassword" class="d-flex align-items-center gap-1">
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary btn-sm py-0 px-2"
+                      @click="showVatPassword = !showVatPassword"
+                      :title="showVatPassword ? 'Hide Password' : 'Show Password'"
+                    >
+                      <i class="bi" :class="showVatPassword ? 'bi-eye-slash' : 'bi-eye'"></i>
+                    </button>
                     <button
                       type="button"
                       class="btn btn-outline-secondary btn-sm py-0 px-2"

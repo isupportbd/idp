@@ -55,6 +55,7 @@ const formError = ref("");
 const binStatus = ref<"idle" | "checking" | "unique" | "released" | "taken">("idle");
 const binMessage = ref<string>("");
 const mobileWarning = ref<string | null>(null);
+const showVatPassword = ref(false);
 
 const form = ref<{
   id: number;
@@ -670,13 +671,24 @@ const handleSubmit = async () => {
 
             <div v-if="can('clients.vat_password')" class="col-md-6">
               <label class="form-label text-light small fw-medium mb-1">VAT Portal Password</label>
-              <input
-                v-model="form.vatPassword"
-                type="password"
-                class="form-control idp-input font-monospace"
-                placeholder="Enter VAT password"
-                autocomplete="new-password"
-              />
+              <div class="input-group">
+                <input
+                  v-model="form.vatPassword"
+                  :type="showVatPassword ? 'text' : 'password'"
+                  class="form-control idp-input font-monospace"
+                  placeholder="Enter VAT password"
+                  autocomplete="new-password"
+                />
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary border-start-0"
+                  style="border-color: #3b424b;"
+                  title="Toggle Password Visibility"
+                  @click="showVatPassword = !showVatPassword"
+                >
+                  <i class="bi" :class="showVatPassword ? 'bi-eye-slash' : 'bi-eye'"></i>
+                </button>
+              </div>
             </div>
           </div>
 
