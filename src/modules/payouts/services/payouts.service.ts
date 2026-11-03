@@ -92,9 +92,9 @@ interface RateContext extends ReturnServiceItems {
 
 interface StaffRateRow {
   serviceItemId: number;
-  rate: any;
-  effectiveFrom: any;
-  effectiveTo: any;
+  rate: string | number;
+  effectiveFrom: string | Date;
+  effectiveTo: string | Date | null;
 }
 
 /** End-of-month timestamp (ms) for a `YYYY-MM` key; `undefined` -> end of the current month. */
@@ -170,7 +170,7 @@ function rateForMonth(rateRows: StaffRateRow[], itemId: number | null, month?: s
     const bt = b.effectiveFrom ? new Date(b.effectiveFrom).getTime() : 0;
     return bt - at;
   });
-  return round2(matching[0]?.rate ?? 0);
+  return round2(Number(matching[0]?.rate ?? 0));
 }
 
 async function getStaffRateContext(

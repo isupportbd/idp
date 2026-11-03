@@ -293,11 +293,11 @@ export async function callSmsGateway(opts: {
         };
         if (code !== null && !ok && errMap[code]) friendly = `[${code}] ${errMap[code]}`;
       }
-    } catch (smsServiceErr: any) { console.warn("[SMS Service Warning]:", smsServiceErr?.message || smsServiceErr); }
+    } catch (smsServiceErr: unknown) { console.warn("[SMS Service Warning]:", (smsServiceErr as Error)?.message || smsServiceErr); }
 
     return { ok, raw: friendly.slice(0, 500), code, networkError: false };
-  } catch (e: any) {
-    return { ok: false, raw: `Network error: ${e?.message || String(e)}`, code: null, networkError: true };
+  } catch (e: unknown) {
+    return { ok: false, raw: `Network error: ${(e as Error)?.message || String(e)}`, code: null, networkError: true };
   }
 }
 
@@ -343,7 +343,7 @@ export async function sendTransactionalSms(payload: SendTransactionalSmsPayload)
   let smsApiKey = "";
   let senderId = "";
   let companyName = "IDP System";
-  let settings: any = null;
+  let settings: typeof companySettings.$inferSelect | null | undefined = null;
   try {
     settings = await db.query.companySettings.findFirst({
       where: adminId ? eq(companySettings.adminId, adminId) : isNull(companySettings.adminId)
@@ -353,7 +353,7 @@ export async function sendTransactionalSms(payload: SendTransactionalSmsPayload)
       senderId = settings.smsSenderId || "";
       companyName = settings.companyName || companyName;
     }
-  } catch (smsServiceErr: any) { console.warn("[SMS Service Warning]:", smsServiceErr?.message || smsServiceErr); }
+  } catch (smsServiceErr: unknown) { console.warn("[SMS Service Warning]:", (smsServiceErr as Error)?.message || smsServiceErr); }
 
   // 1b. Fail-safe per-event gate: a firm may enable SMS for only some events.
   //     A disabled event is a deliberate no-op — no gateway call and no FAILED

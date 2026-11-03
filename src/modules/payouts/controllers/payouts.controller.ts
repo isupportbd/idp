@@ -172,7 +172,7 @@ export const getPayoutsDashboard = async (c: AppContext) => {
 
     const staffRows = await tenantStaff(tenant);
 
-    const staff: any[] = await Promise.all(
+    const staff = await Promise.all(
       staffRows.map(async (s) => {
         const base = {
           id: s.id,
@@ -226,7 +226,7 @@ export const getPayoutsDashboard = async (c: AppContext) => {
     const totalAdvance = round2(staff.reduce((sum, s) => sum + s.advanceBalance, 0));
 
     // Rows scoped to the tenant, plus the selected month when one is active.
-    const scopeConditions: any[] = [eq(payouts.adminId, tenant)];
+    const scopeConditions: import("drizzle-orm").SQL[] = [eq(payouts.adminId, tenant)];
     if (hasMonth) scopeConditions.push(eq(payouts.periodMonth, month));
 
     const recent = await db
@@ -305,16 +305,20 @@ export const listPayouts = async (c: AppContext) => {
     const query = c.req.valid ? c.req.valid("query") : c.req.query();
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
-    const conditions: any[] = [];
+    const conditions: import("drizzle-orm").SQL[] = [];
     if (!isSuperAdmin) conditions.push(eq(payouts.adminId, tenantAdminId ?? -1));
     if (query.month) conditions.push(eq(payouts.periodMonth, query.month));
     if (query.payoutType && query.payoutType !== "all") conditions.push(eq(payouts.payoutType, query.payoutType));
     if (query.userId) conditions.push(eq(payouts.userId, Number(query.userId)));
     if (query.search && String(query.search).trim()) {
       const like = `%${String(query.search).trim()}%`;
-      conditions.push(
-        or(ilike(payouts.referenceNo, like), ilike(payouts.notes, like), ilike(users.name, like), ilike(expenseHeads.name, like))
+      const searchCondition = or(
+        ilike(payouts.referenceNo, like),
+        ilike(payouts.notes, like),
+        ilike(users.name, like),
+        ilike(expenseHeads.name, like)
       );
+      if (searchCondition) conditions.push(searchCondition);
     }
 
     const rows = await db
@@ -358,7 +362,7 @@ export const getPayoutDetail = async (c: AppContext) => {
     const { id } = c.req.valid("param");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
-    const conditions: any[] = [eq(payouts.id, id)];
+    const conditions: import("drizzle-orm").SQL[] = [eq(payouts.id, id)];
     if (!isSuperAdmin) conditions.push(eq(payouts.adminId, tenantAdminId ?? -1));
 
     const row = (
@@ -652,8 +656,8 @@ export const getUserRates = async (c: AppContext) => {
         isActive: v.isActive
       }));
 
-    const data: any[] = [];
-    const retired: any[] = [];
+    const data: Record<string, unknown>[] = [];
+    const retired: Record<string, unknown>[] = [];
     for (const [serviceItemId, list] of byItem) {
       // `list` is newest-effective-first; its head is the most recent version.
       const latest = list[0];

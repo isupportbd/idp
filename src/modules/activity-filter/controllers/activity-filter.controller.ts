@@ -19,7 +19,7 @@ export const getActivityMatrix = async (c: AppContext) => {
     const taxPeriod = getDefaultTaxPeriod(query.month || query.taxPeriod);
     const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
 
-    const clientConditions: any[] = [eq(clients.isActive, true)];
+    const clientConditions: import("drizzle-orm").SQL[] = [eq(clients.isActive, true)];
     if (!isSuperAdmin && tenantAdminId) {
       clientConditions.push(eq(clients.createdBy, tenantAdminId));
     }
@@ -208,7 +208,7 @@ export const getActivityMatrix = async (c: AppContext) => {
       },
       HttpStatusCodes.OK
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Activity Matrix Error:", error);
     return c.json(
       {

@@ -330,7 +330,7 @@ export const updateServiceRate = async (c: AppContext) => {
       return c.json({ message: "Service rate not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
-    const updateData: any = { updatedAt: new Date() };
+    const updateData: Partial<typeof serviceRates.$inferInsert> = { updatedAt: new Date() };
     if (body.customerTypeId !== undefined) updateData.customerTypeId = body.customerTypeId;
     if (body.unit !== undefined) updateData.unit = body.unit;
     if (body.regularRate !== undefined) updateData.regularRate = body.regularRate;

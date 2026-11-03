@@ -70,7 +70,7 @@ export const listUsers = async (c: AppContext) => {
         gt(refreshTokens.expiresAt, new Date())
       )
     });
-    const loggedInUserIds = new Set(activeTokens.map((t: any) => Number(t.userId)));
+    const loggedInUserIds = new Set(activeTokens.map((t) => Number(t.userId)));
     const currentUserId = Number(currentUser.id);
     loggedInUserIds.add(currentUserId);
     const now = Date.now();
@@ -257,7 +257,7 @@ export const updateUser = async (c: AppContext) => {
     }
 
     const body = c.req.valid("json");
-    const updateData: any = { updatedAt: new Date() };
+    const updateData: Partial<typeof users.$inferInsert> = { updatedAt: new Date() };
     const isPrimaryAdmin = targetUser.id === tenantAdminId;
 
     if (body.name) updateData.name = String(body.name).trim();

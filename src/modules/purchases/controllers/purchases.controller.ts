@@ -24,7 +24,7 @@ export const listPurchases = async (c: AppContext) => {
     const limit = parseInt(c.req.query("limit") || "15", 10);
     const offset = (page - 1) * limit;
 
-    const conditions: any[] = [];
+    const conditions: import("drizzle-orm").SQL[] = [];
     if (!isSuperAdmin) {
       conditions.push(eq(purchases.adminId, tenantAdminId ?? -1));
     }
@@ -39,17 +39,16 @@ export const listPurchases = async (c: AppContext) => {
     }
     if (search && search.trim()) {
       const s = `%${search.trim()}%`;
-      conditions.push(
-        or(
-          ilike(purchases.beNo, s),
-          ilike(purchases.office, s),
-          ilike(purchases.lcNumber, s),
-          ilike(clients.companyName, s),
-          ilike(clients.binNumber, s),
-          ilike(globalItems.name, s),
-          ilike(globalItems.hsCode, s)
-        )
+      const searchCondition = or(
+        ilike(purchases.beNo, s),
+        ilike(purchases.office, s),
+        ilike(purchases.lcNumber, s),
+        ilike(clients.companyName, s),
+        ilike(clients.binNumber, s),
+        ilike(globalItems.name, s),
+        ilike(globalItems.hsCode, s)
       );
+      if (searchCondition) conditions.push(searchCondition);
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -116,7 +115,7 @@ export const listPurchases = async (c: AppContext) => {
         totalPages: Math.max(1, Math.ceil(totalCount / limit))
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching purchases:", error);
     return c.json(
       { success: false, message: "Failed to fetch purchases" },
@@ -143,7 +142,7 @@ export const deletePurchase = async (c: AppContext) => {
     await db.delete(purchases).where(whereCondition);
 
     return c.json({ success: true, message: "Purchase record deleted successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return c.json(
       { success: false, message: "Failed to delete purchase" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
@@ -159,7 +158,7 @@ export const batchDeletePurchases = async (c: AppContext) => {
     const { month, clientId, ids } = await validate(batchDeletePurchasesSchema, rawBody);
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
-    const conditions: any[] = [];
+    const conditions: import("drizzle-orm").SQL[] = [];
     if (!isSuperAdmin) {
       conditions.push(eq(purchases.adminId, tenantAdminId ?? -1));
     }
@@ -181,7 +180,7 @@ export const batchDeletePurchases = async (c: AppContext) => {
     await db.delete(purchases).where(and(...conditions));
 
     return c.json({ success: true, message: "Purchase records deleted successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return c.json(
       { success: false, message: "Failed to batch delete purchases" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
@@ -208,7 +207,7 @@ export const deletePurchasesByMonth = async (c: AppContext) => {
     await db.delete(purchases).where(and(...conditions));
 
     return c.json({ success: true, message: `All purchases for ${month} deleted successfully` });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return c.json(
       { success: false, message: "Failed to delete purchases by month" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR
@@ -223,7 +222,7 @@ export const getPurchasesMonths = async (c: AppContext) => {
     const clientId = c.req.query("clientId");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
-    const purchaseConditions: any[] = [];
+    const purchaseConditions: import("drizzle-orm").SQL[] = [];
     if (!isSuperAdmin) {
       purchaseConditions.push(eq(purchases.adminId, tenantAdminId ?? -1));
     }
@@ -284,7 +283,7 @@ export const getPurchasesMonths = async (c: AppContext) => {
         allMonths
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return c.json(
       { success: false, message: "Failed to fetch purchases months" },
       HttpStatusCodes.INTERNAL_SERVER_ERROR

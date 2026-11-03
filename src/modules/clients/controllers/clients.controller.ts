@@ -30,7 +30,7 @@ export const listClients = async (c: AppContext) => {
 
     const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
 
-    const conditions: any[] = [];
+    const conditions: import("drizzle-orm").SQL[] = [];
 
     if (!isSuperAdmin && tenantAdminId) {
       conditions.push(eq(clients.createdBy, tenantAdminId));
@@ -44,14 +44,13 @@ export const listClients = async (c: AppContext) => {
 
     if (query.search && query.search.trim()) {
       const term = `%${query.search.trim()}%`;
-      conditions.push(
-        or(
-          ilike(clients.companyName, term),
-          ilike(clients.binNumber, term),
-          ilike(clients.mobile, term),
-          ilike(clients.proprietorName, term)
-        )
+      const searchCondition = or(
+        ilike(clients.companyName, term),
+        ilike(clients.binNumber, term),
+        ilike(clients.mobile, term),
+        ilike(clients.proprietorName, term)
       );
+      if (searchCondition) conditions.push(searchCondition);
     }
 
     if (query.customerTypeId) {
@@ -776,7 +775,7 @@ export const listAssignments = async (c: AppContext) => {
     const filter = query.filter || "all";
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
-    const clientConditions: any[] = [];
+    const clientConditions: import("drizzle-orm").SQL[] = [];
     if (!isSuperAdmin && tenantAdminId) {
       clientConditions.push(eq(clients.createdBy, tenantAdminId));
     }
@@ -933,7 +932,7 @@ export const listAssignableUsers = async (c: AppContext) => {
 
     const excludeRoleIds = adminRoles.map((r) => r.id);
 
-    const conditions: any[] = [
+    const conditions: import("drizzle-orm").SQL[] = [
       eq(users.status, "active")
     ];
 
@@ -976,7 +975,7 @@ function formatStandardBin(raw: string | null | undefined): string | null {
 export const bulkCreateClients = async (c: AppContext) => {
   try {
     const rawBody = c.req.valid("json");
-    const { clients: rawClients } = await validate(BulkCreateClientsSchema, rawBody) as { clients: any[] };
+    const { clients: rawClients } = (await validate(BulkCreateClientsSchema, rawBody)) as { clients: Record<string, unknown>[] };
 
     const { currentUser, isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
     const tenantAdmin = currentUser.adminId
@@ -995,7 +994,7 @@ export const bulkCreateClients = async (c: AppContext) => {
           .where(and(eq(clients.createdBy, tenantAdminId ?? -1), eq(clients.isActive, true)));
 
         const currentCount = clientCountResult?.count || 0;
-        const validClientsToUpload = rawClients.filter((item: any) => (item.companyName?.trim() || item.name?.trim())).length;
+        const validClientsToUpload = rawClients.filter((item) => (String(item.companyName || "").trim() || String(item.name || "").trim())).length;
 
         if (currentCount + validClientsToUpload > maxClientsAllowed) {
           const remainingSlots = Math.max(0, maxClientsAllowed - currentCount);
@@ -1039,18 +1038,18 @@ export const bulkCreateClients = async (c: AppContext) => {
     }
 
     const seenBatchBinSet = new Set<string>();
-    const toInsert: any[] = [];
+    const toInsert: (typeof clients.$inferInsert)[] = [];
     let skippedCount = 0;
 
     for (const item of rawClients) {
-      const companyName = item.companyName?.trim() || item.name?.trim();
+      const companyName = String(item.companyName || item.name || "").trim();
       if (!companyName) {
         skippedCount++;
         continue;
       }
 
       // Format and validate BIN
-      const rawBin = item.binNumber?.trim() || item.bin?.trim() || null;
+      const rawBin = item.binNumber ? String(item.binNumber).trim() : item.bin ? String(item.bin).trim() : null;
       const formattedBin = formatStandardBin(rawBin);
       const cleanBinDigits = formattedBin ? formattedBin.replace(/\D/g, "") : "";
 
@@ -1121,27 +1120,27 @@ export const bulkCreateClients = async (c: AppContext) => {
 
       toInsert.push({
         companyName,
-        proprietorName: item.proprietorName?.trim() || null,
-        mobile: item.mobile?.trim() || null,
-        alternativeMobile: item.alternativeMobile?.trim() || null,
-        email: item.email?.trim() || null,
-        address: item.address?.trim() || null,
+        proprietorName: item.proprietorName ? String(item.proprietorName).trim() : null,
+        mobile: item.mobile ? String(item.mobile).trim() : null,
+        alternativeMobile: item.alternativeMobile ? String(item.alternativeMobile).trim() : null,
+        email: item.email ? String(item.email).trim() : null,
+        address: item.address ? String(item.address).trim() : null,
         binNumber: formattedBin,
-        tinNumber: item.tinNumber?.trim() || item.tin?.trim() || null,
-        tradeLicenseNo: item.tradeLicenseNo?.trim() || null,
+        tinNumber: item.tinNumber ? String(item.tinNumber).trim() : item.tin ? String(item.tin).trim() : null,
+        tradeLicenseNo: item.tradeLicenseNo ? String(item.tradeLicenseNo).trim() : null,
         customerTypeId: resolvedTypeId,
         referenceId: resolvedRefId,
-        vatUserId: item.vatUserId?.trim() || null,
-        vatPassword: item.vatPassword?.trim() || null,
+        vatUserId: item.vatUserId ? String(item.vatUserId).trim() : null,
+        vatPassword: item.vatPassword ? String(item.vatPassword).trim() : null,
         vatServiceType: serviceType,
         openingBalance: openingBalance,
         isActive: active,
         createdBy: tenantAdminId,
-        notes: item.notes?.trim() || null
+        notes: item.notes ? String(item.notes).trim() : null
       });
     }
 
-    const insertedList: any[] = [];
+    const insertedList: (typeof clients.$inferSelect)[] = [];
     if (toInsert.length > 0) {
       const CHUNK_SIZE = 200;
       for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
@@ -1165,7 +1164,7 @@ export const bulkCreateClients = async (c: AppContext) => {
                 },
                 { tenant: tenantAdminId }
               );
-            } catch (clientErr: any) { console.warn("[Client Controller Warning]:", clientErr?.message || clientErr); }
+            } catch (clientErr: unknown) { console.warn("[Client Controller Warning]:", (clientErr as Error)?.message || clientErr); }
           }
         } catch (e) {
           // Fallback to row-by-row on chunk conflict

@@ -59,13 +59,13 @@ async function getTenantStorageRecords(tenantAdminId: number): Promise<number> {
  * When: Used in auth responses like register/login/me.
  * Where: Called by auth.controller handlers.
  */
-export async function sanitizeUser(user: any) {
+export async function sanitizeUser(user: typeof users.$inferSelect & { role?: { id: number; name: string } | null; plan?: unknown; billingCycle?: string | null }) {
   let plan = null;
   let requiredPlanPrice = 0;
   const isYearly = user.billingCycle === "yearly";
 
   let effectiveAdvanceBalance = user.advanceBalance ?? 0;
-  let effectiveSmsBalance = (user as any).smsBalance ?? 0;
+  let effectiveSmsBalance = user.smsBalance ?? 0;
   let extraStorageMB = user.extraStorageMB ?? 0;
   let effectiveExpDate = user.expDate;
   const tenantAdminId = user.adminId ? Number(user.adminId) : user.id;
@@ -77,11 +77,11 @@ export async function sanitizeUser(user: any) {
       });
       if (adminUser) {
         effectiveAdvanceBalance = adminUser.advanceBalance ?? 0;
-        effectiveSmsBalance = (adminUser as any).smsBalance ?? 0;
+        effectiveSmsBalance = adminUser.smsBalance ?? 0;
         extraStorageMB = adminUser.extraStorageMB ?? 0;
         effectiveExpDate = adminUser.expDate;
       }
-    } catch (authHelperErr: any) { console.warn("[Auth Helper Warning]:", authHelperErr?.message || authHelperErr); }
+    } catch (authHelperErr: unknown) { console.warn("[Auth Helper Warning]:", (authHelperErr as Error)?.message || authHelperErr); }
   }
 
   // Real-time Gateway Balance Sync: If firm has SMS Gateway API Key configured, ensure latest stock
@@ -102,12 +102,12 @@ export async function sanitizeUser(user: any) {
         }
         if (liveBal !== null) {
           effectiveSmsBalance = liveBal;
-          if ((user as any).smsBalance !== liveBal) {
+          if (user.smsBalance !== liveBal) {
             await db.update(users).set({ smsBalance: liveBal, updatedAt: new Date() }).where(eq(users.id, tenantAdminId)).catch(() => {});
           }
         }
       }
-    } catch (authHelperErr: any) { console.warn("[Auth Helper Warning]:", authHelperErr?.message || authHelperErr); }
+    } catch (authHelperErr: unknown) { console.warn("[Auth Helper Warning]:", (authHelperErr as Error)?.message || authHelperErr); }
   }
 
   try {
@@ -185,9 +185,9 @@ export async function sanitizeUser(user: any) {
           note: "Auto-renewed subscription from prepaid wallet balance"
         });
 
-        user.advanceBalance = renewed.advanceBalance;
+        user.advanceBalance = renewed.advanceBalance ?? 0;
         user.expDate = renewed.expDate;
-        effectiveAdvanceBalance = renewed.advanceBalance;
+        effectiveAdvanceBalance = renewed.advanceBalance ?? 0;
         effectiveExpDate = renewed.expDate;
       }
     } catch (renewErr) {
@@ -291,11 +291,15 @@ export async function revokeCurrentRefreshToken(c: AppContext) {
  * When: Used after successful auth actions (register/login/refresh patterns).
  * Where: Called by auth.controller handlers.
  */
-export async function issueTokens(c: AppContext, user: any, options?: { remember?: boolean }) {
+export async function issueTokens(
+  c: AppContext,
+  user: typeof users.$inferSelect & { role?: { id: number; name: string } | string | null },
+  options?: { remember?: boolean }
+) {
   const remember = !!options?.remember;
   const refreshExpiry = remember ? jwtConfig.refreshRememberExpirySeconds : jwtConfig.refreshExpirySeconds;
-  const roleName = user.role?.name || (typeof user.role === "string" ? user.role : null);
-  const roleId = user.roleId ?? user.role?.id ?? null;
+  const roleName = typeof user.role === "object" && user.role !== null ? user.role.name : typeof user.role === "string" ? user.role : null;
+  const roleId = user.roleId ?? (typeof user.role === "object" && user.role !== null ? user.role.id : null);
   const adminId = user.adminId ?? null;
 
   const accessToken = await jwt.generateToken(

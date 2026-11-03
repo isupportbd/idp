@@ -56,7 +56,7 @@ export const getStatementReport = async (c: AppContext) => {
     }
 
     // 1. Build Client filter conditions
-    const clientConditions: any[] = [eq(clients.isActive, true)];
+    const clientConditions: import("drizzle-orm").SQL[] = [eq(clients.isActive, true)];
 
     if (!isSuperAdmin && tenantAdminId) {
       clientConditions.push(eq(clients.createdBy, tenantAdminId));
@@ -164,15 +164,15 @@ export const getStatementReport = async (c: AppContext) => {
     }
 
     // 6. Assemble the statement rows grouped by client
-    const statementRows: any[] = [];
-    const clientSummaries: any[] = [];
+    const statementRows: Record<string, unknown>[] = [];
+    const clientSummaries: Record<string, unknown>[] = [];
 
     for (const cl of matchedClients) {
       let clientTotalQty = 0;
       let clientTotalBeCount = 0;
       let clientSubmittedCount = 0;
       let clientActivityMonths = 0;
-      const clientMonthRows: any[] = [];
+      const clientMonthRows: Record<string, unknown>[] = [];
 
       for (const m of months) {
         const pData = purchaseMap.get(`${cl.id}_${m}`) || { totalQty: 0, beCount: 0 };

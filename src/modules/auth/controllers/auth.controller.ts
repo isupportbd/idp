@@ -846,7 +846,7 @@ export const getUserStats = async (c: AppContext) => {
       console.warn("Failed to update user heartbeat timestamp:", err);
     }
 
-    let rawUsers: any[] = [];
+    let rawUsers: (typeof users.$inferSelect & { role?: { name?: string; slug?: string } | null })[] = [];
     if (isSuperAdmin) {
       // SuperAdmin sees all system users
       rawUsers = await db.query.users.findMany({
@@ -864,7 +864,7 @@ export const getUserStats = async (c: AppContext) => {
     }
 
     // Deduplicate distinct user accounts by ID
-    const uniqueMap = new Map<number, any>();
+    const uniqueMap = new Map<number, typeof rawUsers[0]>();
     for (const u of rawUsers) {
       if (!uniqueMap.has(u.id)) {
         uniqueMap.set(u.id, u);
@@ -879,7 +879,7 @@ export const getUserStats = async (c: AppContext) => {
         gt(refreshTokens.expiresAt, new Date())
       )
     });
-    const loggedInUserIds = new Set(activeTokens.map((t: any) => Number(t.userId)));
+    const loggedInUserIds = new Set(activeTokens.map((t) => Number(t.userId)));
     // Always include the current requesting user
     loggedInUserIds.add(currentUserId);
 
@@ -887,7 +887,7 @@ export const getUserStats = async (c: AppContext) => {
     let activeCount = 0;
     let onlineCount = 0;
 
-    const formattedUsers = userList.map((u: any) => {
+    const formattedUsers = userList.map((u) => {
       const isSelf = u.id === currentUserId;
       const hasActiveSession = isSelf || loggedInUserIds.has(u.id);
       const isStatusActive = u.status === "active";

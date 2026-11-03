@@ -43,13 +43,13 @@ export const getMonthlySummary = async (c: AppContext) => {
       ORDER BY "clientName" ASC
     `;
 
-    const result: any = await db.execute(rawSql);
-    const rows = result.rows || result || [];
+    const result = await db.execute(rawSql);
+    const rows = (Array.isArray(result) ? result : (result as { rows?: Record<string, unknown>[] }).rows || []) as Record<string, unknown>[];
 
-    const data = rows.map((row: any) => ({
-      clientId: row.clientId,
-      clientName: row.clientName,
-      clientBin: row.clientBin || "",
+    const data = rows.map((row) => ({
+      clientId: Number(row.clientId),
+      clientName: String(row.clientName || ""),
+      clientBin: String(row.clientBin || ""),
       totalNetWt: Number(row.totalNetWt) || 0
     }));
 
@@ -143,11 +143,11 @@ export const getSalesReport = async (c: AppContext) => {
       GROUP BY p.item_id, i.name, i.hs_code, p.is_ffs, p.is_rebate
     `;
 
-    const result: any = await db.execute(rawSql);
-    const rows = result.rows || result || [];
+    const result = await db.execute(rawSql);
+    const rows = (Array.isArray(result) ? result : (result as { rows?: Record<string, unknown>[] }).rows || []) as Record<string, unknown>[];
     const allVatNotes = await db.select().from(vatNotes);
 
-    const reportItems = rows.map((row: any) => {
+    const reportItems = rows.map((row) => {
       const totQty = Number(row.totalQty) || 0;
       const totVal = Number(row.totalValue) || 0;
       const totSalesVal = Number(row.totalSalesRateValue) || 0;
@@ -301,9 +301,9 @@ export const getStatementReport = async (c: AppContext) => {
     }
 
     const allVatNotes = await db.select().from(vatNotes);
-    const statementRows: any[] = [];
+    const statementRows: Record<string, unknown>[] = [];
 
-    const parseDate = (rawStr: any) => {
+    const parseDate = (rawStr: string | Date | null | undefined) => {
       if (!rawStr) return 0;
       const d = new Date(rawStr);
       return isNaN(d.getTime()) ? 0 : d.getTime();
@@ -324,7 +324,7 @@ export const getStatementReport = async (c: AppContext) => {
         (r) => parseDate(r.activationDate) > mStartTimestamp && parseDate(r.activationDate) <= mEndTimestamp
       );
 
-      const ranges: { startDate: string; endDate: string; rate: any }[] = [];
+      const ranges: { startDate: string; endDate: string; rate: typeof baseRate }[] = [];
 
       for (const mr of monthRates) {
         const prevEnd = new Date(parseDate(mr.activationDate));
@@ -405,8 +405,10 @@ export const getStatementReport = async (c: AppContext) => {
     }
 
     statementRows.sort((a, b) => {
-      if (a.itemName !== b.itemName) return (a.itemName || "").localeCompare(b.itemName || "");
-      return a.startDate.localeCompare(b.startDate);
+      const itemA = String(a.itemName || "");
+      const itemB = String(b.itemName || "");
+      if (itemA !== itemB) return itemA.localeCompare(itemB);
+      return String(a.startDate || "").localeCompare(String(b.startDate || ""));
     });
 
     return c.json({ success: true, data: statementRows });

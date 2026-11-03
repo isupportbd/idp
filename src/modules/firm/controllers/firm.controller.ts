@@ -132,7 +132,7 @@ export const updateCompanySettings = async (c: AppContext) => {
         .limit(1)
     )[0];
 
-    let result: any = null;
+    let result: typeof companySettings.$inferSelect | null = null;
     if (existing) {
       result = (
         await db

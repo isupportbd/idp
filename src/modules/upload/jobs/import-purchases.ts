@@ -12,7 +12,7 @@ import { runPurchaseImport } from "@/modules/upload/controllers/upload.controlle
  *      broadcasts so the UI can render a live progress bar.
  */
 export type PurchaseImportJobData = {
-  data: any[];
+  data: Record<string, unknown>[];
   month: string;
   isRebate: boolean;
   isFfs: boolean;

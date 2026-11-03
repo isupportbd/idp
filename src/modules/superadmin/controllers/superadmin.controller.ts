@@ -1788,7 +1788,15 @@ export async function getUnitConversions(c: AppContext) {
 
       // Deduplicate pairs for Settings View (showing canonical pairs with direct & reverse)
       const seen = new Set<string>();
-      const uniquePairs: any[] = [];
+      const uniquePairs: {
+        id: number;
+        purchaseUnit: string;
+        salesUnit: string;
+        factor: number;
+        reverseFactor: number;
+        createdAt: Date | null;
+        updatedAt: Date | null;
+      }[] = [];
       for (const item of list) {
         const key = [item.purchaseUnit, item.salesUnit].sort().join("<->");
         if (!seen.has(key)) {
@@ -2666,8 +2674,8 @@ export async function exportDatabaseBackup(c: AppContext) {
       WHERE schemaname = 'public'
       ORDER BY tablename ASC
     `);
-    const tables = (Array.isArray(tablesRes) ? tablesRes : (tablesRes as any).rows || [])
-      .map((r: any) => r.tablename)
+    const tables = (Array.isArray(tablesRes) ? tablesRes : (tablesRes as { rows?: Record<string, unknown>[] }).rows || [])
+      .map((r) => String((r as Record<string, unknown>).tablename || ""))
       .filter(Boolean);
 
     let sqlDump = `-- ========================================================\n`;

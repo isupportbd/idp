@@ -18,7 +18,7 @@ export const listSalesRates = async (c: AppContext) => {
     const limit = Number(query.limit || 500);
     const offset = (page - 1) * limit;
 
-    const conditions: any[] = [];
+    const conditions: import("drizzle-orm").SQL[] = [];
 
     if (!isSuperAdmin && tenantAdminId) {
       conditions.push(eq(salesRates.adminId, tenantAdminId));
@@ -50,14 +50,13 @@ export const listSalesRates = async (c: AppContext) => {
 
     if (query.search && query.search.trim()) {
       const term = `%${query.search.trim()}%`;
-      conditions.push(
-        or(
-          ilike(clients.companyName, term),
-          ilike(clients.binNumber, term),
-          ilike(globalItems.name, term),
-          ilike(globalItems.hsCode, term)
-        )
+      const searchCondition = or(
+        ilike(clients.companyName, term),
+        ilike(clients.binNumber, term),
+        ilike(globalItems.name, term),
+        ilike(globalItems.hsCode, term)
       );
+      if (searchCondition) conditions.push(searchCondition);
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -226,7 +225,7 @@ export const updateSalesRate = async (c: AppContext) => {
     }
 
     const body = c.req.valid("json");
-    const updateData: any = { updatedAt: new Date() };
+    const updateData: Partial<typeof salesRates.$inferInsert> = { updatedAt: new Date() };
 
     if (body.salesRate !== undefined) updateData.salesRate = Number(body.salesRate);
     if (body.vatRate !== undefined) updateData.vatRate = Number(body.vatRate);

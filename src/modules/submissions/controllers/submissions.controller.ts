@@ -51,7 +51,7 @@ export const listSubmissions = async (c: AppContext) => {
 
     const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
 
-    const clientConditions: any[] = [eq(clients.isActive, true)];
+    const clientConditions: import("drizzle-orm").SQL[] = [eq(clients.isActive, true)];
     if (!isSuperAdmin && tenantAdminId) {
       clientConditions.push(eq(clients.createdBy, tenantAdminId));
     }
@@ -364,7 +364,7 @@ export const recordSubmission = async (c: AppContext) => {
     // user on first insert. Later edits never overwrite this attribution.
     const storedSubmittedBy = existing ? existing.submittedBy : managerId;
 
-    let result: any = null;
+    let result: typeof vatSubmissions.$inferSelect | null = null;
     if (existing) {
       result = (
         await db
@@ -634,7 +634,7 @@ export const getSingleSubmission = async (c: AppContext) => {
 
     const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
 
-    const subConditions: any[] = [
+    const subConditions: import("drizzle-orm").SQL[] = [
       eq(vatSubmissions.clientId, clientId),
       eq(vatSubmissions.taxPeriod, taxPeriod)
     ];

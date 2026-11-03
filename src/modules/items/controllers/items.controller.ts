@@ -33,7 +33,7 @@ export const bulkCreateItems = async (c: AppContext) => {
     const rawBody = c.req.valid("json");
     const { items: newItems } = await validate(bulkCreateItemsSchema, rawBody);
 
-    const inserted: any[] = [];
+    const inserted: (typeof globalItems.$inferSelect)[] = [];
     for (const item of newItems) {
       const rawInput = (item.hsCode || item.awHsCode || "").trim();
       const rawAw = (item.awHsCode || rawInput.replace(/[\.\s]/g, "")).trim();

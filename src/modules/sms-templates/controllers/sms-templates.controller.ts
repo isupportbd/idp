@@ -13,11 +13,11 @@ import {
   normalizeBdMobile
 } from "../services/sms.service.js";
 
-function getAuthUser(c: AppContext): any {
-  return c.get("auth") || c.get("user") || (c.req as any).user;
+function getAuthUser(c: AppContext) {
+  return c.get("auth") || c.get("user");
 }
 
-function isSuperAdmin(user: any): boolean {
+function isSuperAdmin(user: { role?: { name?: string } | string } | null | undefined): boolean {
   if (!user) return false;
   const roleName = typeof user.role === "string" ? user.role : user.role?.name;
   return roleName === "superadmin";
@@ -110,7 +110,7 @@ export async function updateTemplate(c: AppContext) {
       return c.json({ success: false, message: "Forbidden: Only global master templates can be edited" }, 403);
     }
 
-    const updateData: any = { updatedAt: new Date() };
+    const updateData: Partial<typeof smsTemplates.$inferInsert> = { updatedAt: new Date() };
     if (typeof body.body === "string" && body.body.trim()) {
       updateData.body = body.body.trim();
     }
@@ -329,7 +329,7 @@ export async function updateGatewaySettings(c: AppContext) {
     const isUpdatingKey = trimmedKey.length > 0 && !trimmedKey.includes("•");
 
     if (existing) {
-      const updateData: any = {
+      const updateData: Partial<typeof companySettings.$inferInsert> = {
         smsSenderId: smsSenderId ? smsSenderId.trim() : "",
         smsProvider: provider ? provider.trim() : "",
         smsEndpointUrl: endpoint ? endpoint.trim() : "",
@@ -447,7 +447,7 @@ export async function checkGatewayBalance(c: AppContext) {
           },
           { tenant: adminId }
         );
-      } catch (smsTmplErr: any) { console.warn("[SMS Template Controller Warning]:", smsTmplErr?.message || smsTmplErr); }
+      } catch (smsTmplErr: unknown) { console.warn("[SMS Template Controller Warning]:", (smsTmplErr as Error)?.message || smsTmplErr); }
     }
 
     return c.json({
