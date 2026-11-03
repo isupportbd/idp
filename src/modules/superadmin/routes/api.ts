@@ -64,9 +64,9 @@ import {
   createUnitConversion,
   updateUnitConversion,
   deleteUnitConversion,
-  getPlatformPublicStats,
-  getGlobalMetrics,
   getNotifications,
+  getGlobalMetrics,
+  getPlatformPublicStats,
   getPendingRecharges,
   approveRecharge,
   rejectRecharge,
@@ -77,7 +77,17 @@ import {
   ApproveSignupSchema,
   RejectSignupSchema,
   ExtendTenantSchema,
-  PaymentSettingsSchema
+  PaymentSettingsSchema,
+  ClientTypeSchema,
+  LocationSchema,
+  CommercialAreaSchema,
+  ClientReferenceSchema,
+  ColumnMappingsSchema,
+  GlobalItemSchema,
+  MeasurementUnitSchema,
+  ServiceUnitSchema,
+  VatNoteSchema,
+  UnitConversionSchema
 } from "../controllers/superadmin.schema.js";
 
 export const superAdminRouter = createRouter();
@@ -146,58 +156,58 @@ superAdminRouter.delete("/plans/:id", authMiddleware, requireRole("superadmin"),
 superAdminRouter.post("/payment-settings", authMiddleware, requireRole("superadmin"), zValidator("json", PaymentSettingsSchema), savePaymentSettings);
 
 // Client Types Management (Protected for write operations)
-superAdminRouter.post("/client-types", authMiddleware, requireRole("superadmin"), createClientType);
-superAdminRouter.put("/client-types/:id", authMiddleware, requireRole("superadmin"), updateClientType);
+superAdminRouter.post("/client-types", authMiddleware, requireRole("superadmin"), zValidator("json", ClientTypeSchema), createClientType);
+superAdminRouter.put("/client-types/:id", authMiddleware, requireRole("superadmin"), zValidator("json", ClientTypeSchema), updateClientType);
 superAdminRouter.patch("/client-types/:id/toggle", authMiddleware, requireRole("superadmin"), toggleClientTypeStatus);
 superAdminRouter.delete("/client-types/:id", authMiddleware, requireRole("superadmin"), deleteClientType);
 
 // Locations & Commercial Areas Management (Protected for write operations)
-superAdminRouter.post("/locations", authMiddleware, requireRole("superadmin"), createLocation);
-superAdminRouter.put("/locations/:id", authMiddleware, requireRole("superadmin"), updateLocation);
+superAdminRouter.post("/locations", authMiddleware, requireRole("superadmin"), zValidator("json", LocationSchema), createLocation);
+superAdminRouter.put("/locations/:id", authMiddleware, requireRole("superadmin"), zValidator("json", LocationSchema), updateLocation);
 superAdminRouter.patch("/locations/:id/toggle", authMiddleware, requireRole("superadmin"), toggleLocationStatus);
 superAdminRouter.delete("/locations/:id", authMiddleware, requireRole("superadmin"), deleteLocation);
 
-superAdminRouter.post("/commercial-areas", authMiddleware, requireRole("superadmin"), createCommercialArea);
-superAdminRouter.put("/commercial-areas/:id", authMiddleware, requireRole("superadmin"), updateCommercialArea);
+superAdminRouter.post("/commercial-areas", authMiddleware, requireRole("superadmin"), zValidator("json", CommercialAreaSchema), createCommercialArea);
+superAdminRouter.put("/commercial-areas/:id", authMiddleware, requireRole("superadmin"), zValidator("json", CommercialAreaSchema), updateCommercialArea);
 superAdminRouter.patch("/commercial-areas/:id/toggle", authMiddleware, requireRole("superadmin"), toggleCommercialAreaStatus);
 superAdminRouter.delete("/commercial-areas/:id", authMiddleware, requireRole("superadmin"), deleteCommercialArea);
 
 // Client References Management (Protected for write operations)
-superAdminRouter.post("/references", authMiddleware, requireRole("superadmin"), createClientReference);
-superAdminRouter.put("/references/:id", authMiddleware, requireRole("superadmin"), updateClientReference);
+superAdminRouter.post("/references", authMiddleware, requireRole("superadmin"), zValidator("json", ClientReferenceSchema), createClientReference);
+superAdminRouter.put("/references/:id", authMiddleware, requireRole("superadmin"), zValidator("json", ClientReferenceSchema), updateClientReference);
 superAdminRouter.patch("/references/:id/toggle", authMiddleware, requireRole("superadmin"), toggleClientReferenceStatus);
 superAdminRouter.delete("/references/:id", authMiddleware, requireRole("superadmin"), deleteClientReference);
 
 // Column Mappings Management (Protected for write operations)
-superAdminRouter.post("/column-mappings", authMiddleware, requireRole("superadmin"), saveColumnMappings);
+superAdminRouter.post("/column-mappings", authMiddleware, requireRole("superadmin"), zValidator("json", ColumnMappingsSchema), saveColumnMappings);
 
 // Global Master Items & HS Codes Management (Protected for write operations)
-superAdminRouter.post("/global-items", authMiddleware, requireRole("superadmin"), createGlobalItem);
-superAdminRouter.put("/global-items/:id", authMiddleware, requireRole("superadmin"), updateGlobalItem);
+superAdminRouter.post("/global-items", authMiddleware, requireRole("superadmin"), zValidator("json", GlobalItemSchema), createGlobalItem);
+superAdminRouter.put("/global-items/:id", authMiddleware, requireRole("superadmin"), zValidator("json", GlobalItemSchema), updateGlobalItem);
 superAdminRouter.patch("/global-items/:id/toggle", authMiddleware, requireRole("superadmin"), toggleGlobalItemStatus);
 superAdminRouter.delete("/global-items/:id", authMiddleware, requireRole("superadmin"), deleteGlobalItem);
 
 // Measurement Units Management (Protected for write operations)
-superAdminRouter.post("/measurement-units", authMiddleware, requireRole("superadmin"), createMeasurementUnit);
-superAdminRouter.put("/measurement-units/:id", authMiddleware, requireRole("superadmin"), updateMeasurementUnit);
+superAdminRouter.post("/measurement-units", authMiddleware, requireRole("superadmin"), zValidator("json", MeasurementUnitSchema), createMeasurementUnit);
+superAdminRouter.put("/measurement-units/:id", authMiddleware, requireRole("superadmin"), zValidator("json", MeasurementUnitSchema), updateMeasurementUnit);
 superAdminRouter.patch("/measurement-units/:id/toggle", authMiddleware, requireRole("superadmin"), toggleMeasurementUnitStatus);
 superAdminRouter.delete("/measurement-units/:id", authMiddleware, requireRole("superadmin"), deleteMeasurementUnit);
 
 // Global Service Units Management (Protected for write operations)
-superAdminRouter.post("/service-units", authMiddleware, requireRole("superadmin"), createServiceUnit);
-superAdminRouter.put("/service-units/:id", authMiddleware, requireRole("superadmin"), updateServiceUnit);
+superAdminRouter.post("/service-units", authMiddleware, requireRole("superadmin"), zValidator("json", ServiceUnitSchema), createServiceUnit);
+superAdminRouter.put("/service-units/:id", authMiddleware, requireRole("superadmin"), zValidator("json", ServiceUnitSchema), updateServiceUnit);
 superAdminRouter.patch("/service-units/:id/toggle", authMiddleware, requireRole("superadmin"), toggleServiceUnitStatus);
 superAdminRouter.delete("/service-units/:id", authMiddleware, requireRole("superadmin"), deleteServiceUnit);
 
 // VAT Notes Management (Protected for write operations)
-superAdminRouter.post("/vat-notes", authMiddleware, requireRole("superadmin"), createVatNote);
-superAdminRouter.put("/vat-notes/:id", authMiddleware, requireRole("superadmin"), updateVatNote);
+superAdminRouter.post("/vat-notes", authMiddleware, requireRole("superadmin"), zValidator("json", VatNoteSchema), createVatNote);
+superAdminRouter.put("/vat-notes/:id", authMiddleware, requireRole("superadmin"), zValidator("json", VatNoteSchema), updateVatNote);
 superAdminRouter.patch("/vat-notes/:id/toggle", authMiddleware, requireRole("superadmin"), toggleVatNoteStatus);
 superAdminRouter.delete("/vat-notes/:id", authMiddleware, requireRole("superadmin"), deleteVatNote);
 
 // Unit Conversions Management (Protected for write operations)
-superAdminRouter.post("/unit-conversions", authMiddleware, requireRole("superadmin"), createUnitConversion);
-superAdminRouter.put("/unit-conversions/:id", authMiddleware, requireRole("superadmin"), updateUnitConversion);
+superAdminRouter.post("/unit-conversions", authMiddleware, requireRole("superadmin"), zValidator("json", UnitConversionSchema), createUnitConversion);
+superAdminRouter.put("/unit-conversions/:id", authMiddleware, requireRole("superadmin"), zValidator("json", UnitConversionSchema), updateUnitConversion);
 superAdminRouter.delete("/unit-conversions/:id", authMiddleware, requireRole("superadmin"), deleteUnitConversion);
 
 // Storage Stats (Protected)

@@ -1,11 +1,12 @@
 import { and, asc, eq, gt, ne, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
-import { HttpStatusCodes, password } from "@/framework/facade.js";
+import { HttpStatusCodes, password, resolveTenantContext, validate } from "@/framework/facade.js";
 import { db } from "@/framework/facade.js";
 import { refreshTokens, users } from "@/modules/auth/database/models/user.js";
 import { roles } from "@/modules/auth/database/models/role.js";
 import { plans } from "@/modules/superadmin/database/models/plans.js";
 import { DEFAULT_SUB_USER_PERMISSIONS, PERMISSION_MODULES, normalizePermissions } from "./permissions.js";
+import { CreateUserSchema, UpdateUserSchema, ResetPasswordSchema, UpdateStatusSchema } from "./users.schema.js";
 
 // 0. Permission catalog (modules and their actions) for the sub-user form
 export const getPermissionCatalog: Handler = async (c: any) => {
@@ -15,28 +16,19 @@ export const getPermissionCatalog: Handler = async (c: any) => {
   );
 };
 
-// Helper: Resolve tenant admin ID
+// Helper: Resolve tenant admin ID via canonical tenant-context
 async function resolveTenantAdmin(c: any) {
-  const auth = c.get("auth") || c.get("user");
-  if (!auth?.id) return null;
-
-  const currentUser = await db.query.users.findFirst({
-    where: eq(users.id, Number(auth.id)),
-    with: { role: true }
-  });
-
-  if (!currentUser) return null;
-
-  const isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin";
-  const isTenantAdmin = currentUser.role?.name?.toLowerCase() === "admin" || !currentUser.adminId;
-  const tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
-
-  return {
-    currentUser,
-    isSuperAdmin,
-    isTenantAdmin,
-    tenantAdminId
-  };
+  try {
+    const ctx = await resolveTenantContext(c);
+    return {
+      currentUser: ctx.currentUser,
+      isSuperAdmin: ctx.isSuperAdmin,
+      isTenantAdmin: ctx.isTenantAdmin,
+      tenantAdminId: ctx.tenantAdminId ?? ctx.currentUser.id
+    };
+  } catch {
+    return null;
+  }
 }
 
 // 1. List Sub-Users
@@ -136,7 +128,12 @@ export const createUser: Handler = async (c: any) => {
     }
 
     const { currentUser, isSuperAdmin, tenantAdminId } = tenantInfo;
-    const body = await c.req.json();
+    const rawBody = await c.req.json();
+    const validation = validate(CreateUserSchema, rawBody);
+    if (!validation.success) {
+      return c.json({ message: "Validation error", errors: (validation as any).errors }, HttpStatusCodes.BAD_REQUEST);
+    }
+    const body = validation.data;
 
     const email = String(body.email || "").trim().toLowerCase();
     const name = String(body.name || "").trim();
@@ -263,7 +260,12 @@ export const updateUser: Handler = async (c: any) => {
       return c.json({ message: "Forbidden: You do not have access to manage this user" }, HttpStatusCodes.FORBIDDEN);
     }
 
-    const body = await c.req.json();
+    const rawBody = await c.req.json();
+    const validation = validate(UpdateUserSchema, rawBody);
+    if (!validation.success) {
+      return c.json({ message: "Validation error", errors: (validation as any).errors }, HttpStatusCodes.BAD_REQUEST);
+    }
+    const body = validation.data;
     const updateData: any = { updatedAt: new Date() };
     const isPrimaryAdmin = targetUser.id === tenantAdminId;
 
@@ -318,7 +320,12 @@ export const resetUserPassword: Handler = async (c: any) => {
 
     const { isSuperAdmin, tenantAdminId } = tenantInfo;
     const userId = Number(c.req.param("id"));
-    const body = await c.req.json();
+    const rawBody = await c.req.json();
+    const validation = validate(ResetPasswordSchema, rawBody);
+    if (!validation.success) {
+      return c.json({ message: "Password must be at least 6 characters long." }, HttpStatusCodes.BAD_REQUEST);
+    }
+    const body = validation.data;
 
     if (!body.newPassword || body.newPassword.length < 6) {
       return c.json({ message: "Password must be at least 6 characters long." }, HttpStatusCodes.BAD_REQUEST);

@@ -5,7 +5,6 @@ import { sql, eq } from "drizzle-orm";
 import { db } from "@/framework/facade.js";
 import { users } from "@/modules/auth/database/models/user.js";
 import { roles } from "@/modules/auth/database/models/role.js";
-import { ensurePayoutTables } from "@/modules/payouts/database/ensure-tables.js";
 
 async function executeSingleSql(rawSql: string) {
   const clean = rawSql.trim();
@@ -143,8 +142,9 @@ export async function syncDatabaseSchemaAndSuperAdmin() {
         }
       }
     }
-  } catch (mErr) {
-    console.warn("[DB Sync Migration Warning]", mErr);
+  } catch (mErr: any) {
+    console.error("[DB Sync Migration Error]: Critical failure during SQL migration replay", mErr);
+    throw mErr;
   }
 
   // 2. Comprehensive Idempotent Schema Guards (Guarantees full model sync regardless of migration state)
@@ -277,9 +277,7 @@ export async function syncDatabaseSchemaAndSuperAdmin() {
     await executeSingleSql(`CREATE INDEX IF NOT EXISTS sms_logs_sent_at_idx ON sms_logs (sent_at)`);
     await executeSingleSql(`CREATE INDEX IF NOT EXISTS sms_logs_status_idx ON sms_logs (status)`);
 
-    // Payouts module tables (staff rates, payouts journal, monthly ledgers).
-    // Money columns are created directly as NUMERIC(14,2).
-    await ensurePayoutTables();
+    // Note: Payouts module tables and indexes are canonicalized in migration 0010
   } catch (rErr) {
     console.warn("[DB Roles/Schema Warning]", rErr);
   }
