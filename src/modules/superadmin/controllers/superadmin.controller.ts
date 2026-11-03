@@ -2684,9 +2684,67 @@ export async function exportDatabaseBackup(c: AppContext) {
       WHERE schemaname = 'public'
       ORDER BY tablename ASC
     `);
-    const tables = (Array.isArray(tablesRes) ? tablesRes : (tablesRes as { rows?: Record<string, unknown>[] }).rows || [])
+    const allTables = (Array.isArray(tablesRes) ? tablesRes : (tablesRes as { rows?: Record<string, unknown>[] }).rows || [])
       .map((r) => String((r as Record<string, unknown>).tablename || ""))
       .filter(Boolean);
+
+    // Query foreign key dependencies to sort tables topologically (parent tables before child tables)
+    const depsRes = await db.execute(sql`
+      SELECT DISTINCT
+        tc.table_name AS child_table,
+        ccu.table_name AS parent_table
+      FROM information_schema.table_constraints AS tc
+      JOIN information_schema.key_column_usage AS kcu
+        ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
+      JOIN information_schema.constraint_column_usage AS ccu
+        ON ccu.constraint_name = tc.constraint_name AND ccu.table_schema = tc.table_schema
+      WHERE tc.constraint_type = 'FOREIGN KEY'
+        AND tc.table_schema = 'public'
+        AND tc.table_name != ccu.table_name;
+    `);
+    const deps = (Array.isArray(depsRes) ? depsRes : (depsRes as { rows?: Record<string, unknown>[] }).rows || []);
+
+    const adj = new Map<string, Set<string>>();
+    const inDegree = new Map<string, number>();
+
+    for (const t of allTables) {
+      adj.set(t, new Set<string>());
+      inDegree.set(t, 0);
+    }
+
+    for (const edge of deps) {
+      const parent = String((edge as Record<string, unknown>).parent_table);
+      const child = String((edge as Record<string, unknown>).child_table);
+      if (adj.has(parent) && inDegree.has(child)) {
+        if (!adj.get(parent)!.has(child)) {
+          adj.get(parent)!.add(child);
+          inDegree.set(child, (inDegree.get(child) || 0) + 1);
+        }
+      }
+    }
+
+    const queue: string[] = [];
+    for (const [t, deg] of inDegree.entries()) {
+      if (deg === 0) queue.push(t);
+    }
+
+    const tables: string[] = [];
+    while (queue.length > 0) {
+      const curr = queue.shift()!;
+      tables.push(curr);
+      for (const child of adj.get(curr) || []) {
+        const newDeg = (inDegree.get(child) || 1) - 1;
+        inDegree.set(child, newDeg);
+        if (newDeg === 0) {
+          queue.push(child);
+        }
+      }
+    }
+
+    // Append any circular or remaining tables
+    for (const t of allTables) {
+      if (!tables.includes(t)) tables.push(t);
+    }
 
     let sqlDump = `-- ========================================================\n`;
     sqlDump += `-- IDP ERP PostgreSQL Database Backup\n`;
@@ -2810,14 +2868,22 @@ export async function restoreDatabaseBackup(c: AppContext) {
 
     // Execute restore inside transaction
     await db.transaction(async (tx) => {
-      // Temporarily disable foreign key constraint and trigger checks during dump restore
-      await tx.execute(sql.raw("SET session_replication_role = 'replica';"));
+      // Best effort: temporarily disable foreign key constraint and trigger checks during dump restore (works if DB user has superuser/replication role)
+      try {
+        await tx.execute(sql.raw("SET session_replication_role = 'replica';"));
+      } catch {
+        // Fall back gracefully if DB user is non-superuser; dump is already topologically ordered
+      }
 
       // Execute the uploaded SQL backup (multi-statement via unsafe)
       await tx.execute(sql.raw(cleanedSql));
 
       // Re-enable foreign key constraints and normal trigger checks
-      await tx.execute(sql.raw("SET session_replication_role = 'origin';"));
+      try {
+        await tx.execute(sql.raw("SET session_replication_role = 'origin';"));
+      } catch {
+        // Fall back gracefully
+      }
 
       // Synchronize PostgreSQL primary key sequences safely (handling empty tables with is_called = false)
       await tx.execute(sql.raw(`
