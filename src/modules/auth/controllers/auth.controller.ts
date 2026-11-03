@@ -735,7 +735,7 @@ export const rechargeWallet: Handler = async (c: any) => {
       return c.json({ success: false, message: "Unauthorized" }, HttpStatusCodes.UNAUTHORIZED);
     }
 
-    const body = await c.req.json();
+    const body = c.req.valid ? c.req.valid("json") : await c.req.json();
     const paidAmount = Number(body?.paidAmount);
     const trxId = body?.trxId ? String(body.trxId).trim() : "";
 
@@ -1163,7 +1163,7 @@ export const buyStorage: Handler = async (c: any) => {
       );
     }
 
-    const body = await c.req.json();
+    const body = c.req.valid ? c.req.valid("json") : await c.req.json();
     const gigabytes = Math.max(1, Number(body?.gigabytes) || 1);
     const ratePerGb = 1000;
     const totalRequiredAmount = gigabytes * ratePerGb;
