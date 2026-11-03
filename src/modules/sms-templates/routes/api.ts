@@ -1,4 +1,5 @@
 import { createRouter } from "@/framework/facade.js";
+import { zValidator } from "@hono/zod-validator";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
 import { denyRole, requireRole } from "@/middlewares/role-middleware.js";
 import { requireTenantAdmin } from "@/middlewares/permission-middleware.js";
@@ -13,6 +14,11 @@ import {
   updateGatewaySettings,
   checkGatewayBalance
 } from "../controllers/sms-templates.controller.js";
+import {
+  UpdateTemplateSchema,
+  SendTestSmsSchema,
+  UpdateGatewaySettingsSchema
+} from "../controllers/sms-templates.schema.js";
 
 const smsTemplatesRouter = createRouter();
 
@@ -21,9 +27,9 @@ const tenantSmsRouter = createRouter();
 tenantSmsRouter.use("*", authMiddleware, denyRole("superadmin"), subscriptionMiddleware, requireTenantAdmin);
 
 tenantSmsRouter.get("/gateway", getGatewaySettings);
-tenantSmsRouter.put("/gateway", updateGatewaySettings);
+tenantSmsRouter.put("/gateway", zValidator("json", UpdateGatewaySettingsSchema), updateGatewaySettings);
 tenantSmsRouter.get("/gateway/balance", checkGatewayBalance);
-tenantSmsRouter.post("/test", sendTestSms);
+tenantSmsRouter.post("/test", zValidator("json", SendTestSmsSchema), sendTestSms);
 tenantSmsRouter.get("/logs", listSmsLogs);
 
 // ── Template management: SuperAdmin only ──
@@ -31,7 +37,7 @@ const superAdminSmsRouter = createRouter();
 superAdminSmsRouter.use("*", authMiddleware, requireRole("superadmin"));
 
 superAdminSmsRouter.get("/", listTemplates);
-superAdminSmsRouter.put("/:id", updateTemplate);
+superAdminSmsRouter.put("/:id", zValidator("json", UpdateTemplateSchema), updateTemplate);
 superAdminSmsRouter.post("/:id/reset", resetTemplate);
 
 smsTemplatesRouter.route("/", tenantSmsRouter);

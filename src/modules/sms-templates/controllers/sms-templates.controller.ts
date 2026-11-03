@@ -90,7 +90,7 @@ export async function updateTemplate(c: Context) {
   try {
     const user = getAuthUser(c);
     const id = Number(c.req.param("id"));
-    const body = await c.req.json();
+    const body = (c.req as any).valid ? (c.req as any).valid("json") : await c.req.json();
 
     if (!id || Number.isNaN(id)) {
       return c.json({ success: false, message: "Invalid template ID" }, 400);
@@ -186,7 +186,7 @@ export async function resetTemplate(c: Context) {
 export async function sendTestSms(c: Context) {
   try {
     const user = getAuthUser(c);
-    const body = await c.req.json();
+    const body = (c.req as any).valid ? (c.req as any).valid("json") : await c.req.json();
     const { recipientMobile, message } = body;
 
     if (!recipientMobile || !message) {
@@ -317,7 +317,7 @@ export async function updateGatewaySettings(c: Context) {
   try {
     const user = getAuthUser(c);
     const { tenantAdminId: adminId } = await resolveTenantContext(c);
-    const body = await c.req.json();
+    const body = (c.req as any).valid ? (c.req as any).valid("json") : await c.req.json();
     const { smsApiKey, smsSenderId, provider, endpoint } = body;
 
     const existing = await db.query.companySettings.findFirst({

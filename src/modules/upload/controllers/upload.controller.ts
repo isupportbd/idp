@@ -830,7 +830,8 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
  */
 export const savePurchases: Handler = async (c: any) => {
   try {
-    const { data, month, isRebate, isFfs } = await c.req.json();
+    const rawBody = (c.req as any).valid ? (c.req as any).valid("json") : await c.req.json();
+    const { data, month, isRebate, isFfs } = rawBody;
 
     if (!data || !Array.isArray(data) || data.length === 0) {
       return c.json({ success: false, message: "No data provided to save." }, HttpStatusCodes.BAD_REQUEST);
@@ -871,7 +872,8 @@ export const savePurchases: Handler = async (c: any) => {
  *      flag is off, the file is small, or Redis is unavailable.
  */
 export const savePurchasesAsync: Handler = async (c: any) => {
-  const { data, month, isRebate, isFfs } = await c.req.json();
+  const rawBody = (c.req as any).valid ? (c.req as any).valid("json") : await c.req.json();
+  const { data, month, isRebate, isFfs } = rawBody;
 
   if (!data || !Array.isArray(data) || data.length === 0) {
     return c.json({ success: false, message: "No data provided to save." }, HttpStatusCodes.BAD_REQUEST);
@@ -912,57 +914,60 @@ export const savePurchasesAsync: Handler = async (c: any) => {
 
 export const replaceDuplicate: Handler = async (c: any) => {
   try {
-    const { itemsToReplace } = await c.req.json();
+    const rawBody = (c.req as any).valid ? (c.req as any).valid("json") : await c.req.json();
+    const { itemsToReplace } = rawBody;
     if (!itemsToReplace || !Array.isArray(itemsToReplace) || itemsToReplace.length === 0) {
       return c.json({ success: false, message: "No items provided for replacement." }, HttpStatusCodes.BAD_REQUEST);
     }
 
     const { tenantAdminId } = await resolveTenantContext(c);
 
-    for (const item of itemsToReplace) {
-      const target = item.incoming || item.newData || item;
-      const beNo = target.beNo;
-      const beDate = target.beDate;
-      const itemId = target.itemId;
-      const office = target.office;
+    await db.transaction(async (tx) => {
+      for (const item of itemsToReplace) {
+        const target = item.incoming || item.newData || item;
+        const beNo = target.beNo;
+        const beDate = target.beDate;
+        const itemId = target.itemId;
+        const office = target.office;
 
-      if (beNo && beDate && itemId) {
-        await db
-          .delete(purchases)
-          .where(
-            and(
-              eq(purchases.adminId, tenantAdminId),
-              eq(purchases.beNo, beNo),
-              eq(purchases.beDate, beDate),
-              eq(purchases.itemId, itemId)
-            )
-          );
+        if (beNo && beDate && itemId) {
+          await tx
+            .delete(purchases)
+            .where(
+              and(
+                eq(purchases.adminId, tenantAdminId),
+                eq(purchases.beNo, beNo),
+                eq(purchases.beDate, beDate),
+                eq(purchases.itemId, itemId)
+              )
+            );
 
-        await db.insert(purchases).values({
-          adminId: tenantAdminId,
-          clientId: target.clientId,
-          itemId: target.itemId,
-          office: target.office,
-          beNo: target.beNo,
-          beDate: target.beDate,
-          month: target.month,
-          lcNumber: target.lcNumber || null,
-          netWt: parseNumber(target.netWt),
-          excessQty: parseNumber(target.excessQty),
-          totalQty: parseNumber(target.totalQty),
-          assValue: parseNumber(target.assValue),
-          unitValue: parseNumber(target.unitValue),
-          cd: parseNumber(target.cd),
-          rd: parseNumber(target.rd),
-          sd: parseNumber(target.sd),
-          baseValueOfVat: parseNumber(target.baseValueOfVat),
-          vat: parseNumber(target.vat),
-          at: parseNumber(target.at),
-          isRebate: Boolean(target.isRebate),
-          isFfs: Boolean(target.isFfs)
-        });
+          await tx.insert(purchases).values({
+            adminId: tenantAdminId,
+            clientId: target.clientId,
+            itemId: target.itemId,
+            office: target.office,
+            beNo: target.beNo,
+            beDate: target.beDate,
+            month: target.month,
+            lcNumber: target.lcNumber || null,
+            netWt: parseNumber(target.netWt),
+            excessQty: parseNumber(target.excessQty),
+            totalQty: parseNumber(target.totalQty),
+            assValue: parseNumber(target.assValue),
+            unitValue: parseNumber(target.unitValue),
+            cd: parseNumber(target.cd),
+            rd: parseNumber(target.rd),
+            sd: parseNumber(target.sd),
+            baseValueOfVat: parseNumber(target.baseValueOfVat),
+            vat: parseNumber(target.vat),
+            at: parseNumber(target.at),
+            isRebate: Boolean(target.isRebate),
+            isFfs: Boolean(target.isFfs)
+          });
+        }
       }
-    }
+    });
 
     return c.json({ success: true, message: "Duplicate record replaced successfully" });
   } catch (error: any) {
@@ -974,7 +979,8 @@ export const replaceDuplicate: Handler = async (c: any) => {
 
 export const savePendingFfs: Handler = async (c: any) => {
   try {
-    const { itemsToSave, takeRebate } = await c.req.json();
+    const rawBody = (c.req as any).valid ? (c.req as any).valid("json") : await c.req.json();
+    const { itemsToSave, takeRebate } = rawBody;
     if (!itemsToSave || !Array.isArray(itemsToSave) || itemsToSave.length === 0) {
       return c.json({ success: false, message: "No FFS items provided." }, HttpStatusCodes.BAD_REQUEST);
     }
@@ -1005,7 +1011,9 @@ export const savePendingFfs: Handler = async (c: any) => {
       isFfs: true
     }));
 
-    await db.insert(purchases).values(toInsert);
+    await db.transaction(async (tx) => {
+      await tx.insert(purchases).values(toInsert);
+    });
 
     return c.json({ success: true, message: `${toInsert.length} FFS records saved successfully!` });
   } catch (error: any) {
