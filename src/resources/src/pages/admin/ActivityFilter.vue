@@ -7,6 +7,7 @@ import IdpSelect from "@/components/common/IdpSelect.vue";
 import { useActivityFilterApi, type ActivityClient } from "@/composables/useActivityFilterApi";
 import { usePagination } from "@/composables/usePagination";
 import { can } from "@/composables/useAuth";
+import { usePulseListener } from "@/composables/usePulseListener";
 import { pulse } from "@/plugins/pulse";
 
 const router = useRouter();
@@ -316,56 +317,50 @@ watch([searchQuery, statusFilter, selectedClientType, selectedReference], () => 
   currentPage.value = 1;
 });
 
-onMounted(() => {
-  loadActivityMatrix(selectedMonth.value);
-
-  pulse.channel("auth").listen("submission:updated", (data: any) => {
-    if (!data) return;
-    if (data.taxPeriod === selectedMonth.value) {
-      const idx = matrixData.value.findIndex((c) => Number(c.id) === Number(data.clientId));
-      if (idx !== -1) {
-        const updatedClient = { ...matrixData.value[idx] };
-        updatedClient.isSubmitted = Boolean(data.submissionId);
-        updatedClient.submission = data.submissionId
-          ? {
-              submissionId: data.submissionId,
-              status: data.status,
-              submittedAt: data.submittedAt,
-              submittedBy: data.submittedByName || (data.submittedBy ? `User #${data.submittedBy}` : "System Staff"),
-              remarks: data.remarks
-            }
-          : null;
-        matrixData.value[idx] = updatedClient;
-        matrixData.value = [...matrixData.value];
-      }
-      loadActivityMatrix(selectedMonth.value);
+usePulseListener("submission:updated", (data: any) => {
+  if (!data) return;
+  if (data.taxPeriod === selectedMonth.value) {
+    const idx = matrixData.value.findIndex((c) => Number(c.id) === Number(data.clientId));
+    if (idx !== -1) {
+      const updatedClient = { ...matrixData.value[idx] };
+      updatedClient.isSubmitted = Boolean(data.submissionId);
+      updatedClient.submission = data.submissionId
+        ? {
+            submissionId: data.submissionId,
+            status: data.status,
+            submittedAt: data.submittedAt,
+            submittedBy: data.submittedByName || (data.submittedBy ? `User #${data.submittedBy}` : "System Staff"),
+            remarks: data.remarks
+          }
+        : null;
+      matrixData.value[idx] = updatedClient;
+      matrixData.value = [...matrixData.value];
     }
-  });
-
-  pulse.channel("auth").listen("submission:deleted", (data: any) => {
-    if (!data) return;
-    if (data.taxPeriod === selectedMonth.value) {
-      const idx = matrixData.value.findIndex((c) => Number(c.id) === Number(data.clientId));
-      if (idx !== -1) {
-        const updatedClient = { ...matrixData.value[idx] };
-        updatedClient.isSubmitted = false;
-        updatedClient.submission = null;
-        matrixData.value[idx] = updatedClient;
-        matrixData.value = [...matrixData.value];
-      }
-      loadActivityMatrix(selectedMonth.value);
-    }
-  });
-
-  pulse.channel("auth").listen("submission:batch_deleted", () => {
     loadActivityMatrix(selectedMonth.value);
-  });
+  }
 });
 
-onUnmounted(() => {
-  pulse.channel("auth").stopListening("submission:updated");
-  pulse.channel("auth").stopListening("submission:deleted");
-  pulse.channel("auth").stopListening("submission:batch_deleted");
+usePulseListener("submission:deleted", (data: any) => {
+  if (!data) return;
+  if (data.taxPeriod === selectedMonth.value) {
+    const idx = matrixData.value.findIndex((c) => Number(c.id) === Number(data.clientId));
+    if (idx !== -1) {
+      const updatedClient = { ...matrixData.value[idx] };
+      updatedClient.isSubmitted = false;
+      updatedClient.submission = null;
+      matrixData.value[idx] = updatedClient;
+      matrixData.value = [...matrixData.value];
+    }
+    loadActivityMatrix(selectedMonth.value);
+  }
+});
+
+usePulseListener("submission:batch_deleted", () => {
+  loadActivityMatrix(selectedMonth.value);
+});
+
+onMounted(() => {
+  loadActivityMatrix(selectedMonth.value);
 });
 </script>
 

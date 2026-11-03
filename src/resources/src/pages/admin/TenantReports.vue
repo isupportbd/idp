@@ -5,6 +5,7 @@ import axios from "axios";
 import MonthMatrix from "@/components/MonthMatrix.vue";
 import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
 import { can, canAccessModule } from "@/composables/useAuth";
+import { usePulseListener } from "@/composables/usePulseListener";
 import { pulse } from "@/plugins/pulse";
 
 // Types
@@ -1243,61 +1244,53 @@ watch(selectedUnitId, () => {
   computeSalesAndStatementReports();
 });
 
-onMounted(async () => {
-  await fetchMasterData();
-
-  pulse.channel("auth").listen("submission:updated", (data: any) => {
-    if (!data) return;
-    if (data.taxPeriod && !submissionMonths.value.includes(data.taxPeriod) && Number(data.clientId) === Number(selectedClientId.value)) {
-      submissionMonths.value.push(data.taxPeriod);
+usePulseListener("submission:updated", (data: any) => {
+  if (!data) return;
+  if (data.taxPeriod && !submissionMonths.value.includes(data.taxPeriod) && Number(data.clientId) === Number(selectedClientId.value)) {
+    submissionMonths.value.push(data.taxPeriod);
+  }
+  if (Number(data.clientId) === Number(selectedClientId.value)) {
+    submissionsMap.value[data.taxPeriod] = data.submissionId;
+    if (data.taxPeriod === selectedMonthYear.value) {
+      submissionId.value = data.submissionId || null;
     }
-    if (Number(data.clientId) === Number(selectedClientId.value)) {
-      submissionsMap.value[data.taxPeriod] = data.submissionId;
-      if (data.taxPeriod === selectedMonthYear.value) {
-        submissionId.value = data.submissionId || null;
-      }
-    }
-  });
-
-  pulse.channel("auth").listen("submission:deleted", (data: any) => {
-    if (!data) return;
-    if (Number(data.clientId) === Number(selectedClientId.value)) {
-      delete submissionsMap.value[data.taxPeriod];
-      submissionMonths.value = submissionMonths.value.filter((m) => m !== data.taxPeriod);
-      if (data.taxPeriod === selectedMonthYear.value) {
-        submissionId.value = null;
-      }
-    }
-  });
-
-  pulse.channel("auth").listen("sales_rate:created", (data: any) => {
-    if (!data) return;
-    if (selectedClientId.value && (!data.clientId || Number(data.clientId) === Number(selectedClientId.value))) {
-      fetchReportsData();
-    }
-  });
-
-  pulse.channel("auth").listen("sales_rate:updated", (data: any) => {
-    if (!data) return;
-    if (selectedClientId.value && (!data.clientId || Number(data.clientId) === Number(selectedClientId.value))) {
-      fetchReportsData();
-    }
-  });
-
-  pulse.channel("auth").listen("sales_rate:deleted", (data: any) => {
-    if (!data) return;
-    if (selectedClientId.value && (!data.clientId || Number(data.clientId) === Number(selectedClientId.value))) {
-      fetchReportsData();
-    }
-  });
+  }
 });
 
-onUnmounted(() => {
-  pulse.channel("auth").stopListening("submission:updated");
-  pulse.channel("auth").stopListening("submission:deleted");
-  pulse.channel("auth").stopListening("sales_rate:created");
-  pulse.channel("auth").stopListening("sales_rate:updated");
-  pulse.channel("auth").stopListening("sales_rate:deleted");
+usePulseListener("submission:deleted", (data: any) => {
+  if (!data) return;
+  if (Number(data.clientId) === Number(selectedClientId.value)) {
+    delete submissionsMap.value[data.taxPeriod];
+    submissionMonths.value = submissionMonths.value.filter((m) => m !== data.taxPeriod);
+    if (data.taxPeriod === selectedMonthYear.value) {
+      submissionId.value = null;
+    }
+  }
+});
+
+usePulseListener("sales_rate:created", (data: any) => {
+  if (!data) return;
+  if (selectedClientId.value && (!data.clientId || Number(data.clientId) === Number(selectedClientId.value))) {
+    fetchReportsData();
+  }
+});
+
+usePulseListener("sales_rate:updated", (data: any) => {
+  if (!data) return;
+  if (selectedClientId.value && (!data.clientId || Number(data.clientId) === Number(selectedClientId.value))) {
+    fetchReportsData();
+  }
+});
+
+usePulseListener("sales_rate:deleted", (data: any) => {
+  if (!data) return;
+  if (selectedClientId.value && (!data.clientId || Number(data.clientId) === Number(selectedClientId.value))) {
+    fetchReportsData();
+  }
+});
+
+onMounted(async () => {
+  await fetchMasterData();
 });
 </script>
 

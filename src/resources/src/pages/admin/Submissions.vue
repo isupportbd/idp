@@ -11,6 +11,7 @@ import SearchInput from "@/components/common/SearchInput.vue";
 import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
 import IdpSelect from "@/components/common/IdpSelect.vue";
 import { usePagination } from "@/composables/usePagination";
+import { usePulseListener } from "@/composables/usePulseListener";
 import { pulse } from "@/plugins/pulse";
 
 const toast = useToast();
@@ -190,32 +191,26 @@ const loadData = async () => {
   }
 };
 
-onMounted(() => {
-  loadData();
-
-  pulse.channel("auth").listen("submission:updated", (data: any) => {
-    if (!data) return;
-    if (data.taxPeriod === selectedMonth.value) {
-      loadSubmissionsList();
-    }
-  });
-
-  pulse.channel("auth").listen("submission:deleted", (data: any) => {
-    if (!data) return;
-    if (data.taxPeriod === selectedMonth.value) {
-      loadSubmissionsList();
-    }
-  });
-
-  pulse.channel("auth").listen("submission:batch_deleted", () => {
+usePulseListener("submission:updated", (data: any) => {
+  if (!data) return;
+  if (data.taxPeriod === selectedMonth.value) {
     loadSubmissionsList();
-  });
+  }
 });
 
-onUnmounted(() => {
-  pulse.channel("auth").stopListening("submission:updated");
-  pulse.channel("auth").stopListening("submission:deleted");
-  pulse.channel("auth").stopListening("submission:batch_deleted");
+usePulseListener("submission:deleted", (data: any) => {
+  if (!data) return;
+  if (data.taxPeriod === selectedMonth.value) {
+    loadSubmissionsList();
+  }
+});
+
+usePulseListener("submission:batch_deleted", () => {
+  loadSubmissionsList();
+});
+
+onMounted(() => {
+  loadData();
 });
 
 // Filtered Submissions (Instant Client-side Search & Responsive Filtering)
