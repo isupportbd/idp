@@ -10,7 +10,7 @@ export interface ToastItem {
 const toasts = ref<ToastItem[]>([]);
 
 export function useToast() {
-  const show = (message: string, type: "success" | "danger" | "warning" | "info" = "success", duration = 1000) => {
+  const show = (message: string, type: "success" | "danger" | "warning" | "info" = "success", duration = 2000) => {
     const id = Date.now() + Math.random();
     toasts.value.push({ id, message, type });
 
@@ -19,10 +19,10 @@ export function useToast() {
     }, duration);
   };
 
-  const success = (message: string, duration = 1000) => show(message, "success", duration);
-  const error = (message: string, duration = 1000) => show(message, "danger", duration);
-  const warning = (message: string, duration = 1000) => show(message, "warning", duration);
-  const info = (message: string, duration = 1000) => show(message, "info", duration);
+  const success = (message: string, duration = 2000) => show(message, "success", duration);
+  const error = (message: string, duration = 2000) => show(message, "danger", duration);
+  const warning = (message: string, duration = 2000) => show(message, "warning", duration);
+  const info = (message: string, duration = 2000) => show(message, "info", duration);
 
   const remove = (id: number) => {
     toasts.value = toasts.value.filter((t) => t.id !== id);
