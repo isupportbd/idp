@@ -317,6 +317,6 @@ export default createRouter()
   .api(postBulkClientsRoute, [requireTenantAdmin], bulkCreateClients)
   .api(postClientRoute, [requireTenantAdmin], createClient)
   .api(patchClientRoute, [requirePermission("clients.edit")], updateClient)
-  .api(patchToggleClientRoute, [requirePermission("clients.edit")], toggleClientStatus)
+  .api(patchToggleClientRoute, [requireTenantAdmin], toggleClientStatus)
   .api(deleteClientRoute, [requireTenantAdmin], deleteClient);
 

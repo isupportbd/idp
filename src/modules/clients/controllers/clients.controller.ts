@@ -464,8 +464,8 @@ export const updateClient = async (c: AppContext) => {
           vatPassword:
             body.vatPassword !== undefined && (await hasPermission(c, "clients.vat_password")) ? body.vatPassword : undefined,
           vatServiceType: body.vatServiceType !== undefined ? body.vatServiceType : undefined,
-          openingBalance: body.openingBalance !== undefined ? Number(body.openingBalance) : undefined,
-          isActive: body.isActive !== undefined ? body.isActive : undefined,
+          openingBalance: (isTenantAdmin || isSuperAdmin) && body.openingBalance !== undefined ? Number(body.openingBalance) : undefined,
+          isActive: (isTenantAdmin || isSuperAdmin) && body.isActive !== undefined ? body.isActive : undefined,
           notes: body.notes !== undefined ? (body.notes ? body.notes.trim() : null) : undefined,
           updatedAt: new Date()
         })
