@@ -23,12 +23,16 @@ export interface TenantContext {
   userId: number;
 }
 
+export interface HttpError extends Error {
+  status?: number;
+}
+
 /**
  * Resolves the authenticated user and tenant context from Hono Context.
  * Fails closed (throws UnauthenticatedTenantError) when auth is missing or invalid.
  */
-export async function resolveTenantContext(c: Context | any): Promise<TenantContext> {
-  const auth = c.get("auth") || c.get("user");
+export async function resolveTenantContext(c: Context): Promise<TenantContext> {
+  const auth = (c.get("auth" as never) || c.get("user" as never)) as { id?: number | string; role?: string } | undefined;
   if (!auth?.id) {
     throw new UnauthenticatedTenantError();
   }
@@ -59,11 +63,11 @@ export async function resolveTenantContext(c: Context | any): Promise<TenantCont
 /**
  * Helper to require a non-null tenantAdminId (throws 403 for superadmin attempting tenant-only action)
  */
-export async function requireTenantContext(c: any): Promise<TenantContext & { tenantAdminId: number }> {
+export async function requireTenantContext(c: Context): Promise<TenantContext & { tenantAdminId: number }> {
   const ctx = await resolveTenantContext(c);
   if (!ctx.tenantAdminId) {
-    const error = new Error("Tenant context required");
-    (error as any).status = 403;
+    const error: HttpError = new Error("Tenant context required");
+    error.status = 403;
     throw error;
   }
   return ctx as TenantContext & { tenantAdminId: number };

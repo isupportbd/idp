@@ -117,6 +117,16 @@ export function useFirmApi() {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
+  const getErrorMessage = (err: unknown): string => {
+    if (axios.isAxiosError(err)) {
+      return err.response?.data?.message || err.message;
+    }
+    if (err instanceof Error) {
+      return err.message;
+    }
+    return "An unexpected error occurred";
+  };
+
   // ── 1. COMPANY SETTINGS ─────────────────────────────
   const fetchCompanySettings = async () => {
     loading.value = true;
@@ -125,8 +135,8 @@ export function useFirmApi() {
       if (res.data.data) {
         company.value = res.data.data;
       }
-    } catch (err: any) {
-      error.value = err.response?.data?.message || err.message;
+    } catch (err) {
+      error.value = getErrorMessage(err);
     } finally {
       loading.value = false;
     }
@@ -138,8 +148,8 @@ export function useFirmApi() {
       const res = await axios.put("/api/firm/settings", payload);
       company.value = res.data.data;
       return res.data;
-    } catch (err: any) {
-      error.value = err.response?.data?.message || err.message;
+    } catch (err) {
+      error.value = getErrorMessage(err);
       throw err;
     } finally {
       loading.value = false;
@@ -151,8 +161,8 @@ export function useFirmApi() {
     try {
       const res = await axios.get("/api/firm/bank-accounts");
       bankAccounts.value = res.data.data || [];
-    } catch (err: any) {
-      error.value = err.response?.data?.message || err.message;
+    } catch (err) {
+      error.value = getErrorMessage(err);
     }
   };
 
@@ -179,8 +189,8 @@ export function useFirmApi() {
     try {
       const res = await axios.get("/api/firm/expense-heads");
       expenseHeads.value = res.data.data || [];
-    } catch (err: any) {
-      error.value = err.response?.data?.message || err.message;
+    } catch (err) {
+      error.value = getErrorMessage(err);
     }
   };
 

@@ -60,6 +60,16 @@ export function useClientsApi() {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
+  const getErrorMessage = (err: unknown, fallback: string): string => {
+    if (axios.isAxiosError(err)) {
+      return err.response?.data?.message || err.message;
+    }
+    if (err instanceof Error) {
+      return err.message;
+    }
+    return fallback;
+  };
+
   const fetchClients = async (params: {
     search?: string;
     customerTypeId?: number;
@@ -76,8 +86,8 @@ export function useClientsApi() {
       clients.value = res.data?.data || [];
       totalCount.value = res.data?.pagination?.total || clients.value.length;
       return res.data;
-    } catch (err: any) {
-      error.value = err.response?.data?.message || "Failed to fetch clients";
+    } catch (err) {
+      error.value = getErrorMessage(err, "Failed to fetch clients");
       throw err;
     } finally {
       loading.value = false;
@@ -90,8 +100,8 @@ export function useClientsApi() {
     try {
       const res = await axios.get(`/api/clients/${id}`);
       return res.data?.data;
-    } catch (err: any) {
-      error.value = err.response?.data?.message || "Failed to fetch client details";
+    } catch (err) {
+      error.value = getErrorMessage(err, "Failed to fetch client details");
       throw err;
     } finally {
       loading.value = false;
@@ -105,8 +115,8 @@ export function useClientsApi() {
       const res = await axios.post("/api/clients", payload);
       await fetchClients();
       return res.data;
-    } catch (err: any) {
-      error.value = err.response?.data?.message || "Failed to create client";
+    } catch (err) {
+      error.value = getErrorMessage(err, "Failed to create client");
       throw err;
     } finally {
       loading.value = false;
@@ -120,8 +130,8 @@ export function useClientsApi() {
       const res = await axios.patch(`/api/clients/${id}`, payload);
       await fetchClients();
       return res.data;
-    } catch (err: any) {
-      error.value = err.response?.data?.message || "Failed to update client";
+    } catch (err) {
+      error.value = getErrorMessage(err, "Failed to update client");
       throw err;
     } finally {
       loading.value = false;
@@ -136,8 +146,8 @@ export function useClientsApi() {
       const found = clients.value.find((c) => c.id === id);
       if (found) found.isActive = isActive;
       return res.data;
-    } catch (err: any) {
-      error.value = err.response?.data?.message || "Failed to toggle client status";
+    } catch (err) {
+      error.value = getErrorMessage(err, "Failed to toggle client status");
       throw err;
     } finally {
       loading.value = false;
@@ -151,8 +161,8 @@ export function useClientsApi() {
       const res = await axios.delete(`/api/clients/${id}`);
       clients.value = clients.value.filter((c) => c.id !== id);
       return res.data;
-    } catch (err: any) {
-      error.value = err.response?.data?.message || "Failed to delete client";
+    } catch (err) {
+      error.value = getErrorMessage(err, "Failed to delete client");
       throw err;
     } finally {
       loading.value = false;
@@ -163,8 +173,9 @@ export function useClientsApi() {
     try {
       const res = await axios.post("/api/clients/check-bin", { bin, excludeId });
       return res.data as { unique: boolean; status?: string; message?: string; existingClient?: Client | null };
-    } catch (err: any) {
-      return { unique: false, status: "ERROR", message: err.response?.data?.message || "Failed to verify BIN", existingClient: null };
+    } catch (err) {
+      const msg = getErrorMessage(err, "Failed to verify BIN");
+      return { unique: false, status: "ERROR", message: msg, existingClient: null };
     }
   };
 
@@ -187,8 +198,8 @@ export function useClientsApi() {
         assignmentStats.value = res.data.stats;
       }
       return res.data;
-    } catch (err: any) {
-      error.value = err.response?.data?.message || "Failed to fetch assignments";
+    } catch (err) {
+      error.value = getErrorMessage(err, "Failed to fetch assignments");
       throw err;
     } finally {
       loading.value = false;
@@ -201,8 +212,8 @@ export function useClientsApi() {
     try {
       const res = await axios.post("/api/clients/assignments", { clientId, managerIds });
       return res.data;
-    } catch (err: any) {
-      error.value = err.response?.data?.message || "Failed to save assignments";
+    } catch (err) {
+      error.value = getErrorMessage(err, "Failed to save assignments");
       throw err;
     } finally {
       loading.value = false;
@@ -214,7 +225,7 @@ export function useClientsApi() {
       const res = await axios.get("/api/clients/users");
       assignableUsers.value = res.data?.data || [];
       return assignableUsers.value;
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to fetch assignable users", err);
       return [];
     }

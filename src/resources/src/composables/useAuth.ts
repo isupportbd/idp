@@ -68,8 +68,14 @@ export function isTenantAdmin(): boolean {
   return roleName === "admin" || !subject.adminId;
 }
 
+export type FullAuthUser = AuthUser & {
+  adminId?: number | null;
+  permissions?: string[] | null;
+  plan?: { hasAccounts?: boolean; [key: string]: unknown } | null;
+};
+
 export function hasAccountsAccess(): boolean {
-  const subject = userRef.value as any;
+  const subject = userRef.value as FullAuthUser | null;
   if (!subject) return false;
   // Superadmin is platform owner, not a tenant firm
   if (hasRole("superadmin")) return false;
@@ -86,7 +92,7 @@ export function hasAccountsAccess(): boolean {
  *      Tenant admins pass everything; superadmin never operates tenant modules.
  */
 export function can(...keys: string[]): boolean {
-  const subject = userRef.value as any;
+  const subject = userRef.value as FullAuthUser | null;
   if (!subject) return false;
   if (hasRole("superadmin")) return false;
   if (isTenantAdmin()) return true;
@@ -105,7 +111,7 @@ const MODULE_VIEW_KEYS: Record<string, string[]> = {
 };
 
 export function canAccessModule(moduleId: string): boolean {
-  const subject = userRef.value as any;
+  const subject = userRef.value as FullAuthUser | null;
   if (!subject) return false;
 
   // Superadmin is platform owner and does not operate tenant firm business modules

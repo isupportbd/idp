@@ -8,11 +8,6 @@ interface Client {
   id: number;
   name: string;
   bin?: string;
-  referenceId?: number;
-  openingBalance?: number;
-  serviceScope?: string;
-  vatUserId?: string;
-  vatPassword?: string;
 }
 
 interface Item {
@@ -31,25 +26,26 @@ interface UnitConversion {
 const props = defineProps<{
   clients: Client[];
   selectedClientId: number | null;
+  selectedClient: Client | null;
   selectedMonthYear: string;
   availableMonths: string[];
   purchaseMonths: string[];
   submissionMonths: string[];
   submissionsMap: Record<string, string>;
-  unitConversions: UnitConversion[];
-  selectedUnitId: number | null;
-  clientMonthItems: Item[];
-  selectedItemId: number | null;
-  isExportingExcel: boolean;
+  filteredUnitConversions: UnitConversion[];
+  selectedUnitName: string;
+  filteredItems: Item[];
+  purchasesCount: number;
 }>();
 
 const emit = defineEmits<{
   (e: "update:selectedClientId", val: number | null): void;
   (e: "update:selectedMonthYear", val: string): void;
-  (e: "update:selectedUnitId", val: number | null): void;
-  (e: "update:selectedItemId", val: number | null): void;
   (e: "clientSelected", client: Client): void;
-  (e: "exportExcel"): void;
+  (e: "selectUnit", id: number | null): void;
+  (e: "selectItem", item: Item): void;
+  (e: "clearItem"): void;
+  (e: "exportActiveReport"): void;
   (e: "openSummaryModal"): void;
 }>();
 
@@ -69,36 +65,16 @@ const hideItemDropdown = () => {
   }, 200);
 };
 
-const selectUnit = (id: number | null) => {
-  emit("update:selectedUnitId", id);
-  showUnitDropdown.value = false;
-};
-
-const selectItem = (id: number | null) => {
-  emit("update:selectedItemId", id);
-  const it = props.clientMonthItems.find((i) => i.id === id);
-  itemSearchText.value = it ? `${it.name}${it.hsCode ? ` [${it.hsCode}]` : ""}` : "";
+const handleItemSelect = (item: Item) => {
+  itemSearchText.value = item.name;
   showItemDropdown.value = false;
+  emit("selectItem", item);
 };
 
-const clearItemFilter = () => {
+const handleClearItem = () => {
   itemSearchText.value = "";
-  emit("update:selectedItemId", null);
+  emit("clearItem");
 };
-
-const filteredItems = computed(() => {
-  if (!itemSearchText.value.trim()) return props.clientMonthItems;
-  const q = itemSearchText.value.toLowerCase().trim();
-  return props.clientMonthItems.filter(
-    (i) => i.name.toLowerCase().includes(q) || (i.hsCode && i.hsCode.toLowerCase().includes(q))
-  );
-});
-
-const selectedUnitName = computed(() => {
-  if (!props.selectedUnitId) return "Original Unit";
-  const u = props.unitConversions.find((x) => x.id === props.selectedUnitId);
-  return u ? `${u.purchaseUnit} ➔ ${u.salesUnit}` : "Original Unit";
-});
 </script>
 
 <template>
@@ -173,23 +149,21 @@ const selectedUnitName = computed(() => {
             <div
               v-if="showUnitDropdown && selectedClientId"
               class="idp-card position-absolute top-100 start-0 w-100 mt-1 shadow-lg p-1"
-              style="z-index: 1050; max-height: 200px; overflow-y: auto;"
+              style="max-height: 180px; overflow-y: auto; z-index: 1050;"
             >
               <div
-                class="dropdown-item-idp px-2.5 py-1.5 rounded cursor-pointer small"
-                :class="{ 'bg-primary text-white': selectedUnitId === null }"
-                @mousedown="selectUnit(null)"
+                class="unit-option-item p-2 rounded cursor-pointer small text-white"
+                @mousedown="emit('selectUnit', null); showUnitDropdown = false"
               >
-                Original Unit
+                Unit (Default)
               </div>
               <div
-                v-for="u in unitConversions"
+                v-for="u in filteredUnitConversions"
                 :key="u.id"
-                class="dropdown-item-idp px-2.5 py-1.5 rounded cursor-pointer small"
-                :class="{ 'bg-primary text-white': selectedUnitId === u.id }"
-                @mousedown="selectUnit(u.id)"
+                class="unit-option-item p-2 rounded cursor-pointer small text-white"
+                @mousedown="emit('selectUnit', u.id); showUnitDropdown = false"
               >
-                {{ u.purchaseUnit }} ➔ {{ u.salesUnit }} (x{{ u.factor }})
+                {{ u.purchaseUnit }} ➔ {{ u.salesUnit }}
               </div>
             </div>
           </div>
@@ -198,45 +172,39 @@ const selectedUnitName = computed(() => {
         <!-- 4. Item Search Filter -->
         <div class="col-lg-2 col-md-4">
           <div class="position-relative">
+            <i class="bi bi-box-seam position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
             <input
               v-model="itemSearchText"
               type="text"
-              class="form-control idp-input pe-4"
-              :disabled="!selectedClientId"
-              placeholder="Filter by item..."
-              style="height: 38px;"
+              class="form-control idp-input"
+              style="padding-left: 36px !important; padding-right: 32px !important; height: 38px;"
+              placeholder="Type to search item..."
+              :disabled="!selectedClientId || !selectedMonthYear"
               @focus="showItemDropdown = true"
               @blur="hideItemDropdown"
             />
             <button
               v-if="itemSearchText"
-              class="btn btn-sm btn-link position-absolute end-0 top-50 translate-middle-y text-muted pe-2"
-              type="button"
-              @click="clearItemFilter"
+              class="btn btn-link btn-sm position-absolute top-50 end-0 translate-middle-y text-muted text-decoration-none p-1 me-2"
+              @mousedown="handleClearItem"
             >
               ✕
             </button>
             <div
               v-if="showItemDropdown && filteredItems.length > 0"
               class="idp-card position-absolute top-100 start-0 w-100 mt-1 shadow-lg p-1"
-              style="z-index: 1050; max-height: 220px; overflow-y: auto;"
+              style="max-height: 180px; overflow-y: auto; z-index: 1050;"
             >
               <div
-                class="dropdown-item-idp px-2.5 py-1.5 rounded cursor-pointer small"
-                :class="{ 'bg-primary text-white': selectedItemId === null }"
-                @mousedown="selectItem(null)"
+                v-for="i in filteredItems"
+                :key="i.id"
+                class="client-option-item p-2 rounded cursor-pointer"
+                @mousedown="handleItemSelect(i)"
               >
-                All Items
-              </div>
-              <div
-                v-for="it in filteredItems"
-                :key="it.id"
-                class="dropdown-item-idp px-2.5 py-1.5 rounded cursor-pointer small d-flex align-items-center justify-content-between"
-                :class="{ 'bg-primary text-white': selectedItemId === it.id }"
-                @mousedown="selectItem(it.id)"
-              >
-                <span class="text-truncate me-2">{{ it.name }}</span>
-                <span v-if="it.hsCode" class="font-monospace text-muted small">[{{ it.hsCode }}]</span>
+                <div class="text-white small fw-medium">{{ i.name }}</div>
+                <div class="text-muted font-monospace" style="font-size: 0.7rem;">
+                  [{{ i.hsCode || "-" }}]
+                </div>
               </div>
             </div>
           </div>
@@ -246,15 +214,14 @@ const selectedUnitName = computed(() => {
         <div v-if="can('reports.export')" class="col-lg-1 col-md-4">
           <button
             type="button"
-            class="btn btn-success w-100 d-flex align-items-center justify-content-center gap-1.5 fw-semibold"
-            :disabled="!selectedClientId || isExportingExcel"
+            class="btn btn-success w-100 d-flex align-items-center justify-content-center gap-1 fw-semibold px-2"
             style="height: 38px;"
-            title="Export Excel report for this client"
-            @click="emit('exportExcel')"
+            :disabled="!selectedClient || purchasesCount === 0"
+            title="Download active report in Excel"
+            @click="emit('exportActiveReport')"
           >
-            <span v-if="isExportingExcel" class="spinner-border spinner-border-sm"></span>
-            <i v-else class="bi bi-file-earmark-excel"></i>
-            <span class="d-none d-lg-inline">Excel</span>
+            <i class="bi bi-download"></i>
+            <span>Excel</span>
           </button>
         </div>
       </div>
@@ -263,11 +230,8 @@ const selectedUnitName = computed(() => {
 </template>
 
 <style scoped>
-.dropdown-item-idp {
-  color: #e2e8f0;
-  transition: background 0.12s ease;
-}
-.dropdown-item-idp:hover {
-  background: rgba(255, 255, 255, 0.08);
+.unit-option-item:hover,
+.client-option-item:hover {
+  background: rgba(59, 130, 246, 0.2);
 }
 </style>
