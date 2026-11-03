@@ -169,6 +169,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   clearTimeout(refreshTimer);
+  pulse.channel("auth").stopListening("payout:earning-accrued");
+  pulse.channel("auth").stopListening("payout:created");
+  pulse.channel("auth").stopListening("payout:balance-updated");
+  pulse.channel("auth").stopListening("payout:rates-updated");
 });
 </script>
 

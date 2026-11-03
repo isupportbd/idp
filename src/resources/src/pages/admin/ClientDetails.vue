@@ -427,7 +427,7 @@ onMounted(() => {
               </div>
 
               <!-- VAT Password -->
-              <div class="detail-row">
+              <div v-if="can('clients.vat_password')" class="detail-row">
                 <div class="label text-muted small d-flex justify-content-between">
                   <span>Portal Password</span>
                   <span v-if="copiedField === 'vatPass'" class="text-success small fw-semibold">Copied!</span>

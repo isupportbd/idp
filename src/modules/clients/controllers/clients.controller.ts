@@ -139,9 +139,10 @@ export const listClients: Handler = async (c: any) => {
       }
     }
 
+    const canSeeVat = await hasPermission(c, "clients.vat_password");
     const data = rows.map((r) => ({
       ...r,
-      vatPassword: r.vatPassword || null,
+      vatPassword: canSeeVat ? (r.vatPassword || null) : null,
       managers: managerMap[r.id] || []
     }));
 
@@ -227,12 +228,13 @@ export const getClientById: Handler = async (c: any) => {
       .innerJoin(users, eq(clientManagers.managerId, users.id))
       .where(eq(clientManagers.clientId, id));
 
+    const canSeeVat = await hasPermission(c, "clients.vat_password");
     return c.json(
       {
         message: "Client retrieved successfully",
         data: {
           ...row,
-          vatPassword: row.vatPassword || null,
+          vatPassword: canSeeVat ? (row.vatPassword || null) : null,
           managers: assignedManagers
         }
       },
@@ -250,20 +252,7 @@ export const createClient: Handler = async (c: any) => {
     const body = c.req.valid("json");
     const trimmedBin = body.binNumber?.trim();
 
-    const auth = c.get("auth") || c.get("user");
-    let tenantAdminId = 1;
-    let isSuperAdmin = false;
-
-    if (auth?.id) {
-      const currentUser = await db.query.users.findFirst({
-        where: eq(users.id, Number(auth.id)),
-        with: { role: true }
-      });
-      if (currentUser) {
-        isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin" || auth.role === "superadmin";
-        tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
-      }
-    }
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
     // 1. Check Tenant Subscription Plan Client Limit (counting ACTIVE clients)
     if (!isSuperAdmin) {
@@ -887,16 +876,28 @@ export const assignManagers: Handler = async (c: any) => {
       return c.json({ message: "Unauthorized access to client" }, HttpStatusCodes.FORBIDDEN);
     }
 
-    await db.delete(clientManagers).where(eq(clientManagers.clientId, clientId));
+    if (managerIds.length > 0 && !isSuperAdmin) {
+      const candidateManagers = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(and(inArray(users.id, managerIds), or(eq(users.adminId, tenantAdminId!), eq(users.id, tenantAdminId!))));
 
-    if (managerIds.length > 0) {
-      await db.insert(clientManagers).values(
-        managerIds.map((mgrId: number) => ({
-          clientId,
-          managerId: mgrId
-        }))
-      );
+      if (candidateManagers.length !== managerIds.length) {
+        return c.json({ message: "One or more managers do not belong to this tenant" }, HttpStatusCodes.BAD_REQUEST);
+      }
     }
+
+    await db.transaction(async (tx) => {
+      await tx.delete(clientManagers).where(eq(clientManagers.clientId, clientId));
+      if (managerIds.length > 0) {
+        await tx.insert(clientManagers).values(
+          managerIds.map((mgrId: number) => ({
+            clientId,
+            managerId: mgrId
+          }))
+        );
+      }
+    });
 
     return c.json({ message: "Manager assignments updated successfully" }, HttpStatusCodes.OK);
   } catch (err: any) {
@@ -978,24 +979,10 @@ export const bulkCreateClients: Handler = async (c: any) => {
       return c.json({ message: "No clients provided", createdCount: 0 }, HttpStatusCodes.BAD_REQUEST);
     }
 
-    const auth = c.get("auth") || c.get("user");
-    let tenantAdminId = 1;
-    let isSuperAdmin = false;
-    let tenantAdmin: any = null;
-
-    if (auth?.id) {
-      const currentUser = await db.query.users.findFirst({
-        where: eq(users.id, Number(auth.id)),
-        with: { role: true }
-      });
-      if (currentUser) {
-        isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin" || auth.role === "superadmin";
-        tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
-        tenantAdmin = currentUser.adminId
-          ? await db.query.users.findFirst({ where: eq(users.id, tenantAdminId) })
-          : currentUser;
-      }
-    }
+    const { currentUser, isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+    const tenantAdmin = currentUser.adminId
+      ? await db.query.users.findFirst({ where: eq(users.id, tenantAdminId!) })
+      : currentUser;
 
     // Check Plan Client Limit for Bulk Upload
     if (!isSuperAdmin && tenantAdmin?.planId) {

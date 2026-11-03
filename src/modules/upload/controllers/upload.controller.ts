@@ -2,7 +2,7 @@ import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import crypto from "node:crypto";
 import * as XLSX from "xlsx";
-import { broadcast, db, HttpStatusCodes } from "@/framework/facade.js";
+import { broadcast, db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
 import { columnMappings } from "@/modules/superadmin/database/models/column_mappings.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
@@ -396,20 +396,7 @@ export const processUpload: Handler = async (c: any) => {
     }
 
     // ── Client Resolution & Validation ─────────────────────────────────
-    const auth = c.get("auth") || c.get("user");
-    let tenantAdminId = 1;
-    let isSuperAdmin = false;
-
-    if (auth?.id) {
-      const currentUser = await db.query.users.findFirst({
-        where: eq(users.id, Number(auth.id)),
-        with: { role: true }
-      });
-      if (currentUser) {
-        isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin";
-        tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
-      }
-    }
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
     const existingClients = await db
       .select()
@@ -509,22 +496,8 @@ const IMPORT_ASYNC_THRESHOLD = 500;
 
 /** Why: resolves the acting tenant admin (and superadmin flag) from the request. */
 async function resolveUploadActor(c: any): Promise<{ tenantAdminId: number; isSuperAdmin: boolean }> {
-  const auth = c.get("auth") || c.get("user");
-  let tenantAdminId = 1;
-  let isSuperAdmin = false;
-
-  if (auth?.id) {
-    const currentUser = await db.query.users.findFirst({
-      where: eq(users.id, Number(auth.id)),
-      with: { role: true }
-    });
-    if (currentUser) {
-      isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin";
-      tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
-    }
-  }
-
-  return { tenantAdminId, isSuperAdmin };
+  const ctx = await resolveTenantContext(c);
+  return { tenantAdminId: ctx.tenantAdminId ?? ctx.userId, isSuperAdmin: ctx.isSuperAdmin };
 }
 
 /** Why: live import progress for the importer UI (best-effort no-op without sockets). */
@@ -943,16 +916,7 @@ export const replaceDuplicate: Handler = async (c: any) => {
       return c.json({ success: false, message: "No items provided for replacement." }, HttpStatusCodes.BAD_REQUEST);
     }
 
-    const auth = c.get("auth") || c.get("user");
-    let tenantAdminId = 1;
-    if (auth?.id) {
-      const currentUser = await db.query.users.findFirst({
-        where: eq(users.id, Number(auth.id))
-      });
-      if (currentUser) {
-        tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
-      }
-    }
+    const { tenantAdminId } = await resolveTenantContext(c);
 
     for (const item of itemsToReplace) {
       const target = item.incoming || item.newData || item;
@@ -1014,16 +978,7 @@ export const savePendingFfs: Handler = async (c: any) => {
       return c.json({ success: false, message: "No FFS items provided." }, HttpStatusCodes.BAD_REQUEST);
     }
 
-    const auth = c.get("auth") || c.get("user");
-    let tenantAdminId = 1;
-    if (auth?.id) {
-      const currentUser = await db.query.users.findFirst({
-        where: eq(users.id, Number(auth.id))
-      });
-      if (currentUser) {
-        tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
-      }
-    }
+    const { tenantAdminId } = await resolveTenantContext(c);
 
     const toInsert = itemsToSave.map((item: any) => ({
       adminId: tenantAdminId,

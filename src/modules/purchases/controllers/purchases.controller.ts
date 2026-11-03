@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
-import { db, HttpStatusCodes } from "@/framework/facade.js";
+import { db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
 import { purchases } from "@/modules/clients/database/models/purchases.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
@@ -11,20 +11,7 @@ import { users } from "@/modules/auth/database/models/user.js";
 
 export const listPurchases: Handler = async (c: any) => {
   try {
-    const auth = c.get("auth") || c.get("user");
-    let tenantAdminId = 1;
-    let isSuperAdmin = false;
-
-    if (auth?.id) {
-      const currentUser = await db.query.users.findFirst({
-        where: eq(users.id, Number(auth.id)),
-        with: { role: true }
-      });
-      if (currentUser) {
-        isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin";
-        tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
-      }
-    }
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
     const month = c.req.query("month");
     const clientId = c.req.query("clientId");
@@ -145,20 +132,7 @@ export const deletePurchase: Handler = async (c: any) => {
       return c.json({ success: false, message: "Invalid ID" }, HttpStatusCodes.BAD_REQUEST);
     }
 
-    const auth = c.get("auth") || c.get("user");
-    let tenantAdminId = 1;
-    let isSuperAdmin = false;
-
-    if (auth?.id) {
-      const currentUser = await db.query.users.findFirst({
-        where: eq(users.id, Number(auth.id)),
-        with: { role: true }
-      });
-      if (currentUser) {
-        isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin";
-        tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
-      }
-    }
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
     const whereCondition = isSuperAdmin
       ? eq(purchases.id, id)
@@ -180,20 +154,7 @@ export const deletePurchase: Handler = async (c: any) => {
 export const batchDeletePurchases: Handler = async (c: any) => {
   try {
     const { month, clientId, ids } = await c.req.json();
-    const auth = c.get("auth") || c.get("user");
-    let tenantAdminId = 1;
-    let isSuperAdmin = false;
-
-    if (auth?.id) {
-      const currentUser = await db.query.users.findFirst({
-        where: eq(users.id, Number(auth.id)),
-        with: { role: true }
-      });
-      if (currentUser) {
-        isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin";
-        tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
-      }
-    }
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
     const conditions: any[] = [];
     if (!isSuperAdmin) {
@@ -234,20 +195,7 @@ export const deletePurchasesByMonth: Handler = async (c: any) => {
       return c.json({ success: false, message: "Month is required" }, HttpStatusCodes.BAD_REQUEST);
     }
 
-    const auth = c.get("auth") || c.get("user");
-    let tenantAdminId = 1;
-    let isSuperAdmin = false;
-
-    if (auth?.id) {
-      const currentUser = await db.query.users.findFirst({
-        where: eq(users.id, Number(auth.id)),
-        with: { role: true }
-      });
-      if (currentUser) {
-        isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin";
-        tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
-      }
-    }
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
     const conditions = [eq(purchases.month, month)];
     if (!isSuperAdmin) {
@@ -270,20 +218,7 @@ export const deletePurchasesByMonth: Handler = async (c: any) => {
 export const getPurchasesMonths: Handler = async (c: any) => {
   try {
     const clientId = c.req.query("clientId");
-    const auth = c.get("auth") || c.get("user");
-    let tenantAdminId = 1;
-    let isSuperAdmin = false;
-
-    if (auth?.id) {
-      const currentUser = await db.query.users.findFirst({
-        where: eq(users.id, Number(auth.id)),
-        with: { role: true }
-      });
-      if (currentUser) {
-        isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin";
-        tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
-      }
-    }
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
     const purchaseConditions: any[] = [];
     if (!isSuperAdmin) {
@@ -310,13 +245,19 @@ export const getPurchasesMonths: Handler = async (c: any) => {
     const submissionsMap: Record<string, string> = {};
 
     if (clientId) {
+      const subConditions = [eq(vatSubmissions.clientId, Number(clientId))];
+      if (!isSuperAdmin && tenantAdminId) {
+        subConditions.push(eq(clients.createdBy, tenantAdminId));
+      }
+
       const subsResult = await db
         .select({
           taxPeriod: vatSubmissions.taxPeriod,
           submissionId: vatSubmissions.submissionId
         })
         .from(vatSubmissions)
-        .where(eq(vatSubmissions.clientId, Number(clientId)));
+        .innerJoin(clients, eq(vatSubmissions.clientId, clients.id))
+        .where(and(...subConditions));
 
       subsResult.forEach((s) => {
         if (s.taxPeriod && s.submissionId) {

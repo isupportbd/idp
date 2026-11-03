@@ -2,37 +2,45 @@ import { eq } from "drizzle-orm";
 import { db } from "@/framework/facade.js";
 import { users } from "@/modules/auth/database/models/user.js";
 
+export class UnauthenticatedTenantError extends Error {
+  status = 401;
+  constructor(message = "Unauthenticated") {
+    super(message);
+    this.name = "UnauthenticatedTenantError";
+  }
+}
+
 export interface TenantContext {
-  currentUser: any | null;
+  currentUser: any;
   isSuperAdmin: boolean;
   isTenantAdmin: boolean;
-  tenantAdminId: number;
+  tenantAdminId: number | null;
   userId: number;
 }
 
 /**
- * Resolves the authenticated user and tenant context from Hono Context
+ * Resolves the authenticated user and tenant context from Hono Context.
+ * Fails closed (throws UnauthenticatedTenantError) when auth is missing or invalid.
  */
 export async function resolveTenantContext(c: any): Promise<TenantContext> {
   const auth = c.get("auth") || c.get("user");
-  const userId = auth?.id ? Number(auth.id) : 1;
-  let tenantAdminId = userId;
-  let isSuperAdmin = false;
-  let isTenantAdmin = true;
-  let currentUser: any = null;
-
-  if (auth?.id) {
-    currentUser = await db.query.users.findFirst({
-      where: eq(users.id, userId),
-      with: { role: true }
-    });
-
-    if (currentUser) {
-      isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin" || auth.role === "superadmin";
-      isTenantAdmin = currentUser.role?.name?.toLowerCase() === "admin" || !currentUser.adminId;
-      tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
-    }
+  if (!auth?.id) {
+    throw new UnauthenticatedTenantError();
   }
+
+  const userId = Number(auth.id);
+  const currentUser = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    with: { role: true }
+  });
+
+  if (!currentUser) {
+    throw new UnauthenticatedTenantError("User not found");
+  }
+
+  const isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin" || auth.role === "superadmin";
+  const isTenantAdmin = currentUser.role?.name?.toLowerCase() === "admin" || !currentUser.adminId;
+  const tenantAdminId = isSuperAdmin ? null : (currentUser.adminId ? Number(currentUser.adminId) : currentUser.id);
 
   return {
     currentUser,
@@ -41,6 +49,19 @@ export async function resolveTenantContext(c: any): Promise<TenantContext> {
     tenantAdminId,
     userId
   };
+}
+
+/**
+ * Helper to require a non-null tenantAdminId (throws 403 for superadmin attempting tenant-only action)
+ */
+export async function requireTenantContext(c: any): Promise<TenantContext & { tenantAdminId: number }> {
+  const ctx = await resolveTenantContext(c);
+  if (!ctx.tenantAdminId) {
+    const error = new Error("Tenant context required");
+    (error as any).status = 403;
+    throw error;
+  }
+  return ctx as TenantContext & { tenantAdminId: number };
 }
 
 /**

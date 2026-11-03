@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import axios from "axios";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
@@ -260,6 +260,11 @@ onMounted(() => {
 
   pulse.channel("auth").listen("purchase:uploaded", () => loadStatementData());
   pulse.channel("auth").listen("submission:updated", () => loadStatementData());
+});
+
+onUnmounted(() => {
+  pulse.channel("auth").stopListening("purchase:uploaded");
+  pulse.channel("auth").stopListening("submission:updated");
 });
 </script>
 

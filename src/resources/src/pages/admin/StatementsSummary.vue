@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { usePagination } from "@/composables/usePagination";
 import axios from "axios";
 import MonthNavigator from "@/components/MonthNavigator.vue";
@@ -279,6 +279,11 @@ onMounted(() => {
 
   pulse.channel("auth").listen("purchase:uploaded", () => loadSummaryData());
   pulse.channel("auth").listen("submission:updated", () => loadSummaryData());
+});
+
+onUnmounted(() => {
+  pulse.channel("auth").stopListening("purchase:uploaded");
+  pulse.channel("auth").stopListening("submission:updated");
 });
 </script>
 

@@ -29,6 +29,8 @@ export { password } from "@/framework/support/password.js";
 export { urls } from "@/framework/support/url.js";
 export {
   resolveTenantContext,
+  requireTenantContext,
+  UnauthenticatedTenantError,
   getSubmissionDeadline,
   getDefaultTaxPeriod,
   formatStandardHsCode,

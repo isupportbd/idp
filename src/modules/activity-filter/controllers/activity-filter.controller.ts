@@ -30,6 +30,8 @@ export const getActivityMatrix: Handler = async (c: any) => {
 
     const auth = c.get("auth") || c.get("user");
 
+    const canSeeVat = await hasPermission(c, "clients.vat_password");
+
     // 1. Fetch all active clients
     const activeClients = await db
       .select({
@@ -43,7 +45,7 @@ export const getActivityMatrix: Handler = async (c: any) => {
         email: clients.email,
         address: clients.address,
         vatUserId: clients.vatUserId,
-        vatPassword: clients.vatPassword,
+        vatPassword: canSeeVat ? clients.vatPassword : sql<string | null>`NULL`,
         vatServiceType: clients.vatServiceType,
         customerTypeId: clients.customerTypeId,
         customerTypeName: customerTypes.typeName,
