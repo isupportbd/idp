@@ -830,7 +830,7 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
  */
 export const savePurchases: Handler = async (c: any) => {
   try {
-    const rawBody = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const rawBody = (c.req as any).valid("json");
     const { data, month, isRebate, isFfs } = rawBody;
 
     if (!data || !Array.isArray(data) || data.length === 0) {
@@ -872,7 +872,7 @@ export const savePurchases: Handler = async (c: any) => {
  *      flag is off, the file is small, or Redis is unavailable.
  */
 export const savePurchasesAsync: Handler = async (c: any) => {
-  const rawBody = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+  const rawBody = (c.req as any).valid("json");
   const { data, month, isRebate, isFfs } = rawBody;
 
   if (!data || !Array.isArray(data) || data.length === 0) {
@@ -914,7 +914,7 @@ export const savePurchasesAsync: Handler = async (c: any) => {
 
 export const replaceDuplicate: Handler = async (c: any) => {
   try {
-    const rawBody = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const rawBody = (c.req as any).valid("json");
     const { itemsToReplace } = rawBody;
     if (!itemsToReplace || !Array.isArray(itemsToReplace) || itemsToReplace.length === 0) {
       return c.json({ success: false, message: "No items provided for replacement." }, HttpStatusCodes.BAD_REQUEST);
@@ -979,7 +979,7 @@ export const replaceDuplicate: Handler = async (c: any) => {
 
 export const savePendingFfs: Handler = async (c: any) => {
   try {
-    const rawBody = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const rawBody = (c.req as any).valid("json");
     const { itemsToSave, takeRebate } = rawBody;
     if (!itemsToSave || !Array.isArray(itemsToSave) || itemsToSave.length === 0) {
       return c.json({ success: false, message: "No FFS items provided." }, HttpStatusCodes.BAD_REQUEST);

@@ -974,7 +974,7 @@ function formatStandardBin(raw: string | null | undefined): string | null {
 
 export const bulkCreateClients: Handler = async (c: any) => {
   try {
-    const rawBody = (c.req as any).valid ? (c.req as any).valid("json") : await c.req.json().catch(() => ({}));
+    const rawBody = (c.req as any).valid("json");
     const { clients: rawClients } = await validate(BulkCreateClientsSchema, rawBody) as { clients: any[] };
 
     const { currentUser, isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);

@@ -154,7 +154,7 @@ export const deletePurchase: Handler = async (c: any) => {
 
 export const batchDeletePurchases: Handler = async (c: any) => {
   try {
-    const rawBody = (c.req as any).valid ? (c.req as any).valid("json") : await c.req.json().catch(() => ({}));
+    const rawBody = (c.req as any).valid("json");
     const { month, clientId, ids } = await validate(batchDeletePurchasesSchema, rawBody);
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 

@@ -178,12 +178,7 @@ export async function getPendingSignups(c: Context) {
 // 3. Approve Signup (Credit Wallet Net Balance & Auto-Activate Plan if Sufficient)
 export async function approveSignup(c: Context) {
   try {
-    let body: any = {};
-    try {
-      body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
-    } catch {
-      body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
-    }
+    const body = (c.req as any).valid("json");
     const userId = Number(body?.userId);
     const rawDays = body?.days ? Number(body.days) : undefined;
     const days = rawDays && !isNaN(rawDays) && rawDays > 0 ? rawDays : undefined;
@@ -317,7 +312,7 @@ export async function approveSignup(c: Context) {
 // 4. Reject Signup (Delete record)
 export async function rejectSignup(c: Context) {
   try {
-    const { userId } = (((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any) as any;
+    const { userId } = (c.req as any).valid("json");
     if (!userId) return c.json({ success: false, error: "User ID is required" }, 400);
 
     await db.delete(users).where(eq(users.id, userId));
@@ -332,7 +327,7 @@ export async function rejectSignup(c: Context) {
 export async function extendTenant(c: Context) {
   try {
     const id = parseInt(c.req.param("id"));
-    const { days } = (((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any) as any;
+    const { days } = (c.req as any).valid("json");
 
     if (isNaN(id) || !days || days < 1) {
       return c.json({ success: false, error: "Valid ID and days are required" }, 400);
@@ -529,7 +524,7 @@ export async function getPlans(c: Context) {
 
 export async function createPlan(c: Context) {
   try {
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     const [newPlan] = await db.insert(plans).values({
       name: body.name,
       rateMonthly: Number(body.rateMonthly),
@@ -556,7 +551,7 @@ export async function updatePlan(c: Context) {
     const id = parseInt(c.req.param("id"));
     if (isNaN(id)) return c.json({ success: false, error: "Invalid plan ID" }, 400);
 
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     const [updatedPlan] = await db.update(plans).set({
       name: body.name,
       rateMonthly: Number(body.rateMonthly),
@@ -621,7 +616,7 @@ export async function getPaymentSettings(c: Context) {
 
 export async function savePaymentSettings(c: Context) {
   try {
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     let [existing] = await db.select().from(paymentSettings).limit(1);
 
     if (existing) {
@@ -843,7 +838,7 @@ export async function getClientTypes(c: Context) {
 
 export async function createClientType(c: Context) {
   try {
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     const name = body.typeName || body.name;
     if (!name || !name.trim()) {
       return c.json({ success: false, error: "Name is required" }, 400);
@@ -868,7 +863,7 @@ export async function createClientType(c: Context) {
 export async function updateClientType(c: Context) {
   try {
     const id = Number(c.req.param("id"));
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     const name = body.typeName || body.name;
     if (!name || !name.trim()) {
       return c.json({ success: false, error: "Name is required" }, 400);
@@ -948,7 +943,7 @@ export async function getLocations(c: Context) {
 
 export async function createLocation(c: Context) {
   try {
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     if (!body.name || !body.name.trim()) {
       return c.json({ success: false, error: "Location name is required" }, 400);
     }
@@ -972,7 +967,7 @@ export async function createLocation(c: Context) {
 export async function updateLocation(c: Context) {
   try {
     const id = Number(c.req.param("id"));
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     if (!body.name || !body.name.trim()) {
       return c.json({ success: false, error: "Location name is required" }, 400);
     }
@@ -1054,7 +1049,7 @@ export async function getCommercialAreas(c: Context) {
 
 export async function createCommercialArea(c: Context) {
   try {
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     if (!body.name || !body.name.trim()) {
       return c.json({ success: false, error: "Area name is required" }, 400);
     }
@@ -1089,7 +1084,7 @@ export async function createCommercialArea(c: Context) {
 export async function updateCommercialArea(c: Context) {
   try {
     const id = Number(c.req.param("id"));
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     if (!body.name || !body.name.trim()) {
       return c.json({ success: false, error: "Area name is required" }, 400);
     }
@@ -1171,7 +1166,7 @@ export async function getClientReferences(c: Context) {
 
 export async function createClientReference(c: Context) {
   try {
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     if (!body.name || !body.name.trim()) {
       return c.json({ success: false, error: "Reference name is required" }, 400);
     }
@@ -1197,7 +1192,7 @@ export async function createClientReference(c: Context) {
 export async function updateClientReference(c: Context) {
   try {
     const id = Number(c.req.param("id"));
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     if (!body.name || !body.name.trim()) {
       return c.json({ success: false, error: "Reference name is required" }, 400);
     }
@@ -1292,7 +1287,7 @@ export async function getColumnMappings(c: Context) {
 
 export async function saveColumnMappings(c: Context) {
   try {
-    const { rows } = (((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any) as any;
+    const { rows } = (c.req as any).valid("json");
     if (!Array.isArray(rows)) {
       return c.json({ success: false, error: "Mappings array is required" }, 400);
     }
@@ -1348,7 +1343,7 @@ export async function getGlobalItems(c: Context) {
 
 export async function createGlobalItem(c: Context) {
   try {
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     const { hsCode, awHsCode, name, unit, isActive } = body;
 
     if (!hsCode || !name) {
@@ -1399,7 +1394,7 @@ export async function createGlobalItem(c: Context) {
 export async function updateGlobalItem(c: Context) {
   try {
     const id = Number(c.req.param("id"));
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     const { hsCode, awHsCode, name, unit, isActive } = body;
 
     const [found] = await db.select().from(globalItems).where(eq(globalItems.id, id));
@@ -1498,7 +1493,7 @@ export async function getMeasurementUnits(c: Context) {
 
 export async function createMeasurementUnit(c: Context) {
   try {
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     const { code, name, description, isActive } = body;
 
     if (!code || !name) {
@@ -1546,7 +1541,7 @@ export async function createMeasurementUnit(c: Context) {
 export async function updateMeasurementUnit(c: Context) {
   try {
     const id = Number(c.req.param("id"));
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     const { code, name, description, isActive } = body;
 
     const [found] = await db.select().from(measurementUnits).where(eq(measurementUnits.id, id));
@@ -1642,7 +1637,7 @@ export async function getVatNotes(c: Context) {
 
 export async function createVatNote(c: Context) {
   try {
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     const { vatRate, noteName, description, isActive } = body;
 
     if (vatRate === undefined || vatRate === null || !noteName) {
@@ -1695,7 +1690,7 @@ export async function createVatNote(c: Context) {
 export async function updateVatNote(c: Context) {
   try {
     const id = Number(c.req.param("id"));
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     const { vatRate, noteName, description, isActive } = body;
 
     const [found] = await db.select().from(vatNotes).where(eq(vatNotes.id, id));
@@ -1821,7 +1816,7 @@ export async function getUnitConversions(c: Context) {
 
 export async function createUnitConversion(c: Context) {
   try {
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     const { purchaseUnit, salesUnit, factor } = body;
 
     if (!purchaseUnit || !salesUnit || factor === undefined || factor === null) {
@@ -1904,7 +1899,7 @@ export async function createUnitConversion(c: Context) {
 export async function updateUnitConversion(c: Context) {
   try {
     const id = Number(c.req.param("id"));
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     const { purchaseUnit, salesUnit, factor } = body;
 
     const [found] = await db.select().from(unitConversions).where(eq(unitConversions.id, id));
@@ -2291,16 +2286,7 @@ export async function getPendingRecharges(c: Context) {
 // 19. Approve Wallet Recharge (Credit Balance & Auto-Activate Plan if Sufficient)
 export async function approveRecharge(c: Context) {
   try {
-    let body: any = {};
-    try {
-      body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
-    } catch {
-      try {
-        body = (c.req as any).valid ? (c.req as any).valid("json") : {};
-      } catch {
-        body = {};
-      }
-    }
+    const body = (c.req as any).valid("json");
     let rawId =
       body?.transactionId ??
       body?.id ??
@@ -2481,16 +2467,7 @@ export async function approveRecharge(c: Context) {
 // 20. Reject Wallet Recharge
 export async function rejectRecharge(c: Context) {
   try {
-    let body: any = {};
-    try {
-      body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
-    } catch {
-      try {
-        body = (c.req as any).valid ? (c.req as any).valid("json") : {};
-      } catch {
-        body = {};
-      }
-    }
+    const body = (c.req as any).valid("json");
     let rawId =
       body?.transactionId ??
       body?.id ??
@@ -2551,7 +2528,7 @@ export async function getServiceUnits(c: Context) {
 
 export async function createServiceUnit(c: Context) {
   try {
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     const { code, name, description, isActive } = body;
 
     if (!code || !code.trim()) {
@@ -2597,7 +2574,7 @@ export async function createServiceUnit(c: Context) {
 export async function updateServiceUnit(c: Context) {
   try {
     const id = Number(c.req.param("id"));
-    const body = ((c.req as any).valid ? (c.req as any).valid("json") : await c.req.json()) as any;
+    const body = (c.req as any).valid("json");
     const { code, name, description, isActive } = body;
 
     const [found] = await db.select().from(serviceUnits).where(eq(serviceUnits.id, id));

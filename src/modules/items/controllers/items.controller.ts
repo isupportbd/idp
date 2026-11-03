@@ -29,7 +29,7 @@ export const getItems: Handler = async (c: any) => {
 
 export const bulkCreateItems: Handler = async (c: any) => {
   try {
-    const rawBody = (c.req as any).valid ? (c.req as any).valid("json") : await c.req.json().catch(() => ({}));
+    const rawBody = (c.req as any).valid("json");
     const { items: newItems } = await validate(bulkCreateItemsSchema, rawBody);
 
     const inserted: any[] = [];

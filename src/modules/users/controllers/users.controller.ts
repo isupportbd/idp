@@ -128,7 +128,7 @@ export const createUser: Handler = async (c: any) => {
     }
 
     const { currentUser, isSuperAdmin, tenantAdminId } = tenantInfo;
-    const body = (c.req as any).valid ? (c.req as any).valid("json") : await validate(CreateUserSchema, await c.req.json());
+    const body = (c.req as any).valid("json");
 
     const email = String(body.email || "").trim().toLowerCase();
     const name = String(body.name || "").trim();
@@ -255,7 +255,7 @@ export const updateUser: Handler = async (c: any) => {
       return c.json({ message: "Forbidden: You do not have access to manage this user" }, HttpStatusCodes.FORBIDDEN);
     }
 
-    const body = (c.req as any).valid ? (c.req as any).valid("json") : await validate(UpdateUserSchema, await c.req.json());
+    const body = (c.req as any).valid("json");
     const updateData: any = { updatedAt: new Date() };
     const isPrimaryAdmin = targetUser.id === tenantAdminId;
 
@@ -310,7 +310,7 @@ export const resetUserPassword: Handler = async (c: any) => {
 
     const { isSuperAdmin, tenantAdminId } = tenantInfo;
     const userId = Number(c.req.param("id"));
-    const body = (c.req as any).valid ? (c.req as any).valid("json") : await validate(ResetPasswordSchema, await c.req.json());
+    const body = (c.req as any).valid("json");
 
     if (!body.newPassword || body.newPassword.length < 6) {
       return c.json({ message: "Password must be at least 6 characters long." }, HttpStatusCodes.BAD_REQUEST);
@@ -344,7 +344,7 @@ export const updateUserStatus: Handler = async (c: any) => {
 
     const { isSuperAdmin, tenantAdminId } = tenantInfo;
     const userId = Number(c.req.param("id"));
-    const body = (c.req as any).valid ? (c.req as any).valid("json") : await validate(UpdateStatusSchema, await c.req.json());
+    const body = (c.req as any).valid("json");
 
     const [targetUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     if (!targetUser) {
