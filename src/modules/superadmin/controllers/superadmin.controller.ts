@@ -1,5 +1,6 @@
 import type { AppContext } from "@/framework/facade.js";
 import { broadcast, cache, db } from "@/framework/facade.js";
+import { databasePool } from "@/framework/database/connection.js";
 import { users } from "@/modules/auth/database/models/user.js";
 import { roles } from "@/modules/auth/database/models/role.js";
 import { plans } from "@/modules/superadmin/database/models/plans.js";
@@ -2866,27 +2867,28 @@ export async function restoreDatabaseBackup(c: AppContext) {
       .filter((line) => !/^\s*(BEGIN|COMMIT|ROLLBACK)\s*;?\s*$/i.test(line))
       .join("\n");
 
-    // Execute restore inside transaction
-    await db.transaction(async (tx) => {
-      // Best effort: temporarily disable foreign key constraint and trigger checks during dump restore (works if DB user has superuser/replication role)
+    // Execute restore using native postgres driver pool to support large multi-statement dumps without Drizzle statement-cache limitations
+    const pool = databasePool();
+    await pool.begin(async (sqlClient: any) => {
+      // Best effort: temporarily disable foreign key constraint and trigger checks during dump restore
       try {
-        await tx.execute(sql.raw("SET session_replication_role = 'replica';"));
+        await sqlClient.unsafe("SET session_replication_role = 'replica';");
       } catch {
-        // Fall back gracefully if DB user is non-superuser; dump is already topologically ordered
+        // Fall back gracefully if non-superuser; dump is already topologically ordered
       }
 
-      // Execute the uploaded SQL backup (multi-statement via unsafe)
-      await tx.execute(sql.raw(cleanedSql));
+      // Execute the uploaded SQL backup (native multi-statement stream execution)
+      await sqlClient.unsafe(cleanedSql);
 
       // Re-enable foreign key constraints and normal trigger checks
       try {
-        await tx.execute(sql.raw("SET session_replication_role = 'origin';"));
+        await sqlClient.unsafe("SET session_replication_role = 'origin';");
       } catch {
         // Fall back gracefully
       }
 
       // Synchronize PostgreSQL primary key sequences safely (handling empty tables with is_called = false)
-      await tx.execute(sql.raw(`
+      await sqlClient.unsafe(`
         DO $$
         DECLARE
           r RECORD;
@@ -2906,7 +2908,7 @@ export async function restoreDatabaseBackup(c: AppContext) {
             END IF;
           END LOOP;
         END $$;
-      `));
+      `);
     });
 
     console.info(`[AUDIT] SuperAdmin #${superAdminId} successfully restored database from file: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB) at ${new Date().toISOString()}`);
