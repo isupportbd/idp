@@ -967,7 +967,7 @@ export const createBill: Handler = async (c: any) => {
     //      on a unique violation we regenerate and retry instead of returning a
     //      spurious 500.
     const auth = c.get("auth") || c.get("user");
-    const creatorId = auth?.adminId ? Number(auth.adminId) : (auth?.id ? Number(auth.id) : null);
+    const { tenantAdminId: creatorId } = await resolveTenantContext(c);
 
     let billNo = await generateNextBillNo(year);
     let newBill: any;
@@ -1095,7 +1095,7 @@ export const createBill: Handler = async (c: any) => {
  */
 async function resolveBatchActor(c: any): Promise<{ creatorId: number | null; isSuperAdmin: boolean }> {
   const auth = c.get("auth") || c.get("user");
-  const creatorId = auth?.adminId ? Number(auth.adminId) : (auth?.id ? Number(auth.id) : null);
+  const { tenantAdminId: creatorId } = await resolveTenantContext(c);
   let isSuperAdmin = false;
 
   if (auth?.id) {
