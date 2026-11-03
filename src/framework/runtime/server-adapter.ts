@@ -58,7 +58,8 @@ async function startBun(
       return app.fetch(req);
     },
     hostname: "0.0.0.0",
-    port
+    port,
+    maxRequestBodySize: 500 * 1024 * 1024 // 500 MB to support large database restore dumps
   };
 
   if (websocket?.bun) {
@@ -67,7 +68,7 @@ async function startBun(
       serverConfig.idleTimeout = websocket.bun.idleTimeout;
     }
     if (websocket.bun.maxRequestBodySize) {
-      serverConfig.maxRequestBodySize = websocket.bun.maxRequestBodySize;
+      serverConfig.maxRequestBodySize = Math.max(websocket.bun.maxRequestBodySize, 500 * 1024 * 1024);
     }
   }
 
