@@ -271,7 +271,7 @@ const handleSubmit = async () => {
       if (window.opener) {
         try {
           window.opener.location.reload();
-        } catch (e) {}
+        } catch (uiErr: any) { console.warn("[UI Component Warning: UserForm.vue]", uiErr?.message || uiErr); }
       }
       router.push("/admin/users");
     }, 1000);

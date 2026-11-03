@@ -74,31 +74,7 @@ const downloadSampleTemplate = async () => {
     }
   ];
 
-  const XLSX = await import("xlsx");
-  const ws = XLSX.utils.json_to_sheet(sampleData);
-  ws["!cols"] = [
-    { wch: 26 }, // Company Name
-    { wch: 22 }, // Proprietor Name
-    { wch: 18 }, // BIN Number
-    { wch: 16 }, // TIN Number
-    { wch: 20 }, // Trade License No
-    { wch: 38 }, // Full Office Address
-    { wch: 16 }, // Mobile
-    { wch: 18 }, // Alternative Mobile
-    { wch: 24 }, // Email
-    { wch: 22 }, // Customer Type
-    { wch: 24 }, // Reference
-    { wch: 20 }, // VAT Portal User ID
-    { wch: 20 }, // VAT Portal Password
-    { wch: 18 }, // VAT Service Type
-    { wch: 26 }, // Opening Balance
-    { wch: 12 }, // Status
-    { wch: 32 }  // Notes
-  ];
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Clients_Template");
-  XLSX.writeFile(wb, "client_bulk_import_template.xlsx");
+  exportSingleSheet(sampleData, "Clients_Template", "client_bulk_import_template.xlsx");
 };
 
 // ── File Selection & Parsing ─────────────────────────────────

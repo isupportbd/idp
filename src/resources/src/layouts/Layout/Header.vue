@@ -108,7 +108,7 @@ const fetchStats = async () => {
       if (fallbackRes.data?.success && fallbackRes.data?.stats) {
         userStats.value = fallbackRes.data.stats;
       }
-    } catch {}
+    } catch (uiErr: any) { console.warn("[UI Component Warning: Header.vue]", uiErr?.message || uiErr); }
   }
 };
 
@@ -125,7 +125,7 @@ const fetchNotifications = async () => {
       if (fallbackRes.data?.success && Array.isArray(fallbackRes.data?.data)) {
         notifications.value = fallbackRes.data.data;
       }
-    } catch {}
+    } catch (uiErr: any) { console.warn("[UI Component Warning: Header.vue]", uiErr?.message || uiErr); }
   }
 };
 

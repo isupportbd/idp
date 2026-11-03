@@ -53,7 +53,7 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(SUBMISSIONS_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: Submissions.vue]", uiErr?.message || uiErr); }
   return {};
 };
 
@@ -81,7 +81,7 @@ const saveFilters = () => {
         })
       );
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: Submissions.vue]", uiErr?.message || uiErr); }
 };
 
 watch([selectedMonth, searchQuery, selectedCustomerTypeId, selectedReferenceId, selectedSubmitterId, statusFilter], saveFilters);
@@ -92,7 +92,7 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(SUBMISSIONS_FILTER_KEY);
       }
-    } catch {}
+    } catch (uiErr: any) { console.warn("[UI Component Warning: Submissions.vue]", uiErr?.message || uiErr); }
   }
 });
 
@@ -132,7 +132,7 @@ const clearAllFilters = () => {
     if (typeof window !== "undefined" && window.sessionStorage) {
       sessionStorage.removeItem(SUBMISSIONS_FILTER_KEY);
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: Submissions.vue]", uiErr?.message || uiErr); }
 };
 
 // Clicking a top KPI card resets every lower toolbar filter so the two never conflict.

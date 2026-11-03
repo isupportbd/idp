@@ -96,7 +96,7 @@ const loadGatewaySettings = async () => {
         endpoint: data.endpoint || ""
       };
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: SmsTemplates.vue]", uiErr?.message || uiErr); }
 };
 
 const cancelGatewayEdit = async () => {

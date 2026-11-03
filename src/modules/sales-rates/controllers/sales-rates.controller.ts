@@ -2,10 +2,10 @@ import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import { broadcast, db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
 import { salesRates } from "../database/models/sales_rates.js";
-import { clients } from "@/modules/clients/database/models/clients.js";
-import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
-import { unitConversions } from "@/modules/superadmin/database/models/unit_conversions.js";
-import { users } from "@/modules/auth/database/models/user.js";
+import { clients } from "@/database/schema.js";
+import { globalItems } from "@/database/schema.js";
+import { unitConversions } from "@/database/schema.js";
+import { users } from "@/database/schema.js";
 
 // ── 1. LIST SALES RATES ───────────────────────────────────────────────
 export const listSalesRates: Handler = async (c: any) => {

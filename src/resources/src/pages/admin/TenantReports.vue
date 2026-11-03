@@ -85,7 +85,7 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(REPORTS_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: TenantReports.vue]", uiErr?.message || uiErr); }
   return {};
 };
 
@@ -136,7 +136,7 @@ const saveFilters = () => {
         })
       );
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: TenantReports.vue]", uiErr?.message || uiErr); }
 };
 
 watch([selectedClientId, selectedMonthYear, currentTab], saveFilters);
@@ -147,7 +147,7 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(REPORTS_FILTER_KEY);
       }
-    } catch {}
+    } catch (uiErr: any) { console.warn("[UI Component Warning: TenantReports.vue]", uiErr?.message || uiErr); }
   }
 });
 

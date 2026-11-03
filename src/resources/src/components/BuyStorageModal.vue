@@ -77,7 +77,7 @@ const copyBkashNumber = async () => {
     setTimeout(() => {
       isCopied.value = false;
     }, 2000);
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: BuyStorageModal.vue]", uiErr?.message || uiErr); }
 };
 
 const handleBuyStorage = async () => {

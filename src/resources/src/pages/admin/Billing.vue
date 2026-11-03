@@ -76,7 +76,7 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(BILLING_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: Billing.vue]", uiErr?.message || uiErr); }
   return {};
 };
 
@@ -123,7 +123,7 @@ const saveFilters = () => {
         })
       );
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: Billing.vue]", uiErr?.message || uiErr); }
 };
 
 watch([activeTab, selectedMonth, searchQuery, selectedCustomerTypeId, selectedReferenceId, selectedStatusFilter, selectedPaymentMethod], saveFilters);
@@ -134,7 +134,7 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(BILLING_FILTER_KEY);
       }
-    } catch {}
+    } catch (uiErr: any) { console.warn("[UI Component Warning: Billing.vue]", uiErr?.message || uiErr); }
   }
 });
 
@@ -201,7 +201,7 @@ const loadData = async () => {
 const loadLookups = async () => {
   try {
     await Promise.all([fetchCustomerTypes(), fetchReferences(), fetchAssignableUsers()]);
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: Billing.vue]", uiErr?.message || uiErr); }
 };
 
 onMounted(() => {
@@ -413,11 +413,7 @@ const exportToExcel = async () => {
     }));
   }
 
-  const XLSX = await import("xlsx");
-  const ws = XLSX.utils.json_to_sheet(exportRows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Billing Data");
-  XLSX.writeFile(wb, `IDP_Billing_${activeTab.value}_${selectedMonth.value}.xlsx`);
+  exportSingleSheet(exportRows, "Billing Data", `IDP_Billing_${activeTab.value}_${selectedMonth.value}.xlsx`);
   toast.success("Excel report exported successfully");
 };
 

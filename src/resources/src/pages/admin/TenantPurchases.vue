@@ -68,7 +68,7 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(PURCHASES_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: TenantPurchases.vue]", uiErr?.message || uiErr); }
   return {};
 };
 
@@ -92,7 +92,7 @@ const saveFilters = () => {
         })
       );
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: TenantPurchases.vue]", uiErr?.message || uiErr); }
 };
 
 watch([selectedMonth, searchQuery, selectedClient, selectedReference], saveFilters);
@@ -103,7 +103,7 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(PURCHASES_FILTER_KEY);
       }
-    } catch {}
+    } catch (uiErr: any) { console.warn("[UI Component Warning: TenantPurchases.vue]", uiErr?.message || uiErr); }
   }
 });
 
@@ -124,7 +124,7 @@ const clearAllFilters = () => {
     if (typeof window !== "undefined" && window.sessionStorage) {
       sessionStorage.removeItem(PURCHASES_FILTER_KEY);
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: TenantPurchases.vue]", uiErr?.message || uiErr); }
 };
 
 // Deletion Modal State

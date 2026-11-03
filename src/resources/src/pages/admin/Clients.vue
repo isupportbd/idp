@@ -75,7 +75,7 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(CLIENTS_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: Clients.vue]", uiErr?.message || uiErr); }
   return {};
 };
 
@@ -100,7 +100,7 @@ const saveFilters = () => {
         })
       );
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: Clients.vue]", uiErr?.message || uiErr); }
 };
 
 const hasActiveFilters = computed(() => {
@@ -124,7 +124,7 @@ const clearAllFilters = () => {
     if (typeof window !== "undefined" && window.sessionStorage) {
       sessionStorage.removeItem(CLIENTS_FILTER_KEY);
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: Clients.vue]", uiErr?.message || uiErr); }
 };
 
 onBeforeRouteLeave((to) => {
@@ -134,7 +134,7 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(CLIENTS_FILTER_KEY);
       }
-    } catch {}
+    } catch (uiErr: any) { console.warn("[UI Component Warning: Clients.vue]", uiErr?.message || uiErr); }
   }
 });
 

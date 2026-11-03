@@ -21,7 +21,7 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(LEDGER_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: TenantLedger.vue]", uiErr?.message || uiErr); }
   return {};
 };
 
@@ -40,7 +40,7 @@ const saveFilters = () => {
         })
       );
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: TenantLedger.vue]", uiErr?.message || uiErr); }
 };
 
 watch(searchTerm, saveFilters);
@@ -51,7 +51,7 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(LEDGER_FILTER_KEY);
       }
-    } catch {}
+    } catch (uiErr: any) { console.warn("[UI Component Warning: TenantLedger.vue]", uiErr?.message || uiErr); }
   }
 });
 
@@ -65,7 +65,7 @@ const clearAllFilters = () => {
     if (typeof window !== "undefined" && window.sessionStorage) {
       sessionStorage.removeItem(LEDGER_FILTER_KEY);
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: TenantLedger.vue]", uiErr?.message || uiErr); }
 };
 
 // Extend Subscription state

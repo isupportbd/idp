@@ -82,7 +82,7 @@ const fetchStatusAndPlans = async () => {
       if (statusRes.data?.success) {
         hasSuperAdmin.value = statusRes.data.hasSuperAdmin;
       }
-    } catch {}
+    } catch (uiErr: any) { console.warn("[UI Component Warning: Landing.vue]", uiErr?.message || uiErr); }
 
     const [plansRes, payRes] = await Promise.allSettled([
       axios.get("/api/superadmin/plans"),
@@ -160,7 +160,7 @@ const formatApiError = (err: any): string => {
         if (parsed.issues && Array.isArray(parsed.issues)) {
           return parsed.issues.map((i: any) => i.message).filter(Boolean).join(", ");
         }
-      } catch {}
+      } catch (uiErr: any) { console.warn("[UI Component Warning: Landing.vue]", uiErr?.message || uiErr); }
       return data.message;
     }
     return String(data.message);

@@ -37,7 +37,7 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(ASSIGNMENTS_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: Assignments.vue]", uiErr?.message || uiErr); }
   return {};
 };
 
@@ -68,7 +68,7 @@ const saveFilters = () => {
         })
       );
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: Assignments.vue]", uiErr?.message || uiErr); }
 };
 
 watch([searchQuery, selectedTypeFilter, selectedReferenceFilter, selectedManagerFilter, activeFilter], saveFilters);
@@ -79,7 +79,7 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(ASSIGNMENTS_FILTER_KEY);
       }
-    } catch {}
+    } catch (uiErr: any) { console.warn("[UI Component Warning: Assignments.vue]", uiErr?.message || uiErr); }
   }
 });
 
@@ -128,7 +128,7 @@ const selectCardFilter = (key: "all" | "assigned" | "shared" | "unassigned") => 
 const loadLookups = async () => {
   try {
     await Promise.all([fetchAssignableUsers(), fetchCustomerTypes(), fetchReferences()]);
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: Assignments.vue]", uiErr?.message || uiErr); }
 };
 
 onMounted(() => {

@@ -33,7 +33,7 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(ACTIVITY_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: ActivityFilter.vue]", uiErr?.message || uiErr); }
   return {};
 };
 
@@ -69,7 +69,7 @@ const saveFilters = () => {
         })
       );
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: ActivityFilter.vue]", uiErr?.message || uiErr); }
 };
 
 watch([selectedMonth, searchQuery, statusFilter, selectedClientType, selectedReference], saveFilters);
@@ -80,7 +80,7 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(ACTIVITY_FILTER_KEY);
       }
-    } catch {}
+    } catch (uiErr: any) { console.warn("[UI Component Warning: ActivityFilter.vue]", uiErr?.message || uiErr); }
   }
 });
 
@@ -113,7 +113,7 @@ const clearAllFilters = () => {
     if (typeof window !== "undefined" && window.sessionStorage) {
       sessionStorage.removeItem(ACTIVITY_FILTER_KEY);
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: ActivityFilter.vue]", uiErr?.message || uiErr); }
 };
 
 // Clipboard copy state

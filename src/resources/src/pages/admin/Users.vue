@@ -42,7 +42,7 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(USERS_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: Users.vue]", uiErr?.message || uiErr); }
   return {};
 };
 
@@ -77,7 +77,7 @@ const saveFilters = () => {
         })
       );
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: Users.vue]", uiErr?.message || uiErr); }
 };
 
 watch([searchQuery, roleFilter, statusFilter], saveFilters);
@@ -88,7 +88,7 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(USERS_FILTER_KEY);
       }
-    } catch {}
+    } catch (uiErr: any) { console.warn("[UI Component Warning: Users.vue]", uiErr?.message || uiErr); }
   }
 });
 
@@ -109,7 +109,7 @@ const clearAllFilters = () => {
     if (typeof window !== "undefined" && window.sessionStorage) {
       sessionStorage.removeItem(USERS_FILTER_KEY);
     }
-  } catch {}
+  } catch (uiErr: any) { console.warn("[UI Component Warning: Users.vue]", uiErr?.message || uiErr); }
 };
 
 // Modal state (password reset only; create/edit use the full UserForm page)
