@@ -14,6 +14,7 @@ export { database, db } from "@/framework/database/connection.js";
 export { type PaginatedResult, paginate, paginateModel, paginateQuery, paginateTable } from "@/framework/database/paginate.js";
 export { command, dispatchCommand, dispatchEvent } from "@/framework/events/dispatcher.js";
 export { createRouter, group } from "@/framework/http/router.js";
+export { type AppContext } from "@/framework/http/context.js";
 export { validate } from "@/framework/http/validation.js";
 export { handleControllerError, type ControllerErrorOptions } from "@/framework/http/errors.js";
 export { loginLimiter } from "@/framework/http/ratelimiter.js";

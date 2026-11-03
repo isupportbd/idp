@@ -315,8 +315,8 @@ export default createRouter()
   .api(getClientByIdRoute, [requirePermission(...CLIENT_READERS)], getClientById)
   .api(getClientItemsRoute, [requirePermission("clients.view", "sales_rates.view")], getClientPurchasedItems)
   .api(postBulkClientsRoute, [requirePermission("clients.create", "purchases.create")], bulkCreateClients)
-  .api(postClientRoute, [requirePermission("clients.create")], createClient)
+  .api(postClientRoute, [requireTenantAdmin], createClient)
   .api(patchClientRoute, [requirePermission("clients.edit")], updateClient)
   .api(patchToggleClientRoute, [requirePermission("clients.edit")], toggleClientStatus)
-  .api(deleteClientRoute, [requirePermission("clients.delete")], deleteClient);
+  .api(deleteClientRoute, [requireTenantAdmin], deleteClient);
 

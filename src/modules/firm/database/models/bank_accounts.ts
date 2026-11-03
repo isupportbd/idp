@@ -1,4 +1,4 @@
-import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { users } from "@/modules/auth/database/models/user.js";
 
 export const bankAccounts = pgTable("bank_accounts", {
@@ -15,5 +15,7 @@ export const bankAccounts = pgTable("bank_accounts", {
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
-});
+}, (table) => ({
+  adminIdIdx: index("bank_accounts_admin_id_idx").on(table.adminId)
+}));
 

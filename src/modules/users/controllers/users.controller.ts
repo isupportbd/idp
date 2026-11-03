@@ -1,5 +1,6 @@
+import type { AppContext } from "@/framework/facade.js";
 import { and, asc, eq, gt, ne, or, sql } from "drizzle-orm";
-import type { Handler } from "hono";
+import type { Context, Handler } from "hono";
 import { HttpStatusCodes, password, resolveTenantContext, validate } from "@/framework/facade.js";
 import { db } from "@/framework/facade.js";
 import { refreshTokens, users } from "@/modules/auth/database/models/user.js";
@@ -9,7 +10,7 @@ import { DEFAULT_SUB_USER_PERMISSIONS, PERMISSION_MODULES, normalizePermissions 
 import { CreateUserSchema, UpdateUserSchema, ResetPasswordSchema, UpdateStatusSchema } from "./users.schema.js";
 
 // 0. Permission catalog (modules and their actions) for the sub-user form
-export const getPermissionCatalog: Handler = async (c: any) => {
+export const getPermissionCatalog: Handler = async (c: AppContext) => {
   return c.json(
     { success: true, data: PERMISSION_MODULES, defaults: DEFAULT_SUB_USER_PERMISSIONS },
     HttpStatusCodes.OK
@@ -17,7 +18,7 @@ export const getPermissionCatalog: Handler = async (c: any) => {
 };
 
 // Helper: Resolve tenant admin ID via canonical tenant-context
-async function resolveTenantAdmin(c: any) {
+async function resolveTenantAdmin(c: AppContext) {
   try {
     const ctx = await resolveTenantContext(c);
     return {
@@ -32,7 +33,7 @@ async function resolveTenantAdmin(c: any) {
 }
 
 // 1. List Sub-Users
-export const listUsers: Handler = async (c: any) => {
+export const listUsers: Handler = async (c: AppContext) => {
   try {
     const tenantInfo = await resolveTenantAdmin(c);
     if (!tenantInfo) {
@@ -120,7 +121,7 @@ export const listUsers: Handler = async (c: any) => {
 };
 
 // 2. Create Sub-User
-export const createUser: Handler = async (c: any) => {
+export const createUser: Handler = async (c: AppContext) => {
   try {
     const tenantInfo = await resolveTenantAdmin(c);
     if (!tenantInfo) {
@@ -128,7 +129,7 @@ export const createUser: Handler = async (c: any) => {
     }
 
     const { currentUser, isSuperAdmin, tenantAdminId } = tenantInfo;
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
 
     const email = String(body.email || "").trim().toLowerCase();
     const name = String(body.name || "").trim();
@@ -232,7 +233,7 @@ export const createUser: Handler = async (c: any) => {
 };
 
 // 3. Update Sub-User
-export const updateUser: Handler = async (c: any) => {
+export const updateUser: Handler = async (c: AppContext) => {
   try {
     const tenantInfo = await resolveTenantAdmin(c);
     if (!tenantInfo) {
@@ -255,7 +256,7 @@ export const updateUser: Handler = async (c: any) => {
       return c.json({ message: "Forbidden: You do not have access to manage this user" }, HttpStatusCodes.FORBIDDEN);
     }
 
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const updateData: any = { updatedAt: new Date() };
     const isPrimaryAdmin = targetUser.id === tenantAdminId;
 
@@ -301,7 +302,7 @@ export const updateUser: Handler = async (c: any) => {
 };
 
 // 4. Reset User Password
-export const resetUserPassword: Handler = async (c: any) => {
+export const resetUserPassword: Handler = async (c: AppContext) => {
   try {
     const tenantInfo = await resolveTenantAdmin(c);
     if (!tenantInfo) {
@@ -310,7 +311,7 @@ export const resetUserPassword: Handler = async (c: any) => {
 
     const { isSuperAdmin, tenantAdminId } = tenantInfo;
     const userId = Number(c.req.param("id"));
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
 
     if (!body.newPassword || body.newPassword.length < 6) {
       return c.json({ message: "Password must be at least 6 characters long." }, HttpStatusCodes.BAD_REQUEST);
@@ -335,7 +336,7 @@ export const resetUserPassword: Handler = async (c: any) => {
 };
 
 // 5. Toggle / Update User Status
-export const updateUserStatus: Handler = async (c: any) => {
+export const updateUserStatus: Handler = async (c: AppContext) => {
   try {
     const tenantInfo = await resolveTenantAdmin(c);
     if (!tenantInfo) {
@@ -344,7 +345,7 @@ export const updateUserStatus: Handler = async (c: any) => {
 
     const { isSuperAdmin, tenantAdminId } = tenantInfo;
     const userId = Number(c.req.param("id"));
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
 
     const [targetUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     if (!targetUser) {
@@ -397,7 +398,7 @@ export const updateUserStatus: Handler = async (c: any) => {
 };
 
 // 6. Delete Sub-User
-export const deleteUser: Handler = async (c: any) => {
+export const deleteUser: Handler = async (c: AppContext) => {
   try {
     const tenantInfo = await resolveTenantAdmin(c);
     if (!tenantInfo) {

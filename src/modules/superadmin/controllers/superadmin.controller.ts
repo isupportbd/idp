@@ -1,3 +1,4 @@
+import type { AppContext } from "@/framework/facade.js";
 import { broadcast, cache, db } from "@/framework/facade.js";
 import { users } from "@/modules/auth/database/models/user.js";
 import { roles } from "@/modules/auth/database/models/role.js";
@@ -32,7 +33,7 @@ export function notifySettingsUpdated(settingType: string) {
 
 
 // 1. Get All Active Tenants (Firm Admins)
-export async function getTenants(c: Context) {
+export async function getTenants(c: AppContext) {
   try {
     const superadminRole = await db.query.roles.findFirst({
       where: eq(roles.name, "superadmin")
@@ -108,7 +109,7 @@ export async function getTenants(c: Context) {
 }
 
 // 2. Get Pending Signups
-export async function getPendingSignups(c: Context) {
+export async function getPendingSignups(c: AppContext) {
   try {
     const pendingUsers = await db
       .select({
@@ -176,9 +177,9 @@ export async function getPendingSignups(c: Context) {
 }
 
 // 3. Approve Signup (Credit Wallet Net Balance & Auto-Activate Plan if Sufficient)
-export async function approveSignup(c: Context) {
+export async function approveSignup(c: AppContext) {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const userId = Number(body?.userId);
     const rawDays = body?.days ? Number(body.days) : undefined;
     const days = rawDays && !isNaN(rawDays) && rawDays > 0 ? rawDays : undefined;
@@ -310,9 +311,9 @@ export async function approveSignup(c: Context) {
 }
 
 // 4. Reject Signup (Delete record)
-export async function rejectSignup(c: Context) {
+export async function rejectSignup(c: AppContext) {
   try {
-    const { userId } = (c.req as any).valid("json");
+    const { userId } = c.req.valid("json");
     if (!userId) return c.json({ success: false, error: "User ID is required" }, 400);
 
     await db.delete(users).where(eq(users.id, userId));
@@ -324,10 +325,10 @@ export async function rejectSignup(c: Context) {
 }
 
 // 5. Extend Tenant Subscription
-export async function extendTenant(c: Context) {
+export async function extendTenant(c: AppContext) {
   try {
     const id = parseInt(c.req.param("id"));
-    const { days } = (c.req as any).valid("json");
+    const { days } = c.req.valid("json");
 
     if (isNaN(id) || !days || days < 1) {
       return c.json({ success: false, error: "Valid ID and days are required" }, 400);
@@ -377,7 +378,7 @@ export async function extendTenant(c: Context) {
 }
 
 // 5.1 Get Tenant Transaction / Payment History
-export async function getTenantTransactions(c: Context) {
+export async function getTenantTransactions(c: AppContext) {
   try {
     const id = parseInt(c.req.param("id"));
     if (isNaN(id)) return c.json({ success: false, error: "Valid ID is required" }, 400);
@@ -452,7 +453,7 @@ export async function getTenantTransactions(c: Context) {
 }
 
 // 6. Toggle Tenant Status (Active / Suspended)
-export async function toggleTenantStatus(c: Context) {
+export async function toggleTenantStatus(c: AppContext) {
   try {
     const id = parseInt(c.req.param("id"));
     if (isNaN(id)) return c.json({ success: false, error: "Valid ID is required" }, 400);
@@ -483,7 +484,7 @@ export async function toggleTenantStatus(c: Context) {
 }
 
 // 7. Delete Tenant Permanently
-export async function deleteTenant(c: Context) {
+export async function deleteTenant(c: AppContext) {
   try {
     const id = parseInt(c.req.param("id"));
     if (isNaN(id)) return c.json({ success: false, error: "Valid ID is required" }, 400);
@@ -512,7 +513,7 @@ export async function deleteTenant(c: Context) {
 }
 
 // 7. Plans CRUD
-export async function getPlans(c: Context) {
+export async function getPlans(c: AppContext) {
   try {
     const allPlans = await db.select().from(plans).orderBy(plans.id);
     return c.json({ success: true, data: allPlans });
@@ -522,9 +523,9 @@ export async function getPlans(c: Context) {
   }
 }
 
-export async function createPlan(c: Context) {
+export async function createPlan(c: AppContext) {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const [newPlan] = await db.insert(plans).values({
       name: body.name,
       rateMonthly: Number(body.rateMonthly),
@@ -546,12 +547,12 @@ export async function createPlan(c: Context) {
   }
 }
 
-export async function updatePlan(c: Context) {
+export async function updatePlan(c: AppContext) {
   try {
     const id = parseInt(c.req.param("id"));
     if (isNaN(id)) return c.json({ success: false, error: "Invalid plan ID" }, 400);
 
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const [updatedPlan] = await db.update(plans).set({
       name: body.name,
       rateMonthly: Number(body.rateMonthly),
@@ -574,7 +575,7 @@ export async function updatePlan(c: Context) {
   }
 }
 
-export async function deletePlan(c: Context) {
+export async function deletePlan(c: AppContext) {
   try {
     const id = parseInt(c.req.param("id"));
     if (isNaN(id)) return c.json({ success: false, error: "Invalid plan ID" }, 400);
@@ -589,7 +590,7 @@ export async function deletePlan(c: Context) {
 }
 
 // 8. Payment Settings (bKash Gateway)
-export async function getPaymentSettings(c: Context) {
+export async function getPaymentSettings(c: AppContext) {
   try {
     let [config] = await db.select().from(paymentSettings).limit(1);
     if (!config) {
@@ -614,9 +615,9 @@ export async function getPaymentSettings(c: Context) {
   }
 }
 
-export async function savePaymentSettings(c: Context) {
+export async function savePaymentSettings(c: AppContext) {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     let [existing] = await db.select().from(paymentSettings).limit(1);
 
     if (existing) {
@@ -646,7 +647,7 @@ export async function savePaymentSettings(c: Context) {
 }
 
 // 9. Storage Stats & Tenant-wise Usage Ranking
-export async function getStorageStats(c: Context) {
+export async function getStorageStats(c: AppContext) {
   try {
     let dbSizeMB = 0;
     let tablesCount = 0;
@@ -826,7 +827,7 @@ export async function getStorageStats(c: Context) {
 }
 
 // 7. Client Types CRUD (Operating on master customer_types table)
-export async function getClientTypes(c: Context) {
+export async function getClientTypes(c: AppContext) {
   try {
     const list = await db.select().from(customerTypes).orderBy(desc(customerTypes.id));
     return c.json({ success: true, data: list });
@@ -836,9 +837,9 @@ export async function getClientTypes(c: Context) {
   }
 }
 
-export async function createClientType(c: Context) {
+export async function createClientType(c: AppContext) {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const name = body.typeName || body.name;
     if (!name || !name.trim()) {
       return c.json({ success: false, error: "Name is required" }, 400);
@@ -860,10 +861,10 @@ export async function createClientType(c: Context) {
   }
 }
 
-export async function updateClientType(c: Context) {
+export async function updateClientType(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const name = body.typeName || body.name;
     if (!name || !name.trim()) {
       return c.json({ success: false, error: "Name is required" }, 400);
@@ -887,7 +888,7 @@ export async function updateClientType(c: Context) {
   }
 }
 
-export async function toggleClientTypeStatus(c: Context) {
+export async function toggleClientTypeStatus(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
     const [found] = await db.select().from(customerTypes).where(eq(customerTypes.id, id));
@@ -911,7 +912,7 @@ export async function toggleClientTypeStatus(c: Context) {
   }
 }
 
-export async function deleteClientType(c: Context) {
+export async function deleteClientType(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
     await db.delete(customerTypes).where(eq(customerTypes.id, id));
@@ -924,7 +925,7 @@ export async function deleteClientType(c: Context) {
 }
 
 // 8. Locations & Districts CRUD
-export async function getLocations(c: Context) {
+export async function getLocations(c: AppContext) {
   try {
     const locs = await db.select().from(locations).orderBy(desc(locations.id));
     const allAreas = await db.select().from(commercialAreas);
@@ -941,9 +942,9 @@ export async function getLocations(c: Context) {
   }
 }
 
-export async function createLocation(c: Context) {
+export async function createLocation(c: AppContext) {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     if (!body.name || !body.name.trim()) {
       return c.json({ success: false, error: "Location name is required" }, 400);
     }
@@ -964,10 +965,10 @@ export async function createLocation(c: Context) {
   }
 }
 
-export async function updateLocation(c: Context) {
+export async function updateLocation(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     if (!body.name || !body.name.trim()) {
       return c.json({ success: false, error: "Location name is required" }, 400);
     }
@@ -990,7 +991,7 @@ export async function updateLocation(c: Context) {
   }
 }
 
-export async function toggleLocationStatus(c: Context) {
+export async function toggleLocationStatus(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
     const [found] = await db.select().from(locations).where(eq(locations.id, id));
@@ -1010,7 +1011,7 @@ export async function toggleLocationStatus(c: Context) {
   }
 }
 
-export async function deleteLocation(c: Context) {
+export async function deleteLocation(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
     await db.delete(locations).where(eq(locations.id, id));
@@ -1023,7 +1024,7 @@ export async function deleteLocation(c: Context) {
 }
 
 // 9. Commercial Areas CRUD
-export async function getCommercialAreas(c: Context) {
+export async function getCommercialAreas(c: AppContext) {
   try {
     const areaList = await db
       .select({
@@ -1047,9 +1048,9 @@ export async function getCommercialAreas(c: Context) {
   }
 }
 
-export async function createCommercialArea(c: Context) {
+export async function createCommercialArea(c: AppContext) {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     if (!body.name || !body.name.trim()) {
       return c.json({ success: false, error: "Area name is required" }, 400);
     }
@@ -1081,10 +1082,10 @@ export async function createCommercialArea(c: Context) {
   }
 }
 
-export async function updateCommercialArea(c: Context) {
+export async function updateCommercialArea(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     if (!body.name || !body.name.trim()) {
       return c.json({ success: false, error: "Area name is required" }, 400);
     }
@@ -1114,7 +1115,7 @@ export async function updateCommercialArea(c: Context) {
   }
 }
 
-export async function toggleCommercialAreaStatus(c: Context) {
+export async function toggleCommercialAreaStatus(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
     const [found] = await db.select().from(commercialAreas).where(eq(commercialAreas.id, id));
@@ -1134,7 +1135,7 @@ export async function toggleCommercialAreaStatus(c: Context) {
   }
 }
 
-export async function deleteCommercialArea(c: Context) {
+export async function deleteCommercialArea(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
     await db.delete(commercialAreas).where(eq(commercialAreas.id, id));
@@ -1147,7 +1148,7 @@ export async function deleteCommercialArea(c: Context) {
 }
 
 // 10. Client References CRUD (Operating on master client_references table)
-export async function getClientReferences(c: Context) {
+export async function getClientReferences(c: AppContext) {
   try {
     const refs = await db.select().from(clientReferences).orderBy(desc(clientReferences.id));
     const allClients = await db.select({ referenceId: clients.referenceId }).from(clients);
@@ -1164,9 +1165,9 @@ export async function getClientReferences(c: Context) {
   }
 }
 
-export async function createClientReference(c: Context) {
+export async function createClientReference(c: AppContext) {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     if (!body.name || !body.name.trim()) {
       return c.json({ success: false, error: "Reference name is required" }, 400);
     }
@@ -1189,10 +1190,10 @@ export async function createClientReference(c: Context) {
   }
 }
 
-export async function updateClientReference(c: Context) {
+export async function updateClientReference(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     if (!body.name || !body.name.trim()) {
       return c.json({ success: false, error: "Reference name is required" }, 400);
     }
@@ -1217,7 +1218,7 @@ export async function updateClientReference(c: Context) {
   }
 }
 
-export async function toggleClientReferenceStatus(c: Context) {
+export async function toggleClientReferenceStatus(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
     const [found] = await db.select().from(clientReferences).where(eq(clientReferences.id, id));
@@ -1237,7 +1238,7 @@ export async function toggleClientReferenceStatus(c: Context) {
   }
 }
 
-export async function deleteClientReference(c: Context) {
+export async function deleteClientReference(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
     await db.delete(clientReferences).where(eq(clientReferences.id, id));
@@ -1271,7 +1272,7 @@ const DEFAULT_SYSTEM_COLUMN_MAPPINGS = [
 ];
 
 // 11. Column Mappings (Operating on master column_mappings table)
-export async function getColumnMappings(c: Context) {
+export async function getColumnMappings(c: AppContext) {
   try {
     const rawList = await db.select().from(columnMappings).orderBy(asc(columnMappings.id));
     const list = rawList.filter((r) => r.dbColumn !== "client_name");
@@ -1285,9 +1286,9 @@ export async function getColumnMappings(c: Context) {
   }
 }
 
-export async function saveColumnMappings(c: Context) {
+export async function saveColumnMappings(c: AppContext) {
   try {
-    const { rows } = (c.req as any).valid("json");
+    const { rows } = c.req.valid("json");
     if (!Array.isArray(rows)) {
       return c.json({ success: false, error: "Mappings array is required" }, 400);
     }
@@ -1329,7 +1330,7 @@ export async function saveColumnMappings(c: Context) {
 }
 
 // 12. Global Commodity & HS Codes (Operating on global_items table)
-export async function getGlobalItems(c: Context) {
+export async function getGlobalItems(c: AppContext) {
   try {
     const list = await cache.remember("master:global-items", 3600, async () => {
       return await db.select().from(globalItems).orderBy(asc(globalItems.hsCode));
@@ -1341,9 +1342,9 @@ export async function getGlobalItems(c: Context) {
   }
 }
 
-export async function createGlobalItem(c: Context) {
+export async function createGlobalItem(c: AppContext) {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const { hsCode, awHsCode, name, unit, isActive } = body;
 
     if (!hsCode || !name) {
@@ -1391,10 +1392,10 @@ export async function createGlobalItem(c: Context) {
   }
 }
 
-export async function updateGlobalItem(c: Context) {
+export async function updateGlobalItem(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const { hsCode, awHsCode, name, unit, isActive } = body;
 
     const [found] = await db.select().from(globalItems).where(eq(globalItems.id, id));
@@ -1446,7 +1447,7 @@ export async function updateGlobalItem(c: Context) {
   }
 }
 
-export async function toggleGlobalItemStatus(c: Context) {
+export async function toggleGlobalItemStatus(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
     const [found] = await db.select().from(globalItems).where(eq(globalItems.id, id));
@@ -1466,7 +1467,7 @@ export async function toggleGlobalItemStatus(c: Context) {
   }
 }
 
-export async function deleteGlobalItem(c: Context) {
+export async function deleteGlobalItem(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
     await db.delete(globalItems).where(eq(globalItems.id, id));
@@ -1479,7 +1480,7 @@ export async function deleteGlobalItem(c: Context) {
 }
 
 // 13. Measurement Units (Operating on measurement_units table)
-export async function getMeasurementUnits(c: Context) {
+export async function getMeasurementUnits(c: AppContext) {
   try {
     const list = await cache.remember("master:measurement-units", 3600, async () => {
       return await db.select().from(measurementUnits).orderBy(asc(measurementUnits.id));
@@ -1491,9 +1492,9 @@ export async function getMeasurementUnits(c: Context) {
   }
 }
 
-export async function createMeasurementUnit(c: Context) {
+export async function createMeasurementUnit(c: AppContext) {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const { code, name, description, isActive } = body;
 
     if (!code || !name) {
@@ -1538,10 +1539,10 @@ export async function createMeasurementUnit(c: Context) {
   }
 }
 
-export async function updateMeasurementUnit(c: Context) {
+export async function updateMeasurementUnit(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const { code, name, description, isActive } = body;
 
     const [found] = await db.select().from(measurementUnits).where(eq(measurementUnits.id, id));
@@ -1590,7 +1591,7 @@ export async function updateMeasurementUnit(c: Context) {
   }
 }
 
-export async function toggleMeasurementUnitStatus(c: Context) {
+export async function toggleMeasurementUnitStatus(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
     const [found] = await db.select().from(measurementUnits).where(eq(measurementUnits.id, id));
@@ -1610,7 +1611,7 @@ export async function toggleMeasurementUnitStatus(c: Context) {
   }
 }
 
-export async function deleteMeasurementUnit(c: Context) {
+export async function deleteMeasurementUnit(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
     await db.delete(measurementUnits).where(eq(measurementUnits.id, id));
@@ -1623,7 +1624,7 @@ export async function deleteMeasurementUnit(c: Context) {
 }
 
 // 14. VAT Note Rules / Mappings (Operating on vat_notes_mapping table)
-export async function getVatNotes(c: Context) {
+export async function getVatNotes(c: AppContext) {
   try {
     const list = await cache.remember("master:vat-notes", 3600, async () => {
       return await db.select().from(vatNotes).orderBy(asc(vatNotes.vatRate));
@@ -1635,9 +1636,9 @@ export async function getVatNotes(c: Context) {
   }
 }
 
-export async function createVatNote(c: Context) {
+export async function createVatNote(c: AppContext) {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const { vatRate, noteName, description, isActive } = body;
 
     if (vatRate === undefined || vatRate === null || !noteName) {
@@ -1687,10 +1688,10 @@ export async function createVatNote(c: Context) {
   }
 }
 
-export async function updateVatNote(c: Context) {
+export async function updateVatNote(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const { vatRate, noteName, description, isActive } = body;
 
     const [found] = await db.select().from(vatNotes).where(eq(vatNotes.id, id));
@@ -1739,7 +1740,7 @@ export async function updateVatNote(c: Context) {
   }
 }
 
-export async function toggleVatNoteStatus(c: Context) {
+export async function toggleVatNoteStatus(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
     const [found] = await db.select().from(vatNotes).where(eq(vatNotes.id, id));
@@ -1762,7 +1763,7 @@ export async function toggleVatNoteStatus(c: Context) {
   }
 }
 
-export async function deleteVatNote(c: Context) {
+export async function deleteVatNote(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
     await db.delete(vatNotes).where(eq(vatNotes.id, id));
@@ -1775,7 +1776,7 @@ export async function deleteVatNote(c: Context) {
 }
 
 // 15. Unit Conversions (Operating on PostgreSQL unit_conversions table)
-export async function getUnitConversions(c: Context) {
+export async function getUnitConversions(c: AppContext) {
   try {
     const allParam = c.req.query("all");
     const cacheKey = allParam === "true" ? "master:unit-conversions:all" : "master:unit-conversions:dedup";
@@ -1814,9 +1815,9 @@ export async function getUnitConversions(c: Context) {
   }
 }
 
-export async function createUnitConversion(c: Context) {
+export async function createUnitConversion(c: AppContext) {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const { purchaseUnit, salesUnit, factor } = body;
 
     if (!purchaseUnit || !salesUnit || factor === undefined || factor === null) {
@@ -1896,10 +1897,10 @@ export async function createUnitConversion(c: Context) {
   }
 }
 
-export async function updateUnitConversion(c: Context) {
+export async function updateUnitConversion(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const { purchaseUnit, salesUnit, factor } = body;
 
     const [found] = await db.select().from(unitConversions).where(eq(unitConversions.id, id));
@@ -2014,7 +2015,7 @@ export async function updateUnitConversion(c: Context) {
   }
 }
 
-export async function deleteUnitConversion(c: Context) {
+export async function deleteUnitConversion(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
     const [found] = await db.select().from(unitConversions).where(eq(unitConversions.id, id));
@@ -2041,7 +2042,7 @@ export async function deleteUnitConversion(c: Context) {
 }
 
 // 16. Public Platform Stats (For Login & Landing Pages)
-export async function getPlatformPublicStats(c: Context) {
+export async function getPlatformPublicStats(c: AppContext) {
   try {
     const superadminRole = await db.query.roles.findFirst({
       where: eq(roles.name, "superadmin")
@@ -2103,7 +2104,7 @@ export async function getPlatformPublicStats(c: Context) {
 }
 
 // 16b. System-wide metrics for the SuperAdmin Global Reports page
-export async function getGlobalMetrics(c: Context) {
+export async function getGlobalMetrics(c: AppContext) {
   try {
     const superadminRole = await db.query.roles.findFirst({ where: eq(roles.name, "superadmin") });
     const superadminRoleId = superadminRole?.id ?? -1;
@@ -2154,7 +2155,7 @@ export async function getGlobalMetrics(c: Context) {
 }
 
 // 17. Live Notifications for SuperAdmin (Pending signups, wallet recharges & alerts)
-export async function getNotifications(c: Context) {
+export async function getNotifications(c: AppContext) {
   try {
     const pendingUsers = await db
       .select({
@@ -2245,7 +2246,7 @@ export async function getNotifications(c: Context) {
 }
 
 // 18. Get Pending Wallet Recharge Requests
-export async function getPendingRecharges(c: Context) {
+export async function getPendingRecharges(c: AppContext) {
   try {
     const list = await db
       .select({
@@ -2284,9 +2285,9 @@ export async function getPendingRecharges(c: Context) {
 }
 
 // 19. Approve Wallet Recharge (Credit Balance & Auto-Activate Plan if Sufficient)
-export async function approveRecharge(c: Context) {
+export async function approveRecharge(c: AppContext) {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     let rawId =
       body?.transactionId ??
       body?.id ??
@@ -2465,9 +2466,9 @@ export async function approveRecharge(c: Context) {
 }
 
 // 20. Reject Wallet Recharge
-export async function rejectRecharge(c: Context) {
+export async function rejectRecharge(c: AppContext) {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     let rawId =
       body?.transactionId ??
       body?.id ??
@@ -2512,7 +2513,7 @@ export async function rejectRecharge(c: Context) {
 }
 
 // ── Global Service Units CRUD ────────────────────────────────
-export async function getServiceUnits(c: Context) {
+export async function getServiceUnits(c: AppContext) {
   try {
     const list = await db
       .select()
@@ -2526,9 +2527,9 @@ export async function getServiceUnits(c: Context) {
   }
 }
 
-export async function createServiceUnit(c: Context) {
+export async function createServiceUnit(c: AppContext) {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const { code, name, description, isActive } = body;
 
     if (!code || !code.trim()) {
@@ -2571,10 +2572,10 @@ export async function createServiceUnit(c: Context) {
   }
 }
 
-export async function updateServiceUnit(c: Context) {
+export async function updateServiceUnit(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const { code, name, description, isActive } = body;
 
     const [found] = await db.select().from(serviceUnits).where(eq(serviceUnits.id, id));
@@ -2620,7 +2621,7 @@ export async function updateServiceUnit(c: Context) {
   }
 }
 
-export async function toggleServiceUnitStatus(c: Context) {
+export async function toggleServiceUnitStatus(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
     const [found] = await db.select().from(serviceUnits).where(eq(serviceUnits.id, id));
@@ -2640,7 +2641,7 @@ export async function toggleServiceUnitStatus(c: Context) {
   }
 }
 
-export async function deleteServiceUnit(c: Context) {
+export async function deleteServiceUnit(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
     await db.delete(serviceUnits).where(eq(serviceUnits.id, id));
@@ -2653,7 +2654,7 @@ export async function deleteServiceUnit(c: Context) {
 }
 
 // 22. Full Database SQL Backup Export
-export async function exportDatabaseBackup(c: Context) {
+export async function exportDatabaseBackup(c: AppContext) {
   try {
     const tablesRes = await db.execute(sql`
       SELECT tablename 

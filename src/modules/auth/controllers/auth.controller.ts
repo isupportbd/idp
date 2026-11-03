@@ -1,3 +1,4 @@
+import type { AppContext } from "@/framework/facade.js";
 import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import { authConfig, jwtConfig } from "@/config/index.js";
@@ -37,9 +38,9 @@ import { companySettings } from "@/modules/firm/database/models/company_settings
  * When: Used on first-time account creation.
  * Where: POST auth register route.
  */
-export const register: Handler = async (c: any) => {
+export const register: Handler = async (c: AppContext) => {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const email = String(body.email || "").trim().toLowerCase();
 
     const defaultRole = (await db.query.roles.findFirst({
@@ -258,9 +259,9 @@ export const register: Handler = async (c: any) => {
  * When: Used whenever a user signs in.
  * Where: POST auth login route.
  */
-export const login: Handler = async (c: any) => {
+export const login: Handler = async (c: AppContext) => {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const email = String(body.email || "").trim().toLowerCase();
     const user = await db.query.users.findFirst({
       where: sql`lower(${users.email}) = ${email}`,
@@ -329,7 +330,7 @@ export const login: Handler = async (c: any) => {
  * When: Used by clients to bootstrap session/user state.
  * Where: GET auth me route.
  */
-export const me: Handler = async (c: any) => {
+export const me: Handler = async (c: AppContext) => {
   try {
     const auth = c.get("auth");
     const user = await db.query.users.findFirst({
@@ -357,7 +358,7 @@ export const me: Handler = async (c: any) => {
  * When: Used when the active device logs out.
  * Where: POST auth logout route.
  */
-export const logout: Handler = async (c: any) => {
+export const logout: Handler = async (c: AppContext) => {
   try {
     const auth = c.get("auth") || c.get("user");
     if (auth && auth.id) {
@@ -388,9 +389,9 @@ export const logout: Handler = async (c: any) => {
  * When: Used when user requests a forgot-password link.
  * Where: POST auth forgot-password route.
  */
-export const forgotPassword: Handler = async (c: any) => {
+export const forgotPassword: Handler = async (c: AppContext) => {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     await db
       .delete(passwordResetTokens)
       .where(and(eq(passwordResetTokens.email, body.email), lt(passwordResetTokens.expiresAt, new Date())));
@@ -517,9 +518,9 @@ If you did not make this request, please ignore this email.
  * When: Used after user submits reset token + new password.
  * Where: POST auth reset-password route.
  */
-export const resetPassword: Handler = async (c: any) => {
+export const resetPassword: Handler = async (c: AppContext) => {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const inputToken = (body.token || body.otp || "").toString().trim();
     const newPass = body.password || body.newPassword;
 
@@ -562,9 +563,9 @@ export const resetPassword: Handler = async (c: any) => {
  * When: Used when user opens verification link from inbox.
  * Where: POST auth verify-email route.
  */
-export const verifyEmail: Handler = async (c: any) => {
+export const verifyEmail: Handler = async (c: AppContext) => {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
 
     if (!authConfig.requireEmailVerification) {
       return c.json({ message: "Email verification is not required" }, HttpStatusCodes.OK);
@@ -597,9 +598,9 @@ export const verifyEmail: Handler = async (c: any) => {
  * When: Used when access token expires but refresh token is still valid.
  * Where: POST auth refresh-token route.
  */
-export const refreshToken: Handler = async (c: any) => {
+export const refreshToken: Handler = async (c: AppContext) => {
   try {
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const payload = await jwt.verifyToken(body.refresh_token, "refresh");
 
     if (!payload?.jti) return c.json({ message: "Invalid refresh token" }, HttpStatusCodes.UNAUTHORIZED);
@@ -698,7 +699,7 @@ export const refreshToken: Handler = async (c: any) => {
  * When: Used for "logout from all devices" security action.
  * Where: POST auth logout-all-devices route.
  */
-export const logoutAllDevices: Handler = async (c: any) => {
+export const logoutAllDevices: Handler = async (c: AppContext) => {
   try {
     const auth = c.get("auth") || c.get("user");
 
@@ -728,14 +729,14 @@ export const logoutAllDevices: Handler = async (c: any) => {
  * When: Tenant needs to cover subscription shortage or add prepaid balance.
  * Where: POST /api/auth/recharge-wallet route.
  */
-export const rechargeWallet: Handler = async (c: any) => {
+export const rechargeWallet: Handler = async (c: AppContext) => {
   try {
     const auth = c.get("auth");
     if (!auth || !auth.id) {
       return c.json({ success: false, message: "Unauthorized" }, HttpStatusCodes.UNAUTHORIZED);
     }
 
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const paidAmount = Number(body?.paidAmount);
     const trxId = body?.trxId ? String(body.trxId).trim() : "";
 
@@ -812,7 +813,7 @@ export const rechargeWallet: Handler = async (c: any) => {
  * When: Called periodically by Header.vue to show live active & online counter.
  * Where: GET /api/auth/users-stats
  */
-export const getUserStats: Handler = async (c: any) => {
+export const getUserStats: Handler = async (c: AppContext) => {
   try {
     const auth = c.get("auth") || c.get("user");
     if (!auth || !auth.id) {
@@ -940,7 +941,7 @@ export const getUserStats: Handler = async (c: any) => {
  * When: Triggered when admin tests SMS gateway or dispatches SMS notifications.
  * Where: POST /api/auth/send-test-sms
  */
-export const sendTestSms: Handler = async (c: any) => {
+export const sendTestSms: Handler = async (c: AppContext) => {
   try {
     const auth = c.get("auth") || c.get("user");
     if (!auth || !auth.id) {
@@ -965,7 +966,7 @@ export const sendTestSms: Handler = async (c: any) => {
       return c.json({ success: false, message: "Admin account not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const firmSetting = (
       await db
         .select()
@@ -1057,7 +1058,7 @@ export const sendTestSms: Handler = async (c: any) => {
  * When: Called when tenant clicks SMS badge in Header or requests balance refresh.
  * Where: POST /api/auth/sync-sms-balance
  */
-export const syncSmsBalance: Handler = async (c: any) => {
+export const syncSmsBalance: Handler = async (c: AppContext) => {
   try {
     const auth = c.get("auth") || c.get("user");
     if (!auth || !auth.id) {
@@ -1132,7 +1133,7 @@ export const syncSmsBalance: Handler = async (c: any) => {
  * Where: POST /api/auth/buy-storage route.
  * Rule: Subscription plan MUST be active to purchase extra storage.
  */
-export const buyStorage: Handler = async (c: any) => {
+export const buyStorage: Handler = async (c: AppContext) => {
   try {
     const auth = c.get("auth");
     if (!auth || !auth.id) {
@@ -1163,7 +1164,7 @@ export const buyStorage: Handler = async (c: any) => {
       );
     }
 
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const gigabytes = Math.max(1, Number(body?.gigabytes) || 1);
     const ratePerGb = 1000;
     const totalRequiredAmount = gigabytes * ratePerGb;

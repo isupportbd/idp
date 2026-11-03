@@ -1,3 +1,4 @@
+import type { AppContext } from "@/framework/facade.js";
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import { broadcast, db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
@@ -8,7 +9,7 @@ import { unitConversions } from "@/database/schema.js";
 import { users } from "@/database/schema.js";
 
 // ── 1. LIST SALES RATES ───────────────────────────────────────────────
-export const listSalesRates: Handler = async (c: any) => {
+export const listSalesRates: Handler = async (c: AppContext) => {
   try {
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
@@ -124,7 +125,7 @@ export const listSalesRates: Handler = async (c: any) => {
 };
 
 // ── 2. CREATE SALES RATE ──────────────────────────────────────────────
-export const createSalesRate: Handler = async (c: any) => {
+export const createSalesRate: Handler = async (c: AppContext) => {
   try {
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
     const adminId = tenantAdminId;
@@ -206,7 +207,7 @@ export const createSalesRate: Handler = async (c: any) => {
 };
 
 // ── 3. UPDATE SALES RATE ──────────────────────────────────────────────
-export const updateSalesRate: Handler = async (c: any) => {
+export const updateSalesRate: Handler = async (c: AppContext) => {
   try {
     const id = Number(c.req.param("id"));
     if (!id || isNaN(id)) {
@@ -276,7 +277,7 @@ export const updateSalesRate: Handler = async (c: any) => {
 };
 
 // ── 4. DELETE SALES RATE ──────────────────────────────────────────────
-export const deleteSalesRate: Handler = async (c: any) => {
+export const deleteSalesRate: Handler = async (c: AppContext) => {
   try {
     const id = Number(c.req.param("id"));
     if (!id || isNaN(id)) {
@@ -343,7 +344,7 @@ export const deleteSalesRate: Handler = async (c: any) => {
 };
 
 // ── 5. GET RATE HISTORY ───────────────────────────────────────────────
-export const getRateHistory: Handler = async (c: any) => {
+export const getRateHistory: Handler = async (c: AppContext) => {
   try {
     const clientId = Number(c.req.query("clientId"));
     const itemId = Number(c.req.query("itemId"));

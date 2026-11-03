@@ -1,6 +1,6 @@
 import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
-import { requirePermission } from "@/middlewares/permission-middleware.js";
+import { requireTenantAdmin } from "@/middlewares/permission-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
   listCustomerTypes,
@@ -259,19 +259,19 @@ import { denyRole } from "@/middlewares/role-middleware.js";
 export default createRouter()
   .group(authMiddleware, denyRole("superadmin"), subscriptionMiddleware)
   .api(getCustomerTypesRoute, [], listCustomerTypes)
-  .api(postCustomerTypeRoute, [requirePermission("settings.edit")], createCustomerType)
-  .api(toggleCustomerTypeRoute, [requirePermission("settings.edit")], toggleCustomerType)
+  .api(postCustomerTypeRoute, [requireTenantAdmin], createCustomerType)
+  .api(toggleCustomerTypeRoute, [requireTenantAdmin], toggleCustomerType)
   .api(getReferencesRoute, [], listReferences)
-  .api(postReferenceRoute, [requirePermission("settings.edit")], createReference)
-  .api(patchReferenceRoute, [requirePermission("settings.edit")], updateReference)
-  .api(toggleReferenceRoute, [requirePermission("settings.edit")], toggleReference)
-  .api(deleteReferenceRoute, [requirePermission("settings.edit")], deleteReference)
+  .api(postReferenceRoute, [requireTenantAdmin], createReference)
+  .api(patchReferenceRoute, [requireTenantAdmin], updateReference)
+  .api(toggleReferenceRoute, [requireTenantAdmin], toggleReference)
+  .api(deleteReferenceRoute, [requireTenantAdmin], deleteReference)
   .api(getServiceItemsRoute, [], listServiceItems)
-  .api(postServiceItemRoute, [requirePermission("settings.edit")], createServiceItem)
-  .api(patchServiceItemRoute, [requirePermission("settings.edit")], updateServiceItem)
-  .api(toggleServiceItemRoute, [requirePermission("settings.edit")], toggleServiceItem)
-  .api(deleteServiceItemRoute, [requirePermission("settings.edit")], deleteServiceItem)
+  .api(postServiceItemRoute, [requireTenantAdmin], createServiceItem)
+  .api(patchServiceItemRoute, [requireTenantAdmin], updateServiceItem)
+  .api(toggleServiceItemRoute, [requireTenantAdmin], toggleServiceItem)
+  .api(deleteServiceItemRoute, [requireTenantAdmin], deleteServiceItem)
   .api(getServiceRatesRoute, [], listServiceRates)
-  .api(postServiceRateRoute, [requirePermission("settings.edit")], createServiceRate)
-  .api(patchServiceRateRoute, [requirePermission("settings.edit")], updateServiceRate)
-  .api(deleteServiceRateRoute, [requirePermission("settings.edit")], deleteServiceRate);
+  .api(postServiceRateRoute, [requireTenantAdmin], createServiceRate)
+  .api(patchServiceRateRoute, [requireTenantAdmin], updateServiceRate)
+  .api(deleteServiceRateRoute, [requireTenantAdmin], deleteServiceRate);

@@ -14,10 +14,23 @@ import { redisClientIfReady } from "@/framework/redis/client.js";
  *      Sends standard RateLimit-* headers so clients can back off.
  */
 
-function adaptRedis(raw: any) {
+/**
+ * Minimal structural view of the ioredis commands the rate-limit store needs.
+ * Why: ioredis exposes heavily overloaded `script`/`evalsha` signatures that do not
+ *      line up with the tiny `RedisClient` contract expected by hono-rate-limiter.
+ */
+type RedisScriptClient = {
+  script: (subcommand: string, script: string) => Promise<unknown>;
+  evalsha: (sha1: string, numKeys: number, ...args: (string | number)[]) => Promise<unknown>;
+  decr: (key: string) => Promise<number>;
+  del: (key: string) => Promise<number>;
+};
+
+function adaptRedis(raw: RedisScriptClient) {
   return {
-    scriptLoad: (script: string) => raw.script("load", script),
-    evalsha: (sha1: string, keys: string[], args: unknown[]) => raw.evalsha(sha1, keys.length, ...keys, ...args),
+    scriptLoad: (script: string) => raw.script("load", script) as Promise<string>,
+    evalsha: <TData = unknown>(sha1: string, keys: string[], args: unknown[]): Promise<TData> =>
+      raw.evalsha(sha1, keys.length, ...keys, ...(args as (string | number)[])) as Promise<TData>,
     decr: (key: string) => raw.decr(key),
     del: (key: string) => raw.del(key)
   };
@@ -42,7 +55,7 @@ function createFailingOverStore() {
   const memoryStore = new MemoryStore();
   let redisStore: RedisStore | null = null;
   let cooldownUntil = 0;
-  let options: any = null;
+  let options: Parameters<MemoryStore["init"]>[0] | null = null;
 
   function enterCooldown() {
     redisStore = null;
@@ -65,7 +78,7 @@ function createFailingOverStore() {
 
       try {
         redisStore = new RedisStore({ client: adaptRedis(raw), prefix: rateLimitConfig.keyPrefix });
-        redisStore.init(options);
+        redisStore.init(options as Parameters<RedisStore["init"]>[0]);
       } catch {
         enterCooldown();
         return null;
@@ -76,7 +89,7 @@ function createFailingOverStore() {
   }
 
   return {
-    init(opts: any) {
+    init(opts: Parameters<MemoryStore["init"]>[0]) {
       options = opts;
       memoryStore.init(opts);
     },
@@ -165,7 +178,7 @@ function lastForwardedEntry(header: string | undefined): string | null {
   return entries.length ? entries[entries.length - 1] : null;
 }
 
-function directPeerAddress(c: any): string | null {
+function directPeerAddress(c: Context): string | null {
   try {
     const info = getConnInfo(c);
     const address = info?.remote?.address;
@@ -176,7 +189,7 @@ function directPeerAddress(c: any): string | null {
   return null;
 }
 
-function clientAddress(c: any): string | null {
+function clientAddress(c: Context): string | null {
   const peer = directPeerAddress(c);
   const forwarded = lastForwardedEntry(c.req.header("x-forwarded-for"));
   const trustProxy = appConfig.trustProxy;
@@ -196,7 +209,7 @@ function clientAddress(c: any): string | null {
   return forwarded;
 }
 
-function rateLimitKey(c: any, prefix: string, useSession = true): string {
+function rateLimitKey(c: Context, prefix: string, useSession = true): string {
   const sessionId = c.get("sessionId");
   if (useSession && sessionId) return `${prefix}:session:${sessionId}`;
 
@@ -219,7 +232,7 @@ export const rateLimiterMiddleware = async (c: Context, next: Next) => {
     middleware = rateLimiter({
       windowMs: rateLimitConfig.windowMs,
       limit: rateLimitConfig.maxRequests,
-      keyGenerator: (c: any) => rateLimitKey(c, "rl"),
+      keyGenerator: (c: Context) => rateLimitKey(c, "rl"),
       store: createFailingOverStore(),
       standardHeaders: "draft-6"
     });
@@ -235,7 +248,7 @@ export const loginLimiter = async (c: Context, next: Next) => {
     loginLimiterMiddleware = rateLimiter({
       windowMs: rateLimitConfig.windowMs,
       limit: rateLimitConfig.loginMaxRequests,
-      keyGenerator: (c: any) => rateLimitKey(c, "login", false),
+      keyGenerator: (c: Context) => rateLimitKey(c, "login", false),
       store: createFailingOverStore(),
       standardHeaders: "draft-6"
     });

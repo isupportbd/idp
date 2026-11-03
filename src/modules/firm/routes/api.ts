@@ -1,7 +1,7 @@
 import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
 import { denyRole } from "@/middlewares/role-middleware.js";
-import { requirePermission } from "@/middlewares/permission-middleware.js";
+import { requirePermission, requireTenantAdmin } from "@/middlewares/permission-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
   getCompanySettings,
@@ -175,13 +175,13 @@ const FIRM_EDITORS = ["settings.edit"];
 export default createRouter()
   .group(authMiddleware, denyRole("superadmin"), subscriptionMiddleware)
   .api(getCompanySettingsRoute, [requirePermission(...FIRM_READERS)], getCompanySettings)
-  .api(putCompanySettingsRoute, [requirePermission(...FIRM_EDITORS)], updateCompanySettings)
+  .api(putCompanySettingsRoute, [requireTenantAdmin], updateCompanySettings)
   .api(getBankAccountsRoute, [requirePermission(...FIRM_READERS)], listBankAccounts)
-  .api(postBankAccountRoute, [requirePermission(...FIRM_EDITORS)], createBankAccount)
-  .api(patchBankAccountRoute, [requirePermission(...FIRM_EDITORS)], updateBankAccount)
-  .api(deleteBankAccountRoute, [requirePermission(...FIRM_EDITORS)], deleteBankAccount)
+  .api(postBankAccountRoute, [requireTenantAdmin], createBankAccount)
+  .api(patchBankAccountRoute, [requireTenantAdmin], updateBankAccount)
+  .api(deleteBankAccountRoute, [requireTenantAdmin], deleteBankAccount)
   .api(getExpenseHeadsRoute, [requirePermission(...FIRM_READERS)], listExpenseHeads)
-  .api(postExpenseHeadRoute, [requirePermission(...FIRM_EDITORS)], createExpenseHead)
-  .api(patchExpenseHeadRoute, [requirePermission(...FIRM_EDITORS)], updateExpenseHead)
-  .api(toggleExpenseHeadRoute, [requirePermission(...FIRM_EDITORS)], toggleExpenseHead)
-  .api(deleteExpenseHeadRoute, [requirePermission(...FIRM_EDITORS)], deleteExpenseHead);
+  .api(postExpenseHeadRoute, [requireTenantAdmin], createExpenseHead)
+  .api(patchExpenseHeadRoute, [requireTenantAdmin], updateExpenseHead)
+  .api(toggleExpenseHeadRoute, [requireTenantAdmin], toggleExpenseHead)
+  .api(deleteExpenseHeadRoute, [requireTenantAdmin], deleteExpenseHead);

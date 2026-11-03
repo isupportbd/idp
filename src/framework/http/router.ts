@@ -1,9 +1,20 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
+import type { RouteConfig } from "@hono/zod-openapi";
+import type { Context, MiddlewareHandler, Next } from "hono";
 import { defaultHook } from "stoker/openapi";
 
+/** A route handler bound to the generic Hono context (validated input is route-scoped). */
+export type ApiHandler = (c: Context, next: Next) => Response | Promise<Response>;
+/** A middleware in the `api(route, [middlewares], handler)` chain. */
+export type ApiMiddleware = (c: Context, next: () => Promise<void>) => Response | Promise<Response | void> | void;
+
 export type NexgenRouter = OpenAPIHono & {
-  group: (...middlewares: any[]) => NexgenRouter;
-  api: (route: any, handlerOrMiddlewares: any, handler?: any) => NexgenRouter;
+  group: (...middlewares: MiddlewareHandler[]) => NexgenRouter;
+  api: (
+    route: RouteConfig,
+    handlerOrMiddlewares: ApiHandler | ApiMiddleware[],
+    handler?: ApiHandler
+  ) => NexgenRouter;
 };
 
 /**
@@ -24,7 +35,7 @@ export function createRouter(): NexgenRouter {
     return this;
   };
 
-  router.api = function (route: any, handlerOrMiddlewares: any, handler?: any) {
+  router.api = function (route, handlerOrMiddlewares, handler) {
     if (!Array.isArray(handlerOrMiddlewares)) {
       baseOpenapi(route, handlerOrMiddlewares);
       return this;
@@ -37,22 +48,22 @@ export function createRouter(): NexgenRouter {
       throw new Error("api(route, middlewares, handler) requires a handler function");
     }
 
-    const wrappedHandler = async (c: any) => {
+    const wrappedHandler = async (c: Context) => {
       let index = 0;
 
-      const next = async (): Promise<any> => {
+      const next = async (): Promise<Response | undefined> => {
         if (index < middlewares.length) {
           const middleware = middlewares[index++];
-          let downstream: any;
+          let downstream: Response | undefined;
           const result = await middleware(c, async () => {
             downstream = await next();
-            return downstream;
           });
 
-          return result === undefined ? downstream : result;
+          if (result) return result;
+          return downstream;
         }
 
-        return await finalHandler(c);
+        return await finalHandler(c, async () => {});
       };
 
       return await next();
@@ -71,6 +82,6 @@ export function createRouter(): NexgenRouter {
  * Where: Module route declarations.
  * How: Creates a router instance and applies all provided middlewares.
  */
-export function group(...middlewares: any[]) {
+export function group(...middlewares: MiddlewareHandler[]) {
   return createRouter().group(...middlewares);
 }

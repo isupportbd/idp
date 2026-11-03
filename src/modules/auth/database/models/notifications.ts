@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { index, integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { users } from "@/modules/auth/database/models/user.js";
 
 export const notifications = pgTable("notifications", {
@@ -14,7 +14,9 @@ export const notifications = pgTable("notifications", {
   link: varchar("link", { length: 500 }),
   readAt: timestamp("read_at"),
   createdAt: timestamp("created_at").defaultNow().notNull()
-});
+}, (table) => ({
+  userIdIdx: index("notifications_user_id_idx").on(table.userId)
+}));
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, {

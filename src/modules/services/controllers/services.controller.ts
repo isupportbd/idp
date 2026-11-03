@@ -1,3 +1,4 @@
+import type { AppContext } from "@/framework/facade.js";
 import { asc, desc, eq } from "drizzle-orm";
 import type { Handler } from "hono";
 import { broadcast, cache, db, HttpStatusCodes } from "@/framework/facade.js";
@@ -20,7 +21,7 @@ function notifySettingsUpdated(settingType: string) {
 
 // ── CUSTOMER TYPES CONTROLLERS ──────────────────────────────────────
 
-export const listCustomerTypes: Handler = async (c: any) => {
+export const listCustomerTypes: Handler = async (c: AppContext) => {
   try {
     const list = await cache.remember("master:client-types", 3600, async () => {
       return await db.select().from(customerTypes).orderBy(desc(customerTypes.id));
@@ -31,7 +32,7 @@ export const listCustomerTypes: Handler = async (c: any) => {
   }
 };
 
-export const createCustomerType: Handler = async (c: any) => {
+export const createCustomerType: Handler = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
     const existing = (await db.select().from(customerTypes).where(eq(customerTypes.typeName, body.typeName.trim())).limit(1))[0];
@@ -52,7 +53,7 @@ export const createCustomerType: Handler = async (c: any) => {
   }
 };
 
-export const toggleCustomerType: Handler = async (c: any) => {
+export const toggleCustomerType: Handler = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const existing = (await db.select().from(customerTypes).where(eq(customerTypes.id, id)).limit(1))[0];
@@ -74,7 +75,7 @@ export const toggleCustomerType: Handler = async (c: any) => {
 
 // ── REFERENCES CONTROLLERS ──────────────────────────────────────────
 
-export const listReferences: Handler = async (c: any) => {
+export const listReferences: Handler = async (c: AppContext) => {
   try {
     const list = await cache.remember("master:references", 3600, async () => {
       return await db.select().from(clientReferences).orderBy(asc(clientReferences.id));
@@ -85,7 +86,7 @@ export const listReferences: Handler = async (c: any) => {
   }
 };
 
-export const createReference: Handler = async (c: any) => {
+export const createReference: Handler = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
     const existing = (await db.select().from(clientReferences).where(eq(clientReferences.name, body.name.trim())).limit(1))[0];
@@ -108,7 +109,7 @@ export const createReference: Handler = async (c: any) => {
   }
 };
 
-export const updateReference: Handler = async (c: any) => {
+export const updateReference: Handler = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
@@ -136,7 +137,7 @@ export const updateReference: Handler = async (c: any) => {
   }
 };
 
-export const deleteReference: Handler = async (c: any) => {
+export const deleteReference: Handler = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const existing = (await db.select().from(clientReferences).where(eq(clientReferences.id, id)).limit(1))[0];
@@ -152,7 +153,7 @@ export const deleteReference: Handler = async (c: any) => {
   }
 };
 
-export const toggleReference: Handler = async (c: any) => {
+export const toggleReference: Handler = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const existing = (await db.select().from(clientReferences).where(eq(clientReferences.id, id)).limit(1))[0];
@@ -174,7 +175,7 @@ export const toggleReference: Handler = async (c: any) => {
 
 // ── SERVICE ITEMS CONTROLLERS ───────────────────────────────────────
 
-export const listServiceItems: Handler = async (c: any) => {
+export const listServiceItems: Handler = async (c: AppContext) => {
   try {
     const list = await cache.remember("master:service-items", 3600, async () => {
       return await db.select().from(serviceItems).orderBy(asc(serviceItems.id));
@@ -185,7 +186,7 @@ export const listServiceItems: Handler = async (c: any) => {
   }
 };
 
-export const createServiceItem: Handler = async (c: any) => {
+export const createServiceItem: Handler = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
     const existing = (await db.select().from(serviceItems).where(eq(serviceItems.itemName, body.itemName.trim())).limit(1))[0];
@@ -205,7 +206,7 @@ export const createServiceItem: Handler = async (c: any) => {
   }
 };
 
-export const toggleServiceItem: Handler = async (c: any) => {
+export const toggleServiceItem: Handler = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const existing = (await db.select().from(serviceItems).where(eq(serviceItems.id, id)).limit(1))[0];
@@ -225,7 +226,7 @@ export const toggleServiceItem: Handler = async (c: any) => {
   }
 };
 
-export const updateServiceItem: Handler = async (c: any) => {
+export const updateServiceItem: Handler = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
@@ -250,7 +251,7 @@ export const updateServiceItem: Handler = async (c: any) => {
   }
 };
 
-export const deleteServiceItem: Handler = async (c: any) => {
+export const deleteServiceItem: Handler = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const existing = (await db.select().from(serviceItems).where(eq(serviceItems.id, id)).limit(1))[0];
@@ -268,7 +269,7 @@ export const deleteServiceItem: Handler = async (c: any) => {
 
 // ── SERVICE RATES CONTROLLERS ───────────────────────────────────────
 
-export const listServiceRates: Handler = async (c: any) => {
+export const listServiceRates: Handler = async (c: AppContext) => {
   try {
     const rates = await cache.remember("master:service-rates", 3600, async () => {
       return await db.query.serviceRates.findMany({
@@ -286,7 +287,7 @@ export const listServiceRates: Handler = async (c: any) => {
   }
 };
 
-export const createServiceRate: Handler = async (c: any) => {
+export const createServiceRate: Handler = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
 
@@ -320,7 +321,7 @@ export const createServiceRate: Handler = async (c: any) => {
   }
 };
 
-export const updateServiceRate: Handler = async (c: any) => {
+export const updateServiceRate: Handler = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
@@ -344,7 +345,7 @@ export const updateServiceRate: Handler = async (c: any) => {
   }
 };
 
-export const deleteServiceRate: Handler = async (c: any) => {
+export const deleteServiceRate: Handler = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const existing = (await db.select().from(serviceRates).where(eq(serviceRates.id, id)).limit(1))[0];

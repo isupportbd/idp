@@ -1,4 +1,5 @@
 import type { Context, Next } from "hono";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { loggingConfig } from "@/config/index.js";
 import { logger } from "@/framework/support/logger.js";
 
@@ -64,12 +65,18 @@ export function notFound(c: Context) {
  * Where: App onError handler registration.
  * How: Logs stack + request context and returns status/message JSON.
  */
-export function onError(error: any, c: Context) {
+export function onError(error: unknown, c: Context) {
+  const err = error instanceof Error ? error : undefined;
+  const statusCandidate = Number((error as { status?: unknown } | null)?.status);
+  const errorMessage = typeof (error as { message?: unknown } | null)?.message === "string"
+    ? ((error as { message: string }).message)
+    : undefined;
+
   logger.error("Unhandled Application Error", {
     requestId: c.get("requestId") || null,
-    name: error?.name || "Error",
-    message: error?.message,
-    stack: error?.stack,
+    name: err?.name || "Error",
+    message: err?.message ?? errorMessage,
+    stack: err?.stack,
     method: c.req.method,
     path: c.req.path,
     url: c.req.url,
@@ -80,9 +87,8 @@ export function onError(error: any, c: Context) {
   // Only deliberately-authored client errors (4xx) surface their message.
   // Internal failures (5xx) return a generic body so callers never receive
   // database, constraint, filesystem or stack details.
-  const rawStatus = Number(error?.status);
-  const status = Number.isFinite(rawStatus) && rawStatus >= 400 && rawStatus <= 599 ? rawStatus : 500;
-  const message = status < 500 ? error?.message || "Request failed" : "Internal Server Error";
+  const status = Number.isFinite(statusCandidate) && statusCandidate >= 400 && statusCandidate <= 599 ? statusCandidate : 500;
+  const message = status < 500 ? errorMessage || "Request failed" : "Internal Server Error";
 
-  return c.json({ message }, status as any);
+  return c.json({ message }, status as ContentfulStatusCode);
 }

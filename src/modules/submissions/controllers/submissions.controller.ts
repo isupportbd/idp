@@ -1,3 +1,4 @@
+import type { AppContext } from "@/framework/facade.js";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import { alias } from "drizzle-orm/pg-core";
@@ -42,7 +43,7 @@ export function deriveSubmitters(
   return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export const listSubmissions: Handler = async (c: any) => {
+export const listSubmissions: Handler = async (c: AppContext) => {
   try {
     const query = c.req.valid("query");
     const taxPeriod = getDefaultTaxPeriod(query.month || query.taxPeriod);
@@ -276,7 +277,7 @@ export const listSubmissions: Handler = async (c: any) => {
 
 // ── 2. RECORD / UPSERT SUBMISSION ID ─────────────────────────────────
 
-export const recordSubmission: Handler = async (c: any) => {
+export const recordSubmission: Handler = async (c: AppContext) => {
   try {
     const payload = c.req.valid("json");
     const { clientId, taxPeriod, submissionId, remarks } = payload;
@@ -525,7 +526,7 @@ export const recordSubmission: Handler = async (c: any) => {
 
 // ── 3. DELETE SUBMISSION RECORD ──────────────────────────────────────
 
-export const deleteSubmission: Handler = async (c: any) => {
+export const deleteSubmission: Handler = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
@@ -574,7 +575,7 @@ export const deleteSubmission: Handler = async (c: any) => {
 
 // ── 4. BATCH DELETE SUBMISSIONS ──────────────────────────────────────
 
-export const batchDeleteSubmissions: Handler = async (c: any) => {
+export const batchDeleteSubmissions: Handler = async (c: AppContext) => {
   try {
     const { ids } = c.req.valid("json");
     if (!ids || ids.length === 0) {
@@ -622,7 +623,7 @@ export const batchDeleteSubmissions: Handler = async (c: any) => {
 
 // ── 5. GET SINGLE SUBMISSION RECORD ──────────────────────────────────
 
-export const getSingleSubmission: Handler = async (c: any) => {
+export const getSingleSubmission: Handler = async (c: AppContext) => {
   try {
     const query = c.req.valid ? c.req.valid("query") : c.req.query();
     const clientId = Number(query.clientId);

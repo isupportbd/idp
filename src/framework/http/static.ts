@@ -1,4 +1,5 @@
 import fsSync from "node:fs";
+import type { Context, Next } from "hono";
 import { runtime } from "@/framework/runtime/runtime.js";
 
 export function hasUiBuild() {
@@ -29,7 +30,7 @@ let _storageStaticMiddleware: ReturnType<Awaited<ReturnType<typeof resolveServeS
  * Where: App middleware stack.
  * How: Maps `/storage` path prefix to local storage public directory.
  */
-export async function storageStaticMiddleware(c: any, next: any) {
+export async function storageStaticMiddleware(c: Context, next: Next) {
   if (!_storageStaticMiddleware) {
     const serveStatic = await resolveServeStatic();
     _storageStaticMiddleware = serveStatic({
@@ -51,7 +52,7 @@ function ensurePublicDir() {
   }
 }
 
-async function uiStaticMiddleware(c: any, next: any) {
+async function uiStaticMiddleware(c: Context, next: Next) {
   ensurePublicDir();
   const path = c.req.path;
 
@@ -67,7 +68,7 @@ async function uiStaticMiddleware(c: any, next: any) {
   return _uiStaticMiddleware(c, next);
 }
 
-async function uiIndexMiddleware(c: any, next: any) {
+async function uiIndexMiddleware(c: Context, next: Next) {
   ensurePublicDir();
   c.header("Cache-Control", "no-cache, no-store, must-revalidate");
   if (!_uiIndexMiddleware) {

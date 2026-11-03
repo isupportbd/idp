@@ -1,3 +1,4 @@
+import type { AppContext } from "@/framework/facade.js";
 import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import { db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
@@ -32,7 +33,7 @@ function generateMonthRange(fromMonth: string, toMonth: string): string[] {
   return result;
 }
 
-export const getStatementReport: Handler = async (c: any) => {
+export const getStatementReport: Handler = async (c: AppContext) => {
   try {
     const query = c.req.query();
     const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);

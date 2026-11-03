@@ -1,3 +1,4 @@
+import type { AppContext } from "@/framework/facade.js";
 import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import crypto from "node:crypto";
@@ -96,13 +97,13 @@ const toCamel = (str: string) => str.replace(/_([a-z])/g, (_, g) => g.toUpperCas
 
 // ── 1. PROCESS UPLOADED EXCEL/CSV FILE ────────────────────────────────
 
-export const processUpload: Handler = async (c: any) => {
+export const processUpload: Handler = async (c: AppContext) => {
   try {
     const body = await c.req.parseBody();
     const file = body["file"];
     const month = body["month"] || "";
-    const isRebate = body["isRebate"] === "true" || body["isRebate"] === true;
-    const isFfs = body["isFfs"] === "true" || body["isFfs"] === true;
+    const isRebate = body["isRebate"] === "true";
+    const isFfs = body["isFfs"] === "true";
 
     if (!file || !(file instanceof File)) {
       return c.json({ success: false, message: "No valid file uploaded." }, HttpStatusCodes.BAD_REQUEST);
@@ -494,7 +495,7 @@ const EXCEL_IMPORT_ASYNC_ENV = "EXCEL_IMPORT_ASYNC";
 const IMPORT_ASYNC_THRESHOLD = 500;
 
 /** Why: resolves the acting tenant admin (and superadmin flag) from the request. */
-async function resolveUploadActor(c: any): Promise<{ tenantAdminId: number; isSuperAdmin: boolean }> {
+async function resolveUploadActor(c: AppContext): Promise<{ tenantAdminId: number; isSuperAdmin: boolean }> {
   const ctx = await resolveTenantContext(c);
   return { tenantAdminId: ctx.tenantAdminId ?? ctx.userId, isSuperAdmin: ctx.isSuperAdmin };
 }
@@ -828,9 +829,9 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
 /**
  * Synchronous REST endpoint — response shape unchanged.
  */
-export const savePurchases: Handler = async (c: any) => {
+export const savePurchases: Handler = async (c: AppContext) => {
   try {
-    const rawBody = (c.req as any).valid("json");
+    const rawBody = c.req.valid("json");
     const { data, month, isRebate, isFfs } = rawBody;
 
     if (!data || !Array.isArray(data) || data.length === 0) {
@@ -871,8 +872,8 @@ export const savePurchases: Handler = async (c: any) => {
  * How: Enqueues onto the `import` queue; falls back to the sync handler when the
  *      flag is off, the file is small, or Redis is unavailable.
  */
-export const savePurchasesAsync: Handler = async (c: any) => {
-  const rawBody = (c.req as any).valid("json");
+export const savePurchasesAsync: Handler = async (c: AppContext) => {
+  const rawBody = c.req.valid("json");
   const { data, month, isRebate, isFfs } = rawBody;
 
   if (!data || !Array.isArray(data) || data.length === 0) {
@@ -912,9 +913,9 @@ export const savePurchasesAsync: Handler = async (c: any) => {
 
 // ── 3. REPLACE DUPLICATE PURCHASE RECORD ─────────────────────────────
 
-export const replaceDuplicate: Handler = async (c: any) => {
+export const replaceDuplicate: Handler = async (c: AppContext) => {
   try {
-    const rawBody = (c.req as any).valid("json");
+    const rawBody = c.req.valid("json");
     const { itemsToReplace } = rawBody;
     if (!itemsToReplace || !Array.isArray(itemsToReplace) || itemsToReplace.length === 0) {
       return c.json({ success: false, message: "No items provided for replacement." }, HttpStatusCodes.BAD_REQUEST);
@@ -977,9 +978,9 @@ export const replaceDuplicate: Handler = async (c: any) => {
 
 // ── 4. SAVE PENDING FFS PURCHASES ─────────────────────────────────────
 
-export const savePendingFfs: Handler = async (c: any) => {
+export const savePendingFfs: Handler = async (c: AppContext) => {
   try {
-    const rawBody = (c.req as any).valid("json");
+    const rawBody = c.req.valid("json");
     const { itemsToSave, takeRebate } = rawBody;
     if (!itemsToSave || !Array.isArray(itemsToSave) || itemsToSave.length === 0) {
       return c.json({ success: false, message: "No FFS items provided." }, HttpStatusCodes.BAD_REQUEST);

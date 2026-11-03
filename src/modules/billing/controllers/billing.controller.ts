@@ -1,3 +1,4 @@
+import type { AppContext } from "@/framework/facade.js";
 import { and, asc, desc, eq, ilike, inArray, like, ne, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import {
@@ -85,7 +86,7 @@ async function resolvePaymentInfo(tenantAdminId: number | null) {
  *      tenant. Superadmins bypass the tenant filter.
  * Returns the row when owned, otherwise null (caller responds 404).
  */
-async function loadScopedBill(c: any, id: number) {
+async function loadScopedBill(c: AppContext, id: number) {
   const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
   const rows = await db
     .select({ bill: bills, clientOwner: clients.createdBy })
@@ -99,7 +100,7 @@ async function loadScopedBill(c: any, id: number) {
   return row.bill;
 }
 
-async function loadScopedCollection(c: any, id: number) {
+async function loadScopedCollection(c: AppContext, id: number) {
   const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
   const rows = await db
     .select({ collection: collections, clientOwner: clients.createdBy })
@@ -117,7 +118,7 @@ async function loadScopedCollection(c: any, id: number) {
  * Why: Money/CRM rows may only reference clients inside the caller's tenant.
  * How: Returns true when the client exists and belongs to the caller.
  */
-async function clientBelongsToTenant(c: any, clientId: number): Promise<boolean> {
+async function clientBelongsToTenant(c: AppContext, clientId: number): Promise<boolean> {
   const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
   const conditions: any[] = [eq(clients.id, clientId)];
   if (!isSuperAdmin) conditions.push(eq(clients.createdBy, tenantAdminId));
@@ -351,7 +352,7 @@ async function getBatchClientsRunningDue(clientIds: number[]): Promise<Map<numbe
 
 // ── 3. LIST INVOICES / BILLS ─────────────────────────────────────────
 
-export const listBills: Handler = async (c: any) => {
+export const listBills: Handler = async (c: AppContext) => {
   try {
     const query = c.req.valid("query");
     const month = query.month || query.taxPeriod;
@@ -481,7 +482,7 @@ export const listBills: Handler = async (c: any) => {
 
 // ── 4. GET BILL DETAILS ──────────────────────────────────────────────
 
-export const getBillDetails: Handler = async (c: any) => {
+export const getBillDetails: Handler = async (c: AppContext) => {
   try {
     const id = Number(c.req.param("id"));
     if (isNaN(id)) {
@@ -627,7 +628,7 @@ export const getBillDetails: Handler = async (c: any) => {
 
 // ── 5. CLIENT BILLING OVERVIEW & AUTO-ITEMS HELPER ───────────────────
 
-export const getClientBillingOverview: Handler = async (c: any) => {
+export const getClientBillingOverview: Handler = async (c: AppContext) => {
   try {
     const query = c.req.valid("query");
     const clientId = Number(query.clientId);
@@ -872,7 +873,7 @@ export const getClientBillingOverview: Handler = async (c: any) => {
 
 // ── 6. CREATE SINGLE BILL ────────────────────────────────────────────
 
-export const createBill: Handler = async (c: any) => {
+export const createBill: Handler = async (c: AppContext) => {
   try {
     const payload = c.req.valid("json");
     const { clientId, referenceId: payloadRefId, taxPeriod, billDate, dueDate, discountAmount, notes, items, status } = payload;
@@ -1093,7 +1094,7 @@ export const createBill: Handler = async (c: any) => {
  * Why: The batch runner is shared by the HTTP handler and the async queue worker
  *      so the billing math exists in exactly one place (no drift).
  */
-async function resolveBatchActor(c: any): Promise<{ creatorId: number | null; isSuperAdmin: boolean }> {
+async function resolveBatchActor(c: AppContext): Promise<{ creatorId: number | null; isSuperAdmin: boolean }> {
   const auth = c.get("auth") || c.get("user");
   const { tenantAdminId: creatorId } = await resolveTenantContext(c);
   let isSuperAdmin = false;
@@ -1423,7 +1424,7 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
  * Synchronous REST endpoint — response shape unchanged. Heavy batches can be
  * routed to the queue via `batchGenerateBillsAsync` instead.
  */
-export const batchGenerateBills: Handler = async (c: any) => {
+export const batchGenerateBills: Handler = async (c: AppContext) => {
   try {
     const payload = c.req.valid("json");
     const { taxPeriod, billDate, dueDate, clientIds } = payload;
@@ -1495,7 +1496,7 @@ function makeBatchJobId(tenantId: string | number | null | undefined, taxPeriod:
  * How: Enqueues onto the `billing` queue; falls back to the sync handler when the
  *      flag is off, the batch is small, or Redis is unavailable.
  */
-export const batchGenerateBillsAsync: Handler = async (c: any) => {
+export const batchGenerateBillsAsync: Handler = async (c: AppContext) => {
   const payload = c.req.valid("json");
   const { taxPeriod, billDate, dueDate, clientIds } = payload;
   const { tenantAdminId } = await resolveTenantContext(c);
@@ -1528,7 +1529,7 @@ export const batchGenerateBillsAsync: Handler = async (c: any) => {
 
 // ── 8. GET MISSING BILLS LIST ────────────────────────────────────────
 
-export const getMissingBills: Handler = async (c: any) => {
+export const getMissingBills: Handler = async (c: AppContext) => {
   try {
     const query = c.req.valid("query");
     const month = query.month || query.taxPeriod || new Date().toISOString().slice(0, 7);
@@ -1728,7 +1729,7 @@ export const getMissingBills: Handler = async (c: any) => {
 
 // ── 9. UPDATE & DELETE BILL ──────────────────────────────────────────
 
-export const updateBill: Handler = async (c: any) => {
+export const updateBill: Handler = async (c: AppContext) => {
   try {
     const id = Number(c.req.param("id"));
     const payload = c.req.valid("json");
@@ -1810,7 +1811,7 @@ export const updateBill: Handler = async (c: any) => {
   }
 };
 
-export const deleteBill: Handler = async (c: any) => {
+export const deleteBill: Handler = async (c: AppContext) => {
   try {
     const id = Number(c.req.param("id"));
     const existing = await loadScopedBill(c, id);
@@ -1856,7 +1857,7 @@ export const deleteBill: Handler = async (c: any) => {
 
 // ── 10. COLLECTIONS & MONEY RECEIPTS ─────────────────────────────────
 
-export const listCollections: Handler = async (c: any) => {
+export const listCollections: Handler = async (c: AppContext) => {
   try {
     const query = c.req.valid("query");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
@@ -1936,7 +1937,7 @@ export const listCollections: Handler = async (c: any) => {
   }
 };
 
-export const createCollection: Handler = async (c: any) => {
+export const createCollection: Handler = async (c: AppContext) => {
   try {
     const payload = c.req.valid("json");
     const { clientId, billId, collectionDate, amount, paymentMethod, referenceNo, notes } = payload;
@@ -2082,7 +2083,7 @@ export const createCollection: Handler = async (c: any) => {
   }
 };
 
-export const cancelCollection: Handler = async (c: any) => {
+export const cancelCollection: Handler = async (c: AppContext) => {
   try {
     const id = Number(c.req.param("id"));
     const col = await loadScopedCollection(c, id);
@@ -2127,7 +2128,7 @@ export const cancelCollection: Handler = async (c: any) => {
   }
 };
 
-export const getCollectionDetails: Handler = async (c: any) => {
+export const getCollectionDetails: Handler = async (c: AppContext) => {
   try {
     const id = Number(c.req.param("id"));
     if (!id || isNaN(id)) {

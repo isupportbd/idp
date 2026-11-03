@@ -1,3 +1,4 @@
+import type { AppContext } from "@/framework/facade.js";
 import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import { db, getDefaultTaxPeriod, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
@@ -12,7 +13,7 @@ import { hasPermission } from "@/middlewares/permission-middleware.js";
 /**
  * Get Activity Matrix & Client Data for the Activity Filter Module
  */
-export const getActivityMatrix: Handler = async (c: any) => {
+export const getActivityMatrix: Handler = async (c: AppContext) => {
   try {
     const query = c.req.valid("query");
     const taxPeriod = getDefaultTaxPeriod(query.month || query.taxPeriod);

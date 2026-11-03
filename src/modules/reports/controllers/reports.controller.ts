@@ -1,3 +1,4 @@
+import type { AppContext } from "@/framework/facade.js";
 import type { Context } from "hono";
 import { db } from "@/framework/facade.js";
 import { resolveTenantContext } from "@/framework/facade.js";
@@ -11,7 +12,7 @@ import { vatNotes } from "@/modules/superadmin/database/models/vat_notes.js";
 import { eq, and, or, sql } from "drizzle-orm";
 
 // GET /api/reports/monthly-summary
-export const getMonthlySummary = async (c: Context) => {
+export const getMonthlySummary = async (c: AppContext) => {
   try {
     const month = c.req.query("month");
     if (!month) {
@@ -60,7 +61,7 @@ export const getMonthlySummary = async (c: Context) => {
 };
 
 // GET /api/reports/sales
-export const getSalesReport = async (c: Context) => {
+export const getSalesReport = async (c: AppContext) => {
   try {
     const clientId = c.req.query("clientId");
     const month = c.req.query("month");
@@ -202,7 +203,7 @@ export const getSalesReport = async (c: Context) => {
 };
 
 // GET /api/reports/statement
-export const getStatementReport = async (c: Context) => {
+export const getStatementReport = async (c: AppContext) => {
   try {
     const clientId = c.req.query("clientId");
     const month = c.req.query("month");

@@ -1,3 +1,4 @@
+import type { AppContext } from "@/framework/facade.js";
 import type { Context } from "hono";
 import { db, resolveTenantContext } from "@/framework/facade.js";
 import { eq, and, isNull, desc, sql } from "drizzle-orm";
@@ -12,7 +13,7 @@ import {
   normalizeBdMobile
 } from "../services/sms.service.js";
 
-function getAuthUser(c: Context): any {
+function getAuthUser(c: AppContext): any {
   return c.get("auth") || c.get("user") || (c.req as any).user;
 }
 
@@ -23,7 +24,7 @@ function isSuperAdmin(user: any): boolean {
 }
 
 // 1. List Templates — SuperAdmin only (enforced at route level)
-export async function listTemplates(c: Context) {
+export async function listTemplates(c: AppContext) {
   try {
     // Ensure global master templates exist in DB
     const globalCount = await db
@@ -86,11 +87,11 @@ export async function listTemplates(c: Context) {
 }
 
 // 2. Update Template Body & Status — SuperAdmin only, global templates only
-export async function updateTemplate(c: Context) {
+export async function updateTemplate(c: AppContext) {
   try {
     const user = getAuthUser(c);
     const id = Number(c.req.param("id"));
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
 
     if (!id || Number.isNaN(id)) {
       return c.json({ success: false, message: "Invalid template ID" }, 400);
@@ -137,7 +138,7 @@ export async function updateTemplate(c: Context) {
 }
 
 // 3. Reset Template to Default — SuperAdmin only, global templates only
-export async function resetTemplate(c: Context) {
+export async function resetTemplate(c: AppContext) {
   try {
     const id = Number(c.req.param("id"));
 
@@ -183,10 +184,10 @@ export async function resetTemplate(c: Context) {
 }
 
 // 4. Send Test SMS
-export async function sendTestSms(c: Context) {
+export async function sendTestSms(c: AppContext) {
   try {
     const user = getAuthUser(c);
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const { recipientMobile, message } = body;
 
     if (!recipientMobile || !message) {
@@ -259,7 +260,7 @@ export async function sendTestSms(c: Context) {
 }
 
 // 5. List Delivery Logs
-export async function listSmsLogs(c: Context) {
+export async function listSmsLogs(c: AppContext) {
   try {
     const { isSuperAdmin: superAdmin, tenantAdminId: adminId } = await resolveTenantContext(c);
 
@@ -279,7 +280,7 @@ export async function listSmsLogs(c: Context) {
 }
 
 // 6. Get Gateway Settings
-export async function getGatewaySettings(c: Context) {
+export async function getGatewaySettings(c: AppContext) {
   try {
     const user = getAuthUser(c);
     const { tenantAdminId: adminId } = await resolveTenantContext(c);
@@ -313,11 +314,11 @@ export async function getGatewaySettings(c: Context) {
 }
 
 // 7. Update Gateway Settings
-export async function updateGatewaySettings(c: Context) {
+export async function updateGatewaySettings(c: AppContext) {
   try {
     const user = getAuthUser(c);
     const { tenantAdminId: adminId } = await resolveTenantContext(c);
-    const body = (c.req as any).valid("json");
+    const body = c.req.valid("json");
     const { smsApiKey, smsSenderId, provider, endpoint } = body;
 
     const existing = await db.query.companySettings.findFirst({
@@ -379,7 +380,7 @@ export async function updateGatewaySettings(c: Context) {
 }
 
 // 8. Check Gateway Balance
-export async function checkGatewayBalance(c: Context) {
+export async function checkGatewayBalance(c: AppContext) {
   try {
     const user = getAuthUser(c);
     const { tenantAdminId: adminId } = await resolveTenantContext(c);

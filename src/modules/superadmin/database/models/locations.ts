@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 export const locations = pgTable("locations", {
   id: serial("id").primaryKey(),
@@ -18,7 +18,9 @@ export const commercialAreas = pgTable("commercial_areas", {
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
+}, (table) => ({
+  locationIdIdx: index("commercial_areas_location_id_idx").on(table.locationId)
+}));
 
 export const locationsRelations = relations(locations, ({ many }) => ({
   areas: many(commercialAreas)

@@ -1,3 +1,4 @@
+import type { AppContext } from "@/framework/facade.js";
 import { asc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import { db, HttpStatusCodes, validate } from "@/framework/facade.js";
@@ -17,7 +18,7 @@ export function formatStandardHsCode(code: string | null | undefined): string {
   return clean;
 }
 
-export const getItems: Handler = async (c: any) => {
+export const getItems: Handler = async (c: AppContext) => {
   try {
     const list = await db.select().from(globalItems).orderBy(asc(globalItems.hsCode));
     return c.json({ success: true, data: list });
@@ -27,9 +28,9 @@ export const getItems: Handler = async (c: any) => {
   }
 };
 
-export const bulkCreateItems: Handler = async (c: any) => {
+export const bulkCreateItems: Handler = async (c: AppContext) => {
   try {
-    const rawBody = (c.req as any).valid("json");
+    const rawBody = c.req.valid("json");
     const { items: newItems } = await validate(bulkCreateItemsSchema, rawBody);
 
     const inserted: any[] = [];

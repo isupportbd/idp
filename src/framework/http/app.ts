@@ -1,6 +1,7 @@
 import { db } from "@/framework/facade.js";
 import { sql } from "drizzle-orm";
 import { createRoute, z } from "@hono/zod-openapi";
+import type { Context } from "hono";
 import { secureHeaders } from "hono/secure-headers";
 import { serveEmojiFavicon } from "stoker/middlewares";
 import { appConfig } from "@/config/index.js";
@@ -68,13 +69,13 @@ export function createHttpApp() {
   app.use(serveEmojiFavicon("🚀"));
 
   // ── Health & Liveness / Readiness Endpoints ──
-  app.get("/health", (c: any) => c.json({ status: "ok", message: "Application is healthy", timestamp: Date.now() }));
+  app.get("/health", (c: Context) => c.json({ status: "ok", message: "Application is healthy", timestamp: Date.now() }));
   
   // Fast Liveness Probe (for container orchestration / process managers)
-  app.get("/health/live", (c: any) => c.json({ status: "ok", timestamp: Date.now() }));
+  app.get("/health/live", (c: Context) => c.json({ status: "ok", timestamp: Date.now() }));
 
   // Deep Readiness Probe (verifies database connectivity)
-  app.get("/health/ready", async (c: any) => {
+  app.get("/health/ready", async (c: Context) => {
     try {
       await db.execute(sql`SELECT 1`);
       return c.json({
@@ -82,11 +83,11 @@ export function createHttpApp() {
         db: "connected",
         timestamp: Date.now()
       }, 200);
-    } catch (err: any) {
+    } catch (err) {
       return c.json({
         status: "not_ready",
         db: "disconnected",
-        error: err?.message || "Database unreachable",
+        error: err instanceof Error ? err.message : "Database unreachable",
         timestamp: Date.now()
       }, 503);
     }
@@ -94,11 +95,11 @@ export function createHttpApp() {
 
   if (appConfig.openApiEnabled) {
     configureOpenApi(app);
-    app.api(healthRoute, (c: any) => c.json({ message: "Application is healthy" }));
+    app.api(healthRoute, (c: Context) => c.json({ message: "Application is healthy" }));
   }
 
   if (!hasUiBuild()) {
-    app.get("/", (c: any) => c.json({ name: appConfig.name, ok: true }));
+    app.get("/", (c: Context) => c.json({ name: appConfig.name, ok: true }));
   }
 
   app.notFound(notFound);

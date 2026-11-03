@@ -1,3 +1,4 @@
+import type { AppContext } from "@/framework/facade.js";
 import { createHash, randomBytes, randomInt } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { jwtConfig } from "@/config/index.js";
@@ -275,7 +276,7 @@ export function hashEmailVerificationToken(token: string) {
  * When: Used before issuing new tokens or during logout.
  * Where: Called by register/login/logout flows.
  */
-export async function revokeCurrentRefreshToken(c: any) {
+export async function revokeCurrentRefreshToken(c: AppContext) {
   const token = await cookie.getRefresh(c);
   if (!token) return;
 
@@ -290,7 +291,7 @@ export async function revokeCurrentRefreshToken(c: any) {
  * When: Used after successful auth actions (register/login/refresh patterns).
  * Where: Called by auth.controller handlers.
  */
-export async function issueTokens(c: any, user: any, options?: { remember?: boolean }) {
+export async function issueTokens(c: AppContext, user: any, options?: { remember?: boolean }) {
   const remember = !!options?.remember;
   const refreshExpiry = remember ? jwtConfig.refreshRememberExpirySeconds : jwtConfig.refreshExpirySeconds;
   const roleName = user.role?.name || (typeof user.role === "string" ? user.role : null);

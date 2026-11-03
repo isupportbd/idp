@@ -63,3 +63,17 @@ export function getTenantContext(c: Context): RequestTenantContext {
     isSuperAdmin: role?.toLowerCase() === "superadmin"
   };
 }
+
+/**
+ * Why: `createRoute` Zod schemas type `c.req.valid()` at the OpenAPI layer, but a
+ *      bare Hono `Context` types every validation target as `never`. Controllers are
+ *      declared independently of their route configs (routes import controllers), so
+ *      the validated payload cannot be inferred here without a circular dependency.
+ * How: Widens only the `valid()` accessor; every other Context member stays typed,
+ *      so handler code keeps real autocomplete for `c.json`, `c.req.param`, etc.
+ */
+export type AppContext = Context & {
+  req: Context["req"] & {
+    valid: (target: "json" | "query" | "param" | "header" | "cookie" | "form") => any;
+  };
+};

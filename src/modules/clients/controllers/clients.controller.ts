@@ -1,3 +1,4 @@
+import type { AppContext } from "@/framework/facade.js";
 import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import { broadcast, db, HttpStatusCodes, resolveTenantContext, validate } from "@/framework/facade.js";
@@ -20,7 +21,7 @@ import { hasPermission } from "@/middlewares/permission-middleware.js";
 
 // ── 1. LIST CLIENTS WITH FILTERS & PAGINATION ────────────────────────
 
-export const listClients: Handler = async (c: any) => {
+export const listClients: Handler = async (c: AppContext) => {
   try {
     const query = c.req.valid("query");
     const page = query.page || 1;
@@ -167,7 +168,7 @@ export const listClients: Handler = async (c: any) => {
 
 // ── 2. GET SINGLE CLIENT BY ID ───────────────────────────────────────
 
-export const getClientById: Handler = async (c: any) => {
+export const getClientById: Handler = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
@@ -248,7 +249,7 @@ export const getClientById: Handler = async (c: any) => {
 
 // ── 3. CREATE / BIND CLIENT (GLOBAL BIN ARCHITECTURE) ────────────────
 
-export const createClient: Handler = async (c: any) => {
+export const createClient: Handler = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
     const trimmedBin = body.binNumber?.trim();
@@ -410,7 +411,7 @@ export const createClient: Handler = async (c: any) => {
 
 // ── 4. UPDATE CLIENT ─────────────────────────────────────────────────
 
-export const updateClient: Handler = async (c: any) => {
+export const updateClient: Handler = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
@@ -496,7 +497,7 @@ export const updateClient: Handler = async (c: any) => {
 
 // ── 5. TOGGLE CLIENT ACTIVE STATUS (RELEASE / RESTORE) ───────────────
 
-export const toggleClientStatus: Handler = async (c: any) => {
+export const toggleClientStatus: Handler = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const { isActive } = c.req.valid("json");
@@ -573,7 +574,7 @@ export const toggleClientStatus: Handler = async (c: any) => {
 
 // ── 6. DELETE CLIENT (AUDIT & COMPLIANCE SAFEGUARD) ───────────────────
 
-export const deleteClient: Handler = async (c: any) => {
+export const deleteClient: Handler = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const auth = c.get("auth") || c.get("user");
@@ -637,7 +638,7 @@ export const deleteClient: Handler = async (c: any) => {
 
 // ── 7. VALIDATION: GLOBAL BIN UNIQUENESS & BIND STATUS CHECK ─────────
 
-export const checkBinUnique: Handler = async (c: any) => {
+export const checkBinUnique: Handler = async (c: AppContext) => {
   try {
     const { bin, excludeId } = c.req.valid("json");
     const auth = c.get("auth") || c.get("user");
@@ -743,7 +744,7 @@ export const checkBinUnique: Handler = async (c: any) => {
 
 // ── 8. VALIDATION: CHECK MOBILE DUPLICATE ─────────────────────────────
 
-export const checkMobileExists: Handler = async (c: any) => {
+export const checkMobileExists: Handler = async (c: AppContext) => {
   try {
     const { mobile, excludeId } = c.req.valid("json");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
@@ -769,7 +770,7 @@ export const checkMobileExists: Handler = async (c: any) => {
 
 // ── 9. ASSIGNMENTS: LIST CLIENT ASSIGNMENTS ──────────────────────────
 
-export const listAssignments: Handler = async (c: any) => {
+export const listAssignments: Handler = async (c: AppContext) => {
   try {
     const query = c.req.valid("query");
     const filter = query.filter || "all";
@@ -864,7 +865,7 @@ export const listAssignments: Handler = async (c: any) => {
 
 // ── 10. ASSIGNMENTS: SAVE ASSIGNMENTS FOR A CLIENT ───────────────────
 
-export const assignManagers: Handler = async (c: any) => {
+export const assignManagers: Handler = async (c: AppContext) => {
   try {
     const { clientId, managerIds } = c.req.valid("json");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
@@ -908,7 +909,7 @@ export const assignManagers: Handler = async (c: any) => {
 
 // ── 11. LIST ASSIGNABLE USERS ────────────────────────────────────────
 
-export const listAssignableUsers: Handler = async (c: any) => {
+export const listAssignableUsers: Handler = async (c: AppContext) => {
   try {
     const auth = c.get("auth") || c.get("user");
     let tenantAdminId: number | null = null;
@@ -972,9 +973,9 @@ function formatStandardBin(raw: string | null | undefined): string | null {
 
 // ── 12. BULK CREATE CLIENTS ──────────────────────────────────────────
 
-export const bulkCreateClients: Handler = async (c: any) => {
+export const bulkCreateClients: Handler = async (c: AppContext) => {
   try {
-    const rawBody = (c.req as any).valid("json");
+    const rawBody = c.req.valid("json");
     const { clients: rawClients } = await validate(BulkCreateClientsSchema, rawBody) as { clients: any[] };
 
     const { currentUser, isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
@@ -1194,7 +1195,7 @@ export const bulkCreateClients: Handler = async (c: any) => {
 };
 
 // ── GET CLIENT PURCHASED ITEMS ───────────────────────────────────────
-export const getClientPurchasedItems: Handler = async (c: any) => {
+export const getClientPurchasedItems: Handler = async (c: AppContext) => {
   try {
     const clientId = Number(c.req.param("id"));
     if (!clientId || isNaN(clientId)) {

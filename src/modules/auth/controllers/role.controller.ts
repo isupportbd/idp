@@ -1,3 +1,4 @@
+import type { AppContext } from "@/framework/facade.js";
 import { eq } from "drizzle-orm";
 import type { Handler } from "hono";
 import { db, HttpStatusCodes } from "@/framework/facade.js";
@@ -8,7 +9,7 @@ import { roles } from "@/modules/auth/database/models/role.js";
  * When: Used by admin/management screens that need available roles.
  * Where: Mounted under auth role routes.
  */
-export const index: Handler = async (c: any) => {
+export const index: Handler = async (c: AppContext) => {
   const result = await db.query.roles.findMany();
   return c.json({ message: "Success", data: result }, HttpStatusCodes.OK);
 };
@@ -18,7 +19,7 @@ export const index: Handler = async (c: any) => {
  * When: Used for detail views or role validation checks.
  * Where: Mounted on auth role detail route with path param id.
  */
-export const show: Handler = async (c: any) => {
+export const show: Handler = async (c: AppContext) => {
   const { id } = c.req.valid("param");
   const result = await db.query.roles.findFirst({ where: eq(roles.id, id) });
   return c.json({ message: "Success", data: result }, HttpStatusCodes.OK);

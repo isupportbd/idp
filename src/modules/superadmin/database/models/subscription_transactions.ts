@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { integer, numeric, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { index, integer, numeric, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { users } from "@/modules/auth/database/models/user.js";
 import { plans } from "@/modules/superadmin/database/models/plans.js";
 
@@ -22,7 +22,10 @@ export const subscriptionTransactions = pgTable("subscription_transactions", {
   note: text("note"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
+}, (table) => ({
+  userIdIdx: index("subscription_transactions_user_id_idx").on(table.userId),
+  planIdIdx: index("subscription_transactions_plan_id_idx").on(table.planId)
+}));
 
 export const subscriptionTransactionsRelations = relations(subscriptionTransactions, ({ one }) => ({
   user: one(users, {

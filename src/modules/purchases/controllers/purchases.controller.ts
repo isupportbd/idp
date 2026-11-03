@@ -1,3 +1,4 @@
+import type { AppContext } from "@/framework/facade.js";
 import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import { db, HttpStatusCodes, resolveTenantContext, validate } from "@/framework/facade.js";
@@ -10,7 +11,7 @@ import { users } from "@/modules/auth/database/models/user.js";
 
 // ── GET PURCHASES LIST ───────────────────────────────────────────────
 
-export const listPurchases: Handler = async (c: any) => {
+export const listPurchases: Handler = async (c: AppContext) => {
   try {
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
@@ -126,7 +127,7 @@ export const listPurchases: Handler = async (c: any) => {
 
 // ── DELETE SINGLE PURCHASE ───────────────────────────────────────────
 
-export const deletePurchase: Handler = async (c: any) => {
+export const deletePurchase: Handler = async (c: AppContext) => {
   try {
     const id = parseInt(c.req.param("id"), 10);
     if (!id || isNaN(id)) {
@@ -152,9 +153,9 @@ export const deletePurchase: Handler = async (c: any) => {
 
 // ── BATCH DELETE PURCHASES ───────────────────────────────────────────
 
-export const batchDeletePurchases: Handler = async (c: any) => {
+export const batchDeletePurchases: Handler = async (c: AppContext) => {
   try {
-    const rawBody = (c.req as any).valid("json");
+    const rawBody = c.req.valid("json");
     const { month, clientId, ids } = await validate(batchDeletePurchasesSchema, rawBody);
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
@@ -190,7 +191,7 @@ export const batchDeletePurchases: Handler = async (c: any) => {
 
 // ── DELETE PURCHASES BY MONTH ────────────────────────────────────────
 
-export const deletePurchasesByMonth: Handler = async (c: any) => {
+export const deletePurchasesByMonth: Handler = async (c: AppContext) => {
   try {
     const month = c.req.param("month");
     if (!month) {
@@ -217,7 +218,7 @@ export const deletePurchasesByMonth: Handler = async (c: any) => {
 
 // ── GET CLIENT PURCHASES & SUBMISSIONS MONTHS OVERVIEW ─────────────────
 
-export const getPurchasesMonths: Handler = async (c: any) => {
+export const getPurchasesMonths: Handler = async (c: AppContext) => {
   try {
     const clientId = c.req.query("clientId");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
