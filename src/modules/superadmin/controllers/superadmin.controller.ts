@@ -2869,6 +2869,14 @@ export async function restoreDatabaseBackup(c: AppContext) {
 
     // Execute restore using native postgres driver pool to support large multi-statement dumps without Drizzle statement-cache limitations
     const pool = databasePool();
+
+    // Auto-align schema: ensure sender_id column exists so legacy dumps restore cleanly
+    try {
+      await pool.unsafe(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS sender_id VARCHAR(50) DEFAULT ''`);
+    } catch {
+      // ignore
+    }
+
     await pool.begin(async (sqlClient: any) => {
       // Best effort: temporarily disable foreign key constraint and trigger checks during dump restore
       try {

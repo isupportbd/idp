@@ -154,6 +154,9 @@ export async function syncDatabaseSchemaAndSuperAdmin() {
       `INSERT INTO roles (name) VALUES ('superadmin'), ('admin'), ('user') ON CONFLICT (name) DO NOTHING`
     );
 
+    // Schema parity guard: ensure company_settings has sender_id column for legacy backup compatibility
+    await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS sender_id VARCHAR(50) DEFAULT ''`);
+
     // Clean stale legacy column mapping entries if present
     await executeSingleSql(`DELETE FROM column_mappings WHERE db_column IN ('client_name', 'clientName') OR label = 'client_name'`);
   } catch (rErr: any) {
