@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { createRouter } from "@/framework/facade.js";
 import { zValidator } from "@hono/zod-validator";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
 import { requireRole } from "@/middlewares/role-middleware.js";
@@ -80,7 +80,7 @@ import {
   PaymentSettingsSchema
 } from "../controllers/superadmin.schema.js";
 
-export const superAdminRouter = new Hono();
+export const superAdminRouter = createRouter();
 
 // Public endpoints (used by the Landing / registration page before login)
 superAdminRouter.get("/public-stats", getPlatformPublicStats);

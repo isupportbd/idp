@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { createRouter } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
 import { denyRole } from "@/middlewares/role-middleware.js";
 import { requirePermission } from "@/middlewares/permission-middleware.js";
@@ -11,7 +11,7 @@ import {
   getPurchasesMonths
 } from "../controllers/purchases.controller.js";
 
-const purchasesRouter = new Hono();
+const purchasesRouter = createRouter();
 
 purchasesRouter.use("*", authMiddleware, denyRole("superadmin"), subscriptionMiddleware);
 

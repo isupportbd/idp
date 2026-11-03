@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { createRouter } from "@/framework/facade.js";
 import { zValidator } from "@hono/zod-validator";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
 import { denyRole } from "@/middlewares/role-middleware.js";
@@ -29,7 +29,7 @@ import {
   clientBillingSummaryQuerySchema
 } from "../controllers/billing.schema.js";
 
-export const billingRouter = new Hono();
+export const billingRouter = createRouter();
 
 // Auth + Subscription + Billing Feature Gate (via subscriptionMiddleware)
 // hasAccounts plan check is handled inside subscriptionMiddleware for /billing routes

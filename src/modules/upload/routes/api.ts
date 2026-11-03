@@ -1,11 +1,11 @@
-import { Hono } from "hono";
+import { createRouter } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
 import { denyRole } from "@/middlewares/role-middleware.js";
 import { requirePermission } from "@/middlewares/permission-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import { processUpload, savePurchases, savePurchasesAsync, replaceDuplicate, savePendingFfs } from "../controllers/upload.controller.js";
 
-const uploadRouter = new Hono({ strict: false });
+const uploadRouter = createRouter();
 
 uploadRouter.use("*", authMiddleware, denyRole("superadmin"), subscriptionMiddleware);
 

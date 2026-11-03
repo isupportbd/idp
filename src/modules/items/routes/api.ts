@@ -1,11 +1,11 @@
-import { Hono } from "hono";
+import { createRouter } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
 import { denyRole } from "@/middlewares/role-middleware.js";
 import { requirePermission } from "@/middlewares/permission-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import { getItems, bulkCreateItems } from "../controllers/items.controller.js";
 
-const itemsRouter = new Hono();
+const itemsRouter = createRouter();
 
 itemsRouter.use("*", authMiddleware, denyRole("superadmin"), subscriptionMiddleware);
 
