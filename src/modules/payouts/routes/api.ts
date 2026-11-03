@@ -25,7 +25,7 @@ import {
 } from "../controllers/payouts.schema.js";
 
 const okEnvelope = (description: string) =>
-  jsonContent(z.object({ message: z.string(), data: z.any() }), description);
+  jsonContent(z.object({ message: z.string(), data: z.unknown() }), description);
 
 // ── META ─────────────────────────────────────────────────────────────
 const metaRoute = createRoute({

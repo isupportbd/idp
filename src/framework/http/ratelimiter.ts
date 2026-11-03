@@ -35,7 +35,6 @@ function adaptRedis(raw: RedisScriptClient) {
     del: (key: string) => raw.del(key)
   };
 }
-
 const REDIS_RETRY_MS = 30_000;
 
 /**
@@ -77,7 +76,7 @@ function createFailingOverStore() {
       }
 
       try {
-        redisStore = new RedisStore({ client: adaptRedis(raw), prefix: rateLimitConfig.keyPrefix });
+        redisStore = new RedisStore({ client: adaptRedis(raw as unknown as RedisScriptClient), prefix: rateLimitConfig.keyPrefix });
         redisStore.init(options as Parameters<RedisStore["init"]>[0]);
       } catch {
         enterCooldown();

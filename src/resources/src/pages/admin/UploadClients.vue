@@ -4,8 +4,10 @@ import { useRouter } from "vue-router";
 import axios from "axios";
 import { useToast } from "@/composables/useToast";
 import SearchInput from "@/components/common/SearchInput.vue";
+import { useExcelExport } from "@/composables/useExcelExport";
 
 const router = useRouter();
+const { exportSingleSheet } = useExcelExport();
 const toast = useToast();
 
 // ── File Selection & Parsing State ───────────────────────────

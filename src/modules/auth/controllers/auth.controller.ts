@@ -38,7 +38,7 @@ import { companySettings } from "@/modules/firm/database/models/company_settings
  * When: Used on first-time account creation.
  * Where: POST auth register route.
  */
-export const register: Handler = async (c: AppContext) => {
+export const register = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
     const email = String(body.email || "").trim().toLowerCase();
@@ -131,6 +131,10 @@ export const register: Handler = async (c: AppContext) => {
       where: eq(users.id, insertedId),
       with: { role: true }
     });
+
+    if (!user) {
+      throw new Error("Failed to load registered user");
+    }
 
     // Initialize clean firm profile for tenant
     try {
@@ -259,7 +263,7 @@ export const register: Handler = async (c: AppContext) => {
  * When: Used whenever a user signs in.
  * Where: POST auth login route.
  */
-export const login: Handler = async (c: AppContext) => {
+export const login = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
     const email = String(body.email || "").trim().toLowerCase();
@@ -330,7 +334,7 @@ export const login: Handler = async (c: AppContext) => {
  * When: Used by clients to bootstrap session/user state.
  * Where: GET auth me route.
  */
-export const me: Handler = async (c: AppContext) => {
+export const me = async (c: AppContext) => {
   try {
     const auth = c.get("auth");
     const user = await db.query.users.findFirst({
@@ -358,7 +362,7 @@ export const me: Handler = async (c: AppContext) => {
  * When: Used when the active device logs out.
  * Where: POST auth logout route.
  */
-export const logout: Handler = async (c: AppContext) => {
+export const logout = async (c: AppContext) => {
   try {
     const auth = c.get("auth") || c.get("user");
     if (auth && auth.id) {
@@ -389,7 +393,7 @@ export const logout: Handler = async (c: AppContext) => {
  * When: Used when user requests a forgot-password link.
  * Where: POST auth forgot-password route.
  */
-export const forgotPassword: Handler = async (c: AppContext) => {
+export const forgotPassword = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
     await db
@@ -518,7 +522,7 @@ If you did not make this request, please ignore this email.
  * When: Used after user submits reset token + new password.
  * Where: POST auth reset-password route.
  */
-export const resetPassword: Handler = async (c: AppContext) => {
+export const resetPassword = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
     const inputToken = (body.token || body.otp || "").toString().trim();
@@ -563,7 +567,7 @@ export const resetPassword: Handler = async (c: AppContext) => {
  * When: Used when user opens verification link from inbox.
  * Where: POST auth verify-email route.
  */
-export const verifyEmail: Handler = async (c: AppContext) => {
+export const verifyEmail = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
 
@@ -598,7 +602,7 @@ export const verifyEmail: Handler = async (c: AppContext) => {
  * When: Used when access token expires but refresh token is still valid.
  * Where: POST auth refresh-token route.
  */
-export const refreshToken: Handler = async (c: AppContext) => {
+export const refreshToken = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
     const payload = await jwt.verifyToken(body.refresh_token, "refresh");
@@ -699,7 +703,7 @@ export const refreshToken: Handler = async (c: AppContext) => {
  * When: Used for "logout from all devices" security action.
  * Where: POST auth logout-all-devices route.
  */
-export const logoutAllDevices: Handler = async (c: AppContext) => {
+export const logoutAllDevices = async (c: AppContext) => {
   try {
     const auth = c.get("auth") || c.get("user");
 
@@ -729,7 +733,7 @@ export const logoutAllDevices: Handler = async (c: AppContext) => {
  * When: Tenant needs to cover subscription shortage or add prepaid balance.
  * Where: POST /api/auth/recharge-wallet route.
  */
-export const rechargeWallet: Handler = async (c: AppContext) => {
+export const rechargeWallet = async (c: AppContext) => {
   try {
     const auth = c.get("auth");
     if (!auth || !auth.id) {
@@ -813,7 +817,7 @@ export const rechargeWallet: Handler = async (c: AppContext) => {
  * When: Called periodically by Header.vue to show live active & online counter.
  * Where: GET /api/auth/users-stats
  */
-export const getUserStats: Handler = async (c: AppContext) => {
+export const getUserStats = async (c: AppContext) => {
   try {
     const auth = c.get("auth") || c.get("user");
     if (!auth || !auth.id) {
@@ -832,7 +836,7 @@ export const getUserStats: Handler = async (c: AppContext) => {
       return c.json({ success: false, message: "Unauthorized" }, HttpStatusCodes.UNAUTHORIZED);
     }
 
-    const currentUserRole = currentUser.role?.name || currentUser.role?.slug || "user";
+    const currentUserRole = currentUser.role?.name || "user";
     const isSuperAdmin = currentUserRole === "superadmin";
 
     // Update current user's updatedAt as heartbeat
@@ -941,7 +945,7 @@ export const getUserStats: Handler = async (c: AppContext) => {
  * When: Triggered when admin tests SMS gateway or dispatches SMS notifications.
  * Where: POST /api/auth/send-test-sms
  */
-export const sendTestSms: Handler = async (c: AppContext) => {
+export const sendTestSms = async (c: AppContext) => {
   try {
     const auth = c.get("auth") || c.get("user");
     if (!auth || !auth.id) {
@@ -1058,7 +1062,7 @@ export const sendTestSms: Handler = async (c: AppContext) => {
  * When: Called when tenant clicks SMS badge in Header or requests balance refresh.
  * Where: POST /api/auth/sync-sms-balance
  */
-export const syncSmsBalance: Handler = async (c: AppContext) => {
+export const syncSmsBalance = async (c: AppContext) => {
   try {
     const auth = c.get("auth") || c.get("user");
     if (!auth || !auth.id) {
@@ -1133,7 +1137,7 @@ export const syncSmsBalance: Handler = async (c: AppContext) => {
  * Where: POST /api/auth/buy-storage route.
  * Rule: Subscription plan MUST be active to purchase extra storage.
  */
-export const buyStorage: Handler = async (c: AppContext) => {
+export const buyStorage = async (c: AppContext) => {
   try {
     const auth = c.get("auth");
     if (!auth || !auth.id) {

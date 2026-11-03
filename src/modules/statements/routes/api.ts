@@ -19,7 +19,7 @@ const getStatementRoute = createRoute({
   tags: ["Statements"],
   description: "Get client financial and submission statement summary",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Statement data")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.unknown() }), "Statement data")
   }
 });
 

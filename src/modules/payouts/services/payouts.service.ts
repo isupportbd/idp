@@ -797,8 +797,8 @@ export async function sendPayoutSms(
       .where(eq(payouts.id, payoutId));
 
     return { status: result.status, response: result.response };
-  } catch (err: any) {
-    const response = err?.message || String(err);
+  } catch (err: unknown) {
+    const response = err instanceof Error ? err.message : String(err);
     await db
       .update(payouts)
       .set({ smsStatus: "FAILED", smsResponse: response, updatedAt: new Date() })

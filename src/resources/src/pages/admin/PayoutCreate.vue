@@ -5,12 +5,11 @@ import MonthNavigator from "@/components/MonthNavigator.vue";
 import IdpSelect from "@/components/common/IdpSelect.vue";
 import { usePayoutsApi, formatBdt, formatMonth, currentMonthValue, type StaffLedgerPreview } from "@/composables/usePayoutsApi";
 import { useToast } from "@/composables/useToast";
-import { useAuth } from "@/composables/useAuth";
+import { can } from "@/composables/useAuth";
 
 const router = useRouter();
 const route = useRoute();
 const toast = useToast();
-const { can } = useAuth();
 
 const { meta, fetchMeta, fetchStaffLedger, createPayout, saving } = usePayoutsApi();
 

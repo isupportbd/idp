@@ -327,7 +327,7 @@ export async function rejectSignup(c: AppContext) {
 // 5. Extend Tenant Subscription
 export async function extendTenant(c: AppContext) {
   try {
-    const id = parseInt(c.req.param("id"));
+    const id = parseInt(c.req.param("id") ?? "");
     const { days } = c.req.valid("json");
 
     if (isNaN(id) || !days || days < 1) {
@@ -380,7 +380,7 @@ export async function extendTenant(c: AppContext) {
 // 5.1 Get Tenant Transaction / Payment History
 export async function getTenantTransactions(c: AppContext) {
   try {
-    const id = parseInt(c.req.param("id"));
+    const id = parseInt(c.req.param("id") ?? "");
     if (isNaN(id)) return c.json({ success: false, error: "Valid ID is required" }, 400);
 
     const [tenant] = await db
@@ -455,7 +455,7 @@ export async function getTenantTransactions(c: AppContext) {
 // 6. Toggle Tenant Status (Active / Suspended)
 export async function toggleTenantStatus(c: AppContext) {
   try {
-    const id = parseInt(c.req.param("id"));
+    const id = parseInt(c.req.param("id") ?? "");
     if (isNaN(id)) return c.json({ success: false, error: "Valid ID is required" }, 400);
 
     const [targetUser] = await db
@@ -486,7 +486,7 @@ export async function toggleTenantStatus(c: AppContext) {
 // 7. Delete Tenant Permanently
 export async function deleteTenant(c: AppContext) {
   try {
-    const id = parseInt(c.req.param("id"));
+    const id = parseInt(c.req.param("id") ?? "");
     if (isNaN(id)) return c.json({ success: false, error: "Valid ID is required" }, 400);
 
     const [targetUser] = await db
@@ -549,7 +549,7 @@ export async function createPlan(c: AppContext) {
 
 export async function updatePlan(c: AppContext) {
   try {
-    const id = parseInt(c.req.param("id"));
+    const id = parseInt(c.req.param("id") ?? "");
     if (isNaN(id)) return c.json({ success: false, error: "Invalid plan ID" }, 400);
 
     const body = c.req.valid("json");
@@ -577,7 +577,7 @@ export async function updatePlan(c: AppContext) {
 
 export async function deletePlan(c: AppContext) {
   try {
-    const id = parseInt(c.req.param("id"));
+    const id = parseInt(c.req.param("id") ?? "");
     if (isNaN(id)) return c.json({ success: false, error: "Invalid plan ID" }, 400);
 
     await db.delete(plans).where(eq(plans.id, id));
@@ -2315,6 +2315,10 @@ export async function approveRecharge(c: AppContext) {
 
     if (tx.status !== "pending") {
       return c.json({ success: true, message: `Transaction is already ${tx.status}` });
+    }
+
+    if (tx.userId === null) {
+      return c.json({ success: false, message: "Transaction is missing its user reference" }, 400);
     }
 
     const [targetUser] = await db.select().from(users).where(eq(users.id, tx.userId));

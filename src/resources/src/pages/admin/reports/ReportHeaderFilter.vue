@@ -6,7 +6,7 @@ import { can } from "@/composables/useAuth";
 
 interface Client {
   id: number;
-  name: string;
+  name?: string;
   bin?: string;
 }
 
@@ -41,7 +41,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "update:selectedClientId", val: number | null): void;
   (e: "update:selectedMonthYear", val: string): void;
-  (e: "clientSelected", client: Client): void;
+  (e: "clientSelected", client: Client | null): void;
   (e: "selectUnit", id: number | null): void;
   (e: "selectItem", item: Item): void;
   (e: "clearItem"): void;

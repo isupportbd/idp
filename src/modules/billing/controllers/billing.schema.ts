@@ -73,3 +73,7 @@ export const clientBillingSummaryQuerySchema = z.object({
   clientId: z.string().optional(),
   month: z.string().optional()
 });
+
+export type CreateBillInput = z.infer<typeof createBillSchema>;
+export type BillItemInput = z.infer<typeof billItemSchema>;
+export type UpdateBillInput = z.infer<typeof updateBillSchema>;

@@ -30,7 +30,7 @@ const getGatewaySettingsRoute = createRoute({
   method: "get",
   tags: ["SMS - Tenant Gateway"],
   description: "Get tenant SMS gateway settings",
-  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Gateway settings") }
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.unknown() }), "Gateway settings") }
 });
 
 const updateGatewaySettingsRoute = createRoute({
@@ -47,7 +47,7 @@ const checkGatewayBalanceRoute = createRoute({
   method: "get",
   tags: ["SMS - Tenant Gateway"],
   description: "Check live SMS gateway balance",
-  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), balance: z.any() }), "Gateway balance") }
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), balance: z.unknown() }), "Gateway balance") }
 });
 
 const sendTestSmsRoute = createRoute({
@@ -64,7 +64,7 @@ const listSmsLogsRoute = createRoute({
   method: "get",
   tags: ["SMS - Tenant Logs"],
   description: "List recent tenant SMS delivery logs",
-  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), logs: z.array(z.any()) }), "SMS logs") }
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), logs: z.array(z.unknown()) }), "SMS logs") }
 });
 
 tenantSmsRouter.api(getGatewaySettingsRoute, getGatewaySettings);
@@ -82,7 +82,7 @@ const listTemplatesRoute = createRoute({
   method: "get",
   tags: ["SMS - SuperAdmin Templates"],
   description: "List all global master SMS templates",
-  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), templates: z.array(z.any()) }), "Templates list") }
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), templates: z.array(z.unknown()) }), "Templates list") }
 });
 
 const updateTemplateRoute = createRoute({

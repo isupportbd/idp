@@ -111,8 +111,8 @@ async function runSeed() {
   // 6. Seed Initial Clients
   const existingClient = (await db.select().from(clients).limit(1))[0];
   if (!existingClient) {
-    const types = await db.select().from(customerTypes);
-    const refs = await db.select().from(clientReferences);
+    const types: (typeof customerTypes.$inferSelect)[] = await db.select().from(customerTypes);
+    const refs: (typeof clientReferences.$inferSelect)[] = await db.select().from(clientReferences);
 
     const importerType = types.find(t => t.typeName === "Importer") || types[0];
     const commType = types.find(t => t.typeName === "Commercial Importer") || types[0];

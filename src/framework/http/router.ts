@@ -2,9 +2,14 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { RouteConfig } from "@hono/zod-openapi";
 import type { Context, MiddlewareHandler, Next } from "hono";
 import { defaultHook } from "stoker/openapi";
+import type { AppContext } from "@/framework/http/context.js";
 
-/** A route handler bound to the generic Hono context (validated input is route-scoped). */
-export type ApiHandler = (c: Context, next: Next) => Response | Promise<Response>;
+/**
+ * A route handler bound to the app context. `AppContext` widens only the
+ * validated-input accessor; every other Context member remains strongly typed.
+ * The router casts the incoming Context once (OpenAPIHono attaches `valid`).
+ */
+export type ApiHandler = (c: AppContext, next: Next) => Response | Promise<Response>;
 /** A middleware in the `api(route, [middlewares], handler)` chain. */
 export type ApiMiddleware = (c: Context, next: () => Promise<void>) => Response | Promise<Response | void> | void;
 
@@ -17,6 +22,9 @@ export type NexgenRouter = OpenAPIHono & {
   ) => NexgenRouter;
 };
 
+type OpenApiHandler = (c: Context, next: Next) => Response | Promise<Response>;
+type OpenApiRegister = (route: RouteConfig, handler: OpenApiHandler) => unknown;
+
 /**
  * Why: Creates the framework router with OpenAPI + helper methods.
  * When: Building root app and module route files.
@@ -25,7 +33,10 @@ export type NexgenRouter = OpenAPIHono & {
  */
 export function createRouter(): NexgenRouter {
   const router = new OpenAPIHono({ strict: false, defaultHook }) as NexgenRouter;
-  const baseOpenapi = router.openapi.bind(router);
+  // OpenAPIHono types handlers against the generic Hono Context. Our handlers use
+  // AppContext (which only widens `req.valid`), so the adaptation happens once here
+  // at the registration boundary rather than at every call site.
+  const baseOpenapi = router.openapi.bind(router) as unknown as OpenApiRegister;
 
   router.group = function (...middlewares) {
     for (const middleware of middlewares) {
@@ -37,7 +48,7 @@ export function createRouter(): NexgenRouter {
 
   router.api = function (route, handlerOrMiddlewares, handler) {
     if (!Array.isArray(handlerOrMiddlewares)) {
-      baseOpenapi(route, handlerOrMiddlewares);
+      baseOpenapi(route, handlerOrMiddlewares as unknown as OpenApiHandler);
       return this;
     }
 
@@ -48,7 +59,7 @@ export function createRouter(): NexgenRouter {
       throw new Error("api(route, middlewares, handler) requires a handler function");
     }
 
-    const wrappedHandler = async (c: Context) => {
+    const wrappedHandler = async (c: Context): Promise<Response> => {
       let index = 0;
 
       const next = async (): Promise<Response | undefined> => {
@@ -63,10 +74,14 @@ export function createRouter(): NexgenRouter {
           return downstream;
         }
 
-        return await finalHandler(c, async () => {});
+        return await finalHandler(c as AppContext, async () => {});
       };
 
-      return await next();
+      const response = await next();
+      if (!response) {
+        throw new Error("api(route, middlewares, handler) produced no response");
+      }
+      return response;
     };
 
     baseOpenapi(route, wrappedHandler);

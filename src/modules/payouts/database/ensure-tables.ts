@@ -10,8 +10,8 @@ export async function ensurePayoutTables(): Promise<void> {
   // Running a fast verification ping to avoid unnecessary DDL execution during boot and test runs.
   try {
     await db.execute(sql`SELECT 1 FROM payouts LIMIT 1`);
-  } catch (err: any) {
+  } catch (err: unknown) {
     // If running on a fresh isolated test DB without migration 0010 applied yet, we gracefully warn
-    console.warn("[ensurePayoutTables]: Note - payouts table verification ping", err?.message || err);
+    console.warn("[ensurePayoutTables]: Note - payouts table verification ping", err instanceof Error ? err.message : err);
   }
 }

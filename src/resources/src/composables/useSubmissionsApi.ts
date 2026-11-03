@@ -5,6 +5,7 @@ export interface SubmissionItem {
   id: number; // Client ID
   submissionRecordId: number | null; // vat_submissions.id
   companyName: string;
+  address?: string;
   binNumber?: string;
   mobile?: string;
   customerTypeId?: number;

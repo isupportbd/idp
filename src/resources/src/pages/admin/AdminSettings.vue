@@ -277,7 +277,7 @@ onMounted(async () => {
       v-if="activeTab === 'bank'"
       :bank-accounts="bankAccounts"
       :default-account-name="form.companyName"
-      :default-phone="form.phone"
+      :default-phone="form.phone ?? undefined"
       :can-edit="canEditSettings"
       @refresh="fetchBankAccounts"
     />

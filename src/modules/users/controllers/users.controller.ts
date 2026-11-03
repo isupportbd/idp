@@ -10,7 +10,7 @@ import { DEFAULT_SUB_USER_PERMISSIONS, PERMISSION_MODULES, normalizePermissions 
 import { CreateUserSchema, UpdateUserSchema, ResetPasswordSchema, UpdateStatusSchema } from "./users.schema.js";
 
 // 0. Permission catalog (modules and their actions) for the sub-user form
-export const getPermissionCatalog: Handler = async (c: AppContext) => {
+export const getPermissionCatalog = async (c: AppContext) => {
   return c.json(
     { success: true, data: PERMISSION_MODULES, defaults: DEFAULT_SUB_USER_PERMISSIONS },
     HttpStatusCodes.OK
@@ -33,7 +33,7 @@ async function resolveTenantAdmin(c: AppContext) {
 }
 
 // 1. List Sub-Users
-export const listUsers: Handler = async (c: AppContext) => {
+export const listUsers = async (c: AppContext) => {
   try {
     const tenantInfo = await resolveTenantAdmin(c);
     if (!tenantInfo) {
@@ -121,7 +121,7 @@ export const listUsers: Handler = async (c: AppContext) => {
 };
 
 // 2. Create Sub-User
-export const createUser: Handler = async (c: AppContext) => {
+export const createUser = async (c: AppContext) => {
   try {
     const tenantInfo = await resolveTenantAdmin(c);
     if (!tenantInfo) {
@@ -233,7 +233,7 @@ export const createUser: Handler = async (c: AppContext) => {
 };
 
 // 3. Update Sub-User
-export const updateUser: Handler = async (c: AppContext) => {
+export const updateUser = async (c: AppContext) => {
   try {
     const tenantInfo = await resolveTenantAdmin(c);
     if (!tenantInfo) {
@@ -302,7 +302,7 @@ export const updateUser: Handler = async (c: AppContext) => {
 };
 
 // 4. Reset User Password
-export const resetUserPassword: Handler = async (c: AppContext) => {
+export const resetUserPassword = async (c: AppContext) => {
   try {
     const tenantInfo = await resolveTenantAdmin(c);
     if (!tenantInfo) {
@@ -336,7 +336,7 @@ export const resetUserPassword: Handler = async (c: AppContext) => {
 };
 
 // 5. Toggle / Update User Status
-export const updateUserStatus: Handler = async (c: AppContext) => {
+export const updateUserStatus = async (c: AppContext) => {
   try {
     const tenantInfo = await resolveTenantAdmin(c);
     if (!tenantInfo) {
@@ -398,7 +398,7 @@ export const updateUserStatus: Handler = async (c: AppContext) => {
 };
 
 // 6. Delete Sub-User
-export const deleteUser: Handler = async (c: AppContext) => {
+export const deleteUser = async (c: AppContext) => {
   try {
     const tenantInfo = await resolveTenantAdmin(c);
     if (!tenantInfo) {

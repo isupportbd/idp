@@ -7,6 +7,8 @@ import IdpSelect from "@/components/common/IdpSelect.vue";
 import { usePulseListener } from "@/composables/usePulseListener";
 import { useExcelExport } from "@/composables/useExcelExport";
 
+const { exportSingleSheet } = useExcelExport();
+
 interface UnitConversion {
   id: number;
   purchaseUnit: string;

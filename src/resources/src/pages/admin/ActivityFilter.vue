@@ -12,6 +12,7 @@ import { useExcelExport } from "@/composables/useExcelExport";
 import { pulse } from "@/plugins/pulse";
 
 const router = useRouter();
+const { exportSingleSheet } = useExcelExport();
 const route = useRoute();
 const { loading, matrixData, stats, clientTypes, references, loadActivityMatrix } = useActivityFilterApi();
 

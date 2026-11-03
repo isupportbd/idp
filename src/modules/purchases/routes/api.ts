@@ -35,7 +35,7 @@ const listPurchasesRoute = createRoute({
   tags: ["Purchases"],
   description: "List purchases filtered by month, client, etc.",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Purchases list")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.unknown() }), "Purchases list")
   }
 });
 

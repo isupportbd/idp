@@ -109,10 +109,10 @@ export async function runDueReminderScan(options?: { adminIds?: number[] }): Pro
         if (outcome.inline) inlineRuns.push(outcome.inline);
         result.dispatched += 1;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn(
         `[SMS] due-reminder scan skipped a firm (admin ${tenantAdminId ?? "global"}):`,
-        err?.message || err
+        err instanceof Error ? err.message : err
       );
     }
   }

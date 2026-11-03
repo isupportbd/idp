@@ -174,7 +174,7 @@ export async function paginate<T = any>(
     maxPerPage: options.maxPerPage,
     path: resolvedPath,
     total: async () => {
-      const inner = db.select({ val: sql`1` }).from(query.as("_inner"));
+      const inner = db.select({ val: sql`1` }).from(query.as("_inner")).as("_counted");
       const [row] = await db.select({ total: count() }).from(inner);
       return Number(row?.total ?? 0);
     },
@@ -204,8 +204,8 @@ export async function paginateModel<T = any>(c: RequestLike, options: PaginateMo
       if (options.total) return Number(await options.total());
       if (!options.table) throw new Error("paginateModel requires either table or total callback");
 
-      let totalQuery = db.select({ total: count() }).from(options.table);
-      if (options.where) totalQuery = totalQuery.where(options.where);
+      const baseCount = db.select({ total: count() }).from(options.table);
+      const totalQuery = options.where ? baseCount.where(options.where) : baseCount;
       const [row] = await totalQuery;
       return Number(row?.total ?? 0);
     },

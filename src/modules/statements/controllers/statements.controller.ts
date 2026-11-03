@@ -33,7 +33,7 @@ function generateMonthRange(fromMonth: string, toMonth: string): string[] {
   return result;
 }
 
-export const getStatementReport: Handler = async (c: AppContext) => {
+export const getStatementReport = async (c: AppContext) => {
   try {
     const query = c.req.query();
     const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);

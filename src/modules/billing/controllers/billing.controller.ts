@@ -1,6 +1,6 @@
 import type { AppContext } from "@/framework/facade.js";
-import { and, asc, desc, eq, ilike, inArray, like, ne, or, sql } from "drizzle-orm";
-import type { Handler } from "hono";
+import { and, asc, desc, eq, ilike, inArray, like, ne, or, sql, type SQL } from "drizzle-orm";
+import type { CreateBillInput, UpdateBillInput } from "./billing.schema.js";
 import {
   billingScope,
   broadcast,
@@ -34,6 +34,48 @@ import { bankAccounts } from "@/modules/firm/database/models/bank_accounts.js";
 function r2(num: number): number {
   return Math.round((num + Number.EPSILON) * 100) / 100;
 }
+
+/** A suggested line item for preview / auto-generation. */
+type SuggestedBillItem = {
+  serviceItemId: number | null;
+  itemName: string;
+  unit: string;
+  qty: number;
+  rateUsed: number;
+  minimumChargeUsed: number;
+  calculatedAmount: number;
+  finalAmount: number;
+  isRateMissing?: boolean;
+  notes: string;
+};
+
+/** A bill summary emitted by the batch generator (returned to the caller). */
+type CreatedBillSummary = {
+  id: number;
+  billNo: string;
+  companyName: string;
+  grandTotal: number;
+};
+
+/** A client flagged as unbilled for a month, with the computed service fee. */
+type MissingBillingClient = {
+  id: number;
+  companyName: string;
+  proprietorName: string | null;
+  binNumber: string | null;
+  mobile: string | null;
+  tinNumber: string | null;
+  customerTypeId: number | null;
+  customerTypeName: string | null;
+  referenceId: number | null;
+  referenceName: string | null;
+  vatServiceType: string | null;
+  targetMonth: string;
+  submissionId: string | null;
+  isSubmitted: boolean;
+  previousDue: number;
+  monthlyServiceFee: number;
+};
 
 /**
  * Why: The invoice's "Payment Details" card must show the tenant's own bKash /
@@ -81,7 +123,7 @@ async function resolvePaymentInfo(tenantAdminId: number | null) {
 
 /**
  * Why: Item-level billing endpoints previously trusted the client-supplied id,
- *      letting any authenticated user read/modify another tenant's rows (IDOR).
+ *      letting an authenticated user read/modify another tenant's rows (IDOR).
  * How: Loads the row together with its owning client and enforces the caller's
  *      tenant. Superadmins bypass the tenant filter.
  * Returns the row when owned, otherwise null (caller responds 404).
@@ -120,8 +162,8 @@ async function loadScopedCollection(c: AppContext, id: number) {
  */
 async function clientBelongsToTenant(c: AppContext, clientId: number): Promise<boolean> {
   const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
-  const conditions: any[] = [eq(clients.id, clientId)];
-  if (!isSuperAdmin) conditions.push(eq(clients.createdBy, tenantAdminId));
+  const conditions: SQL[] = [eq(clients.id, clientId)];
+  if (!isSuperAdmin) conditions.push(eq(clients.createdBy, tenantAdminId ?? -1));
   const row = (await db.select({ id: clients.id }).from(clients).where(and(...conditions)).limit(1))[0];
   return !!row;
 }
@@ -147,7 +189,7 @@ async function generateNextBillNo(year: number, customPrefix?: string, tenantAdm
   }
   const cleanPrefix = (prefixToUse || "INV").replace(/-+$/, "").toUpperCase();
   const prefix = `${cleanPrefix}-${year}-`;
-  const conditions: any[] = [or(like(bills.billNo, `${prefix}%`), ilike(bills.billNo, `%-${year}-%`))];
+  const conditions: (SQL | undefined)[] = [or(like(bills.billNo, `${prefix}%`), ilike(bills.billNo, `%-${year}-%`))];
   if (tenantAdminId) {
     conditions.push(eq(bills.createdBy, tenantAdminId));
   }
@@ -194,7 +236,7 @@ async function generateNextReceiptNo(year: number, customPrefix?: string, tenant
   }
   const cleanPrefix = (prefixToUse || "RCP").replace(/-+$/, "").toUpperCase();
   const prefix = `${cleanPrefix}-${year}-`;
-  const conditions: any[] = [or(like(collections.receiptNo, `${prefix}%`), ilike(collections.receiptNo, `%-${year}-%`))];
+  const conditions: (SQL | undefined)[] = [or(like(collections.receiptNo, `${prefix}%`), ilike(collections.receiptNo, `%-${year}-%`))];
   if (tenantAdminId) {
     conditions.push(eq(clients.createdBy, tenantAdminId));
   }
@@ -352,13 +394,13 @@ async function getBatchClientsRunningDue(clientIds: number[]): Promise<Map<numbe
 
 // ── 3. LIST INVOICES / BILLS ─────────────────────────────────────────
 
-export const listBills: Handler = async (c: AppContext) => {
+export const listBills = async (c: AppContext) => {
   try {
     const query = c.req.valid("query");
     const month = query.month || query.taxPeriod;
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
-    let conditions: any[] = [];
+    let conditions: SQL[] = [];
     if (!isSuperAdmin && tenantAdminId) {
       conditions.push(eq(clients.createdBy, tenantAdminId));
     }
@@ -412,7 +454,7 @@ export const listBills: Handler = async (c: AppContext) => {
 
     // Fetch line items for the bills
     const billIds = rows.map((r) => r.id);
-    let itemsMap: Record<number, any[]> = {};
+    let itemsMap: Record<number, (typeof billItems.$inferSelect)[]> = {};
     if (billIds.length > 0) {
       const allItems = await db
         .select()
@@ -482,7 +524,7 @@ export const listBills: Handler = async (c: AppContext) => {
 
 // ── 4. GET BILL DETAILS ──────────────────────────────────────────────
 
-export const getBillDetails: Handler = async (c: AppContext) => {
+export const getBillDetails = async (c: AppContext) => {
   try {
     const id = Number(c.req.param("id"));
     if (isNaN(id)) {
@@ -546,7 +588,7 @@ export const getBillDetails: Handler = async (c: AppContext) => {
       .from(collections)
       .where(eq(collections.billId, id));
 
-    // Fetch matching VAT return submission if any
+    // Fetch matching VAT return submission, if present
     const submission = (
       await db
         .select({ submissionId: vatSubmissions.submissionId, submittedAt: vatSubmissions.submittedAt })
@@ -566,12 +608,13 @@ export const getBillDetails: Handler = async (c: AppContext) => {
     // fallback, so one firm's clients can never be shown another firm's (or the
     // superadmin's) account details.
     const tenantAdminId = bill.clientOwner ? Number(bill.clientOwner) : null;
-    let firmSetting: any = null;
+    let firmSetting: (typeof companySettings.$inferSelect) | null = null;
     try {
       if (tenantAdminId) {
-        firmSetting = await db.query.companySettings.findFirst({
-          where: eq(companySettings.adminId, tenantAdminId)
-        });
+        firmSetting =
+          (await db.query.companySettings.findFirst({
+            where: eq(companySettings.adminId, tenantAdminId)
+          })) ?? null;
       }
     } catch (err) {
       console.warn("Failed to query company settings for bill print branding:", err);
@@ -628,7 +671,7 @@ export const getBillDetails: Handler = async (c: AppContext) => {
 
 // ── 5. CLIENT BILLING OVERVIEW & AUTO-ITEMS HELPER ───────────────────
 
-export const getClientBillingOverview: Handler = async (c: AppContext) => {
+export const getClientBillingOverview = async (c: AppContext) => {
   try {
     const query = c.req.valid("query");
     const clientId = Number(query.clientId);
@@ -754,7 +797,7 @@ export const getClientBillingOverview: Handler = async (c: AppContext) => {
 
     // 6. Auto-calculate suggested line items for selected targetMonth
     const isOnlyReturn = client.vatServiceType === "ONLY_RETURN";
-    const suggestedItems: any[] = [];
+    const suggestedItems: SuggestedBillItem[] = [];
     const hasMonthlyPurchases = purchaseCount > 0 || totalNetWtKg > 0;
 
     // Item A: VAT Return Submission (Dynamic Regular vs Zero selection)
@@ -855,7 +898,7 @@ export const getClientBillingOverview: Handler = async (c: AppContext) => {
           masterServices: allServiceItems.map((s) => ({
             id: s.id,
             itemName: s.itemName,
-            unit: rateMap[s.id]?.unit || (s as any).defaultUnit || "Month",
+            unit: rateMap[s.id]?.unit || "Month",
             regularRate: rateMap[s.id]?.regularRate || 0,
             minimumCharge: rateMap[s.id]?.minimumCharge || 0
           }))
@@ -873,9 +916,9 @@ export const getClientBillingOverview: Handler = async (c: AppContext) => {
 
 // ── 6. CREATE SINGLE BILL ────────────────────────────────────────────
 
-export const createBill: Handler = async (c: AppContext) => {
+export const createBill = async (c: AppContext) => {
   try {
-    const payload = c.req.valid("json");
+    const payload = c.req.valid("json") as CreateBillInput;
     const { clientId, referenceId: payloadRefId, taxPeriod, billDate, dueDate, discountAmount, notes, items, status } = payload;
 
     // Tenant ownership guard — a sub-user/tenant must not bill another tenant's client.
@@ -971,7 +1014,7 @@ export const createBill: Handler = async (c: AppContext) => {
     const { tenantAdminId: creatorId } = await resolveTenantContext(c);
 
     let billNo = await generateNextBillNo(year);
-    let newBill: any;
+    let newBill!: typeof bills.$inferSelect;
     for (let attempt = 0; ; attempt++) {
       try {
         newBill = await db.transaction(async (tx) => {
@@ -1018,13 +1061,14 @@ export const createBill: Handler = async (c: AppContext) => {
           return created;
         });
         break;
-      } catch (insertErr: any) {
-        const code = insertErr?.code ?? insertErr?.cause?.code;
+      } catch (insertErr: unknown) {
+        const insertErrLike = insertErr as { code?: string; cause?: { code?: string }; message?: string };
+        const code = insertErrLike?.code ?? insertErrLike?.cause?.code;
         const isDuplicateBillNo =
           code === "23505" ||
           code === "SQLITE_CONSTRAINT_UNIQUE" ||
           code === "ER_DUP_ENTRY" ||
-          /duplicate key|unique constraint|UNIQUE constraint/i.test(String(insertErr?.message ?? ""));
+          /duplicate key|unique constraint|UNIQUE constraint/i.test(String(insertErrLike?.message ?? ""));
         if (!isDuplicateBillNo || attempt >= 4) throw insertErr;
         billNo = await generateNextBillNo(year);
       }
@@ -1123,7 +1167,7 @@ export type BatchGenerationParams = {
 };
 
 export type BatchGenerationResult = {
-  createdBillsList: any[];
+  createdBillsList: CreatedBillSummary[];
   skippedCount: number;
 };
 
@@ -1139,7 +1183,7 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
   const year = parsedBillDate.getFullYear();
 
   // 1. Fetch all Active Clients
-  const clientConditions: any[] = [eq(clients.isActive, true)];
+  const clientConditions: SQL[] = [eq(clients.isActive, true)];
   if (!isSuperAdmin && creatorId) {
     clientConditions.push(eq(clients.createdBy, creatorId));
   }
@@ -1198,7 +1242,7 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
   const allServices = await db.select().from(serviceItems).where(eq(serviceItems.isActive, true));
   const allRates = await db.select().from(serviceRates);
 
-  const createdBillsList: any[] = [];
+  const createdBillsList: CreatedBillSummary[] = [];
   let skippedCount = 0;
   let processedCount = 0;
   const totalCount = targetClients.length;
@@ -1222,7 +1266,7 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
     .where(eq(purchases.month, taxPeriod))
     .groupBy(purchases.clientId);
 
-  const clientPurchaseMap = new Map<string, number>(purchaseRows.map((p) => [p.clientId, Number(p.totalNetWtKg) || 0]));
+  const clientPurchaseMap = new Map<number, number>(purchaseRows.map((p): [number, number] => [p.clientId, Number(p.totalNetWtKg) || 0]));
 
   // Resolve the firm's bill-notification toggle once per tenant for the whole
   // batch so a 100-invoice run does not issue 100 settings queries.
@@ -1254,12 +1298,12 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
 
     // Rates lookup for this client's customer type
     const clientRates = allRates.filter((r) => r.customerTypeId === client.customerTypeId || !r.customerTypeId);
-    const netWtKg: number = Number(clientPurchaseMap.get(client.id)) || 0;
+    const netWtKg: number = clientPurchaseMap.get(client.id) ?? 0;
     const netWtMt = r2(netWtKg / 1000);
     const hasPurchases = netWtKg > 0;
 
     // 1. VAT Return Fee (Dynamic Regular vs Zero)
-    let returnItem: any = null;
+    let returnItem: (typeof allServices)[number] | null | undefined = null;
     if (hasPurchases) {
       returnItem = allServices.find(
         (s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("regular")
@@ -1278,7 +1322,7 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
     const returnUnit = returnRateObj?.unit || "Month";
 
     // Generate Line Items
-    const itemsToInsert: any[] = [];
+    const itemsToInsert: SuggestedBillItem[] = [];
 
     itemsToInsert.push({
       serviceItemId: returnItem ? returnItem.id : null,
@@ -1424,7 +1468,7 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
  * Synchronous REST endpoint — response shape unchanged. Heavy batches can be
  * routed to the queue via `batchGenerateBillsAsync` instead.
  */
-export const batchGenerateBills: Handler = async (c: AppContext) => {
+export const batchGenerateBills = async (c: AppContext) => {
   try {
     const payload = c.req.valid("json");
     const { taxPeriod, billDate, dueDate, clientIds } = payload;
@@ -1496,7 +1540,7 @@ function makeBatchJobId(tenantId: string | number | null | undefined, taxPeriod:
  * How: Enqueues onto the `billing` queue; falls back to the sync handler when the
  *      flag is off, the batch is small, or Redis is unavailable.
  */
-export const batchGenerateBillsAsync: Handler = async (c: AppContext) => {
+export const batchGenerateBillsAsync = async (c: AppContext) => {
   const payload = c.req.valid("json");
   const { taxPeriod, billDate, dueDate, clientIds } = payload;
   const { tenantAdminId } = await resolveTenantContext(c);
@@ -1509,7 +1553,7 @@ export const batchGenerateBillsAsync: Handler = async (c: AppContext) => {
     queue: "billing",
     jobName: "billing.batch.generate",
     shouldUseAsync: shouldUseBillingBatchAsync(clientCount),
-    fallback: () => (batchGenerateBills as any)(c),
+    fallback: () => batchGenerateBills(c),
     idemParts: [tenantAdminId, taxPeriod, "batch", clientCount, (clientIds || []).join(",")],
     makeJobId: (idemKey) => makeBatchJobId(tenantAdminId, taxPeriod, idemKey),
     buildPayload: (jobId) => ({
@@ -1529,13 +1573,13 @@ export const batchGenerateBillsAsync: Handler = async (c: AppContext) => {
 
 // ── 8. GET MISSING BILLS LIST ────────────────────────────────────────
 
-export const getMissingBills: Handler = async (c: AppContext) => {
+export const getMissingBills = async (c: AppContext) => {
   try {
     const query = c.req.valid("query");
     const month = query.month || query.taxPeriod || new Date().toISOString().slice(0, 7);
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
-    const clientConditions: any[] = [eq(clients.isActive, true)];
+    const clientConditions: SQL[] = [eq(clients.isActive, true)];
     if (!isSuperAdmin && tenantAdminId) {
       clientConditions.push(eq(clients.createdBy, tenantAdminId));
     }
@@ -1598,13 +1642,13 @@ export const getMissingBills: Handler = async (c: AppContext) => {
         )
       );
 
-    const subMap = new Map<number, any>(submissions.map((s) => [s.clientId, s]));
+    const subMap = new Map<number, (typeof submissions)[number]>(submissions.map((s) => [s.clientId, s]));
 
     // Fetch Master Services and Rates to calculate exact service fee
     const allServices = await db.select().from(serviceItems).where(eq(serviceItems.isActive, true));
     const allRates = await db.select().from(serviceRates);
 
-    const missingList: any[] = [];
+    const missingList: MissingBillingClient[] = [];
     const unbilledClients = activeClients.filter((cl) => !billedSet.has(cl.id));
     const batchDueMap = await getBatchClientsRunningDue(unbilledClients.map((cl) => cl.id));
 
@@ -1618,7 +1662,7 @@ export const getMissingBills: Handler = async (c: AppContext) => {
       .where(eq(purchases.month, month))
       .groupBy(purchases.clientId);
 
-    const clientPurchaseMap = new Map<string, number>(purchaseRows.map((p) => [p.clientId, Number(p.totalNetWtKg) || 0]));
+    const clientPurchaseMap = new Map<number, number>(purchaseRows.map((p): [number, number] => [p.clientId, Number(p.totalNetWtKg) || 0]));
 
     for (const cl of unbilledClients) {
       const sub = subMap.get(cl.id);
@@ -1626,7 +1670,7 @@ export const getMissingBills: Handler = async (c: AppContext) => {
 
       // Compute exact service fee
       const clientRates = allRates.filter((r) => r.customerTypeId === cl.customerTypeId || !r.customerTypeId);
-      const netWtKg: number = Number(clientPurchaseMap.get(cl.id)) || 0;
+      const netWtKg: number = clientPurchaseMap.get(cl.id) ?? 0;
       const netWtMt = r2(netWtKg / 1000);
       const hasPurchases = netWtKg > 0;
 
@@ -1729,10 +1773,10 @@ export const getMissingBills: Handler = async (c: AppContext) => {
 
 // ── 9. UPDATE & DELETE BILL ──────────────────────────────────────────
 
-export const updateBill: Handler = async (c: AppContext) => {
+export const updateBill = async (c: AppContext) => {
   try {
     const id = Number(c.req.param("id"));
-    const payload = c.req.valid("json");
+    const payload = c.req.valid("json") as UpdateBillInput;
 
     const existing = await loadScopedBill(c, id);
 
@@ -1740,7 +1784,7 @@ export const updateBill: Handler = async (c: AppContext) => {
       return c.json({ message: "Bill not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
-    const updatedData: any = {
+    const updatedData: Partial<typeof bills.$inferInsert> = {
       updatedAt: new Date()
     };
 
@@ -1749,7 +1793,8 @@ export const updateBill: Handler = async (c: AppContext) => {
     if (payload.notes !== undefined) updatedData.notes = payload.notes;
     if (payload.status) updatedData.status = payload.status;
 
-    const hasItems = Array.isArray(payload.items) && payload.items.length > 0;
+    const items = payload.items;
+    const hasItems = Array.isArray(items) && items.length > 0;
     const discountTouched = payload.discountAmount !== undefined;
 
     // Recompute totals when EITHER items or discount change. Previously the whole
@@ -1757,9 +1802,9 @@ export const updateBill: Handler = async (c: AppContext) => {
     // was accepted by the API but silently discarded.
     if (hasItems || discountTouched) {
       const newSubtotal = hasItems
-        ? r2(payload.items.reduce((acc: number, it: any) => acc + (it.finalAmount || 0), 0))
+        ? r2(items.reduce((acc: number, it) => acc + (it.finalAmount || 0), 0))
         : r2(existing.subtotal);
-      const discount = discountTouched ? r2(payload.discountAmount) : r2(existing.discountAmount);
+      const discount = discountTouched ? r2(payload.discountAmount ?? 0) : r2(existing.discountAmount);
       const grandTotal = r2(Math.max(0, newSubtotal - discount + existing.previousDue));
       const dueAmount = r2(Math.max(0, grandTotal - existing.paidAmount));
 
@@ -1781,7 +1826,7 @@ export const updateBill: Handler = async (c: AppContext) => {
         // leave the invoice without its line items.
         await tx.delete(billItems).where(eq(billItems.billId, id));
         await tx.insert(billItems).values(
-          payload.items.map((it: any) => ({
+          items.map((it) => ({
             billId: id,
             serviceItemId: it.serviceItemId || null,
             itemName: it.itemName.trim(),
@@ -1811,7 +1856,7 @@ export const updateBill: Handler = async (c: AppContext) => {
   }
 };
 
-export const deleteBill: Handler = async (c: AppContext) => {
+export const deleteBill = async (c: AppContext) => {
   try {
     const id = Number(c.req.param("id"));
     const existing = await loadScopedBill(c, id);
@@ -1857,11 +1902,11 @@ export const deleteBill: Handler = async (c: AppContext) => {
 
 // ── 10. COLLECTIONS & MONEY RECEIPTS ─────────────────────────────────
 
-export const listCollections: Handler = async (c: AppContext) => {
+export const listCollections = async (c: AppContext) => {
   try {
     const query = c.req.valid("query");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
-    let conditions: any[] = [];
+    let conditions: SQL[] = [];
 
     if (!isSuperAdmin && tenantAdminId) {
       conditions.push(eq(clients.createdBy, tenantAdminId));
@@ -1937,13 +1982,13 @@ export const listCollections: Handler = async (c: AppContext) => {
   }
 };
 
-export const createCollection: Handler = async (c: AppContext) => {
+export const createCollection = async (c: AppContext) => {
   try {
     const payload = c.req.valid("json");
     const { clientId, billId, collectionDate, amount, paymentMethod, referenceNo, notes } = payload;
     const { userId, tenantAdminId } = await resolveTenantContext(c);
 
-    // Tenant guard: the client (and any linked bill) must belong to the caller.
+    // Tenant guard: the client (and every linked bill) must belong to the caller.
     if (!(await clientBelongsToTenant(c, Number(clientId)))) {
       return c.json({ message: "Client not found" }, HttpStatusCodes.NOT_FOUND);
     }
@@ -2083,7 +2128,7 @@ export const createCollection: Handler = async (c: AppContext) => {
   }
 };
 
-export const cancelCollection: Handler = async (c: AppContext) => {
+export const cancelCollection = async (c: AppContext) => {
   try {
     const id = Number(c.req.param("id"));
     const col = await loadScopedCollection(c, id);
@@ -2128,7 +2173,7 @@ export const cancelCollection: Handler = async (c: AppContext) => {
   }
 };
 
-export const getCollectionDetails: Handler = async (c: AppContext) => {
+export const getCollectionDetails = async (c: AppContext) => {
   try {
     const id = Number(c.req.param("id"));
     if (!id || isNaN(id)) {
@@ -2203,14 +2248,15 @@ export const getCollectionDetails: Handler = async (c: AppContext) => {
 
     // Tenant-scoped company branding — resolved from the client owner's Firm
     // Settings only, with no cross-tenant fallback.
-    let firmSetting: any = null;
+    let firmSetting: (typeof companySettings.$inferSelect) | null = null;
     try {
       if (col.createdBy) {
-        firmSetting = await db.query.companySettings.findFirst({
-          where: eq(companySettings.adminId, col.createdBy)
-        });
+        firmSetting =
+          (await db.query.companySettings.findFirst({
+            where: eq(companySettings.adminId, col.createdBy)
+          })) ?? null;
       }
-    } catch (billErr: any) { console.warn("[Billing Warning]:", billErr?.message || billErr); }
+    } catch (billErr: unknown) { console.warn("[Billing Warning]:", billErr instanceof Error ? billErr.message : billErr); }
 
     return c.json(
       {

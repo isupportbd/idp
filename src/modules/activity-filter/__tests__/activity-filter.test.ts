@@ -8,6 +8,7 @@ import { users } from "@/modules/auth/database/models/user.js";
 import { and, eq } from "drizzle-orm";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { zValidator } from "@hono/zod-validator";
+import type { Handler } from "hono";
 import activityFilterRouter from "../routes/api.js";
 import { getActivityMatrix } from "../controllers/activity-filter.controller.js";
 import { QueryActivityFilterSchema } from "../controllers/activity-filter.schema.js";
@@ -53,7 +54,8 @@ describe("Activity Filter Module Integration Tests", () => {
         await next();
       },
       zValidator("query", QueryActivityFilterSchema),
-      getActivityMatrix
+      // The real route uses router.api(...) which casts Context→AppContext at its boundary.
+      getActivityMatrix as unknown as Handler
     );
 
     // Create client 1 (Submitted)

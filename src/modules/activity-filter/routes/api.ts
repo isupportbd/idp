@@ -19,7 +19,7 @@ const getActivityMatrixRoute = createRoute({
     query: QueryActivityFilterSchema
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.any(), "Activity matrix dataset")
+    [HttpStatusCodes.OK]: jsonContent(z.unknown(), "Activity matrix dataset")
   }
 });
 

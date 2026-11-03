@@ -9,7 +9,7 @@ import { unitConversions } from "@/database/schema.js";
 import { users } from "@/database/schema.js";
 
 // ── 1. LIST SALES RATES ───────────────────────────────────────────────
-export const listSalesRates: Handler = async (c: AppContext) => {
+export const listSalesRates = async (c: AppContext) => {
   try {
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
@@ -125,7 +125,7 @@ export const listSalesRates: Handler = async (c: AppContext) => {
 };
 
 // ── 2. CREATE SALES RATE ──────────────────────────────────────────────
-export const createSalesRate: Handler = async (c: AppContext) => {
+export const createSalesRate = async (c: AppContext) => {
   try {
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
     const adminId = tenantAdminId;
@@ -207,7 +207,7 @@ export const createSalesRate: Handler = async (c: AppContext) => {
 };
 
 // ── 3. UPDATE SALES RATE ──────────────────────────────────────────────
-export const updateSalesRate: Handler = async (c: AppContext) => {
+export const updateSalesRate = async (c: AppContext) => {
   try {
     const id = Number(c.req.param("id"));
     if (!id || isNaN(id)) {
@@ -277,7 +277,7 @@ export const updateSalesRate: Handler = async (c: AppContext) => {
 };
 
 // ── 4. DELETE SALES RATE ──────────────────────────────────────────────
-export const deleteSalesRate: Handler = async (c: AppContext) => {
+export const deleteSalesRate = async (c: AppContext) => {
   try {
     const id = Number(c.req.param("id"));
     if (!id || isNaN(id)) {
@@ -344,7 +344,7 @@ export const deleteSalesRate: Handler = async (c: AppContext) => {
 };
 
 // ── 5. GET RATE HISTORY ───────────────────────────────────────────────
-export const getRateHistory: Handler = async (c: AppContext) => {
+export const getRateHistory = async (c: AppContext) => {
   try {
     const clientId = Number(c.req.query("clientId"));
     const itemId = Number(c.req.query("itemId"));

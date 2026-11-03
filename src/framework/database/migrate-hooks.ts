@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import { closeDatabase, database, databasePool, detectDialect, initDatabase } from "@/framework/database/connection.js";
 import { discoverModuleFiles, importFile } from "@/framework/modules/discover.js";
 
@@ -43,7 +43,7 @@ async function executeStatement(statement: string, dialect: "postgresql" | "mysq
   const drizzle = database();
   try {
     if (dialect === "sqlite") {
-      await drizzle.run(sql.raw(statement));
+      await (drizzle as unknown as { run: (q: SQL) => Promise<unknown> }).run(sql.raw(statement));
     } else {
       await drizzle.execute(sql.raw(statement));
     }

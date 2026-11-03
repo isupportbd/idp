@@ -10,7 +10,7 @@ import { expenseHeads } from "../database/models/expense_heads.js";
 
 // ── COMPANY SETTINGS CONTROLLERS ─────────────────────────────────────
 
-export const getCompanySettings: Handler = async (c: AppContext) => {
+export const getCompanySettings = async (c: AppContext) => {
   try {
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
     const targetAdminId = tenantAdminId || (isSuperAdmin ? null : 1);
@@ -76,7 +76,7 @@ export const getCompanySettings: Handler = async (c: AppContext) => {
             smsOnSubmission: true,
             autoDueReminder: false,
             dueReminderDays: 7,
-            dueReminderMinAmount: 1000
+            dueReminderMinAmount: "1000.00"
           })
           .returning()
       )[0];
@@ -109,7 +109,7 @@ export const getCompanySettings: Handler = async (c: AppContext) => {
   }
 };
 
-export const updateCompanySettings: Handler = async (c: AppContext) => {
+export const updateCompanySettings = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
@@ -206,7 +206,7 @@ export const updateCompanySettings: Handler = async (c: AppContext) => {
 
 // ── BANK ACCOUNTS CONTROLLERS ────────────────────────────────────────
 
-export const listBankAccounts: Handler = async (c: AppContext) => {
+export const listBankAccounts = async (c: AppContext) => {
   try {
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
     if (!tenantAdminId && !isSuperAdmin) return c.json({ message: "Tenant context required" }, HttpStatusCodes.FORBIDDEN);
@@ -228,7 +228,7 @@ export const listBankAccounts: Handler = async (c: AppContext) => {
   }
 };
 
-export const createBankAccount: Handler = async (c: AppContext) => {
+export const createBankAccount = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
@@ -258,7 +258,7 @@ export const createBankAccount: Handler = async (c: AppContext) => {
   }
 };
 
-export const updateBankAccount: Handler = async (c: AppContext) => {
+export const updateBankAccount = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
@@ -306,7 +306,7 @@ export const updateBankAccount: Handler = async (c: AppContext) => {
   }
 };
 
-export const deleteBankAccount: Handler = async (c: AppContext) => {
+export const deleteBankAccount = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
@@ -341,7 +341,7 @@ export const deleteBankAccount: Handler = async (c: AppContext) => {
 
 // ── EXPENSE HEADS CONTROLLERS ────────────────────────────────────────
 
-export const listExpenseHeads: Handler = async (c: AppContext) => {
+export const listExpenseHeads = async (c: AppContext) => {
   try {
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
     if (!tenantAdminId && !isSuperAdmin) return c.json({ message: "Tenant context required" }, HttpStatusCodes.FORBIDDEN);
@@ -363,7 +363,7 @@ export const listExpenseHeads: Handler = async (c: AppContext) => {
   }
 };
 
-export const createExpenseHead: Handler = async (c: AppContext) => {
+export const createExpenseHead = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
     const trimmedName = body.name.trim();
@@ -407,7 +407,7 @@ export const createExpenseHead: Handler = async (c: AppContext) => {
   }
 };
 
-export const updateExpenseHead: Handler = async (c: AppContext) => {
+export const updateExpenseHead = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
@@ -473,7 +473,7 @@ export const updateExpenseHead: Handler = async (c: AppContext) => {
   }
 };
 
-export const toggleExpenseHead: Handler = async (c: AppContext) => {
+export const toggleExpenseHead = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
@@ -513,7 +513,7 @@ export const toggleExpenseHead: Handler = async (c: AppContext) => {
   }
 };
 
-export const deleteExpenseHead: Handler = async (c: AppContext) => {
+export const deleteExpenseHead = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);

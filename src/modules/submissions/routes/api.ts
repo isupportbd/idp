@@ -32,7 +32,7 @@ const getSubmissionsRoute = createRoute({
     [HttpStatusCodes.OK]: jsonContent(
       z.object({
         message: z.string(),
-        data: z.array(z.any()),
+        data: z.array(z.unknown()),
         stats: z.object({
           totalActive: z.number(),
           submittedCount: z.number(),
@@ -68,7 +68,7 @@ const postSubmissionRoute = createRoute({
     [HttpStatusCodes.OK]: jsonContent(
       z.object({
         message: z.string(),
-        data: z.any()
+        data: z.unknown()
       }),
       "Submission record response"
     )
@@ -130,7 +130,7 @@ const getSubmissionRoute = createRoute({
       z.object({
         message: z.string(),
         data: z.string().nullable(),
-        record: z.any().nullable()
+        record: z.unknown().nullable()
       }),
       "Single submission response"
     )

@@ -291,7 +291,7 @@ export async function callSmsGateway(opts: {
           1007: "Number is blocked",
           1011: "User ID not found"
         };
-        if (!ok && errMap[code]) friendly = `[${code}] ${errMap[code]}`;
+        if (code !== null && !ok && errMap[code]) friendly = `[${code}] ${errMap[code]}`;
       }
     } catch (smsServiceErr: any) { console.warn("[SMS Service Warning]:", smsServiceErr?.message || smsServiceErr); }
 

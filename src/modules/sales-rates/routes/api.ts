@@ -31,9 +31,9 @@ const getSalesRatesRoute = createRoute({
       z.object({
         success: z.boolean(),
         message: z.string(),
-        data: z.array(z.any()),
+        data: z.array(z.unknown()),
         total: z.number().optional(),
-        pagination: z.any().optional()
+        pagination: z.unknown().optional()
       }),
       "Sales rates list"
     )
@@ -56,7 +56,7 @@ const getRateHistoryRoute = createRoute({
     [HttpStatusCodes.OK]: jsonContent(
       z.object({
         success: z.boolean(),
-        data: z.array(z.any())
+        data: z.array(z.unknown())
       }),
       "Rate history records"
     )
@@ -77,7 +77,7 @@ const postSalesRateRoute = createRoute({
       z.object({
         success: z.boolean(),
         message: z.string(),
-        data: z.any()
+        data: z.unknown()
       }),
       "Sales rate created"
     )
@@ -99,7 +99,7 @@ const putSalesRateRoute = createRoute({
       z.object({
         success: z.boolean(),
         message: z.string(),
-        data: z.any()
+        data: z.unknown()
       }),
       "Sales rate updated"
     )

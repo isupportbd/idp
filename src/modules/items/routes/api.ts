@@ -16,7 +16,7 @@ const getItemsRoute = createRoute({
   tags: ["Items"],
   description: "Get all global HS items",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.array(z.any()) }), "Items list")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.array(z.unknown()) }), "Items list")
   }
 });
 
@@ -29,7 +29,7 @@ const bulkCreateItemsRoute = createRoute({
     body: jsonContent(bulkCreateItemsSchema, "Bulk items payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), message: z.string(), inserted: z.array(z.any()).optional() }), "Bulk creation result")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), message: z.string(), inserted: z.array(z.unknown()).optional() }), "Bulk creation result")
   }
 });
 

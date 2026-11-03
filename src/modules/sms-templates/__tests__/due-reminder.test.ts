@@ -45,7 +45,7 @@ describe("Due Reminder SMS scan (runDueReminderScan)", () => {
         smsEndpointUrl: "http://127.0.0.1:9/smsapi",
         autoDueReminder: true,
         dueReminderDays: 7,
-        dueReminderMinAmount: 1000.00
+        dueReminderMinAmount: "1000.00"
       })
       .returning();
 

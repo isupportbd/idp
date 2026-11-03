@@ -40,7 +40,7 @@ const getCustomerTypesRoute = createRoute({
   tags: ["Services"],
   description: "List all customer types",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.any()) }), "Customer types list")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.unknown()) }), "Customer types list")
   }
 });
 
@@ -53,7 +53,7 @@ const postCustomerTypeRoute = createRoute({
     body: jsonContent(CreateCustomerTypeSchema, "Customer type payload")
   },
   responses: {
-    [HttpStatusCodes.CREATED]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Created customer type")
+    [HttpStatusCodes.CREATED]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Created customer type")
   }
 });
 
@@ -66,7 +66,7 @@ const toggleCustomerTypeRoute = createRoute({
     params: IdParamSchema
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Updated customer type")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Updated customer type")
   }
 });
 
@@ -78,7 +78,7 @@ const getReferencesRoute = createRoute({
   tags: ["Services"],
   description: "List all client references",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.any()) }), "References list")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.unknown()) }), "References list")
   }
 });
 
@@ -91,7 +91,7 @@ const postReferenceRoute = createRoute({
     body: jsonContent(CreateReferenceSchema, "Reference payload")
   },
   responses: {
-    [HttpStatusCodes.CREATED]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Created reference")
+    [HttpStatusCodes.CREATED]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Created reference")
   }
 });
 
@@ -105,7 +105,7 @@ const patchReferenceRoute = createRoute({
     body: jsonContent(UpdateReferenceSchema, "Reference update payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Updated reference")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Updated reference")
   }
 });
 
@@ -118,7 +118,7 @@ const toggleReferenceRoute = createRoute({
     params: IdParamSchema
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Updated reference")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Updated reference")
   }
 });
 
@@ -143,7 +143,7 @@ const getServiceItemsRoute = createRoute({
   tags: ["Services"],
   description: "List all billable service items",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.any()) }), "Service items list")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.unknown()) }), "Service items list")
   }
 });
 
@@ -156,7 +156,7 @@ const postServiceItemRoute = createRoute({
     body: jsonContent(CreateServiceItemSchema, "Service item payload")
   },
   responses: {
-    [HttpStatusCodes.CREATED]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Created service item")
+    [HttpStatusCodes.CREATED]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Created service item")
   }
 });
 
@@ -170,7 +170,7 @@ const patchServiceItemRoute = createRoute({
     body: jsonContent(UpdateServiceItemSchema, "Service item update payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Updated service item")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Updated service item")
   }
 });
 
@@ -183,7 +183,7 @@ const toggleServiceItemRoute = createRoute({
     params: IdParamSchema
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Updated service item")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Updated service item")
   }
 });
 
@@ -208,7 +208,7 @@ const getServiceRatesRoute = createRoute({
   tags: ["Services"],
   description: "List all configured service rates",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.any()) }), "Service rates list")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.unknown()) }), "Service rates list")
   }
 });
 
@@ -221,7 +221,7 @@ const postServiceRateRoute = createRoute({
     body: jsonContent(CreateServiceRateSchema, "Service rate payload")
   },
   responses: {
-    [HttpStatusCodes.CREATED]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Created service rate")
+    [HttpStatusCodes.CREATED]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Created service rate")
   }
 });
 
@@ -235,7 +235,7 @@ const patchServiceRateRoute = createRoute({
     body: jsonContent(UpdateServiceRateSchema, "Service rate update payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Updated service rate")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Updated service rate")
   }
 });
 

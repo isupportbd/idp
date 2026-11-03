@@ -21,7 +21,7 @@ function notifySettingsUpdated(settingType: string) {
 
 // ── CUSTOMER TYPES CONTROLLERS ──────────────────────────────────────
 
-export const listCustomerTypes: Handler = async (c: AppContext) => {
+export const listCustomerTypes = async (c: AppContext) => {
   try {
     const list = await cache.remember("master:client-types", 3600, async () => {
       return await db.select().from(customerTypes).orderBy(desc(customerTypes.id));
@@ -32,7 +32,7 @@ export const listCustomerTypes: Handler = async (c: AppContext) => {
   }
 };
 
-export const createCustomerType: Handler = async (c: AppContext) => {
+export const createCustomerType = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
     const existing = (await db.select().from(customerTypes).where(eq(customerTypes.typeName, body.typeName.trim())).limit(1))[0];
@@ -53,7 +53,7 @@ export const createCustomerType: Handler = async (c: AppContext) => {
   }
 };
 
-export const toggleCustomerType: Handler = async (c: AppContext) => {
+export const toggleCustomerType = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const existing = (await db.select().from(customerTypes).where(eq(customerTypes.id, id)).limit(1))[0];
@@ -75,7 +75,7 @@ export const toggleCustomerType: Handler = async (c: AppContext) => {
 
 // ── REFERENCES CONTROLLERS ──────────────────────────────────────────
 
-export const listReferences: Handler = async (c: AppContext) => {
+export const listReferences = async (c: AppContext) => {
   try {
     const list = await cache.remember("master:references", 3600, async () => {
       return await db.select().from(clientReferences).orderBy(asc(clientReferences.id));
@@ -86,7 +86,7 @@ export const listReferences: Handler = async (c: AppContext) => {
   }
 };
 
-export const createReference: Handler = async (c: AppContext) => {
+export const createReference = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
     const existing = (await db.select().from(clientReferences).where(eq(clientReferences.name, body.name.trim())).limit(1))[0];
@@ -109,7 +109,7 @@ export const createReference: Handler = async (c: AppContext) => {
   }
 };
 
-export const updateReference: Handler = async (c: AppContext) => {
+export const updateReference = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
@@ -137,7 +137,7 @@ export const updateReference: Handler = async (c: AppContext) => {
   }
 };
 
-export const deleteReference: Handler = async (c: AppContext) => {
+export const deleteReference = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const existing = (await db.select().from(clientReferences).where(eq(clientReferences.id, id)).limit(1))[0];
@@ -153,7 +153,7 @@ export const deleteReference: Handler = async (c: AppContext) => {
   }
 };
 
-export const toggleReference: Handler = async (c: AppContext) => {
+export const toggleReference = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const existing = (await db.select().from(clientReferences).where(eq(clientReferences.id, id)).limit(1))[0];
@@ -175,7 +175,7 @@ export const toggleReference: Handler = async (c: AppContext) => {
 
 // ── SERVICE ITEMS CONTROLLERS ───────────────────────────────────────
 
-export const listServiceItems: Handler = async (c: AppContext) => {
+export const listServiceItems = async (c: AppContext) => {
   try {
     const list = await cache.remember("master:service-items", 3600, async () => {
       return await db.select().from(serviceItems).orderBy(asc(serviceItems.id));
@@ -186,7 +186,7 @@ export const listServiceItems: Handler = async (c: AppContext) => {
   }
 };
 
-export const createServiceItem: Handler = async (c: AppContext) => {
+export const createServiceItem = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
     const existing = (await db.select().from(serviceItems).where(eq(serviceItems.itemName, body.itemName.trim())).limit(1))[0];
@@ -206,7 +206,7 @@ export const createServiceItem: Handler = async (c: AppContext) => {
   }
 };
 
-export const toggleServiceItem: Handler = async (c: AppContext) => {
+export const toggleServiceItem = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const existing = (await db.select().from(serviceItems).where(eq(serviceItems.id, id)).limit(1))[0];
@@ -226,7 +226,7 @@ export const toggleServiceItem: Handler = async (c: AppContext) => {
   }
 };
 
-export const updateServiceItem: Handler = async (c: AppContext) => {
+export const updateServiceItem = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
@@ -251,7 +251,7 @@ export const updateServiceItem: Handler = async (c: AppContext) => {
   }
 };
 
-export const deleteServiceItem: Handler = async (c: AppContext) => {
+export const deleteServiceItem = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const existing = (await db.select().from(serviceItems).where(eq(serviceItems.id, id)).limit(1))[0];
@@ -269,7 +269,7 @@ export const deleteServiceItem: Handler = async (c: AppContext) => {
 
 // ── SERVICE RATES CONTROLLERS ───────────────────────────────────────
 
-export const listServiceRates: Handler = async (c: AppContext) => {
+export const listServiceRates = async (c: AppContext) => {
   try {
     const rates = await cache.remember("master:service-rates", 3600, async () => {
       return await db.query.serviceRates.findMany({
@@ -287,7 +287,7 @@ export const listServiceRates: Handler = async (c: AppContext) => {
   }
 };
 
-export const createServiceRate: Handler = async (c: AppContext) => {
+export const createServiceRate = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
 
@@ -321,7 +321,7 @@ export const createServiceRate: Handler = async (c: AppContext) => {
   }
 };
 
-export const updateServiceRate: Handler = async (c: AppContext) => {
+export const updateServiceRate = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
@@ -345,7 +345,7 @@ export const updateServiceRate: Handler = async (c: AppContext) => {
   }
 };
 
-export const deleteServiceRate: Handler = async (c: AppContext) => {
+export const deleteServiceRate = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const existing = (await db.select().from(serviceRates).where(eq(serviceRates.id, id)).limit(1))[0];

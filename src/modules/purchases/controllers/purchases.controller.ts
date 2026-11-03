@@ -11,7 +11,7 @@ import { users } from "@/modules/auth/database/models/user.js";
 
 // ── GET PURCHASES LIST ───────────────────────────────────────────────
 
-export const listPurchases: Handler = async (c: AppContext) => {
+export const listPurchases = async (c: AppContext) => {
   try {
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
@@ -26,7 +26,7 @@ export const listPurchases: Handler = async (c: AppContext) => {
 
     const conditions: any[] = [];
     if (!isSuperAdmin) {
-      conditions.push(eq(purchases.adminId, tenantAdminId));
+      conditions.push(eq(purchases.adminId, tenantAdminId ?? -1));
     }
     if (month) {
       conditions.push(eq(purchases.month, month));
@@ -127,9 +127,9 @@ export const listPurchases: Handler = async (c: AppContext) => {
 
 // ── DELETE SINGLE PURCHASE ───────────────────────────────────────────
 
-export const deletePurchase: Handler = async (c: AppContext) => {
+export const deletePurchase = async (c: AppContext) => {
   try {
-    const id = parseInt(c.req.param("id"), 10);
+    const id = parseInt(c.req.param("id") ?? "", 10);
     if (!id || isNaN(id)) {
       return c.json({ success: false, message: "Invalid ID" }, HttpStatusCodes.BAD_REQUEST);
     }
@@ -138,7 +138,7 @@ export const deletePurchase: Handler = async (c: AppContext) => {
 
     const whereCondition = isSuperAdmin
       ? eq(purchases.id, id)
-      : and(eq(purchases.id, id), eq(purchases.adminId, tenantAdminId));
+      : and(eq(purchases.id, id), eq(purchases.adminId, tenantAdminId ?? -1));
 
     await db.delete(purchases).where(whereCondition);
 
@@ -153,7 +153,7 @@ export const deletePurchase: Handler = async (c: AppContext) => {
 
 // ── BATCH DELETE PURCHASES ───────────────────────────────────────────
 
-export const batchDeletePurchases: Handler = async (c: AppContext) => {
+export const batchDeletePurchases = async (c: AppContext) => {
   try {
     const rawBody = c.req.valid("json");
     const { month, clientId, ids } = await validate(batchDeletePurchasesSchema, rawBody);
@@ -161,7 +161,7 @@ export const batchDeletePurchases: Handler = async (c: AppContext) => {
 
     const conditions: any[] = [];
     if (!isSuperAdmin) {
-      conditions.push(eq(purchases.adminId, tenantAdminId));
+      conditions.push(eq(purchases.adminId, tenantAdminId ?? -1));
     }
 
     if (ids && Array.isArray(ids) && ids.length > 0) {
@@ -191,7 +191,7 @@ export const batchDeletePurchases: Handler = async (c: AppContext) => {
 
 // ── DELETE PURCHASES BY MONTH ────────────────────────────────────────
 
-export const deletePurchasesByMonth: Handler = async (c: AppContext) => {
+export const deletePurchasesByMonth = async (c: AppContext) => {
   try {
     const month = c.req.param("month");
     if (!month) {
@@ -202,7 +202,7 @@ export const deletePurchasesByMonth: Handler = async (c: AppContext) => {
 
     const conditions = [eq(purchases.month, month)];
     if (!isSuperAdmin) {
-      conditions.push(eq(purchases.adminId, tenantAdminId));
+      conditions.push(eq(purchases.adminId, tenantAdminId ?? -1));
     }
 
     await db.delete(purchases).where(and(...conditions));
@@ -218,14 +218,14 @@ export const deletePurchasesByMonth: Handler = async (c: AppContext) => {
 
 // ── GET CLIENT PURCHASES & SUBMISSIONS MONTHS OVERVIEW ─────────────────
 
-export const getPurchasesMonths: Handler = async (c: AppContext) => {
+export const getPurchasesMonths = async (c: AppContext) => {
   try {
     const clientId = c.req.query("clientId");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
     const purchaseConditions: any[] = [];
     if (!isSuperAdmin) {
-      purchaseConditions.push(eq(purchases.adminId, tenantAdminId));
+      purchaseConditions.push(eq(purchases.adminId, tenantAdminId ?? -1));
     }
     if (clientId) {
       purchaseConditions.push(eq(purchases.clientId, Number(clientId)));

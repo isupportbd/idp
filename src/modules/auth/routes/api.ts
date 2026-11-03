@@ -96,7 +96,7 @@ const forgotPasswordRoute = createRoute({
     body: jsonContent(ForgotPasswordSchema, "Forgot password payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.any(), "Reset email sent")
+    [HttpStatusCodes.OK]: jsonContent(z.unknown(), "Reset email sent")
   }
 });
 
@@ -109,7 +109,7 @@ const forgotPasswordRequestRoute = createRoute({
     body: jsonContent(ForgotPasswordSchema, "Forgot password payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.any(), "OTP sent")
+    [HttpStatusCodes.OK]: jsonContent(z.unknown(), "OTP sent")
   }
 });
 
@@ -122,7 +122,7 @@ const resetPasswordRoute = createRoute({
     body: jsonContent(ResetPasswordSchema, "Reset password payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.any(), "Password reset")
+    [HttpStatusCodes.OK]: jsonContent(z.unknown(), "Password reset")
   }
 });
 
@@ -135,7 +135,7 @@ const forgotPasswordResetRoute = createRoute({
     body: jsonContent(ResetPasswordSchema, "Reset password payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.any(), "Password reset")
+    [HttpStatusCodes.OK]: jsonContent(z.unknown(), "Password reset")
   }
 });
 
@@ -174,7 +174,7 @@ const rechargeWalletRoute = createRoute({
     body: jsonContent(RechargeWalletSchema, "Recharge payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), message: z.string(), data: z.any().optional() }), "Recharge request submitted")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), message: z.string(), data: z.unknown().optional() }), "Recharge request submitted")
   }
 });
 
@@ -194,7 +194,7 @@ const buyStorageRoute = createRoute({
     )
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.any(), "Storage purchase response")
+    [HttpStatusCodes.OK]: jsonContent(z.unknown(), "Storage purchase response")
   }
 });
 
@@ -204,7 +204,7 @@ const getUserStatsRoute = createRoute({
   tags: ["Auth"],
   description: "Get live online and active user stats",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.any(), "User stats")
+    [HttpStatusCodes.OK]: jsonContent(z.unknown(), "User stats")
   }
 });
 
@@ -225,7 +225,7 @@ const sendTestSmsRoute = createRoute({
     )
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.any(), "SMS sent")
+    [HttpStatusCodes.OK]: jsonContent(z.unknown(), "SMS sent")
   }
 });
 
@@ -235,7 +235,7 @@ const syncSmsBalanceRoute = createRoute({
   tags: ["Auth"],
   description: "Sync live remaining balance directly from SMS gateway provider",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.any(), "SMS balance synced")
+    [HttpStatusCodes.OK]: jsonContent(z.unknown(), "SMS balance synced")
   }
 });
 

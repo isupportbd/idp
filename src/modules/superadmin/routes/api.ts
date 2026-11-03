@@ -91,8 +91,8 @@ import {
 
 // ── Shared response schemas ───────────────────────────────────────────────
 const OkMessage = z.object({ success: z.boolean(), message: z.string() });
-const OkData = z.object({ success: z.boolean(), data: z.any() });
-const OkDataMessage = z.object({ success: z.boolean(), data: z.any(), message: z.string().optional() });
+const OkData = z.object({ success: z.boolean(), data: z.unknown() });
+const OkDataMessage = z.object({ success: z.boolean(), data: z.unknown(), message: z.string().optional() });
 const ErrResponse = z.object({ success: z.boolean(), error: z.string() });
 
 const superAdminMiddleware = [authMiddleware, requireRole("superadmin")];
@@ -125,7 +125,7 @@ const publicPlansRoute = createRoute({
   description: "Public subscription tiers and pricing (pre-login)",
   responses: {
     [HttpStatusCodes.OK]: jsonContent(
-      z.object({ success: z.boolean(), data: z.array(z.any()) }),
+      z.object({ success: z.boolean(), data: z.array(z.unknown()) }),
       "Public plans"
     )
   }

@@ -35,7 +35,7 @@ export async function storageStaticMiddleware(c: Context, next: Next) {
     const serveStatic = await resolveServeStatic();
     _storageStaticMiddleware = serveStatic({
       root: "./src/storage/app/public",
-      rewriteRequestPath: (path) => path.replace(/^\/storage/, "")
+      rewriteRequestPath: (path: string) => path.replace(/^\/storage/, "")
     });
   }
   c.header("Cache-Control", "public, max-age=86400");

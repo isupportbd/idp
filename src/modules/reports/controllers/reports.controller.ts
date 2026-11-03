@@ -172,9 +172,9 @@ export const getSalesReport = async (c: AppContext) => {
         vatRate = 15;
         note = "4";
       } else {
-        const mapping = allVatNotes.find((v: any) => Number(v.rate) === vatRate);
+        const mapping = allVatNotes.find((v) => Number(v.vatRate) === vatRate);
         if (mapping) {
-          note = mapping.noteNumber ? String(mapping.noteNumber) : "8";
+          note = mapping.noteName ? String(mapping.noteName) : "8";
         } else {
           note = vatRate === 0 ? "3" : "8";
         }
@@ -380,9 +380,9 @@ export const getStatementReport = async (c: AppContext) => {
           const itemName = purchaseData.find((p) => p.itemId === itemId)?.itemName;
 
           let note = "8";
-          const mapping = allVatNotes.find((v: any) => Number(v.rate) === vatRateVal);
+          const mapping = allVatNotes.find((v) => Number(v.vatRate) === vatRateVal);
           if (mapping) {
-            note = mapping.noteNumber ? String(mapping.noteNumber) : "8";
+            note = mapping.noteName ? String(mapping.noteName) : "8";
           } else if (vatRateVal === 0) {
             note = "3";
           }

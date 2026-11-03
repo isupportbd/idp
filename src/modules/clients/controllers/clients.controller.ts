@@ -21,7 +21,7 @@ import { hasPermission } from "@/middlewares/permission-middleware.js";
 
 // ── 1. LIST CLIENTS WITH FILTERS & PAGINATION ────────────────────────
 
-export const listClients: Handler = async (c: AppContext) => {
+export const listClients = async (c: AppContext) => {
   try {
     const query = c.req.valid("query");
     const page = query.page || 1;
@@ -168,7 +168,7 @@ export const listClients: Handler = async (c: AppContext) => {
 
 // ── 2. GET SINGLE CLIENT BY ID ───────────────────────────────────────
 
-export const getClientById: Handler = async (c: AppContext) => {
+export const getClientById = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
@@ -249,7 +249,7 @@ export const getClientById: Handler = async (c: AppContext) => {
 
 // ── 3. CREATE / BIND CLIENT (GLOBAL BIN ARCHITECTURE) ────────────────
 
-export const createClient: Handler = async (c: AppContext) => {
+export const createClient = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
     const trimmedBin = body.binNumber?.trim();
@@ -259,7 +259,7 @@ export const createClient: Handler = async (c: AppContext) => {
     // 1. Check Tenant Subscription Plan Client Limit (counting ACTIVE clients)
     if (!isSuperAdmin) {
       const tenantAdmin = await db.query.users.findFirst({
-        where: eq(users.id, tenantAdminId)
+        where: eq(users.id, tenantAdminId ?? -1)
       });
 
       if (tenantAdmin?.planId) {
@@ -270,7 +270,7 @@ export const createClient: Handler = async (c: AppContext) => {
           const [clientCountResult] = await db
             .select({ count: sql<number>`count(*)::int` })
             .from(clients)
-            .where(and(eq(clients.createdBy, tenantAdminId), eq(clients.isActive, true)));
+            .where(and(eq(clients.createdBy, tenantAdminId ?? -1), eq(clients.isActive, true)));
 
           const currentCount = clientCountResult?.count || 0;
           if (currentCount >= maxClientsAllowed) {
@@ -411,7 +411,7 @@ export const createClient: Handler = async (c: AppContext) => {
 
 // ── 4. UPDATE CLIENT ─────────────────────────────────────────────────
 
-export const updateClient: Handler = async (c: AppContext) => {
+export const updateClient = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
@@ -497,7 +497,7 @@ export const updateClient: Handler = async (c: AppContext) => {
 
 // ── 5. TOGGLE CLIENT ACTIVE STATUS (RELEASE / RESTORE) ───────────────
 
-export const toggleClientStatus: Handler = async (c: AppContext) => {
+export const toggleClientStatus = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const { isActive } = c.req.valid("json");
@@ -574,7 +574,7 @@ export const toggleClientStatus: Handler = async (c: AppContext) => {
 
 // ── 6. DELETE CLIENT (AUDIT & COMPLIANCE SAFEGUARD) ───────────────────
 
-export const deleteClient: Handler = async (c: AppContext) => {
+export const deleteClient = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const auth = c.get("auth") || c.get("user");
@@ -638,7 +638,7 @@ export const deleteClient: Handler = async (c: AppContext) => {
 
 // ── 7. VALIDATION: GLOBAL BIN UNIQUENESS & BIND STATUS CHECK ─────────
 
-export const checkBinUnique: Handler = async (c: AppContext) => {
+export const checkBinUnique = async (c: AppContext) => {
   try {
     const { bin, excludeId } = c.req.valid("json");
     const auth = c.get("auth") || c.get("user");
@@ -744,7 +744,7 @@ export const checkBinUnique: Handler = async (c: AppContext) => {
 
 // ── 8. VALIDATION: CHECK MOBILE DUPLICATE ─────────────────────────────
 
-export const checkMobileExists: Handler = async (c: AppContext) => {
+export const checkMobileExists = async (c: AppContext) => {
   try {
     const { mobile, excludeId } = c.req.valid("json");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
@@ -770,7 +770,7 @@ export const checkMobileExists: Handler = async (c: AppContext) => {
 
 // ── 9. ASSIGNMENTS: LIST CLIENT ASSIGNMENTS ──────────────────────────
 
-export const listAssignments: Handler = async (c: AppContext) => {
+export const listAssignments = async (c: AppContext) => {
   try {
     const query = c.req.valid("query");
     const filter = query.filter || "all";
@@ -865,7 +865,7 @@ export const listAssignments: Handler = async (c: AppContext) => {
 
 // ── 10. ASSIGNMENTS: SAVE ASSIGNMENTS FOR A CLIENT ───────────────────
 
-export const assignManagers: Handler = async (c: AppContext) => {
+export const assignManagers = async (c: AppContext) => {
   try {
     const { clientId, managerIds } = c.req.valid("json");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
@@ -909,7 +909,7 @@ export const assignManagers: Handler = async (c: AppContext) => {
 
 // ── 11. LIST ASSIGNABLE USERS ────────────────────────────────────────
 
-export const listAssignableUsers: Handler = async (c: AppContext) => {
+export const listAssignableUsers = async (c: AppContext) => {
   try {
     const auth = c.get("auth") || c.get("user");
     let tenantAdminId: number | null = null;
@@ -973,7 +973,7 @@ function formatStandardBin(raw: string | null | undefined): string | null {
 
 // ── 12. BULK CREATE CLIENTS ──────────────────────────────────────────
 
-export const bulkCreateClients: Handler = async (c: AppContext) => {
+export const bulkCreateClients = async (c: AppContext) => {
   try {
     const rawBody = c.req.valid("json");
     const { clients: rawClients } = await validate(BulkCreateClientsSchema, rawBody) as { clients: any[] };
@@ -992,7 +992,7 @@ export const bulkCreateClients: Handler = async (c: AppContext) => {
         const [clientCountResult] = await db
           .select({ count: sql<number>`count(*)::int` })
           .from(clients)
-          .where(and(eq(clients.createdBy, tenantAdminId), eq(clients.isActive, true)));
+          .where(and(eq(clients.createdBy, tenantAdminId ?? -1), eq(clients.isActive, true)));
 
         const currentCount = clientCountResult?.count || 0;
         const validClientsToUpload = rawClients.filter((item: any) => (item.companyName?.trim() || item.name?.trim())).length;
@@ -1025,7 +1025,7 @@ export const bulkCreateClients: Handler = async (c: AppContext) => {
         isSuperAdmin
           ? undefined
           : or(
-              eq(clients.createdBy, tenantAdminId),
+              eq(clients.createdBy, tenantAdminId ?? -1),
               sql`${clients.createdBy} IS NULL`
             )
       );
@@ -1195,7 +1195,7 @@ export const bulkCreateClients: Handler = async (c: AppContext) => {
 };
 
 // ── GET CLIENT PURCHASED ITEMS ───────────────────────────────────────
-export const getClientPurchasedItems: Handler = async (c: AppContext) => {
+export const getClientPurchasedItems = async (c: AppContext) => {
   try {
     const clientId = Number(c.req.param("id"));
     if (!clientId || isNaN(clientId)) {

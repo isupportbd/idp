@@ -1,12 +1,21 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { detectDialectFrom } from "@/config/database.js";
 import { databaseConfig } from "@/config/index.js";
 import * as schema from "@/database/schema.js";
 
 export type Dialect = "sqlite" | "mysql" | "postgresql";
 
-let databaseInstance: any;
+/**
+ * The typed Drizzle surface shared by all modules. The runtime driver is chosen
+ * at bootstrap (sqlite/mysql/postgres), but application code only ever uses the
+ * PostgreSQL-compatible query builder, so the schema-typed Postgres database is
+ * the public contract.
+ */
+export type Database = PostgresJsDatabase<typeof schema>;
+
+let databaseInstance: Database | undefined;
 let pool: any;
 let dialect: Dialect;
 
@@ -181,19 +190,18 @@ function normalizeExecuteResult(result: unknown): unknown {
  * Where: Exposed via framework facade as `db`.
  * How: Proxy forwards property access to the initialized Drizzle instance.
  */
-export const db = new Proxy(
-  {},
-  {
-    get(_target, property) {
-      const instance = database();
-      if (property === "execute") {
-        return async (query: unknown, params?: unknown) => {
-          const raw = instance.execute ? await instance.execute(query, params) : await instance.all(query);
-          return normalizeExecuteResult(raw);
-        };
-      }
-      const value = instance[property as keyof typeof instance];
-      return typeof value === "function" ? value.bind(instance) : value;
+export const db = new Proxy({} as Database, {
+  get(_target, property) {
+    const instance = database();
+    if (property === "execute") {
+      return async (query: unknown) => {
+        const raw = instance.execute
+          ? await instance.execute(query as never)
+          : await (instance as unknown as { all: (q: unknown) => Promise<unknown> }).all(query);
+        return normalizeExecuteResult(raw);
+      };
     }
+    const value = instance[property as keyof typeof instance];
+    return typeof value === "function" ? value.bind(instance) : value;
   }
-) as any;
+}) as Database;

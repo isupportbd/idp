@@ -27,7 +27,7 @@ export const UserSchema = z.object({
   isSubscriptionActive: z.boolean().nullable().optional(),
   adminId: z.number().nullable().optional(),
   expDate: z.string().nullable().optional(),
-  plan: z.any().nullable().optional(),
+  plan: z.unknown().nullable().optional(),
   roleId: z.number().nullable().optional(),
   role: RoleSchema.nullable().optional(),
   emailVerifiedAt: z.string().nullable().optional(),

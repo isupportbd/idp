@@ -14,6 +14,8 @@ import SalesSummarySection from "./reports/SalesSummarySection.vue";
 import MushakReturnSection from "./reports/MushakReturnSection.vue";
 import BalanceStatementSection from "./reports/BalanceStatementSection.vue";
 
+const { exportSingleSheet, exportMultipleSheets } = useExcelExport();
+
 // Types
 interface Client {
   id: number;
@@ -235,7 +237,7 @@ const fmt = (val: any, decimals = 2): string => {
   return Number(val).toFixed(decimals);
 };
 
-const formatDate = (dateStr?: string): string => {
+const formatDate = (dateStr?: string | null): string => {
   if (!dateStr) return "";
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
@@ -244,7 +246,7 @@ const formatDate = (dateStr?: string): string => {
   return `${dd} ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
 };
 
-const formatBeDate = (dateStr?: string): string => {
+const formatBeDate = (dateStr?: string | null): string => {
   if (!dateStr) return "";
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) {
@@ -258,7 +260,7 @@ const formatBeDate = (dateStr?: string): string => {
   return `${dd}/${mm}/${yyyy}`;
 };
 
-const formatMonth = (mStr?: string): string => {
+const formatMonth = (mStr?: string | null): string => {
   if (!mStr) return "";
   const [y, m] = mStr.split("-");
   const d = new Date(parseInt(y), parseInt(m) - 1, 1);

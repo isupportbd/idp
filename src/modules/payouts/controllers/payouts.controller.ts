@@ -104,6 +104,15 @@ function normalizeEffectiveDate(value?: string | Date | null): Date {
   return new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate()));
 }
 
+/**
+ * Tenant scope for payout queries. A superadmin has no tenant of their own, so
+ * their scope is -1, which matches no rows; superadmins act on an explicit
+ * target instead (see resolveStaffScope).
+ */
+function tenantScope(tenantAdminId: number | null): number {
+  return tenantAdminId ?? -1;
+}
+
 /** Formats an effective date as `YYYY-MM-DD` for the client. */
 function toDateOnly(value: Date | string | null | undefined): string {
   if (!value) return "";
@@ -113,10 +122,10 @@ function toDateOnly(value: Date | string | null | undefined): string {
 
 // ── 1. META (dropdown data for create + rates editor) ────────────────
 
-export const getPayoutMeta: Handler = async (c: AppContext) => {
+export const getPayoutMeta = async (c: AppContext) => {
   try {
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
-    const tenant = isSuperAdmin ? tenantAdminId : tenantAdminId;
+    const tenant = tenantScope(tenantAdminId);
 
     const [staff, heads, banks, items, staffHead] = await Promise.all([
       tenantStaff(tenant),
@@ -152,11 +161,11 @@ export const getPayoutMeta: Handler = async (c: AppContext) => {
 
 // ── 2. DASHBOARD ─────────────────────────────────────────────────────
 
-export const getPayoutsDashboard: Handler = async (c: AppContext) => {
+export const getPayoutsDashboard = async (c: AppContext) => {
   try {
     const query = c.req.valid ? c.req.valid("query") : c.req.query();
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
-    const tenant = isSuperAdmin ? tenantAdminId : tenantAdminId;
+    const tenant = tenantScope(tenantAdminId);
     // No month selected ("All Months") -> aggregate a lifetime view across every month.
     const hasMonth = isValidMonth(query.month);
     const month = hasMonth ? query.month : "";
@@ -291,13 +300,13 @@ export const getPayoutsDashboard: Handler = async (c: AppContext) => {
 
 // ── 3. LIST PAYOUTS ──────────────────────────────────────────────────
 
-export const listPayouts: Handler = async (c: AppContext) => {
+export const listPayouts = async (c: AppContext) => {
   try {
     const query = c.req.valid ? c.req.valid("query") : c.req.query();
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
     const conditions: any[] = [];
-    if (!isSuperAdmin) conditions.push(eq(payouts.adminId, tenantAdminId));
+    if (!isSuperAdmin) conditions.push(eq(payouts.adminId, tenantAdminId ?? -1));
     if (query.month) conditions.push(eq(payouts.periodMonth, query.month));
     if (query.payoutType && query.payoutType !== "all") conditions.push(eq(payouts.payoutType, query.payoutType));
     if (query.userId) conditions.push(eq(payouts.userId, Number(query.userId)));
@@ -344,13 +353,13 @@ export const listPayouts: Handler = async (c: AppContext) => {
 
 // ── 4. SINGLE PAYOUT ─────────────────────────────────────────────────
 
-export const getPayoutDetail: Handler = async (c: AppContext) => {
+export const getPayoutDetail = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
     const conditions: any[] = [eq(payouts.id, id)];
-    if (!isSuperAdmin) conditions.push(eq(payouts.adminId, tenantAdminId));
+    if (!isSuperAdmin) conditions.push(eq(payouts.adminId, tenantAdminId ?? -1));
 
     const row = (
       await db
@@ -400,7 +409,7 @@ export const getPayoutDetail: Handler = async (c: AppContext) => {
 
 // ── 5. STAFF LEDGER PREVIEW (for the create page) ────────────────────
 
-export const getStaffLedger: Handler = async (c: AppContext) => {
+export const getStaffLedger = async (c: AppContext) => {
   try {
     const query = c.req.valid ? c.req.valid("query") : c.req.query();
     const userId = Number(query.userId);
@@ -420,13 +429,13 @@ export const getStaffLedger: Handler = async (c: AppContext) => {
 
 // ── 6. CREATE PAYOUT ─────────────────────────────────────────────────
 
-export const createPayout: Handler = async (c: AppContext) => {
+export const createPayout = async (c: AppContext) => {
   try {
     const payload = c.req.valid("json");
     const { isSuperAdmin, tenantAdminId, userId: actorId } = await resolveTenantContext(c);
     // Superadmins have no tenant of their own; the staff branch below re-resolves
     // the owning firm from the target staff record.
-    let tenant = isSuperAdmin ? tenantAdminId : tenantAdminId;
+    let tenant = tenantScope(tenantAdminId);
 
     const amount = round2(Number(payload.amount) || 0);
     const paidAt = payload.paidAt ? new Date(payload.paidAt) : new Date();
@@ -436,6 +445,12 @@ export const createPayout: Handler = async (c: AppContext) => {
 
     // ── General firm expense ──────────────────────────────────────────
     if (payload.payoutType === "general_expense") {
+      if (tenantAdminId === null) {
+        return c.json(
+          { message: "General firm expenses must be recorded by a tenant admin (no firm context for superadmin)" },
+          HttpStatusCodes.FORBIDDEN
+        );
+      }
       if (!payload.expenseHeadId) {
         return c.json({ message: "Expense head is required" }, HttpStatusCodes.BAD_REQUEST);
       }
@@ -602,7 +617,7 @@ export const createPayout: Handler = async (c: AppContext) => {
 
 // ── 7. USER SERVICE RATES ────────────────────────────────────────────
 
-export const getUserRates: Handler = async (c: AppContext) => {
+export const getUserRates = async (c: AppContext) => {
   try {
     const { userId } = c.req.valid("param");
     const scope = await resolveStaffScope(c, userId);
@@ -677,7 +692,7 @@ export const getUserRates: Handler = async (c: AppContext) => {
   }
 };
 
-export const saveUserRates: Handler = async (c: AppContext) => {
+export const saveUserRates = async (c: AppContext) => {
   try {
     const { userId } = c.req.valid("param");
     const { rates } = c.req.valid("json");
@@ -815,11 +830,14 @@ export const saveUserRates: Handler = async (c: AppContext) => {
  *      without holding the `payouts.view` permission (which exposes the whole
  *      firm). This endpoint is scoped strictly to the caller.
  */
-export const getMyEarnings: Handler = async (c: AppContext) => {
+export const getMyEarnings = async (c: AppContext) => {
   try {
     const query = c.req.valid ? c.req.valid("query") : c.req.query();
     const { tenantAdminId, userId } = await resolveTenantContext(c);
     const month = isValidMonth(query.month) ? query.month : currentMonth();
+    if (tenantAdminId === null) {
+      return c.json({ message: "No tenant context for this account" }, HttpStatusCodes.FORBIDDEN);
+    }
 
     const history = await resolveStaffLedgerHistory(tenantAdminId, userId, month);
     const current = history.months[history.months.length - 1];

@@ -17,6 +17,7 @@ import { useVirtualizer } from "@tanstack/vue-virtual";
 import { pulse } from "@/plugins/pulse";
 
 const toast = useToast();
+const { exportSingleSheet } = useExcelExport();
 
 const {
   submissions,

@@ -18,14 +18,14 @@ import { round2 } from "@/utils/number.js";
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_UPLOAD_EXTENSIONS = [".xlsx", ".xls", ".csv"];
 
-const parseNumber = (val: any): number => {
+const parseNumber = (val: unknown): number => {
   if (val === undefined || val === null || val === "") return 0;
   const cleaned = String(val).replace(/,/g, "").trim();
   const num = parseFloat(cleaned);
   return isNaN(num) ? 0 : num;
 };
 
-const parseDateValue = (val: any): string => {
+const parseDateValue = (val: unknown): string => {
   if (!val) return "";
   if (typeof val === "number") {
     const utc_days = Math.floor(val - 25569);
@@ -97,7 +97,7 @@ const toCamel = (str: string) => str.replace(/_([a-z])/g, (_, g) => g.toUpperCas
 
 // ── 1. PROCESS UPLOADED EXCEL/CSV FILE ────────────────────────────────
 
-export const processUpload: Handler = async (c: AppContext) => {
+export const processUpload = async (c: AppContext) => {
   try {
     const body = await c.req.parseBody();
     const file = body["file"];
@@ -132,15 +132,16 @@ export const processUpload: Handler = async (c: AppContext) => {
 
     // ── Smart Header Detection ──────────────────────────────────────────
     // Identifies the row matching configured Excel headers in database column mappings
-    const rawGrid = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: "" });
+    const rawGrid = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "" });
 
     if (!rawGrid || rawGrid.length === 0) {
       return c.json({ success: false, message: "The uploaded file is empty." }, HttpStatusCodes.BAD_REQUEST);
     }
 
     const mappingHeaderAliases = dbMappings
-      .filter((m) => m.excelHeader && m.excelHeader.trim())
-      .map((m) => m.excelHeader.trim().toLowerCase().replace(/[\s\.\_\-\/]+/g, ""));
+      .map((m) => m.excelHeader?.trim())
+      .filter((header): header is string => Boolean(header))
+      .map((header) => header.toLowerCase().replace(/[\s\.\_\-\/]+/g, ""));
 
     let bestHeaderRowIndex = 0;
     let maxMatchCount = 0;
@@ -167,15 +168,15 @@ export const processUpload: Handler = async (c: AppContext) => {
       }
     }
 
-    let rawData: any[] = [];
+    let rawData: Record<string, unknown>[] = [];
     if (maxMatchCount >= 2) {
-      const headerRow = rawGrid[bestHeaderRowIndex].map((h: any) => String(h || "").trim());
+      const headerRow = rawGrid[bestHeaderRowIndex].map((h) => String(h || "").trim());
       for (let i = bestHeaderRowIndex + 1; i < rawGrid.length; i++) {
         const rowArr = rawGrid[i];
         if (!Array.isArray(rowArr) || rowArr.every((cell) => cell === "" || cell === null || cell === undefined)) {
           continue;
         }
-        const rowObj: any = {};
+        const rowObj: Record<string, unknown> = {};
         headerRow.forEach((headerName: string, colIdx: number) => {
           if (headerName) {
             rowObj[headerName] = rowArr[colIdx] !== undefined ? rowArr[colIdx] : null;
@@ -184,17 +185,17 @@ export const processUpload: Handler = async (c: AppContext) => {
         rawData.push(rowObj);
       }
     } else {
-      rawData = XLSX.utils.sheet_to_json<any>(sheet, { defval: null });
+      rawData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null });
     }
 
     if (!rawData || rawData.length === 0) {
       return c.json({ success: false, message: "The uploaded file is empty." }, HttpStatusCodes.BAD_REQUEST);
     }
 
-    const processedData: any[] = [];
+    const processedData: Record<string, unknown>[] = [];
 
     for (const row of rawData) {
-      const mappedRow: any = {};
+      const mappedRow: Record<string, unknown> = {};
       const rowKeys = Object.keys(row);
 
       // Map strictly using database column mappings
@@ -305,7 +306,7 @@ export const processUpload: Handler = async (c: AppContext) => {
       mappedRow.unitValue = unitValue;
       mappedRow.vat = vat;
       mappedRow.at = at;
-      mappedRow.month = month || (mappedRow.beDate ? mappedRow.beDate.slice(0, 7) : "");
+      mappedRow.month = month || (mappedRow.beDate ? String(mappedRow.beDate).slice(0, 7) : "");
       mappedRow.isRebate = isRebate;
       mappedRow.isFfs = isFfs;
       mappedRow.tempId = `temp_${Math.random().toString(36).substr(2, 9)}`;
@@ -330,7 +331,7 @@ export const processUpload: Handler = async (c: AppContext) => {
     for (const row of processedData) {
       if (row.hsCode || row.awHsCode) {
         const awHsCode = String(row.awHsCode || String(row.hsCode).replace(/[\.\s]/g, "")).trim();
-        const stdHsCode = formatStandardHsCode(row.hsCode || awHsCode);
+        const stdHsCode = formatStandardHsCode(row.hsCode ? String(row.hsCode) : awHsCode);
         const itemName =
           row.itemName && String(row.itemName).trim() !== "" && String(row.itemName).trim() !== "Unknown Item"
             ? String(row.itemName).trim()
@@ -356,7 +357,7 @@ export const processUpload: Handler = async (c: AppContext) => {
       if (item.hsCode) dbItemMap.set(item.hsCode.trim(), item);
     });
 
-    const missingItems: any[] = [];
+    const missingItems: Array<{ awHsCode: string; hsCode: string; name: string }> = [];
     for (const [awHsCode, itemInfo] of uploadedItemsMap.entries()) {
       if (!dbItemMap.has(awHsCode)) {
         missingItems.push({
@@ -405,7 +406,7 @@ export const processUpload: Handler = async (c: AppContext) => {
         isSuperAdmin
           ? undefined
           : or(
-              eq(clients.createdBy, tenantAdminId),
+              eq(clients.createdBy, tenantAdminId ?? -1),
               sql`${clients.createdBy} IS NULL`
             )
       );
@@ -451,12 +452,12 @@ export const processUpload: Handler = async (c: AppContext) => {
           row.bin = formatStandardBin(matchedClient.binNumber);
         }
       } else if (row.bin && String(row.bin).trim()) {
-        const stdBin = formatStandardBin(row.bin);
+        const stdBin = formatStandardBin(String(row.bin));
         row.bin = stdBin;
         const cleanDigits = String(row.bin).trim().replace(/[^0-9]/g, "");
         const mapKey = stdBin || cleanDigits || String(row.bin).trim();
         if (!unmappedBins.has(mapKey)) {
-          unmappedBins.set(mapKey, row.clientName || "Unknown Client");
+          unmappedBins.set(mapKey, row.clientName ? String(row.clientName) : "Unknown Client");
         }
       }
     }
@@ -509,7 +510,9 @@ function broadcastPurchaseProgress(tenantAdminId: number, processed: number, tot
       { adminId: tenantAdminId, processed, total, percent, timestamp: Date.now() },
       { tenant: tenantAdminId }
     );
-  } catch (uploadErr: any) { console.warn("[Upload Progress Warning]:", uploadErr?.message || uploadErr); }
+  } catch (uploadErr: unknown) {
+    console.warn("[Upload Progress Warning]:", uploadErr instanceof Error ? uploadErr.message : uploadErr);
+  }
 }
 
 /** Why: run imports async behind a flag, or force it for very large files. */
@@ -523,8 +526,38 @@ function makeImportJobId(tenantAdminId: number, month: string, key: string): str
   return `upload:purchases:${tenantAdminId}:${month}:${key}`;
 }
 
+/** A normalised, client/item-resolved purchase row ready for insert. */
+type ImportIncomingRow = Record<string, unknown> & {
+  clientId: number | null;
+  itemId: number;
+  office: string;
+  beNo: string;
+  beDate: string;
+  month: string;
+  netWt: number;
+  excessQty: number;
+  totalQty: number;
+  assValue: number;
+  unitValue: number;
+  cd: number;
+  rd: number;
+  sd: number;
+  baseValueOfVat: number;
+  vat: number;
+  at: number;
+  isRebate: boolean;
+  isFfs: boolean;
+};
+
+/** A duplicate detected during import (existing DB row vs incoming row). */
+type PurchaseDuplicate = {
+  existing: object;
+  incoming: ImportIncomingRow;
+  newData: ImportIncomingRow;
+};
+
 export type PurchaseImportParams = {
-  data: any[];
+  data: Record<string, unknown>[];
   month: string;
   isRebate: boolean;
   isFfs: boolean;
@@ -535,8 +568,8 @@ export type PurchaseImportParams = {
 
 export type PurchaseImportResult = {
   totalRowsProcessed: number;
-  duplicatesList: any[];
-  ffsPendingList: any[];
+  duplicatesList: PurchaseDuplicate[];
+  ffsPendingList: ImportIncomingRow[];
 };
 
 /**
@@ -561,8 +594,8 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
           )
     );
 
-  const clientByBin = new Map<string, any>();
-  const clientByName = new Map<string, any>();
+  const clientByBin = new Map<string, (typeof existingClients)[number]>();
+  const clientByName = new Map<string, (typeof existingClients)[number]>();
 
   existingClients.forEach((cl) => {
     if (cl.binNumber) {
@@ -582,7 +615,7 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
   const uniqueHsCodes = [
     ...new Set(
       data
-        .map((r: any) =>
+        .map((r) =>
           r.awHsCode
             ? String(r.awHsCode).trim()
             : r.hsCode
@@ -595,7 +628,7 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
 
   const existingItems = await db.select().from(globalItems);
 
-  const itemByHsCode = new Map<string, any>();
+  const itemByHsCode = new Map<string, (typeof existingItems)[number]>();
   existingItems.forEach((item) => {
     const awCode = String(item.awHsCode || item.hsCode.replace(/[\.\s]/g, "")).trim();
     if (awCode) itemByHsCode.set(awCode, item);
@@ -632,9 +665,9 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
   );
 
   // ── Step 4: Process Rows & Build Inserts ─────────────────────────
-  const toInsert: any[] = [];
-  const duplicatesList: any[] = [];
-  const ffsPendingList: any[] = [];
+  const toInsert: (typeof purchases.$inferInsert)[] = [];
+  const duplicatesList: PurchaseDuplicate[] = [];
+  const ffsPendingList: ImportIncomingRow[] = [];
 
   for (const mappedRow of data) {
     if (Object.keys(mappedRow).length === 0 || (Object.keys(mappedRow).length === 1 && mappedRow.tempId)) continue;
@@ -649,7 +682,7 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
     if (!clientId && (bin || mappedRow.clientName)) {
       const cachedClient =
         (bin ? clientByBin.get(bin) || (cleanBinDigits ? clientByBin.get(cleanBinDigits) : undefined) : undefined) ||
-        (mappedRow.clientName
+        (typeof mappedRow.clientName === "string"
           ? clientByName.get(mappedRow.clientName.trim().toLowerCase()) ||
             clientByName.get(mappedRow.clientName.trim().toLowerCase().replace(/^m\/s\s+/i, ""))
           : undefined);
@@ -662,7 +695,7 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
         const [newClient] = await db
           .insert(clients)
           .values({
-            companyName: mappedRow.clientName || "Unknown Client",
+            companyName: mappedRow.clientName ? String(mappedRow.clientName) : "Unknown Client",
             binNumber: formattedNewBin || null,
             createdBy: tenantAdminId,
             isActive: true
@@ -679,7 +712,7 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
     let itemId: number | null = mappedRow.itemId ? Number(mappedRow.itemId) : null;
     if (!itemId && (mappedRow.hsCode || mappedRow.awHsCode || mappedRow.itemName)) {
       const normalizedHsCode = String(mappedRow.awHsCode || mappedRow.hsCode || "").trim().replace(/[.\s]/g, "");
-      const stdHs = formatStandardHsCode(mappedRow.hsCode || normalizedHsCode);
+      const stdHs = formatStandardHsCode(mappedRow.hsCode ? String(mappedRow.hsCode) : normalizedHsCode);
       const cachedItem = itemByHsCode.get(normalizedHsCode) || itemByHsCode.get(stdHs);
       if (cachedItem) {
         itemId = cachedItem.id;
@@ -687,7 +720,7 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
         const [newItem] = await db
           .insert(globalItems)
           .values({
-            name: mappedRow.itemName || "Unknown Item",
+            name: mappedRow.itemName ? String(mappedRow.itemName) : "Unknown Item",
             hsCode: stdHs || "0000.00.00",
             awHsCode: normalizedHsCode,
             isActive: true
@@ -712,8 +745,8 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
     const unitValue = round2(totalQty > 0 ? baseValueOfVat / totalQty : 0);
     const vat = round2(parseNumber(mappedRow.vat));
     const at = round2(parseNumber(mappedRow.at));
-    const office = (mappedRow.office?.toString() || "").trim();
-    const beNo = (mappedRow.beNo?.toString() || "").trim();
+    const office = (mappedRow.office !== undefined && mappedRow.office !== null ? String(mappedRow.office) : "").trim();
+    const beNo = (mappedRow.beNo !== undefined && mappedRow.beNo !== null ? String(mappedRow.beNo) : "").trim();
 
     const dedupKey = `${beNo}|${formattedDate}|${itemId}|${office}`;
 
@@ -829,7 +862,7 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
 /**
  * Synchronous REST endpoint — response shape unchanged.
  */
-export const savePurchases: Handler = async (c: AppContext) => {
+export const savePurchases = async (c: AppContext) => {
   try {
     const rawBody = c.req.valid("json");
     const { data, month, isRebate, isFfs } = rawBody;
@@ -872,7 +905,7 @@ export const savePurchases: Handler = async (c: AppContext) => {
  * How: Enqueues onto the `import` queue; falls back to the sync handler when the
  *      flag is off, the file is small, or Redis is unavailable.
  */
-export const savePurchasesAsync: Handler = async (c: AppContext) => {
+export const savePurchasesAsync = async (c: AppContext) => {
   const rawBody = c.req.valid("json");
   const { data, month, isRebate, isFfs } = rawBody;
 
@@ -894,7 +927,7 @@ export const savePurchasesAsync: Handler = async (c: AppContext) => {
     queue: "import",
     jobName: "upload.purchases.import",
     shouldUseAsync: shouldUseExcelImportAsync(data.length),
-    fallback: () => (savePurchases as any)(c),
+    fallback: () => savePurchases(c),
     idemParts: [tenantAdminId, month, "purchases-import", contentHash],
     makeJobId: (idemKey) => makeImportJobId(tenantAdminId, month, idemKey),
     buildPayload: (jobId) => ({
@@ -913,7 +946,7 @@ export const savePurchasesAsync: Handler = async (c: AppContext) => {
 
 // ── 3. REPLACE DUPLICATE PURCHASE RECORD ─────────────────────────────
 
-export const replaceDuplicate: Handler = async (c: AppContext) => {
+export const replaceDuplicate = async (c: AppContext) => {
   try {
     const rawBody = c.req.valid("json");
     const { itemsToReplace } = rawBody;
@@ -922,6 +955,9 @@ export const replaceDuplicate: Handler = async (c: AppContext) => {
     }
 
     const { tenantAdminId } = await resolveTenantContext(c);
+    if (tenantAdminId === null) {
+      return c.json({ success: false, message: "No tenant context for this account." }, HttpStatusCodes.FORBIDDEN);
+    }
 
     await db.transaction(async (tx) => {
       for (const item of itemsToReplace) {
@@ -978,7 +1014,7 @@ export const replaceDuplicate: Handler = async (c: AppContext) => {
 
 // ── 4. SAVE PENDING FFS PURCHASES ─────────────────────────────────────
 
-export const savePendingFfs: Handler = async (c: AppContext) => {
+export const savePendingFfs = async (c: AppContext) => {
   try {
     const rawBody = c.req.valid("json");
     const { itemsToSave, takeRebate } = rawBody;
@@ -987,16 +1023,19 @@ export const savePendingFfs: Handler = async (c: AppContext) => {
     }
 
     const { tenantAdminId } = await resolveTenantContext(c);
+    if (tenantAdminId === null) {
+      return c.json({ success: false, message: "No tenant context for this account." }, HttpStatusCodes.FORBIDDEN);
+    }
 
-    const toInsert = itemsToSave.map((item: any) => ({
+    const toInsert = (itemsToSave as Array<Record<string, unknown>>).map((item) => ({
       adminId: tenantAdminId,
-      clientId: item.clientId,
-      itemId: item.itemId,
-      office: item.office,
-      beNo: item.beNo,
-      beDate: item.beDate,
-      month: item.month,
-      lcNumber: item.lcNumber || null,
+      clientId: Number(item.clientId),
+      itemId: Number(item.itemId),
+      office: String(item.office ?? ""),
+      beNo: String(item.beNo ?? ""),
+      beDate: String(item.beDate ?? ""),
+      month: String(item.month ?? ""),
+      lcNumber: item.lcNumber ? String(item.lcNumber) : null,
       netWt: parseNumber(item.netWt),
       excessQty: parseNumber(item.excessQty),
       totalQty: parseNumber(item.totalQty),

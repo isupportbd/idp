@@ -19,7 +19,7 @@ const getMonthlySummaryRoute = createRoute({
   tags: ["Reports"],
   description: "Get monthly purchase and sales summary report",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Monthly summary")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.unknown() }), "Monthly summary")
   }
 });
 
@@ -29,7 +29,7 @@ const getSalesReportRoute = createRoute({
   tags: ["Reports"],
   description: "Get sales details report",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Sales report")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.unknown() }), "Sales report")
   }
 });
 
@@ -39,7 +39,7 @@ const getStatementReportRoute = createRoute({
   tags: ["Reports"],
   description: "Get client balance statement report",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Statement report")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.unknown() }), "Statement report")
   }
 });
 

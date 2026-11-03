@@ -6,6 +6,8 @@ import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
 import { usePulseListener } from "@/composables/usePulseListener";
 import { useExcelExport } from "@/composables/useExcelExport";
 
+const { exportSingleSheet } = useExcelExport();
+
 interface UnitConversion {
   id: number;
   purchaseUnit: string;

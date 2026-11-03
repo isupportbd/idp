@@ -45,7 +45,7 @@ const listCollectionsRoute = createRoute({
   tags: ["Billing - Collections"],
   description: "List payment collections with filters",
   request: { query: listCollectionsQuerySchema },
-  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Collections list") }
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.unknown() }), "Collections list") }
 });
 
 const getCollectionDetailsRoute = createRoute({
@@ -53,7 +53,7 @@ const getCollectionDetailsRoute = createRoute({
   method: "get",
   tags: ["Billing - Collections"],
   description: "Get single payment collection details",
-  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Collection details") }
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.unknown() }), "Collection details") }
 });
 
 const createCollectionRoute = createRoute({
@@ -62,7 +62,7 @@ const createCollectionRoute = createRoute({
   tags: ["Billing - Collections"],
   description: "Record a new payment collection",
   request: { body: jsonContent(createCollectionSchema, "Collection payload") },
-  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Collection created") }
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.unknown() }), "Collection created") }
 });
 
 const cancelCollectionRoute = createRoute({
@@ -81,7 +81,7 @@ const overviewRoute = createRoute({
   tags: ["Billing - Overview"],
   description: "Client billing summary overview",
   request: { query: clientBillingSummaryQuerySchema },
-  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Overview summary") }
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.unknown() }), "Overview summary") }
 });
 
 const missingBillsRoute = createRoute({
@@ -90,7 +90,7 @@ const missingBillsRoute = createRoute({
   tags: ["Billing - Invoices"],
   description: "Find clients with pending bills for the month",
   request: { query: listBillsQuerySchema },
-  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Missing bills list") }
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.unknown() }), "Missing bills list") }
 });
 
 // ── BILL INVOICES ROUTE SCHEMAS ───────────────────────────────────────
@@ -101,7 +101,7 @@ const listBillsRoute = createRoute({
   tags: ["Billing - Invoices"],
   description: "List monthly bills and invoices",
   request: { query: listBillsQuerySchema },
-  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Bills list") }
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.unknown() }), "Bills list") }
 });
 
 const createBillRoute = createRoute({
@@ -110,7 +110,7 @@ const createBillRoute = createRoute({
   tags: ["Billing - Invoices"],
   description: "Create single client bill invoice",
   request: { body: jsonContent(createBillSchema, "Create bill payload") },
-  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Bill created") }
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.unknown() }), "Bill created") }
 });
 
 const batchGenerateBillsRoute = createRoute({
@@ -119,7 +119,7 @@ const batchGenerateBillsRoute = createRoute({
   tags: ["Billing - Invoices"],
   description: "Synchronously batch generate bills for month",
   request: { body: jsonContent(batchGenerateBillsSchema, "Batch bill payload") },
-  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Batch generation result") }
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.unknown() }), "Batch generation result") }
 });
 
 const batchGenerateBillsAsyncRoute = createRoute({
@@ -136,7 +136,7 @@ const getBillDetailsRoute = createRoute({
   method: "get",
   tags: ["Billing - Invoices"],
   description: "Get detailed invoice info with line items and payments",
-  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Bill details") }
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.unknown() }), "Bill details") }
 });
 
 const updateBillRoute = createRoute({
@@ -145,7 +145,7 @@ const updateBillRoute = createRoute({
   tags: ["Billing - Invoices"],
   description: "Update existing bill invoice",
   request: { body: jsonContent(updateBillSchema, "Update bill payload") },
-  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.any() }), "Bill updated") }
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.unknown() }), "Bill updated") }
 });
 
 const deleteBillRoute = createRoute({

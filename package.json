@@ -9,8 +9,8 @@
   "scripts": {
     "build": "bun run build:ui",
     "build:ui": "bun src/framework/maker-cli/runtime/build-ui.mjs",
-    "typecheck": "bunx tsc --noEmit && bunx tsc -p src/resources/tsconfig.json --noEmit",
-    "typecheck:ui": "bunx tsc -p src/resources/tsconfig.json --noEmit",
+    "typecheck": "bunx tsc --noEmit && bunx vue-tsc -p src/resources/tsconfig.json --noEmit",
+    "typecheck:ui": "bunx vue-tsc -p src/resources/tsconfig.json --noEmit",
     "start": "bun src/framework/server.ts",
     "dev": "bun src/framework/maker-cli/index.mjs dev",
     "backend": "bun src/framework/maker-cli/index.mjs serve --src",
@@ -89,7 +89,9 @@
     "drizzle-kit": "^0.31.10",
     "maildev": "^2.2.1",
     "redis-commander": "^0.9.0",
-    "vitest": "^4.1.10"
+    "typescript": "~5.9.0",
+    "vitest": "^4.1.10",
+    "vue-tsc": "^3.3.14"
   },
   "engines": {
     "bun": ">=1.3"

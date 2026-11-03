@@ -43,7 +43,7 @@ export function deriveSubmitters(
   return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export const listSubmissions: Handler = async (c: AppContext) => {
+export const listSubmissions = async (c: AppContext) => {
   try {
     const query = c.req.valid("query");
     const taxPeriod = getDefaultTaxPeriod(query.month || query.taxPeriod);
@@ -277,7 +277,7 @@ export const listSubmissions: Handler = async (c: AppContext) => {
 
 // ── 2. RECORD / UPSERT SUBMISSION ID ─────────────────────────────────
 
-export const recordSubmission: Handler = async (c: AppContext) => {
+export const recordSubmission = async (c: AppContext) => {
   try {
     const payload = c.req.valid("json");
     const { clientId, taxPeriod, submissionId, remarks } = payload;
@@ -526,7 +526,7 @@ export const recordSubmission: Handler = async (c: AppContext) => {
 
 // ── 3. DELETE SUBMISSION RECORD ──────────────────────────────────────
 
-export const deleteSubmission: Handler = async (c: AppContext) => {
+export const deleteSubmission = async (c: AppContext) => {
   try {
     const { id } = c.req.valid("param");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
@@ -575,7 +575,7 @@ export const deleteSubmission: Handler = async (c: AppContext) => {
 
 // ── 4. BATCH DELETE SUBMISSIONS ──────────────────────────────────────
 
-export const batchDeleteSubmissions: Handler = async (c: AppContext) => {
+export const batchDeleteSubmissions = async (c: AppContext) => {
   try {
     const { ids } = c.req.valid("json");
     if (!ids || ids.length === 0) {
@@ -592,7 +592,7 @@ export const batchDeleteSubmissions: Handler = async (c: AppContext) => {
         .select({ id: vatSubmissions.id })
         .from(vatSubmissions)
         .leftJoin(clients, eq(vatSubmissions.clientId, clients.id))
-        .where(and(inArray(vatSubmissions.id, ids), eq(clients.createdBy, tenantAdminId)));
+        .where(and(inArray(vatSubmissions.id, ids), eq(clients.createdBy, tenantAdminId ?? -1)));
       deletableIds = owned.map((row) => row.id);
     }
 
@@ -623,7 +623,7 @@ export const batchDeleteSubmissions: Handler = async (c: AppContext) => {
 
 // ── 5. GET SINGLE SUBMISSION RECORD ──────────────────────────────────
 
-export const getSingleSubmission: Handler = async (c: AppContext) => {
+export const getSingleSubmission = async (c: AppContext) => {
   try {
     const query = c.req.valid ? c.req.valid("query") : c.req.query();
     const clientId = Number(query.clientId);

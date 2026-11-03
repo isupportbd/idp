@@ -33,7 +33,7 @@ const getCompanySettingsRoute = createRoute({
   tags: ["Firm"],
   description: "Get company/firm profile and configuration",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Company settings")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Company settings")
   }
 });
 
@@ -46,7 +46,7 @@ const putCompanySettingsRoute = createRoute({
     body: jsonContent(CompanySettingsSchema, "Company settings payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Updated company settings")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Updated company settings")
   }
 });
 
@@ -58,7 +58,7 @@ const getBankAccountsRoute = createRoute({
   tags: ["Firm"],
   description: "List all firm bank & MFS accounts",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.any()) }), "Bank accounts list")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.unknown()) }), "Bank accounts list")
   }
 });
 
@@ -71,7 +71,7 @@ const postBankAccountRoute = createRoute({
     body: jsonContent(CreateBankAccountSchema, "Bank account payload")
   },
   responses: {
-    [HttpStatusCodes.CREATED]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Created bank account")
+    [HttpStatusCodes.CREATED]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Created bank account")
   }
 });
 
@@ -85,7 +85,7 @@ const patchBankAccountRoute = createRoute({
     body: jsonContent(UpdateBankAccountSchema, "Update bank account payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Updated bank account")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Updated bank account")
   }
 });
 
@@ -110,7 +110,7 @@ const getExpenseHeadsRoute = createRoute({
   tags: ["Firm"],
   description: "List all operating expense heads",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.any()) }), "Expense heads list")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.unknown()) }), "Expense heads list")
   }
 });
 
@@ -123,7 +123,7 @@ const postExpenseHeadRoute = createRoute({
     body: jsonContent(CreateExpenseHeadSchema, "Expense head payload")
   },
   responses: {
-    [HttpStatusCodes.CREATED]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Created expense head")
+    [HttpStatusCodes.CREATED]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Created expense head")
   }
 });
 
@@ -137,7 +137,7 @@ const patchExpenseHeadRoute = createRoute({
     body: jsonContent(UpdateExpenseHeadSchema, "Update expense head payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Updated expense head")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Updated expense head")
   }
 });
 
@@ -150,7 +150,7 @@ const toggleExpenseHeadRoute = createRoute({
     params: IdParamSchema
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Toggled expense head status")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Toggled expense head status")
   }
 });
 

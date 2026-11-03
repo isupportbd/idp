@@ -18,7 +18,7 @@ export function formatStandardHsCode(code: string | null | undefined): string {
   return clean;
 }
 
-export const getItems: Handler = async (c: AppContext) => {
+export const getItems = async (c: AppContext) => {
   try {
     const list = await db.select().from(globalItems).orderBy(asc(globalItems.hsCode));
     return c.json({ success: true, data: list });
@@ -28,7 +28,7 @@ export const getItems: Handler = async (c: AppContext) => {
   }
 };
 
-export const bulkCreateItems: Handler = async (c: AppContext) => {
+export const bulkCreateItems = async (c: AppContext) => {
   try {
     const rawBody = c.req.valid("json");
     const { items: newItems } = await validate(bulkCreateItemsSchema, rawBody);

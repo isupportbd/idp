@@ -35,16 +35,17 @@ export async function enqueueTransactionalSms(payload: SendTransactionalSmsPaylo
       removeOnFail: 5000
     });
     if (job) return { queued: true };
-  } catch (err: any) {
-    console.warn("[SMS] Enqueue failed; falling back to inline background send:", err?.message || err);
+  } catch (err: unknown) {
+    console.warn("[SMS] Enqueue failed; falling back to inline background send:", err instanceof Error ? err.message : err);
   }
 
-  const inline = sendTransactionalSms(payload).catch((err: any) => {
-    console.warn("[SMS] Inline background send failed:", err?.message || err);
+  const inline = sendTransactionalSms(payload).catch((err: unknown) => {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn("[SMS] Inline background send failed:", message);
     return {
       ok: false,
       status: "FAILED" as const,
-      response: String(err?.message || err),
+      response: message,
       message: "",
       retryable: false
     } as import("./sms.service.js").TransactionalSmsResult;

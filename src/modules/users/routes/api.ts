@@ -25,7 +25,7 @@ const listUsersRoute = createRoute({
   tags: ["Users"],
   description: "List organization sub-users",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.any(), "Users list")
+    [HttpStatusCodes.OK]: jsonContent(z.unknown(), "Users list")
   }
 });
 
@@ -38,9 +38,9 @@ const createUserRoute = createRoute({
     body: jsonContent(CreateUserSchema, "User payload")
   },
   responses: {
-    [HttpStatusCodes.CREATED]: jsonContent(z.any(), "User created"),
-    [HttpStatusCodes.BAD_REQUEST]: jsonContent(z.any(), "Bad request"),
-    [HttpStatusCodes.CONFLICT]: jsonContent(z.any(), "Email exists")
+    [HttpStatusCodes.CREATED]: jsonContent(z.unknown(), "User created"),
+    [HttpStatusCodes.BAD_REQUEST]: jsonContent(z.unknown(), "Bad request"),
+    [HttpStatusCodes.CONFLICT]: jsonContent(z.unknown(), "Email exists")
   }
 });
 
@@ -54,7 +54,7 @@ const updateUserRoute = createRoute({
     body: jsonContent(UpdateUserSchema, "Update payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.any(), "User updated")
+    [HttpStatusCodes.OK]: jsonContent(z.unknown(), "User updated")
   }
 });
 
@@ -68,7 +68,7 @@ const resetPasswordRoute = createRoute({
     body: jsonContent(ResetPasswordSchema, "New password")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.any(), "Password reset response")
+    [HttpStatusCodes.OK]: jsonContent(z.unknown(), "Password reset response")
   }
 });
 
@@ -82,7 +82,7 @@ const updateStatusRoute = createRoute({
     body: jsonContent(UpdateStatusSchema, "Status update payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.any(), "Status updated response")
+    [HttpStatusCodes.OK]: jsonContent(z.unknown(), "Status updated response")
   }
 });
 
@@ -95,7 +95,7 @@ const deleteUserRoute = createRoute({
     params: IdParamSchema
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.any(), "User deleted response")
+    [HttpStatusCodes.OK]: jsonContent(z.unknown(), "User deleted response")
   }
 });
 
@@ -105,7 +105,7 @@ const permissionCatalogRoute = createRoute({
   tags: ["Users"],
   description: "List assignable sub-user permissions grouped by module",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.any(), "Permission catalog")
+    [HttpStatusCodes.OK]: jsonContent(z.unknown(), "Permission catalog")
   }
 });
 

@@ -68,7 +68,7 @@ export const ColumnMappingsSchema = z.object({
   rows: z.array(z.object({
     dbColumn: z.string().optional(),
     label: z.string().optional(),
-    aliases: z.any().optional(),
+    aliases: z.unknown().optional(),
     excelColumn: z.string().optional().nullable(),
     isActive: z.boolean().optional(),
     fieldOrder: z.coerce.number().optional()

@@ -11,8 +11,10 @@ import { useClientsApi } from "@/composables/useClientsApi";
 import { useToast } from "@/composables/useToast";
 import { usePagination } from "@/composables/usePagination";
 import { can } from "@/composables/useAuth";
+import { useExcelExport } from "@/composables/useExcelExport";
 
 const router = useRouter();
+const { exportSingleSheet } = useExcelExport();
 const route = useRoute();
 const toast = useToast();
 

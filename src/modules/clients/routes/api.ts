@@ -49,7 +49,7 @@ const getUsersRoute = createRoute({
   tags: ["Clients"],
   description: "List all users available for client assignment",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.any()) }), "Users list")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.unknown()) }), "Users list")
   }
 });
 
@@ -64,7 +64,7 @@ const getAssignmentsRoute = createRoute({
     query: ListAssignmentsQuerySchema
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.any()) }), "Assignments list")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.unknown()) }), "Assignments list")
   }
 });
 
@@ -92,7 +92,7 @@ const checkBinRoute = createRoute({
     body: jsonContent(CheckBinSchema, "Check BIN payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ unique: z.boolean(), existingClient: z.any().nullable() }), "BIN check response")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ unique: z.boolean(), existingClient: z.unknown().nullable() }), "BIN check response")
   }
 });
 
@@ -105,7 +105,7 @@ const checkMobileRoute = createRoute({
     body: jsonContent(CheckMobileSchema, "Check mobile payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ matches: z.array(z.any()) }), "Mobile check response")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ matches: z.array(z.unknown()) }), "Mobile check response")
   }
 });
 
@@ -120,7 +120,7 @@ const getClientsRoute = createRoute({
     query: ListClientsQuerySchema
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.any()), pagination: z.any() }), "Clients list")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.unknown()), pagination: z.unknown() }), "Clients list")
   }
 });
 
@@ -133,7 +133,7 @@ const getClientByIdRoute = createRoute({
     params: IdParamSchema
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Client details")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Client details")
   }
 });
 
@@ -146,7 +146,7 @@ const getClientItemsRoute = createRoute({
     params: IdParamSchema
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.any()) }), "Client purchased items")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.unknown()) }), "Client purchased items")
   }
 });
 
@@ -156,7 +156,7 @@ const postBulkClientsRoute = createRoute({
   tags: ["Clients"],
   description: "Bulk upload multiple client organizations",
   request: {
-    body: jsonContent(z.object({ clients: z.array(z.any()) }), "Bulk client payload")
+    body: jsonContent(z.object({ clients: z.array(z.unknown()) }), "Bulk client payload")
   },
   responses: {
     [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), createdCount: z.number(), skippedCount: z.number().optional() }), "Bulk clients created")
@@ -172,7 +172,7 @@ const postClientRoute = createRoute({
     body: jsonContent(CreateClientSchema, "Client payload")
   },
   responses: {
-    [HttpStatusCodes.CREATED]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Client created")
+    [HttpStatusCodes.CREATED]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Client created")
   }
 });
 
@@ -186,7 +186,7 @@ const patchClientRoute = createRoute({
     body: jsonContent(UpdateClientSchema, "Update client payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Client updated")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Client updated")
   }
 });
 
@@ -200,7 +200,7 @@ const patchToggleClientRoute = createRoute({
     body: jsonContent(ToggleClientSchema, "Toggle status payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Status updated")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Status updated")
   }
 });
 
@@ -231,7 +231,7 @@ const getSubmissionsRoute = createRoute({
     [HttpStatusCodes.OK]: jsonContent(
       z.object({
         message: z.string(),
-        data: z.array(z.any()),
+        data: z.array(z.unknown()),
         stats: z.object({
           totalActive: z.number(),
           submittedCount: z.number(),
@@ -253,7 +253,7 @@ const postSubmissionRoute = createRoute({
     body: jsonContent(RecordSubmissionSchema, "Submission payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.any() }), "Submission record response")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Submission record response")
   }
 });
 

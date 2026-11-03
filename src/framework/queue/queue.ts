@@ -39,6 +39,8 @@ function key(queue: string, job: string) {
  *      such a handler can split its work into `ctx.step(...)` checkpoints that
  *      survive crashes/restarts instead of re-running from scratch.
  */
+export function shouldQueue(job: string, queue: string, handler: QueueHandler, options?: { durable?: false }): void;
+export function shouldQueue(job: string, queue: string, handler: DurableQueueHandler, options: { durable: true }): void;
 export function shouldQueue(job: string, queue: string, handler: AnyQueueHandler, options: { durable?: boolean } = {}) {
   const target = key(queue || "default", job);
   if (options.durable) {
