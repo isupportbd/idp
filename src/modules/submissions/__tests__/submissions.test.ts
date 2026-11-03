@@ -3,7 +3,7 @@ import { initDatabase } from "@/framework/database/connection.js";
 import { db } from "@/framework/facade.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
-import { vatSubmissions } from "@/modules/clients/database/models/vat_submissions.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { users } from "@/modules/auth/database/models/user.js";
 import { deriveSubmitters, recordSubmission, listSubmissions } from "../controllers/submissions.controller.js";

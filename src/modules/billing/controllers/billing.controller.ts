@@ -18,14 +18,14 @@ import { bills } from "../database/models/bills.js";
 import { billItems } from "../database/models/bill_items.js";
 import { collections } from "../database/models/collections.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
-import { vatSubmissions } from "@/modules/clients/database/models/vat_submissions.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 import { serviceItems } from "@/modules/services/database/models/service_items.js";
 import { serviceRates } from "@/modules/services/database/models/service_rates.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
 import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
 import { users } from "@/modules/auth/database/models/user.js";
-import { purchases } from "@/modules/clients/database/models/purchases.js";
+import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { companySettings } from "@/modules/firm/database/models/company_settings.js";
 import { bankAccounts } from "@/modules/firm/database/models/bank_accounts.js";
 

@@ -6,7 +6,7 @@ import { broadcast, db, HttpStatusCodes, resolveTenantContext } from "@/framewor
 import { columnMappings } from "@/modules/superadmin/database/models/column_mappings.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
-import { purchases } from "@/modules/clients/database/models/purchases.js";
+import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { users } from "@/modules/auth/database/models/user.js";
 import { handleControllerError, handleAsyncEndpoint, isAsyncFlagEnabled } from "@/framework/facade.js";
 import { round2 } from "@/utils/number.js";

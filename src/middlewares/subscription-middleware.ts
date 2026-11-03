@@ -4,8 +4,8 @@ import { db } from "@/framework/facade.js";
 import { users } from "@/modules/auth/database/models/user.js";
 import { plans } from "@/modules/superadmin/database/models/plans.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
-import { purchases } from "@/modules/clients/database/models/purchases.js";
-import { vatSubmissions } from "@/modules/clients/database/models/vat_submissions.js";
+import { purchases } from "@/modules/purchases/database/models/purchases.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 import { bills } from "@/modules/billing/database/models/bills.js";
 
 export async function subscriptionMiddleware(c: Context, next: Next) {

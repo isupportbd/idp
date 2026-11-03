@@ -3,7 +3,7 @@ import { and, asc, desc, eq, like, sql } from "drizzle-orm";
 import { initDatabase } from "@/framework/database/connection.js";
 import { db } from "@/framework/facade.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
-import { vatSubmissions } from "@/modules/clients/database/models/vat_submissions.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { serviceItems } from "@/modules/services/database/models/service_items.js";
 import { serviceRates } from "@/modules/services/database/models/service_rates.js";

@@ -2,8 +2,8 @@ import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import { db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
-import { purchases } from "@/modules/clients/database/models/purchases.js";
-import { vatSubmissions } from "@/modules/clients/database/models/vat_submissions.js";
+import { purchases } from "@/modules/purchases/database/models/purchases.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
 

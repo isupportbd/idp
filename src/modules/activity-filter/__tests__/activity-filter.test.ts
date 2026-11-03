@@ -3,7 +3,7 @@ import { initDatabase } from "@/framework/database/connection.js";
 import { db, jwt } from "@/framework/facade.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
-import { vatSubmissions } from "@/modules/clients/database/models/vat_submissions.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 import { users } from "@/modules/auth/database/models/user.js";
 import { and, eq } from "drizzle-orm";
 import { OpenAPIHono } from "@hono/zod-openapi";

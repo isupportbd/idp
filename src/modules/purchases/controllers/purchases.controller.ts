@@ -2,10 +2,10 @@ import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import { db, HttpStatusCodes, resolveTenantContext, validate } from "@/framework/facade.js";
 import { batchDeletePurchasesSchema } from "./purchases.schema.js";
-import { purchases } from "@/modules/clients/database/models/purchases.js";
+import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
-import { vatSubmissions } from "@/modules/clients/database/models/vat_submissions.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 import { users } from "@/modules/auth/database/models/user.js";
 
 // ── GET PURCHASES LIST ───────────────────────────────────────────────

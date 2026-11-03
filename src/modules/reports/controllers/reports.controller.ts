@@ -1,8 +1,8 @@
 import type { Context } from "hono";
 import { db } from "@/framework/facade.js";
 import { resolveTenantContext } from "@/framework/facade.js";
-import { purchases } from "@/modules/clients/database/models/purchases.js";
-import { salesRates } from "@/modules/clients/database/models/sales_rates.js";
+import { purchases } from "@/modules/purchases/database/models/purchases.js";
+import { salesRates } from "@/modules/sales-rates/database/models/sales_rates.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
