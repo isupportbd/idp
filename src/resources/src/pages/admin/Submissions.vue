@@ -12,6 +12,7 @@ import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
 import IdpSelect from "@/components/common/IdpSelect.vue";
 import { usePagination } from "@/composables/usePagination";
 import { usePulseListener } from "@/composables/usePulseListener";
+import { useExcelExport } from "@/composables/useExcelExport";
 import { pulse } from "@/plugins/pulse";
 
 const toast = useToast();
@@ -402,11 +403,7 @@ const exportToExcel = async () => {
     "Remarks": s.remarks || ""
   }));
 
-  const XLSX = await import("xlsx");
-  const worksheet = XLSX.utils.json_to_sheet(exportData);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Submissions");
-  XLSX.writeFile(workbook, `Submissions_${selectedMonth.value || "All"}.xlsx`);
+  exportSingleSheet(exportData, "Submissions", `Submissions_${selectedMonth.value || "All"}.xlsx`);
 };
 
 // 2. Standard A4 Print Action

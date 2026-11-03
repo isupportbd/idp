@@ -8,6 +8,7 @@ import { useActivityFilterApi, type ActivityClient } from "@/composables/useActi
 import { usePagination } from "@/composables/usePagination";
 import { can } from "@/composables/useAuth";
 import { usePulseListener } from "@/composables/usePulseListener";
+import { useExcelExport } from "@/composables/useExcelExport";
 import { pulse } from "@/plugins/pulse";
 
 const router = useRouter();
@@ -295,11 +296,7 @@ const exportToExcel = async () => {
     "Submitted By": c.submission?.submittedBy || "—"
   }));
 
-  const XLSX = await import("xlsx");
-  const ws = XLSX.utils.json_to_sheet(exportRows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Activity Filter");
-  XLSX.writeFile(wb, `IDP_Activity_Filter_${selectedMonth.value}.xlsx`);
+  exportSingleSheet(exportRows, "Activity Filter", `IDP_Activity_Filter_${selectedMonth.value}.xlsx`);
 };
 
 // Print
