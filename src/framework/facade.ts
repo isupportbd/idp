@@ -35,6 +35,7 @@ export { storage } from "@/framework/storage/storage.js";
 export { cookie } from "@/framework/support/cookie.js";
 export { jwt } from "@/framework/support/jwt.js";
 export { logger } from "@/framework/support/logger.js";
+export { retry, type RetryOptions } from "@/framework/utils/retry.js";
 export { mail } from "@/framework/support/mail.js";
 export { password } from "@/framework/support/password.js";
 export { urls } from "@/framework/support/url.js";

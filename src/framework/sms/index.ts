@@ -1,3 +1,4 @@
+import { retry } from "@/framework/utils/retry.js";
 import axios from "axios";
 
 export interface SmsSendOptions {
@@ -57,17 +58,21 @@ export async function dispatchProviderSms(options: SmsSendOptions): Promise<{ su
     // Clean mobile number (strip spaces, dashes, plus signs, brackets)
     const cleanMobile = mobile.replace(/[\s\-\+\(\)]/g, "");
 
-    // 1. Dispatch SMS through BulkSMSBD API
-    const sendRes = await axios.get("http://bulksmsbd.net/api/smsapi", {
-      params: {
-        api_key: apiKey.trim(),
-        type: "text",
-        number: cleanMobile,
-        senderid: senderId || "",
-        message: message
-      },
-      timeout: 10000
-    });
+    // 1. Dispatch SMS through BulkSMSBD API with retry & exponential backoff
+    const sendRes = await retry(
+      () =>
+        axios.get("http://bulksmsbd.net/api/smsapi", {
+          params: {
+            api_key: apiKey.trim(),
+            type: "text",
+            number: cleanMobile,
+            senderid: senderId || "",
+            message: message
+          },
+          timeout: 8000
+        }),
+      { attempts: 3, minDelayMs: 300, maxDelayMs: 1500, jitter: true }
+    );
 
     if (sendRes.data && typeof sendRes.data === "object") {
       if (sendRes.data.response_code && sendRes.data.response_code !== 202) {

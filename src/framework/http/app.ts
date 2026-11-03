@@ -1,3 +1,5 @@
+import { db } from "@/framework/facade.js";
+import { sql } from "drizzle-orm";
 import { createRoute, z } from "@hono/zod-openapi";
 import { secureHeaders } from "hono/secure-headers";
 import { serveEmojiFavicon } from "stoker/middlewares";
@@ -65,6 +67,31 @@ export function createHttpApp() {
   app.use("/storage/*", storageStaticMiddleware);
   app.use(serveEmojiFavicon("🚀"));
 
+  // ── Health & Liveness / Readiness Endpoints ──
+  app.get("/health", (c: any) => c.json({ status: "ok", message: "Application is healthy", timestamp: Date.now() }));
+  
+  // Fast Liveness Probe (for container orchestration / process managers)
+  app.get("/health/live", (c: any) => c.json({ status: "ok", timestamp: Date.now() }));
+
+  // Deep Readiness Probe (verifies database connectivity)
+  app.get("/health/ready", async (c: any) => {
+    try {
+      await db.execute(sql`SELECT 1`);
+      return c.json({
+        status: "ready",
+        db: "connected",
+        timestamp: Date.now()
+      }, 200);
+    } catch (err: any) {
+      return c.json({
+        status: "not_ready",
+        db: "disconnected",
+        error: err?.message || "Database unreachable",
+        timestamp: Date.now()
+      }, 503);
+    }
+  });
+
   if (appConfig.openApiEnabled) {
     configureOpenApi(app);
     app.api(healthRoute, (c: any) => c.json({ message: "Application is healthy" }));
@@ -72,10 +99,6 @@ export function createHttpApp() {
 
   if (!hasUiBuild()) {
     app.get("/", (c: any) => c.json({ name: appConfig.name, ok: true }));
-  }
-
-  if (!appConfig.openApiEnabled) {
-    app.get("/health", (c: any) => c.json({ message: "Application is healthy" }));
   }
 
   app.notFound(notFound);
