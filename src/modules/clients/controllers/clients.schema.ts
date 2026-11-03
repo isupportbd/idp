@@ -60,3 +60,9 @@ export const ListClientsQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().optional().default(50)
 });
+
+export const BulkCreateClientsSchema = z.object({
+  clients: z.array(CreateClientSchema).min(1, "No clients provided")
+});
+
+export type BulkCreateClientsInput = z.infer<typeof BulkCreateClientsSchema>;

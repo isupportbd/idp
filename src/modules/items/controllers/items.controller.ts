@@ -1,6 +1,7 @@
 import { asc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
-import { db, HttpStatusCodes } from "@/framework/facade.js";
+import { db, HttpStatusCodes, validate } from "@/framework/facade.js";
+import { bulkCreateItemsSchema } from "./items.schema.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
 
 export function formatStandardHsCode(code: string | null | undefined): string {
@@ -28,10 +29,8 @@ export const getItems: Handler = async (c: any) => {
 
 export const bulkCreateItems: Handler = async (c: any) => {
   try {
-    const { items: newItems } = await c.req.json();
-    if (!newItems || !Array.isArray(newItems) || newItems.length === 0) {
-      return c.json({ success: false, message: "No items provided." }, HttpStatusCodes.BAD_REQUEST);
-    }
+    const rawBody = await c.req.json().catch(() => ({}));
+    const { items: newItems } = await validate(bulkCreateItemsSchema, rawBody);
 
     const inserted: any[] = [];
     for (const item of newItems) {

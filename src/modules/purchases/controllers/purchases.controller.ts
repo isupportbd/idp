@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
-import { db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
+import { db, HttpStatusCodes, resolveTenantContext, validate } from "@/framework/facade.js";
+import { batchDeletePurchasesSchema } from "./purchases.schema.js";
 import { purchases } from "@/modules/clients/database/models/purchases.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
@@ -153,7 +154,8 @@ export const deletePurchase: Handler = async (c: any) => {
 
 export const batchDeletePurchases: Handler = async (c: any) => {
   try {
-    const { month, clientId, ids } = await c.req.json();
+    const rawBody = await c.req.json().catch(() => ({}));
+    const { month, clientId, ids } = await validate(batchDeletePurchasesSchema, rawBody);
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
     const conditions: any[] = [];

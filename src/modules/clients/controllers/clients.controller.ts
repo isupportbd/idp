@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
-import { broadcast, db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
+import { broadcast, db, HttpStatusCodes, resolveTenantContext, validate } from "@/framework/facade.js";
+import { BulkCreateClientsSchema } from "./clients.schema.js";
 import { clients } from "../database/models/clients.js";
 import { clientManagers } from "../database/models/client_managers.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
@@ -973,11 +974,8 @@ function formatStandardBin(raw: string | null | undefined): string | null {
 
 export const bulkCreateClients: Handler = async (c: any) => {
   try {
-    const body = await c.req.json().catch(() => ({}));
-    const rawClients = Array.isArray(body?.clients) ? body.clients : [];
-    if (rawClients.length === 0) {
-      return c.json({ message: "No clients provided", createdCount: 0 }, HttpStatusCodes.BAD_REQUEST);
-    }
+    const rawBody = await c.req.json().catch(() => ({}));
+    const { clients: rawClients } = await validate(BulkCreateClientsSchema, rawBody);
 
     const { currentUser, isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
     const tenantAdmin = currentUser.adminId
