@@ -6,7 +6,7 @@ import IdpSelect from "@/components/common/IdpSelect.vue";
 import { usePayoutsApi, formatBdt, formatMonth, currentMonthValue } from "@/composables/usePayoutsApi";
 import { useToast } from "@/composables/useToast";
 import { can, useAuth } from "@/composables/useAuth";
-import { pulse } from "@/plugins/pulse";
+import { usePulseListener } from "@/composables/usePulseListener";
 
 const toast = useToast();
 const { user } = useAuth();
@@ -148,31 +148,27 @@ const onMonthChange = () => {
 
 const printReport = () => window.print();
 
+usePulseListener("payout:earning-accrued", (data: any) => {
+  if (!data) return;
+  if (data.userId && Number(data.userId) === Number(user.value?.id)) return; // ignore own filings
+  if (data.taxPeriod && data.taxPeriod !== selectedMonth.value) return;
+  toast.info(
+    `${data.staffName || "Staff"} earned ${formatBdt(data.amount)} Tk (${data.classification === "regular" ? "Regular" : "Zero"} return) — month total ${formatBdt(data.monthTotalEarned)} Tk`,
+    5000
+  );
+  reloadQuiet();
+});
+
+usePulseListener("payout:created", () => reloadQuiet());
+usePulseListener("payout:balance-updated", () => reloadQuiet());
+usePulseListener("payout:rates-updated", () => reloadQuiet());
+
 onMounted(() => {
   loadAll();
-
-  pulse.channel("auth").listen("payout:earning-accrued", (data: any) => {
-    if (!data) return;
-    if (data.userId && Number(data.userId) === Number(user.value?.id)) return; // ignore own filings
-    if (data.taxPeriod && data.taxPeriod !== selectedMonth.value) return;
-    toast.info(
-      `${data.staffName || "Staff"} earned ${formatBdt(data.amount)} Tk (${data.classification === "regular" ? "Regular" : "Zero"} return) — month total ${formatBdt(data.monthTotalEarned)} Tk`,
-      5000
-    );
-    reloadQuiet();
-  });
-
-  pulse.channel("auth").listen("payout:created", () => reloadQuiet());
-  pulse.channel("auth").listen("payout:balance-updated", () => reloadQuiet());
-  pulse.channel("auth").listen("payout:rates-updated", () => reloadQuiet());
 });
 
 onUnmounted(() => {
   clearTimeout(refreshTimer);
-  pulse.channel("auth").stopListening("payout:earning-accrued");
-  pulse.channel("auth").stopListening("payout:created");
-  pulse.channel("auth").stopListening("payout:balance-updated");
-  pulse.channel("auth").stopListening("payout:rates-updated");
 });
 </script>
 

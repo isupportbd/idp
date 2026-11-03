@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import axios from "axios";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
-import { pulse } from "@/plugins/pulse";
+import { usePulseListener } from "@/composables/usePulseListener";
 
 interface UnitConversion {
   id: number;
@@ -255,16 +255,11 @@ watch([fromMonth, toMonth, selectedClientId], () => {
   loadStatementData();
 });
 
+usePulseListener("purchase:uploaded", () => loadStatementData());
+usePulseListener("submission:updated", () => loadStatementData());
+
 onMounted(() => {
   fetchMasterData();
-
-  pulse.channel("auth").listen("purchase:uploaded", () => loadStatementData());
-  pulse.channel("auth").listen("submission:updated", () => loadStatementData());
-});
-
-onUnmounted(() => {
-  pulse.channel("auth").stopListening("purchase:uploaded");
-  pulse.channel("auth").stopListening("submission:updated");
 });
 </script>
 

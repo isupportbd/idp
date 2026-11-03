@@ -24,6 +24,11 @@ export { dispatchProviderSms, fetchProviderBalance } from "@/framework/sms/index
 export { notify } from "@/framework/notification/index.js";
 export { queue, queueJob, shouldQueue } from "@/framework/queue/queue.js";
 export { broadcast } from "@/framework/realtime/index.js";
+export {
+  billingScope,
+  collectionReceivedPayload,
+  invoiceCreatedPayload
+} from "@/framework/realtime/event-builders.js";
 export { defineSchedule } from "@/framework/scheduler/scheduler.js";
 export { session } from "@/framework/session/session.js";
 export { storage } from "@/framework/storage/storage.js";

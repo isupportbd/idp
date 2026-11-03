@@ -1,6 +1,8 @@
-import type { Context, Next } from "hono";
 import { createRouter } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
+import { denyRole, requireRole } from "@/middlewares/role-middleware.js";
+import { requireTenantAdmin } from "@/middlewares/permission-middleware.js";
+import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
   listTemplates,
   updateTemplate,
@@ -14,56 +16,25 @@ import {
 
 const smsTemplatesRouter = createRouter();
 
-/**
- * SuperAdmin only — global master template management.
- * Admin/Staff are blocked from editing the master template defaults.
- */
-async function superAdminOnlyMiddleware(c: Context, next: Next) {
-  const auth = c.get("auth") || c.get("user") || (c.req as any).user;
-  const roleName = typeof auth?.role === "string" ? auth.role : auth?.role?.name;
-  if (roleName !== "superadmin") {
-    return c.json({ success: false, message: "Forbidden: Super Admin access only" }, 403);
-  }
-  return await next();
-}
+// ── Gateway settings & actions: tenant admin only ──
+const tenantSmsRouter = createRouter();
+tenantSmsRouter.use("*", authMiddleware, denyRole("superadmin"), subscriptionMiddleware, requireTenantAdmin);
 
-/**
- * Block regular staff/sub-users from accessing SMS gateway management.
- * Allow: superadmin OR tenant admin (role === 'admin').
- * Block: staff/sub-users (role !== 'admin').
- */
-async function blockStaffMiddleware(c: Context, next: Next) {
-  const auth = c.get("auth") || c.get("user") || (c.req as any).user;
-  const roleName = typeof auth?.role === "string" ? auth.role.toLowerCase() : auth?.role?.name?.toLowerCase();
-  const isSuperAdmin = roleName === "superadmin";
-  const isTenantAdmin = roleName === "admin";
-  if (isSuperAdmin || isTenantAdmin) {
-    return await next();
-  }
-  return c.json({ success: false, message: "Forbidden: Insufficient permissions" }, 403);
-}
+tenantSmsRouter.get("/gateway", getGatewaySettings);
+tenantSmsRouter.put("/gateway", updateGatewaySettings);
+tenantSmsRouter.get("/gateway/balance", checkGatewayBalance);
+tenantSmsRouter.post("/test", sendTestSms);
+tenantSmsRouter.get("/logs", listSmsLogs);
 
-/**
- * Authenticated users.
- * Each user sees only their own tenant's data via resolveTenantAdminId() in the controller.
- * - SuperAdmin: adminId = null — global gateway & templates
- * - Admin: adminId = user.id — own gateway & templates
- * - Staff: blocked from gateway management
- */
-smsTemplatesRouter.use("*", authMiddleware);
+// ── Template management: SuperAdmin only ──
+const superAdminSmsRouter = createRouter();
+superAdminSmsRouter.use("*", authMiddleware, requireRole("superadmin"));
 
-// ── Gateway settings & actions: superadmin and tenant admin only ──
-// Controller isolates data per tenant via resolveTenantAdminId()
-smsTemplatesRouter.get("/gateway", blockStaffMiddleware, getGatewaySettings);
-smsTemplatesRouter.put("/gateway", blockStaffMiddleware, updateGatewaySettings);
-smsTemplatesRouter.get("/gateway/balance", blockStaffMiddleware, checkGatewayBalance);
-smsTemplatesRouter.post("/test", blockStaffMiddleware, sendTestSms);
-smsTemplatesRouter.get("/logs", blockStaffMiddleware, listSmsLogs);
+superAdminSmsRouter.get("/", listTemplates);
+superAdminSmsRouter.put("/:id", updateTemplate);
+superAdminSmsRouter.post("/:id/reset", resetTemplate);
 
-// ── Template management: SuperAdmin only ──────────────────────────────────
-// Admins use global templates for SMS sending; they do NOT manage templates.
-smsTemplatesRouter.get("/", superAdminOnlyMiddleware, listTemplates);
-smsTemplatesRouter.put("/:id", superAdminOnlyMiddleware, updateTemplate);
-smsTemplatesRouter.post("/:id/reset", superAdminOnlyMiddleware, resetTemplate);
+smsTemplatesRouter.route("/", tenantSmsRouter);
+smsTemplatesRouter.route("/", superAdminSmsRouter);
 
 export default smsTemplatesRouter;

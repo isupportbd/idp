@@ -4,7 +4,7 @@ import { usePagination } from "@/composables/usePagination";
 import axios from "axios";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import IdpSelect from "@/components/common/IdpSelect.vue";
-import { pulse } from "@/plugins/pulse";
+import { usePulseListener } from "@/composables/usePulseListener";
 
 interface UnitConversion {
   id: number;
@@ -273,17 +273,12 @@ watch([fromMonth, toMonth, selectedCustomerTypeId, selectedReferenceId], () => {
   loadSummaryData();
 });
 
+usePulseListener("purchase:uploaded", () => loadSummaryData());
+usePulseListener("submission:updated", () => loadSummaryData());
+
 onMounted(() => {
   fetchMasterData();
   loadSummaryData();
-
-  pulse.channel("auth").listen("purchase:uploaded", () => loadSummaryData());
-  pulse.channel("auth").listen("submission:updated", () => loadSummaryData());
-});
-
-onUnmounted(() => {
-  pulse.channel("auth").stopListening("purchase:uploaded");
-  pulse.channel("auth").stopListening("submission:updated");
 });
 </script>
 
