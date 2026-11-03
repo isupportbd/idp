@@ -134,7 +134,7 @@ export function useSuperAdminApi() {
     onUnmounted(() => {
       pulse.channel("auth").stopListening("global:settings-updated", onSettingsUpdated);
     });
-  } catch {}
+  } catch (uiErr) { console.warn("[SuperAdmin API Warning]:", uiErr); }
 
   // Fetch Tenants
   async function fetchTenants() {

@@ -100,7 +100,7 @@ function normalize(row: typeof notifications.$inferSelect) {
   if (row.data) {
     try {
       parsed = JSON.parse(row.data);
-    } catch {}
+    } catch (notifyErr: any) { console.warn("[Notification Warning]: Failed broadcast", notifyErr?.message || notifyErr); }
   }
   return {
     id: row.id,

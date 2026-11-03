@@ -293,7 +293,7 @@ export async function callSmsGateway(opts: {
         };
         if (!ok && errMap[code]) friendly = `[${code}] ${errMap[code]}`;
       }
-    } catch {}
+    } catch (smsServiceErr: any) { console.warn("[SMS Service Warning]:", smsServiceErr?.message || smsServiceErr); }
 
     return { ok, raw: friendly.slice(0, 500), code, networkError: false };
   } catch (e: any) {
@@ -353,7 +353,7 @@ export async function sendTransactionalSms(payload: SendTransactionalSmsPayload)
       senderId = settings.smsSenderId || "";
       companyName = settings.companyName || companyName;
     }
-  } catch {}
+  } catch (smsServiceErr: any) { console.warn("[SMS Service Warning]:", smsServiceErr?.message || smsServiceErr); }
 
   // 1b. Fail-safe per-event gate: a firm may enable SMS for only some events.
   //     A disabled event is a deliberate no-op — no gateway call and no FAILED

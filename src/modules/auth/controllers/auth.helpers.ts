@@ -80,7 +80,7 @@ export async function sanitizeUser(user: any) {
         extraStorageMB = adminUser.extraStorageMB ?? 0;
         effectiveExpDate = adminUser.expDate;
       }
-    } catch {}
+    } catch (authHelperErr: any) { console.warn("[Auth Helper Warning]:", authHelperErr?.message || authHelperErr); }
   }
 
   // Real-time Gateway Balance Sync: If firm has SMS Gateway API Key configured, ensure latest stock
@@ -106,7 +106,7 @@ export async function sanitizeUser(user: any) {
           }
         }
       }
-    } catch {}
+    } catch (authHelperErr: any) { console.warn("[Auth Helper Warning]:", authHelperErr?.message || authHelperErr); }
   }
 
   try {

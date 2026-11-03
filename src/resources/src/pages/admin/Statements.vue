@@ -4,6 +4,7 @@ import axios from "axios";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
 import { usePulseListener } from "@/composables/usePulseListener";
+import { useExcelExport } from "@/composables/useExcelExport";
 
 interface UnitConversion {
   id: number;
@@ -187,7 +188,7 @@ const resetFilters = () => {
 const exportToExcel = async () => {
   if (statementRows.value.length === 0) return;
 
-  const XLSX = await import("xlsx");
+  // Using central useExcelExport composable
   const rows: any[] = [];
   const fromLabel = formatMonthDisplay(fromMonth.value).replace(/\s+/g, "_");
   const toLabel = formatMonthDisplay(toMonth.value).replace(/\s+/g, "_");

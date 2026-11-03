@@ -508,7 +508,7 @@ function broadcastPurchaseProgress(tenantAdminId: number, processed: number, tot
       { adminId: tenantAdminId, processed, total, percent, timestamp: Date.now() },
       { tenant: tenantAdminId }
     );
-  } catch {}
+  } catch (uploadErr: any) { console.warn("[Upload Progress Warning]:", uploadErr?.message || uploadErr); }
 }
 
 /** Why: run imports async behind a flag, or force it for very large files. */

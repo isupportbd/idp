@@ -6,6 +6,7 @@ import MonthMatrix from "@/components/MonthMatrix.vue";
 import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
 import { can, canAccessModule } from "@/composables/useAuth";
 import { usePulseListener } from "@/composables/usePulseListener";
+import { useExcelExport } from "@/composables/useExcelExport";
 import { pulse } from "@/plugins/pulse";
 
 // Types
@@ -1101,8 +1102,6 @@ const saveNewMonth = async () => {
 const exportActiveReport = async () => {
   if (!can("reports.export")) return;
   if (!selectedClient.value) return;
-  const XLSX = await import("xlsx");
-  const wb = XLSX.utils.book_new();
 
   if (currentTab.value === "purchases") {
     const headers = [
@@ -1135,16 +1134,17 @@ const exportActiveReport = async () => {
         AT: Number(fmt(p.at || 0))
       }));
 
+    const sheets = [];
     if (vatNote22.value.length > 0) {
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(makeRows(vatNote22.value), { header: headers }), "Note 22 (Non-Rebate)");
+      sheets.push({ name: "Note 22 (Non-Rebate)", data: makeRows(vatNote22.value), headers });
     }
     if (vatNote15.value.length > 0) {
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(makeRows(vatNote15.value), { header: headers }), "Note 15 (Rebate)");
+      sheets.push({ name: "Note 15 (Rebate)", data: makeRows(vatNote15.value), headers });
     }
     if (vatNote13.value.length > 0) {
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(makeRows(vatNote13.value), { header: headers }), "Note 13 (Exempt)");
+      sheets.push({ name: "Note 13 (Exempt)", data: makeRows(vatNote13.value), headers });
     }
-    XLSX.writeFile(wb, `Purchases_${selectedClient.value.name}_${formatMonth(selectedMonthYear.value)}.xlsx`);
+    exportMultipleSheets(sheets, `Purchases_${selectedClient.value.name}_${formatMonth(selectedMonthYear.value)}.xlsx`);
   } else if (currentTab.value === "sales") {
     const rows = salesReport.value.map((s, idx) => ({
       SL: idx + 1,
@@ -1158,8 +1158,7 @@ const exportActiveReport = async () => {
       "Addition %": Number(fmt(s.addition)),
       "VAT Note": `Note ${s.note}`
     }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Sales Summary");
-    XLSX.writeFile(wb, `Sales_${selectedClient.value.name}_${formatMonth(selectedMonthYear.value)}.xlsx`);
+    exportSingleSheet(rows, "Sales Summary", `Sales_${selectedClient.value.name}_${formatMonth(selectedMonthYear.value)}.xlsx`);
   } else if (currentTab.value === "statement") {
     const rows = statementReport.value.map((st, idx) => ({
       SL: idx + 1,
@@ -1171,8 +1170,7 @@ const exportActiveReport = async () => {
       "Vatable Value": Number(fmt(st.vatableValue)),
       VAT: Number(fmt(st.vat))
     }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Statement");
-    XLSX.writeFile(wb, `Statement_${selectedClient.value.name}_${formatMonth(selectedMonthYear.value)}.xlsx`);
+    exportSingleSheet(rows, "Statement", `Statement_${selectedClient.value.name}_${formatMonth(selectedMonthYear.value)}.xlsx`);
   }
 };
 
@@ -1201,11 +1199,7 @@ const downloadMonthlySummaryExcel = async () => {
       "Total Purchased (Metric Tons)": Number(fmt(row.totalNetWt))
     }));
 
-    const XLSX = await import("xlsx");
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(excelData);
-    XLSX.utils.book_append_sheet(wb, ws, "Monthly Summary");
-    XLSX.writeFile(wb, `Monthly_Client_Summary_${formatMonth(summaryModalMonth.value)}.xlsx`);
+    exportSingleSheet(excelData, "Monthly Summary", `Monthly_Client_Summary_${formatMonth(summaryModalMonth.value)}.xlsx`);
     showSummaryModal.value = false;
   } catch (err: any) {
     summaryErrorMsg.value = "Failed to download summary report.";

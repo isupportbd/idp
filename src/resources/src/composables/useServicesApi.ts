@@ -47,7 +47,7 @@ export function useServicesApi() {
     onUnmounted(() => {
       pulse.channel("auth").stopListening("global:settings-updated", onSettingsUpdated);
     });
-  } catch {}
+  } catch (uiErr) { console.warn("[Services API Warning]:", uiErr); }
 
   // ── CUSTOMER TYPES ──────────────────────
   const fetchCustomerTypes = async (force = false) => {

@@ -2206,7 +2206,7 @@ export const getCollectionDetails: Handler = async (c: any) => {
           where: eq(companySettings.adminId, col.createdBy)
         });
       }
-    } catch { }
+    } catch (billErr: any) { console.warn("[Billing Warning]:", billErr?.message || billErr); }
 
     return c.json(
       {

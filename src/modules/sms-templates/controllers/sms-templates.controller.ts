@@ -448,7 +448,7 @@ export async function checkGatewayBalance(c: Context) {
           },
           { tenant: adminId }
         );
-      } catch {}
+      } catch (smsTmplErr: any) { console.warn("[SMS Template Controller Warning]:", smsTmplErr?.message || smsTmplErr); }
     }
 
     return c.json({

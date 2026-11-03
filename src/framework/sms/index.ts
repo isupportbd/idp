@@ -37,7 +37,7 @@ export async function fetchProviderBalance(apiKey?: string | null): Promise<numb
       });
       const gwNum = parseFloat(String(gwRes.data));
       if (!isNaN(gwNum)) return parseFloat(gwNum.toFixed(2));
-    } catch { }
+    } catch (smsErr: any) { console.warn("[SMS Framework Warning]: Failed dispatch", smsErr?.message || smsErr); }
   }
 
   return null;

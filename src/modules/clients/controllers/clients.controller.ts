@@ -1164,7 +1164,7 @@ export const bulkCreateClients: Handler = async (c: any) => {
                 },
                 { tenant: tenantAdminId }
               );
-            } catch {}
+            } catch (clientErr: any) { console.warn("[Client Controller Warning]:", clientErr?.message || clientErr); }
           }
         } catch (e) {
           // Fallback to row-by-row on chunk conflict

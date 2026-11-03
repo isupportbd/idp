@@ -30,7 +30,7 @@ function clearStoredAuth() {
   // stale identity is never hydrated after the session ends.
   try {
     localStorage.removeItem(AUTH_USER_KEY);
-  } catch {}
+  } catch (storageErr) { console.warn("[Axios Plugin Warning]: Failed to access storage", storageErr); }
 }
 
 function redirectToLogin() {

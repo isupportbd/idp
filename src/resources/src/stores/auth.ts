@@ -62,12 +62,12 @@ export const useAuthStore = defineStore("auth", () => {
     isAuthenticated.value = !!value;
     if (value) {
       setUser(value);
-      try { localStorage.setItem("idp_auth_user", JSON.stringify(value)); } catch {}
+      try { localStorage.setItem("idp_auth_user", JSON.stringify(value)); } catch (storageErr) { console.warn("[Auth Store Storage Warning]:", storageErr); }
     } else {
       clearUser();
       try {
         localStorage.removeItem("idp_auth_user");
-      } catch {}
+      } catch (storageErr) { console.warn("[Auth Store Warning]:", storageErr); }
     }
   };
 
@@ -81,7 +81,7 @@ export const useAuthStore = defineStore("auth", () => {
       localStorage.removeItem("idp_access_token");
       localStorage.removeItem("idp_refresh_token");
       localStorage.removeItem("auth_token");
-    } catch {}
+    } catch (storageErr) { console.warn("[Auth Store Warning]:", storageErr); }
 
     // Hydrate synchronously from the cached user so an already-signed-in user
     // never waits on a network round-trip before the first paint.
@@ -95,7 +95,7 @@ export const useAuthStore = defineStore("auth", () => {
         setUser(parsed);
         hadCachedUser = true;
       }
-    } catch {}
+    } catch (storageErr) { console.warn("[Auth Store Warning]:", storageErr); }
 
     initialized.value = true;
 

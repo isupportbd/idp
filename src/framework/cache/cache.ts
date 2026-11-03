@@ -82,7 +82,7 @@ export const cache = {
     if (client) {
       try {
         await client.del(fullKey);
-      } catch {}
+      } catch (cacheErr: any) { console.warn("[Cache Warning]: Failed operation", cacheErr?.message || cacheErr); }
     }
     return true;
   },

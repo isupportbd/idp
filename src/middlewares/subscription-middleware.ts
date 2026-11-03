@@ -122,7 +122,7 @@ export async function subscriptionMiddleware(c: Context, next: Next) {
           .innerJoin(clients, eq(bills.clientId, clients.id))
           .where(eq(clients.createdBy, tenantAdminId));
         totalRecords = Number(pCount?.count || 0) + Number(cCount?.count || 0) + Number(sCount?.count || 0) + Number(bCount?.count || 0);
-      } catch {}
+      } catch (subErr: any) { console.warn("[Subscription Middleware Warning]:", subErr?.message || subErr); }
 
       const estimatedKB = Math.round(totalRecords * 3.2);
       const usedStorageMB = Number((estimatedKB / 1024).toFixed(2));
