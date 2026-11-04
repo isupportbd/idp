@@ -128,18 +128,6 @@ const saveFilters = () => {
   } catch (uiErr: any) { console.warn("[UI Component Warning: Billing.vue]", uiErr?.message || uiErr); }
 };
 
-watch([activeTab, selectedMonth, searchQuery, selectedCustomerTypeId, selectedReferenceId, selectedStatusFilter, selectedPaymentMethod], saveFilters);
-
-onBeforeRouteLeave((to) => {
-  if (!to.path.startsWith("/admin/billing")) {
-    try {
-      if (typeof window !== "undefined" && window.sessionStorage) {
-        sessionStorage.removeItem(BILLING_FILTER_KEY);
-      }
-    } catch (uiErr: any) { console.warn("[UI Component Warning: Billing.vue]", uiErr?.message || uiErr); }
-  }
-});
-
 // Update URL parameters when tab, month, or search changes without refreshing
 const updateUrlParams = () => {
   const q: any = { ...route.query };
@@ -153,8 +141,38 @@ const updateUrlParams = () => {
   router.replace({ query: q });
 };
 
-watch([activeTab, selectedMonth, searchQuery], () => {
+// Consolidated Debounced Filter Handler (eliminates multiple un-debounced watchers)
+let filterSyncTimer: ReturnType<typeof setTimeout> | null = null;
+const onFilterChange = () => {
+  saveFilters();
+  currentPage.value = 1;
+  if (filterSyncTimer) clearTimeout(filterSyncTimer);
+  filterSyncTimer = setTimeout(() => {
+    filterSyncTimer = null;
+    updateUrlParams();
+    void loadData();
+  }, 250);
+};
+
+watch(
+  [selectedMonth, selectedCustomerTypeId, selectedReferenceId, selectedStatusFilter, selectedPaymentMethod, searchQuery],
+  onFilterChange
+);
+
+watch(activeTab, () => {
+  saveFilters();
   updateUrlParams();
+  currentPage.value = 1;
+});
+
+onBeforeRouteLeave((to) => {
+  if (!to.path.startsWith("/admin/billing")) {
+    try {
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        sessionStorage.removeItem(BILLING_FILTER_KEY);
+      }
+    } catch (uiErr: any) { console.warn("[UI Component Warning: Billing.vue]", uiErr?.message || uiErr); }
+  }
 });
 
 watch(
@@ -228,13 +246,10 @@ const scheduleLoadData = () => {
 
 onBeforeUnmount(() => {
   if (loadTimer) clearTimeout(loadTimer);
+  if (filterSyncTimer) clearTimeout(filterSyncTimer);
   document.removeEventListener("click", closeInvoiceActions);
   window.removeEventListener("scroll", closeInvoiceActions, true);
   window.removeEventListener("resize", closeInvoiceActions);
-});
-
-watch([selectedMonth, selectedCustomerTypeId, selectedReferenceId, selectedStatusFilter, selectedPaymentMethod, searchQuery], () => {
-  scheduleLoadData();
 });
 
 const referenceOptions = computed(() => [
@@ -290,10 +305,6 @@ const { currentPage, itemsPerPage, totalPages, paginateList } = usePagination("b
 });
 
 const paginatedList = computed<any[]>(() => paginateList(currentTabList.value));
-
-watch([activeTab, selectedMonth, selectedCustomerTypeId, selectedReferenceId, selectedStatusFilter, selectedPaymentMethod, searchQuery], () => {
-  currentPage.value = 1;
-});
 
 // Navigate to Create Invoice (Full Page)
 const goToCreateBill = (clientId?: number, month?: string) => {
