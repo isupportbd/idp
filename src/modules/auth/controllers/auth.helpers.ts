@@ -103,7 +103,9 @@ export async function sanitizeUser(user: typeof users.$inferSelect & { role?: { 
         if (liveBal !== null) {
           effectiveSmsBalance = liveBal;
           if (user.smsBalance !== liveBal) {
-            await db.update(users).set({ smsBalance: liveBal, updatedAt: new Date() }).where(eq(users.id, tenantAdminId)).catch(() => {});
+            await db.update(users).set({ smsBalance: liveBal, updatedAt: new Date() }).where(eq(users.id, tenantAdminId)).catch((updateErr) => {
+              console.warn(`[Auth Helper Warning]: Failed to update cached sms balance for admin #${tenantAdminId}:`, updateErr?.message || updateErr);
+            });
           }
         }
       }

@@ -183,7 +183,8 @@ export function useClientsApi() {
     try {
       const res = await axios.post("/api/clients/check-mobile", { mobile, excludeId });
       return res.data?.matches || [];
-    } catch {
+    } catch (err: unknown) {
+      console.warn("[Clients API Warning]: Failed to check mobile uniqueness:", (err as Error)?.message || err);
       return [];
     }
   };

@@ -42,7 +42,7 @@ export async function listTemplates(c: AppContext) {
           body: def.body,
           variables: def.variables,
           isActive: true
-        }).catch(() => {});
+        }).onConflictDoNothing();
       }
     }
 
@@ -228,7 +228,9 @@ export async function sendTestSms(c: AppContext) {
       status: result.ok ? "SENT" : "FAILED",
       providerResponse: result.raw,
       sentBy: user?.id ?? null
-    }).catch(() => {});
+    }).catch((logErr) => {
+      console.warn("[SMS Log Warning]: Failed to record test SMS log:", logErr?.message || logErr);
+    });
 
     if (result.ok && adminId && settings.smsApiKey) {
       try {
@@ -436,7 +438,9 @@ export async function checkGatewayBalance(c: AppContext) {
 
     if (adminId && !isNaN(parseFloat(balance))) {
       const numBal = parseFloat(balance);
-      await db.update(users).set({ smsBalance: numBal, updatedAt: new Date() }).where(eq(users.id, adminId)).catch(() => {});
+      await db.update(users).set({ smsBalance: numBal, updatedAt: new Date() }).where(eq(users.id, adminId)).catch((balErr) => {
+        console.warn(`[SMS Balance Update Warning]: Failed to update balance for admin #${adminId}:`, balErr?.message || balErr);
+      });
       try {
         broadcast(
           "tenant:sms-updated",

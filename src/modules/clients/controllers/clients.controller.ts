@@ -1,7 +1,7 @@
 import type { AppContext } from "@/framework/facade.js";
 import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
-import { broadcast, db, HttpStatusCodes, resolveTenantContext, validate } from "@/framework/facade.js";
+import { broadcast, db, HttpStatusCodes, resolveTenantContext, validate, round2 as r2 } from "@/framework/facade.js";
 import { BulkCreateClientsSchema } from "./clients.schema.js";
 import { clients } from "../database/models/clients.js";
 import { clientManagers } from "../database/models/client_managers.js";
@@ -334,7 +334,7 @@ export const createClient = async (c: AppContext) => {
             vatUserId: body.vatUserId !== undefined ? (body.vatUserId ? body.vatUserId.trim() : null) : existingGlobalClient.vatUserId,
             vatPassword: body.vatPassword !== undefined ? body.vatPassword : existingGlobalClient.vatPassword,
             vatServiceType: body.vatServiceType || existingGlobalClient.vatServiceType,
-            openingBalance: body.openingBalance !== undefined ? Number(body.openingBalance) : 0,
+            openingBalance: body.openingBalance !== undefined ? r2(Number(body.openingBalance)) : 0,
             isActive: true, // Activated under new admin
             createdBy: tenantAdminId, // Transferred to new tenant admin
             notes: body.notes !== undefined ? (body.notes ? body.notes.trim() : null) : existingGlobalClient.notes,
@@ -384,7 +384,7 @@ export const createClient = async (c: AppContext) => {
           vatUserId: body.vatUserId?.trim() || null,
           vatPassword: body.vatPassword || null,
           vatServiceType: body.vatServiceType || "FULL",
-          openingBalance: body.openingBalance !== undefined ? Number(body.openingBalance) : 0,
+          openingBalance: body.openingBalance !== undefined ? r2(Number(body.openingBalance)) : 0,
           isActive: body.isActive ?? true,
           createdBy: tenantAdminId,
           notes: body.notes?.trim() || null
@@ -464,7 +464,7 @@ export const updateClient = async (c: AppContext) => {
           vatPassword:
             body.vatPassword !== undefined && (await hasPermission(c, "clients.vat_password")) ? body.vatPassword : undefined,
           vatServiceType: body.vatServiceType !== undefined ? body.vatServiceType : undefined,
-          openingBalance: (isTenantAdmin || isSuperAdmin) && body.openingBalance !== undefined ? Number(body.openingBalance) : undefined,
+          openingBalance: (isTenantAdmin || isSuperAdmin) && body.openingBalance !== undefined ? r2(Number(body.openingBalance)) : undefined,
           isActive: (isTenantAdmin || isSuperAdmin) && body.isActive !== undefined ? body.isActive : undefined,
           notes: body.notes !== undefined ? (body.notes ? body.notes.trim() : null) : undefined,
           updatedAt: new Date()

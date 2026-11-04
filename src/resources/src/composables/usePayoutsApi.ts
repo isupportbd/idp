@@ -259,12 +259,15 @@ export function usePayoutsApi() {
   };
 
   const fetchStaffLedger = async (userId: number, month?: string) => {
+    loading.value = true;
     try {
       const res = await axios.get("/api/payouts/ledger", { params: { userId, month } });
       return res.data?.data as StaffLedgerPreview | null;
     } catch (err: any) {
       error.value = err.response?.data?.message || "Failed to fetch staff ledger";
       throw err;
+    } finally {
+      loading.value = false;
     }
   };
 

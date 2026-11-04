@@ -348,7 +348,7 @@ async function getBatchClientsRunningDue(clientIds: number[]): Promise<Map<numbe
   const billSums = await db
     .select({
       clientId: bills.clientId,
-      totalBilled: sql<number>`COALESCE(SUM(${bills.subtotal} - ${bills.discountAmount}), 0)::float`
+      totalBilled: sql<number>`COALESCE(SUM(${bills.subtotal} - ${bills.discountAmount}), 0)::numeric(14,2)`
     })
     .from(bills)
     .where(
@@ -361,14 +361,14 @@ async function getBatchClientsRunningDue(clientIds: number[]): Promise<Map<numbe
 
   for (const b of billSums) {
     const current = dueMap.get(b.clientId) || 0;
-    dueMap.set(b.clientId, current + b.totalBilled);
+    dueMap.set(b.clientId, r2(current + Number(b.totalBilled)));
   }
 
   // 3. Aggregate Completed Collections per client
   const collectionSums = await db
     .select({
       clientId: collections.clientId,
-      totalCollected: sql<number>`COALESCE(SUM(${collections.amount}), 0)::float`
+      totalCollected: sql<number>`COALESCE(SUM(${collections.amount}), 0)::numeric(14,2)`
     })
     .from(collections)
     .where(
@@ -381,7 +381,7 @@ async function getBatchClientsRunningDue(clientIds: number[]): Promise<Map<numbe
 
   for (const c of collectionSums) {
     const current = dueMap.get(c.clientId) || 0;
-    dueMap.set(c.clientId, r2(current - c.totalCollected));
+    dueMap.set(c.clientId, r2(current - Number(c.totalCollected)));
   }
 
   // Ensure all clients have rounded 2 decimal values

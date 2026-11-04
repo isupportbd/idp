@@ -395,7 +395,9 @@ export async function sendTransactionalSms(payload: SendTransactionalSmsPayload)
         providerResponse: "No valid Bangladesh mobile number found for client",
         sentBy
       })
-      .catch(() => {});
+      .catch((logErr) => {
+        console.warn("[SMS Service Warning]: Failed to log missing mobile number:", logErr?.message || logErr);
+      });
     return { ok: false, status: "FAILED", response: "No valid mobile number", message: renderedMessage, retryable: false };
   }
 
@@ -413,7 +415,9 @@ export async function sendTransactionalSms(payload: SendTransactionalSmsPayload)
         providerResponse: "SMS Gateway API Key or Sender ID not configured in Firm Settings",
         sentBy
       })
-      .catch(() => {});
+      .catch((logErr) => {
+        console.warn("[SMS Service Warning]: Failed to log unconfigured gateway:", logErr?.message || logErr);
+      });
     return { ok: false, status: "FAILED", response: "SMS Gateway not configured", message: renderedMessage, retryable: false };
   }
 
@@ -441,7 +445,9 @@ export async function sendTransactionalSms(payload: SendTransactionalSmsPayload)
       providerResponse: result.raw,
       sentBy
     })
-    .catch(() => {});
+    .catch((logErr) => {
+      console.warn("[SMS Service Warning]: Failed to log SMS delivery status:", logErr?.message || logErr);
+    });
 
   // 6. Sync live provider balance after a successful send (header badge stays true).
   if (result.ok && adminId && smsApiKey) {

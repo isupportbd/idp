@@ -803,7 +803,9 @@ export async function sendPayoutSms(
       .update(payouts)
       .set({ smsStatus: "FAILED", smsResponse: response, updatedAt: new Date() })
       .where(eq(payouts.id, payoutId))
-      .catch(() => {});
+      .catch((updateErr) => {
+        console.warn(`[Payout SMS Update Warning]: Failed to update status to FAILED for payout #${payoutId}:`, updateErr?.message || updateErr);
+      });
     return { status: "FAILED", response };
   }
 }

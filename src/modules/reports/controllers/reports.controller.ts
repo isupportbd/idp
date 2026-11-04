@@ -1,7 +1,6 @@
 import type { AppContext } from "@/framework/facade.js";
 import type { Context } from "hono";
-import { db } from "@/framework/facade.js";
-import { resolveTenantContext } from "@/framework/facade.js";
+import { db, round2 as r2, resolveTenantContext } from "@/framework/facade.js";
 import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { salesRates } from "@/modules/sales-rates/database/models/sales_rates.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
@@ -153,13 +152,13 @@ export const getSalesReport = async (c: AppContext) => {
       const totSalesVal = Number(row.totalSalesRateValue) || 0;
       const totBaseVal = Number(row.totalBaseValueOfVat) || 0;
 
-      const avgVatableValue = totQty > 0 ? totVal / totQty : 0;
-      const avgSalesRate = totQty > 0 ? totSalesVal / totQty : 0;
-      const avgPurchaseUnitValue = totQty > 0 ? totBaseVal / totQty : 0;
+      const avgVatableValue = totQty > 0 ? r2(totVal / totQty) : 0;
+      const avgSalesRate = totQty > 0 ? r2(totSalesVal / totQty) : 0;
+      const avgPurchaseUnitValue = totQty > 0 ? r2(totBaseVal / totQty) : 0;
 
       let additionPercent = 0;
       if (avgPurchaseUnitValue > 0) {
-        additionPercent = ((avgVatableValue - avgPurchaseUnitValue) / avgPurchaseUnitValue) * 100;
+        additionPercent = r2(((avgVatableValue - avgPurchaseUnitValue) / avgPurchaseUnitValue) * 100);
       }
 
       let vatRate = Number(row.vatRate);
@@ -373,9 +372,9 @@ export const getStatementReport = async (c: AppContext) => {
           const vatRateVal = rateObj ? Number(rateObj.vatRate) : 0;
           const vatableValueVal = rateObj ? Number(rateObj.vatableValue) * factor : 0;
 
-          const totalSalesValue = totalQty * salesRateVal;
-          const totalVatableValue = totalQty * vatableValueVal;
-          const totalVat = (totalVatableValue * vatRateVal) / 100;
+          const totalSalesValue = r2(totalQty * salesRateVal);
+          const totalVatableValue = r2(totalQty * vatableValueVal);
+          const totalVat = r2((totalVatableValue * vatRateVal) / 100);
 
           const itemName = purchaseData.find((p) => p.itemId === itemId)?.itemName;
 
