@@ -300,6 +300,12 @@ export const getStatementReport = async (c: AppContext) => {
     }
 
     const allVatNotes = await db.select().from(vatNotes);
+    const itemNameMap = new Map<number, string>();
+    for (const p of purchaseData) {
+      if (p.itemId && p.itemName && !itemNameMap.has(p.itemId)) {
+        itemNameMap.set(p.itemId, p.itemName);
+      }
+    }
     const statementRows: Record<string, unknown>[] = [];
 
     const parseDate = (rawStr: string | Date | null | undefined) => {
@@ -376,7 +382,7 @@ export const getStatementReport = async (c: AppContext) => {
           const totalVatableValue = r2(totalQty * vatableValueVal);
           const totalVat = r2((totalVatableValue * vatRateVal) / 100);
 
-          const itemName = purchaseData.find((p) => p.itemId === itemId)?.itemName;
+          const itemName = itemNameMap.get(itemId);
 
           let note = "8";
           const mapping = allVatNotes.find((v) => Number(v.vatRate) === vatRateVal);
