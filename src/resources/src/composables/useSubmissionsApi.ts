@@ -1,4 +1,4 @@
-import { ref } from "vue";
+import { ref, shallowRef } from "vue";
 import axios from "axios";
 
 export interface SubmissionItem {
@@ -39,7 +39,7 @@ export interface SubmitterOption {
 }
 
 export function useSubmissionsApi() {
-  const submissions = ref<SubmissionItem[]>([]);
+  const submissions = shallowRef<SubmissionItem[]>([]);
   const stats = ref<SubmissionsStats>({
     totalActive: 0,
     submittedCount: 0,

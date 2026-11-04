@@ -18,7 +18,7 @@ const props = withDefaults(
     minWidth: "200px",
     size: "sm",
     disabled: false,
-    debounce: 0,
+    debounce: 250,
     autoFocus: false
   }
 );

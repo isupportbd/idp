@@ -157,6 +157,11 @@ export async function syncDatabaseSchemaAndSuperAdmin() {
     // Schema parity guard: ensure company_settings has sender_id column for legacy backup compatibility
     await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS sender_id VARCHAR(50) DEFAULT ''`);
 
+    // High-performance search indexes: enable pg_trgm for lightning-fast leading-wildcard text search
+    await executeSingleSql(`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
+    await executeSingleSql(`CREATE INDEX IF NOT EXISTS clients_trgm_search_idx ON clients USING gin (company_name gin_trgm_ops, bin_number gin_trgm_ops)`);
+    await executeSingleSql(`CREATE INDEX IF NOT EXISTS purchases_trgm_search_idx ON purchases USING gin (be_no gin_trgm_ops, lc_number gin_trgm_ops)`);
+
     // Clean stale legacy column mapping entries if present
     await executeSingleSql(`DELETE FROM column_mappings WHERE db_column IN ('client_name', 'clientName') OR label = 'client_name'`);
   } catch (rErr: any) {
