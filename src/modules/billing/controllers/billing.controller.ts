@@ -172,12 +172,14 @@ async function clientBelongsToTenant(c: AppContext, clientId: number): Promise<b
 
 /**
  * Generates sequential Invoice No in format: [PREFIX]-YYYY-000001 (Dynamic from firm settings)
+ * Accepts an optional transaction client (tx) to perform atomic sequential locking.
  */
-async function generateNextBillNo(year: number, customPrefix?: string, tenantAdminId?: number | null): Promise<string> {
+async function generateNextBillNo(year: number, customPrefix?: string, tenantAdminId?: number | null, txRunner?: any): Promise<string> {
+  const runner = txRunner || db;
   let prefixToUse = customPrefix;
   if (!prefixToUse && tenantAdminId) {
     try {
-      const firmSetting = await db.query.companySettings.findFirst({
+      const firmSetting = await runner.query.companySettings.findFirst({
         where: eq(companySettings.adminId, tenantAdminId)
       });
       if (firmSetting?.invoicePrefix) {
@@ -194,7 +196,7 @@ async function generateNextBillNo(year: number, customPrefix?: string, tenantAdm
     conditions.push(eq(bills.createdBy, tenantAdminId));
   }
   const latestBill = (
-    await db
+    await runner
       .select({ billNo: bills.billNo })
       .from(bills)
       .where(and(...conditions))
@@ -219,12 +221,14 @@ async function generateNextBillNo(year: number, customPrefix?: string, tenantAdm
 
 /**
  * Generates sequential Money Receipt No in format: [PREFIX]-YYYY-000001 (Dynamic from firm settings)
+ * Accepts an optional transaction client (tx) to perform atomic sequential locking.
  */
-async function generateNextReceiptNo(year: number, customPrefix?: string, tenantAdminId?: number | null): Promise<string> {
+async function generateNextReceiptNo(year: number, customPrefix?: string, tenantAdminId?: number | null, txRunner?: any): Promise<string> {
+  const runner = txRunner || db;
   let prefixToUse = customPrefix;
   if (!prefixToUse && tenantAdminId) {
     try {
-      const firmSetting = await db.query.companySettings.findFirst({
+      const firmSetting = await runner.query.companySettings.findFirst({
         where: eq(companySettings.adminId, tenantAdminId)
       });
       if (firmSetting?.receiptPrefix) {
@@ -241,7 +245,7 @@ async function generateNextReceiptNo(year: number, customPrefix?: string, tenant
     conditions.push(eq(clients.createdBy, tenantAdminId));
   }
   const latestCol = (
-    await db
+    await runner
       .select({ receiptNo: collections.receiptNo })
       .from(collections)
       .leftJoin(clients, eq(collections.clientId, clients.id))
@@ -1013,11 +1017,11 @@ export const createBill = async (c: AppContext) => {
     const auth = c.get("auth") || c.get("user");
     const { tenantAdminId: creatorId } = await resolveTenantContext(c);
 
-    let billNo = await generateNextBillNo(year);
     let newBill!: typeof bills.$inferSelect;
     for (let attempt = 0; ; attempt++) {
       try {
         newBill = await db.transaction(async (tx) => {
+          const billNo = await generateNextBillNo(year, undefined, creatorId, tx);
           const created = (
             await tx
               .insert(bills)
@@ -1070,7 +1074,6 @@ export const createBill = async (c: AppContext) => {
           code === "ER_DUP_ENTRY" ||
           /duplicate key|unique constraint|UNIQUE constraint/i.test(String(insertErrLike?.message ?? ""));
         if (!isDuplicateBillNo || attempt >= 4) throw insertErr;
-        billNo = await generateNextBillNo(year);
       }
     }
 
@@ -1119,7 +1122,7 @@ export const createBill = async (c: AppContext) => {
 
     return c.json(
       {
-        message: `Invoice ${billNo} created successfully`,
+        message: `Invoice ${newBill.billNo} created successfully`,
         data: newBill
       },
       HttpStatusCodes.CREATED
@@ -2010,12 +2013,12 @@ export const createCollection = async (c: AppContext) => {
     }
 
     const year = parsedDate.getFullYear() || new Date().getFullYear();
-    const receiptNo = await generateNextReceiptNo(year);
     const normalizedAmount = r2(amount);
 
     // Insert the receipt and settle the invoice in a single transaction so the
-    // ledger and the invoice balance can never diverge.
+    // ledger and the invoice balance can never diverge. Receipt number is generated atomically inside tx.
     const newCollection = await db.transaction(async (tx) => {
+      const receiptNo = await generateNextReceiptNo(year, undefined, tenantAdminId, tx);
       const created = (
         await tx
           .insert(collections)
@@ -2115,7 +2118,7 @@ export const createCollection = async (c: AppContext) => {
 
     return c.json(
       {
-        message: `Payment receipt ${receiptNo} created successfully`,
+        message: `Payment receipt ${newCollection.receiptNo} created successfully`,
         data: newCollection
       },
       HttpStatusCodes.CREATED
