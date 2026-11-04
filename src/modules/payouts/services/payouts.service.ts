@@ -1,6 +1,5 @@
 import { and, asc, desc, eq, gt, ilike, inArray, or, sql } from "drizzle-orm";
-import { db } from "@/framework/facade.js";
-import { round2 } from "@/utils/number.js";
+import { db, round2 } from "@/framework/facade.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";

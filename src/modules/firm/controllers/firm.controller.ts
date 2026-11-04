@@ -7,6 +7,7 @@ import { users } from "@/modules/auth/database/models/user.js";
 import { companySettings } from "../database/models/company_settings.js";
 import { bankAccounts } from "../database/models/bank_accounts.js";
 import { expenseHeads } from "../database/models/expense_heads.js";
+import { payouts } from "@/modules/payouts/database/models/payouts.js";
 
 // ── COMPANY SETTINGS CONTROLLERS ─────────────────────────────────────
 
@@ -332,6 +333,23 @@ export const deleteBankAccount = async (c: AppContext) => {
       return c.json({ message: "Bank account not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
+    // Protect financial and audit history: Check if bank account has payouts or collections attached
+    const [associatedPayout] = await db
+      .select({ id: payouts.id })
+      .from(payouts)
+      .where(eq(payouts.bankAccountId, id))
+      .limit(1);
+
+    if (associatedPayout) {
+      return c.json(
+        {
+          success: false,
+          message: "Cannot delete this bank account because payment disbursement records are linked to it. Deactivate it instead."
+        },
+        HttpStatusCodes.BAD_REQUEST
+      );
+    }
+
     await db.delete(bankAccounts).where(eq(bankAccounts.id, id));
     return c.json({ message: "Bank account removed successfully" }, HttpStatusCodes.OK);
   } catch (err: unknown) {
@@ -537,6 +555,23 @@ export const deleteExpenseHead = async (c: AppContext) => {
 
     if (!existing) {
       return c.json({ message: "Expense head not found" }, HttpStatusCodes.NOT_FOUND);
+    }
+
+    // Protect financial and audit history: Check if expense head has payouts attached
+    const [associatedPayout] = await db
+      .select({ id: payouts.id })
+      .from(payouts)
+      .where(eq(payouts.expenseHeadId, id))
+      .limit(1);
+
+    if (associatedPayout) {
+      return c.json(
+        {
+          success: false,
+          message: "Cannot delete this expense head because payment disbursement records are linked to it. Deactivate it instead."
+        },
+        HttpStatusCodes.BAD_REQUEST
+      );
     }
 
     await db.delete(expenseHeads).where(eq(expenseHeads.id, id));

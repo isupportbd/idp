@@ -6,6 +6,7 @@ import { db } from "@/framework/facade.js";
 import { refreshTokens, users } from "@/modules/auth/database/models/user.js";
 import { roles } from "@/modules/auth/database/models/role.js";
 import { plans } from "@/modules/superadmin/database/models/plans.js";
+import { payouts } from "@/modules/payouts/database/models/payouts.js";
 import { DEFAULT_SUB_USER_PERMISSIONS, PERMISSION_MODULES, normalizePermissions } from "./permissions.js";
 import { CreateUserSchema, UpdateUserSchema, ResetPasswordSchema, UpdateStatusSchema } from "./users.schema.js";
 
@@ -419,6 +420,23 @@ export const deleteUser = async (c: AppContext) => {
 
     if (!isSuperAdmin && targetUser.adminId !== tenantAdminId) {
       return c.json({ message: "Forbidden" }, HttpStatusCodes.FORBIDDEN);
+    }
+
+    // Protect financial and audit history: Check if user has associated payout records
+    const [associatedPayout] = await db
+      .select({ id: payouts.id })
+      .from(payouts)
+      .where(eq(payouts.userId, userId))
+      .limit(1);
+
+    if (associatedPayout) {
+      return c.json(
+        {
+          success: false,
+          message: "Cannot delete this user because financial payout disbursement records are attached. Deactivate the user instead to preserve audit integrity."
+        },
+        HttpStatusCodes.BAD_REQUEST
+      );
     }
 
     await db.delete(users).where(eq(users.id, userId));

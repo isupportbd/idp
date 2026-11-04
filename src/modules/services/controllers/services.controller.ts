@@ -6,6 +6,7 @@ import { customerTypes } from "../database/models/customer_types.js";
 import { clientReferences } from "../database/models/references.js";
 import { serviceItems } from "../database/models/service_items.js";
 import { serviceRates } from "../database/models/service_rates.js";
+import { clients } from "@/modules/clients/database/models/clients.js";
 
 function notifySettingsUpdated(settingType: string) {
   try {
@@ -143,6 +144,23 @@ export const deleteReference = async (c: AppContext) => {
     const existing = (await db.select().from(clientReferences).where(eq(clientReferences.id, id)).limit(1))[0];
     if (!existing) {
       return c.json({ message: "Reference not found" }, HttpStatusCodes.NOT_FOUND);
+    }
+
+    // Protect client assignment history
+    const [assignedClient] = await db
+      .select({ id: clients.id })
+      .from(clients)
+      .where(eq(clients.referenceId, id))
+      .limit(1);
+
+    if (assignedClient) {
+      return c.json(
+        {
+          success: false,
+          message: "Cannot delete this reference because client records are linked to it. Deactivate it instead."
+        },
+        HttpStatusCodes.BAD_REQUEST
+      );
     }
 
     await db.delete(clientReferences).where(eq(clientReferences.id, id));
