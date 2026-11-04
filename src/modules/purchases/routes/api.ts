@@ -10,7 +10,7 @@ import {
   deletePurchasesByMonth,
   getPurchasesMonths
 } from "../controllers/purchases.controller.js";
-import { batchDeletePurchasesSchema } from "../controllers/purchases.schema.js";
+import { batchDeletePurchasesSchema, purchasesListResponseSchema } from "../controllers/purchases.schema.js";
 
 const purchasesRouter = createRouter();
 
@@ -35,7 +35,7 @@ const listPurchasesRoute = createRoute({
   tags: ["Purchases"],
   description: "List purchases filtered by month, client, etc.",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.unknown() }), "Purchases list")
+    [HttpStatusCodes.OK]: jsonContent(purchasesListResponseSchema, "Purchases list")
   }
 });
 

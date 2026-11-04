@@ -22,7 +22,10 @@ import {
   UpdateBankAccountSchema,
   CreateExpenseHeadSchema,
   UpdateExpenseHeadSchema,
-  IdParamSchema
+  IdParamSchema,
+  BankAccountResponseSchema,
+  ExpenseHeadResponseSchema,
+  CompanySettingsResponseSchema
 } from "../controllers/firm.schema.js";
 
 // ── COMPANY SETTINGS ROUTES ──────────────────────────────────────────
@@ -33,7 +36,7 @@ const getCompanySettingsRoute = createRoute({
   tags: ["Firm"],
   description: "Get company/firm profile and configuration",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Company settings")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: CompanySettingsResponseSchema }), "Company settings")
   }
 });
 
@@ -46,7 +49,7 @@ const putCompanySettingsRoute = createRoute({
     body: jsonContent(CompanySettingsSchema, "Company settings payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Updated company settings")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: CompanySettingsResponseSchema }), "Updated company settings")
   }
 });
 
@@ -58,7 +61,7 @@ const getBankAccountsRoute = createRoute({
   tags: ["Firm"],
   description: "List all firm bank & MFS accounts",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.unknown()) }), "Bank accounts list")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(BankAccountResponseSchema) }), "Bank accounts list")
   }
 });
 
@@ -71,7 +74,7 @@ const postBankAccountRoute = createRoute({
     body: jsonContent(CreateBankAccountSchema, "Bank account payload")
   },
   responses: {
-    [HttpStatusCodes.CREATED]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Created bank account")
+    [HttpStatusCodes.CREATED]: jsonContent(z.object({ message: z.string(), data: BankAccountResponseSchema }), "Created bank account")
   }
 });
 
@@ -85,7 +88,7 @@ const patchBankAccountRoute = createRoute({
     body: jsonContent(UpdateBankAccountSchema, "Update bank account payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Updated bank account")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: BankAccountResponseSchema }), "Updated bank account")
   }
 });
 
@@ -110,7 +113,7 @@ const getExpenseHeadsRoute = createRoute({
   tags: ["Firm"],
   description: "List all operating expense heads",
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.unknown()) }), "Expense heads list")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(ExpenseHeadResponseSchema) }), "Expense heads list")
   }
 });
 
@@ -123,7 +126,7 @@ const postExpenseHeadRoute = createRoute({
     body: jsonContent(CreateExpenseHeadSchema, "Expense head payload")
   },
   responses: {
-    [HttpStatusCodes.CREATED]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Created expense head")
+    [HttpStatusCodes.CREATED]: jsonContent(z.object({ message: z.string(), data: ExpenseHeadResponseSchema }), "Created expense head")
   }
 });
 
@@ -137,7 +140,7 @@ const patchExpenseHeadRoute = createRoute({
     body: jsonContent(UpdateExpenseHeadSchema, "Update expense head payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Updated expense head")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: ExpenseHeadResponseSchema }), "Updated expense head")
   }
 });
 
@@ -150,7 +153,7 @@ const toggleExpenseHeadRoute = createRoute({
     params: IdParamSchema
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.unknown() }), "Toggled expense head status")
+    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: ExpenseHeadResponseSchema }), "Toggled expense head status")
   }
 });
 

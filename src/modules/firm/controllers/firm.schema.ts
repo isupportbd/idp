@@ -64,3 +64,27 @@ export const CreateExpenseHeadSchema = z.object({
 });
 
 export const UpdateExpenseHeadSchema = CreateExpenseHeadSchema.partial();
+
+// ── RESPONSE SCHEMAS ─────────────────────────────────────────────────
+
+export const BankAccountResponseSchema = CreateBankAccountSchema.extend({
+  id: z.number().int(),
+  adminId: z.number().int().nullable().optional(),
+  createdAt: z.union([z.string(), z.date()]).optional(),
+  updatedAt: z.union([z.string(), z.date()]).optional()
+});
+
+export const ExpenseHeadResponseSchema = CreateExpenseHeadSchema.extend({
+  id: z.number().int(),
+  adminId: z.number().int().nullable().optional(),
+  createdAt: z.union([z.string(), z.date()]).optional(),
+  updatedAt: z.union([z.string(), z.date()]).optional()
+});
+
+export const CompanySettingsResponseSchema = CompanySettingsSchema.extend({
+  id: z.number().int().optional(),
+  adminId: z.number().int().nullable().optional(),
+  createdAt: z.union([z.string(), z.date()]).optional(),
+  updatedAt: z.union([z.string(), z.date()]).optional()
+});
+

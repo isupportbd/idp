@@ -30,3 +30,41 @@ export const UpdateStatusSchema = z.object({
 export const IdParamSchema = z.object({
   id: z.string()
 });
+
+export const UserItemResponseSchema = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  email: z.string(),
+  mobile: z.string(),
+  role: z.string(),
+  status: z.string(),
+  permissions: z.array(z.string()),
+  createdAt: z.string(),
+  lastActive: z.string(),
+  lastPage: z.string()
+});
+
+export const ListUsersResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  data: z.array(UserItemResponseSchema)
+});
+
+export const UserMutationResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  data: UserItemResponseSchema.optional()
+});
+
+export const UpdateStatusResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  status: z.string().optional()
+});
+
+export const PermissionCatalogResponseSchema = z.object({
+  success: z.boolean(),
+  data: z.record(z.string(), z.any()),
+  defaults: z.array(z.string())
+});
+

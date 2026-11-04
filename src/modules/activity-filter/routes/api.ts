@@ -4,7 +4,7 @@ import { denyRole } from "@/middlewares/role-middleware.js";
 import { requirePermission } from "@/middlewares/permission-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import { getActivityMatrix } from "../controllers/activity-filter.controller.js";
-import { QueryActivityFilterSchema } from "../controllers/activity-filter.schema.js";
+import { QueryActivityFilterSchema, ActivityMatrixResponseSchema } from "../controllers/activity-filter.schema.js";
 
 // ── 1. GET ACTIVITY FILTER MATRIX ────────────────────────────────────
 // authMiddleware is required: without it the controller cannot resolve the tenant
@@ -19,7 +19,7 @@ const getActivityMatrixRoute = createRoute({
     query: QueryActivityFilterSchema
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.unknown(), "Activity matrix dataset")
+    [HttpStatusCodes.OK]: jsonContent(ActivityMatrixResponseSchema, "Activity matrix dataset")
   }
 });
 
