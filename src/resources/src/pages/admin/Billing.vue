@@ -143,7 +143,10 @@ const updateUrlParams = () => {
 
 // Consolidated Debounced Filter Handler (eliminates multiple un-debounced watchers)
 let filterSyncTimer: ReturnType<typeof setTimeout> | null = null;
+let isInitialized = false;
+
 const onFilterChange = () => {
+  if (!isInitialized) return;
   saveFilters();
   currentPage.value = 1;
   if (filterSyncTimer) clearTimeout(filterSyncTimer);
@@ -160,6 +163,7 @@ watch(
 );
 
 watch(activeTab, () => {
+  if (!isInitialized) return;
   saveFilters();
   updateUrlParams();
   currentPage.value = 1;
@@ -224,9 +228,12 @@ const loadLookups = async () => {
   } catch (uiErr: any) { console.warn("[UI Component Warning: Billing.vue]", uiErr?.message || uiErr); }
 };
 
-onMounted(() => {
-  loadLookups();
-  loadData();
+onMounted(async () => {
+  try {
+    await Promise.all([loadLookups(), loadData()]);
+  } finally {
+    isInitialized = true;
+  }
   // Dismiss the row-actions dropdown on any outside click / scroll / resize.
   document.addEventListener("click", closeInvoiceActions);
   window.addEventListener("scroll", closeInvoiceActions, true);

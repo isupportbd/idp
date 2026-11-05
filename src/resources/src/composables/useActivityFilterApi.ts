@@ -46,28 +46,39 @@ export interface ActivityStats {
   totalBeCount?: number;
 }
 
+// Module-scoped persistent reactive state (SWR / Stale-While-Revalidate)
+// Ensures that on route transitions, existing matrix data and stats are rendered immediately
+// (0ms latency, no empty table flash / prolonged loading spinner) while background revalidation occurs.
+const cachedMatrixData = ref<ActivityClient[]>([]);
+const cachedStats = ref<ActivityStats>({
+  totalClients: 0,
+  activeClients: 0,
+  activeFiledClients: 0,
+  activeUnfiledClients: 0,
+  inactiveClients: 0,
+  inactiveFiledClients: 0,
+  inactiveUnfiledClients: 0,
+  totalFiledClients: 0,
+  totalUnfiledClients: 0,
+  totalPurchaseSum: 0,
+  totalBeCount: 0
+});
+const cachedClientTypes = ref<Array<{ id: number; name: string }>>([]);
+const cachedReferences = ref<Array<{ id: number; name: string }>>([]);
+const hasLoadedMatrixOnce = ref(false);
+
 export function useActivityFilterApi() {
   const toast = useToast();
   const loading = ref(false);
-  const matrixData = ref<ActivityClient[]>([]);
-  const stats = ref<ActivityStats>({
-    totalClients: 0,
-    activeClients: 0,
-    activeFiledClients: 0,
-    activeUnfiledClients: 0,
-    inactiveClients: 0,
-    inactiveFiledClients: 0,
-    inactiveUnfiledClients: 0,
-    totalFiledClients: 0,
-    totalUnfiledClients: 0,
-    totalPurchaseSum: 0,
-    totalBeCount: 0
-  });
-  const clientTypes = ref<Array<{ id: number; name: string }>>([]);
-  const references = ref<Array<{ id: number; name: string }>>([]);
+  const matrixData = cachedMatrixData;
+  const stats = cachedStats;
+  const clientTypes = cachedClientTypes;
+  const references = cachedReferences;
 
   const loadActivityMatrix = async (month?: string) => {
-    loading.value = true;
+    if (!hasLoadedMatrixOnce.value || matrixData.value.length === 0) {
+      loading.value = true;
+    }
     try {
       const res = await axios.get("/api/activity-filter", {
         params: { month }
@@ -88,6 +99,7 @@ export function useActivityFilterApi() {
         };
         clientTypes.value = res.data.clientTypes || [];
         references.value = res.data.references || [];
+        hasLoadedMatrixOnce.value = true;
       }
       return res.data;
     } catch (err: any) {

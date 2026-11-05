@@ -309,12 +309,16 @@ const printReport = () => {
 };
 
 // Watchers
+let isInitialized = false;
+
 watch(selectedMonth, (newMonth) => {
+  if (!isInitialized) return;
   currentPage.value = 1;
   loadActivityMatrix(newMonth);
 });
 
 watch([searchQuery, statusFilter, selectedClientType, selectedReference], () => {
+  if (!isInitialized) return;
   currentPage.value = 1;
 });
 
@@ -360,8 +364,12 @@ usePulseListener("submission:batch_deleted", () => {
   loadActivityMatrix(selectedMonth.value);
 });
 
-onMounted(() => {
-  loadActivityMatrix(selectedMonth.value);
+onMounted(async () => {
+  try {
+    await loadActivityMatrix(selectedMonth.value);
+  } finally {
+    isInitialized = true;
+  }
 });
 </script>
 

@@ -93,22 +93,34 @@ export interface BillingStats {
   partialCount: number;
 }
 
+// Module-scoped persistent reactive state (SWR / Stale-While-Revalidate)
+// Ensures that on route transitions, existing bills, collections, and missing bills data is rendered immediately
+// (0ms latency, no empty table flash / prolonged loading spinner) while background revalidation occurs.
+const cachedBills = ref<Bill[]>([]);
+const cachedCollections = ref<Collection[]>([]);
+const cachedMissingBills = ref<MissingBillItem[]>([]);
+const cachedStats = ref<BillingStats>({
+  totalInvoicesCount: 0,
+  totalBilledAmount: 0,
+  totalPaidAmount: 0,
+  totalDueAmount: 0,
+  paidCount: 0,
+  unpaidCount: 0,
+  partialCount: 0
+});
+const cachedTotalCollectionsAmount = ref(0);
+const hasLoadedBillsOnce = ref(false);
+const hasLoadedCollectionsOnce = ref(false);
+const hasLoadedMissingBillsOnce = ref(false);
+
 export function useBillingApi() {
   const toast = useToast();
-  const bills = ref<Bill[]>([]);
-  const collections = ref<Collection[]>([]);
-  const missingBills = ref<MissingBillItem[]>([]);
-  const stats = ref<BillingStats>({
-    totalInvoicesCount: 0,
-    totalBilledAmount: 0,
-    totalPaidAmount: 0,
-    totalDueAmount: 0,
-    paidCount: 0,
-    unpaidCount: 0,
-    partialCount: 0
-  });
+  const bills = cachedBills;
+  const collections = cachedCollections;
+  const missingBills = cachedMissingBills;
+  const stats = cachedStats;
   const loading = ref(false);
-  const totalCollectionsAmount = ref(0);
+  const totalCollectionsAmount = cachedTotalCollectionsAmount;
 
   // 1. Fetch Invoices / Bills
   const fetchBills = async (params: {
@@ -119,13 +131,16 @@ export function useBillingApi() {
     customerTypeId?: number | string;
     referenceId?: number | string;
   } = {}) => {
-    loading.value = true;
+    if (!hasLoadedBillsOnce.value || bills.value.length === 0) {
+      loading.value = true;
+    }
     try {
       const res = await axios.get("/api/billing", { params });
       bills.value = res.data.data || [];
       if (res.data.stats) {
         stats.value = res.data.stats;
       }
+      hasLoadedBillsOnce.value = true;
       return res.data;
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to fetch bills");
@@ -240,11 +255,14 @@ export function useBillingApi() {
     customerTypeId?: number | string;
     referenceId?: number | string;
   } | string) => {
-    loading.value = true;
+    if (!hasLoadedMissingBillsOnce.value || missingBills.value.length === 0) {
+      loading.value = true;
+    }
     try {
       const queryParams = typeof params === "string" ? { month: params } : params;
       const res = await axios.get("/api/billing/missing", { params: queryParams });
       missingBills.value = res.data.data || [];
+      hasLoadedMissingBillsOnce.value = true;
       return res.data;
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to fetch missing bills");
@@ -287,11 +305,14 @@ export function useBillingApi() {
     referenceId?: number | string;
     search?: string;
   } = {}) => {
-    loading.value = true;
+    if (!hasLoadedCollectionsOnce.value || collections.value.length === 0) {
+      loading.value = true;
+    }
     try {
       const res = await axios.get("/api/billing/collections", { params });
       collections.value = res.data.data || [];
       totalCollectionsAmount.value = res.data.totalCollected || 0;
+      hasLoadedCollectionsOnce.value = true;
       return res.data;
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to fetch collections");
