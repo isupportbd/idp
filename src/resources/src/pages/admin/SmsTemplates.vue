@@ -257,7 +257,7 @@ const insertVariable = (templateId: number, varName: string) => {
 const getSmsPartCount = (text: string) => {
   const len = text.length;
   if (len === 0) return { chars: 0, parts: 0 };
-  const isUnicode = /[^\u0000-\u00ff]/.test(text);
+  const isUnicode = Array.from(text).some((ch) => (ch.codePointAt(0) ?? 0) > 255);
   const partLimit = isUnicode ? 70 : 160;
   const concatLimit = isUnicode ? 67 : 153;
   if (len <= partLimit) return { chars: len, parts: 1 };

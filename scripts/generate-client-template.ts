@@ -1,7 +1,7 @@
 // @ts-nocheck
+import * as fs from "node:fs";
+import * as path from "node:path";
 import * as XLSX from "xlsx";
-import * as fs from "fs";
-import * as path from "path";
 
 const headers = [
   "Company Name",
@@ -72,10 +72,10 @@ const sampleWs = XLSX.utils.json_to_sheet(sampleData, { header: headers });
 sampleWs["!cols"] = blankWs["!cols"];
 XLSX.utils.book_append_sheet(wb, sampleWs, "Sample Example");
 
+const rootDir = process.cwd();
 const outDirs = [
-  path.resolve("d:/Softwares/Apps Portal/IDP-V2/public/templates"),
-  path.resolve("d:/Softwares/Apps Portal/IDP-V2/src/resources/public/templates"),
-  path.resolve("d:/Softwares/Apps Portal/IDP-V2")
+  path.resolve(rootDir, "public/templates"),
+  path.resolve(rootDir, "src/resources/public/templates")
 ];
 
 for (const dir of outDirs) {
@@ -84,21 +84,19 @@ for (const dir of outDirs) {
   }
 }
 
-const xlsxPath = path.resolve("d:/Softwares/Apps Portal/IDP-V2/public/templates/client_bulk_import_template.xlsx");
-const rootXlsxPath = path.resolve("d:/Softwares/Apps Portal/IDP-V2/client_bulk_import_template.xlsx");
-const srcPublicXlsxPath = path.resolve("d:/Softwares/Apps Portal/IDP-V2/src/resources/public/templates/client_bulk_import_template.xlsx");
+const xlsxPath = path.resolve(rootDir, "public/templates/client_bulk_import_template.xlsx");
+const srcPublicXlsxPath = path.resolve(rootDir, "src/resources/public/templates/client_bulk_import_template.xlsx");
 
 XLSX.writeFile(wb, xlsxPath);
-XLSX.writeFile(wb, rootXlsxPath);
 XLSX.writeFile(wb, srcPublicXlsxPath);
 
 // Also generate CSV format
-const csvContent = headers.join(",") + "\n" +
+const csvContent = `${headers.join(",")}\n` +
   `"Example Trading Ltd","Md. Rafiqul Islam","001234567-0101","01711002233","01812345678","info@exampletrading.com","123456789012","TRAD/DSCC/012345/2026","House 12, Road 5, Motijheel C/A, Dhaka-1000","Trader","Direct","example_vat","Password@123","FULL","Priority client"\n`;
 
-const blankCsv = headers.join(",") + "\n";
+const blankCsv = `${headers.join(",")}\n`;
 
-fs.writeFileSync(path.resolve("d:/Softwares/Apps Portal/IDP-V2/public/templates/client_bulk_import_template.csv"), blankCsv);
-fs.writeFileSync(path.resolve("d:/Softwares/Apps Portal/IDP-V2/client_bulk_import_template.csv"), blankCsv);
+fs.writeFileSync(path.resolve(rootDir, "public/templates/client_bulk_import_template.csv"), blankCsv);
+fs.writeFileSync(path.resolve(rootDir, "src/resources/public/templates/client_bulk_import_template.csv"), blankCsv);
 
 console.log("Excel and CSV templates created successfully!");
