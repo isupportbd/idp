@@ -43,6 +43,7 @@ export { urls } from "@/framework/support/url.js";
 export {
   resolveTenantContext,
   requireTenantContext,
+  assertClientAccess,
   UnauthenticatedTenantError,
   getSubmissionDeadline,
   getDefaultTaxPeriod,

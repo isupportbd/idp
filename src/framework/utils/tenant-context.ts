@@ -1,7 +1,9 @@
 import type { Context } from "hono";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/framework/facade.js";
 import { users } from "@/modules/auth/database/models/user.js";
+import { clients } from "@/modules/clients/database/models/clients.js";
+import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
 
 export class UnauthenticatedTenantError extends Error {
   status = 401;
@@ -26,6 +28,55 @@ export interface TenantContext {
 export interface HttpError extends Error {
   status?: number;
 }
+
+/**
+ * Asserts that the client belongs to the tenant and that the user is authorized to view/manage it.
+ * Throws 403 HttpError if unauthorized.
+ */
+export async function assertClientAccess(
+  ctx: TenantContext,
+  clientId: number
+): Promise<void> {
+  const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = ctx;
+
+  if (!isSuperAdmin && tenantAdminId) {
+    const client = (
+      await db
+        .select({ id: clients.id })
+        .from(clients)
+        .where(
+          and(
+            eq(clients.id, clientId),
+            eq(clients.createdBy, tenantAdminId)
+          )
+        )
+        .limit(1)
+    )[0];
+
+    if (!client) {
+      const err: HttpError = new Error("Client not found or unauthorized access");
+      err.status = 403;
+      throw err;
+    }
+  }
+
+  if (!isSuperAdmin && !isTenantAdmin) {
+    const isAssigned = (
+      await db
+        .select({ id: clientManagers.id })
+        .from(clientManagers)
+        .where(and(eq(clientManagers.clientId, clientId), eq(clientManagers.managerId, userId)))
+        .limit(1)
+    )[0];
+
+    if (!isAssigned) {
+      const err: HttpError = new Error("Unauthorized: You are not assigned to this client");
+      err.status = 403;
+      throw err;
+    }
+  }
+}
+
 
 /**
  * Resolves the authenticated user and tenant context from Hono Context.

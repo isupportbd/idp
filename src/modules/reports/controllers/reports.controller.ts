@@ -1,6 +1,6 @@
 import type { AppContext } from "@/framework/facade.js";
 import type { Context } from "hono";
-import { db, round2 as r2, resolveTenantContext } from "@/framework/facade.js";
+import { assertClientAccess, db, round2 as r2, resolveTenantContext } from "@/framework/facade.js";
 import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { salesRates } from "@/modules/sales-rates/database/models/sales_rates.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
@@ -70,41 +70,11 @@ export const getSalesReport = async (c: AppContext) => {
       return c.json({ success: false, message: "clientId and month are required" }, 400);
     }
 
-    const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
+    const ctx = await resolveTenantContext(c);
     const parsedClientId = parseInt(clientId);
 
-    // Verify client belongs to current tenant
-    if (!isSuperAdmin && tenantAdminId) {
-      const client = (
-        await db
-          .select({ id: clients.id })
-          .from(clients)
-          .where(
-            and(
-              eq(clients.id, parsedClientId),
-              eq(clients.createdBy, tenantAdminId)
-            )
-          )
-          .limit(1)
-      )[0];
-
-      if (!client) {
-        return c.json({ success: false, message: "Client not found or unauthorized access" }, 403);
-      }
-    }
-
-    if (!isSuperAdmin && !isTenantAdmin) {
-      const isAssigned = (
-        await db
-          .select({ id: clientManagers.id })
-          .from(clientManagers)
-          .where(and(eq(clientManagers.clientId, parsedClientId), eq(clientManagers.managerId, userId)))
-          .limit(1)
-      )[0];
-      if (!isAssigned) {
-        return c.json({ success: false, message: "Unauthorized: You are not assigned to this client" }, 403);
-      }
-    }
+    // Verify client belongs to current tenant and is authorized
+    await assertClientAccess(ctx, parsedClientId);
 
     const [yearStr, monthStr] = month.split("-");
     const reportMonthEnd = new Date(parseInt(yearStr), parseInt(monthStr), 0);
@@ -211,41 +181,11 @@ export const getStatementReport = async (c: AppContext) => {
       return c.json({ success: false, message: "clientId and month are required" }, 400);
     }
 
-    const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
+    const ctx = await resolveTenantContext(c);
     const parsedClientId = parseInt(clientId);
 
-    // Verify client belongs to current tenant
-    if (!isSuperAdmin && tenantAdminId) {
-      const client = (
-        await db
-          .select({ id: clients.id })
-          .from(clients)
-          .where(
-            and(
-              eq(clients.id, parsedClientId),
-              eq(clients.createdBy, tenantAdminId)
-            )
-          )
-          .limit(1)
-      )[0];
-
-      if (!client) {
-        return c.json({ success: false, message: "Client not found or unauthorized access" }, 403);
-      }
-    }
-
-    if (!isSuperAdmin && !isTenantAdmin) {
-      const isAssigned = (
-        await db
-          .select({ id: clientManagers.id })
-          .from(clientManagers)
-          .where(and(eq(clientManagers.clientId, parsedClientId), eq(clientManagers.managerId, userId)))
-          .limit(1)
-      )[0];
-      if (!isAssigned) {
-        return c.json({ success: false, message: "Unauthorized: You are not assigned to this client" }, 403);
-      }
-    }
+    // Verify client belongs to current tenant and is authorized
+    await assertClientAccess(ctx, parsedClientId);
 
     const purchaseData = await db
       .select({
