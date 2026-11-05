@@ -25,13 +25,22 @@ const referenceNo = ref("");
 const notes = ref("");
 const isSaving = ref(false);
 
+let lastLoadedClientId: number | null = null;
+
 const loadClientDetails = async () => {
   if (!selectedClientId.value) {
     clientOverview.value = null;
     clientBills.value = [];
     selectedBillId.value = null;
+    lastLoadedClientId = null;
     return;
   }
+
+  // De-duplication guard: prevents duplicate API calls on route hydration
+  if (selectedClientId.value === lastLoadedClientId) {
+    return;
+  }
+  lastLoadedClientId = selectedClientId.value;
 
   try {
     const [overviewData, billsData] = await Promise.all([

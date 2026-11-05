@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
+import { debounce } from "lodash-es";
 import { pulse } from "@/plugins/pulse";
 import {
   useSuperAdminApi,
@@ -67,7 +68,9 @@ const saveFilters = () => {
   } catch (uiErr: any) { console.warn("[UI Component Warning: Tenants.vue]", uiErr?.message || uiErr); }
 };
 
-watch([searchTerm, statusFilter], saveFilters);
+const debouncedSaveFilters = debounce(saveFilters, 250);
+
+watch([searchTerm, statusFilter], debouncedSaveFilters);
 
 onBeforeRouteLeave((to) => {
   if (!to.path.startsWith("/superadmin/tenants") && !to.path.startsWith("/superadmin/tenant-ledger")) {

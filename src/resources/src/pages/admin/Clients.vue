@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from "vue";
 import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
+import { debounce } from "lodash-es";
 import axios from "axios";
 import ConfirmModal from "@/components/common/ConfirmModal.vue";
 import { useClientsApi, type ClientItem, type AssignableUser } from "@/composables/useClientsApi";
@@ -183,20 +184,15 @@ onMounted(() => {
   loadData();
 });
 
-watch(searchQuery, () => {
-  saveFilters();
-  if (searchTimeout) clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    currentPage.value = 1;
-    fetchClientsList();
-  }, 250);
-});
-
-watch([selectedTypeFilter, selectedReferenceFilter, selectedServiceTypeFilter, selectedStatusFilter], () => {
+const debouncedFetchClients = debounce(() => {
   saveFilters();
   currentPage.value = 1;
   fetchClientsList();
-});
+}, 250);
+
+watch(searchQuery, debouncedFetchClients);
+
+watch([selectedTypeFilter, selectedReferenceFilter, selectedServiceTypeFilter, selectedStatusFilter], debouncedFetchClients);
 
 watch(currentPage, () => {
   fetchClientsList();

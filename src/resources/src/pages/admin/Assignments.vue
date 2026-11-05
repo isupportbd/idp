@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
+import { debounce } from "lodash-es";
 import { useClientsApi, type ClientManagerAssignment, type AssignableUser } from "@/composables/useClientsApi";
 import { useServicesApi, type CustomerType, type ClientReference } from "@/composables/useServicesApi";
 import { useToast } from "@/composables/useToast";
@@ -71,7 +72,9 @@ const saveFilters = () => {
   } catch (uiErr: any) { console.warn("[UI Component Warning: Assignments.vue]", uiErr?.message || uiErr); }
 };
 
-watch([searchQuery, selectedTypeFilter, selectedReferenceFilter, selectedManagerFilter, activeFilter], saveFilters);
+const debouncedSaveFilters = debounce(saveFilters, 250);
+
+watch([searchQuery, selectedTypeFilter, selectedReferenceFilter, selectedManagerFilter, activeFilter], debouncedSaveFilters);
 
 onBeforeRouteLeave((to) => {
   if (!to.path.startsWith("/admin/assignments") && !to.path.startsWith("/admin/clients")) {

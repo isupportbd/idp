@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
+import { debounce } from "lodash-es";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
 import IdpSelect from "@/components/common/IdpSelect.vue";
@@ -73,7 +74,9 @@ const saveFilters = () => {
   } catch (uiErr: any) { console.warn("[UI Component Warning: ActivityFilter.vue]", uiErr?.message || uiErr); }
 };
 
-watch([selectedMonth, searchQuery, statusFilter, selectedClientType, selectedReference], saveFilters);
+const debouncedSaveFilters = debounce(saveFilters, 250);
+
+watch([selectedMonth, searchQuery, statusFilter, selectedClientType, selectedReference], debouncedSaveFilters);
 
 onBeforeRouteLeave((to) => {
   if (!to.path.startsWith("/admin/activity-filter")) {
