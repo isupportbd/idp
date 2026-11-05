@@ -253,7 +253,7 @@ const handleConfirmDelete = async () => {
         <h4 class="text-white fw-bold mb-0">Client Organizations</h4>
       </div>
 
-      <div class="clients-header-actions d-flex align-items-center gap-2">
+      <div class="d-flex align-items-center gap-2">
         <button
           v-if="can('clients.create')"
           type="button"
@@ -343,162 +343,160 @@ const handleConfirmDelete = async () => {
 
     <!-- Clients Table Card -->
     <div class="table-card shadow-sm">
-      <div class="table-responsive">
-        <table class="table-custom">
-          <thead>
-            <tr>
-              <th style="min-width: 220px; width: 28%;">Company & Proprietor</th>
-              <th style="min-width: 150px; width: 15%;">Identifiers (BIN / TIN)</th>
-              <th style="min-width: 130px; width: 13%;">Customer Type</th>
-              <th style="min-width: 120px; width: 14%;">Reference</th>
-              <th style="min-width: 140px; width: 14%;">Assigned Users</th>
-              <th style="min-width: 90px; width: 6%; text-align: center;">Status</th>
-              <th style="min-width: 110px; width: 10%; text-align: right;">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="clientsLoading && clients.length === 0">
-              <td colspan="7" class="text-center py-5 text-muted">
-                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                Loading client records from database...
-              </td>
-            </tr>
+      <table class="table-custom">
+        <thead>
+          <tr>
+            <th style="width: 28%;">Company & Proprietor</th>
+            <th style="width: 15%;">Identifiers (BIN / TIN)</th>
+            <th style="width: 13%;">Customer Type</th>
+            <th style="width: 14%;">Reference</th>
+            <th style="width: 14%;">Assigned Users</th>
+            <th style="width: 6%; text-align: center;">Status</th>
+            <th style="width: 10%; text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-if="clientsLoading && clients.length === 0">
+            <td colspan="7" class="text-center py-5 text-muted">
+              <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+              Loading client records from database...
+            </td>
+          </tr>
 
-            <tr v-else-if="clients.length === 0">
-              <td colspan="7" class="text-center py-5 text-muted">
-                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
-                No clients found. Click "Add Client" to register a new organization.
-              </td>
-            </tr>
+          <tr v-else-if="clients.length === 0">
+            <td colspan="7" class="text-center py-5 text-muted">
+              <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+              No clients found. Click "Add Client" to register a new organization.
+            </td>
+          </tr>
 
-            <tr v-for="client in clients" :key="client.id">
-              <!-- Company & Proprietor -->
-              <td>
-                <div class="fw-bold text-white mb-0">{{ client.companyName }}</div>
-                <div class="text-muted small">
-                  <span v-if="client.proprietorName">{{ client.proprietorName }} • </span>
-                  <span v-if="client.mobile"><i class="bi bi-telephone me-1"></i>{{ client.mobile }}</span>
-                </div>
-              </td>
+          <tr v-for="client in clients" :key="client.id">
+            <!-- Company & Proprietor -->
+            <td>
+              <div class="fw-bold text-white mb-0">{{ client.companyName }}</div>
+              <div class="text-muted small">
+                <span v-if="client.proprietorName">{{ client.proprietorName }} • </span>
+                <span v-if="client.mobile"><i class="bi bi-telephone me-1"></i>{{ client.mobile }}</span>
+              </div>
+            </td>
 
-              <!-- Identifiers -->
-              <td>
-                <div v-if="client.binNumber" class="font-monospace text-info small fw-bold">
-                  BIN: {{ client.binNumber }}
-                </div>
-                <div v-if="client.tinNumber" class="text-muted small font-monospace">
-                  TIN: {{ client.tinNumber }}
-                </div>
-                <div v-if="!client.binNumber && !client.tinNumber" class="text-muted small">
-                  Not Specified
-                </div>
-              </td>
+            <!-- Identifiers -->
+            <td>
+              <div v-if="client.binNumber" class="font-monospace text-info small fw-bold">
+                BIN: {{ client.binNumber }}
+              </div>
+              <div v-if="client.tinNumber" class="text-muted small font-monospace">
+                TIN: {{ client.tinNumber }}
+              </div>
+              <div v-if="!client.binNumber && !client.tinNumber" class="text-muted small">
+                Not Specified
+              </div>
+            </td>
 
-              <!-- Customer Type -->
-              <td>
-                <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25 small">
-                  {{ client.customerTypeName || 'Standard' }}
+            <!-- Customer Type -->
+            <td>
+              <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25 small">
+                {{ client.customerTypeName || 'Standard' }}
+              </span>
+            </td>
+
+            <!-- Reference -->
+            <td>
+              <span v-if="client.referenceName" class="badge bg-dark border border-secondary text-info small">
+                {{ client.referenceName }}
+              </span>
+              <span v-else class="text-muted small">—</span>
+            </td>
+
+            <!-- Assigned Managers -->
+            <td>
+              <div v-if="client.managers && client.managers.length > 0" class="d-flex flex-wrap gap-1 align-items-center">
+                <span
+                  v-if="client.managers.length === 1"
+                  class="badge bg-dark border border-secondary text-light small d-inline-flex align-items-center gap-1 py-1 px-2"
+                >
+                  <i class="bi bi-person-fill text-primary"></i>
+                  {{ client.managers[0].name }}
                 </span>
-              </td>
-
-              <!-- Reference -->
-              <td>
-                <span v-if="client.referenceName" class="badge bg-dark border border-secondary text-info small">
-                  {{ client.referenceName }}
-                </span>
-                <span v-else class="text-muted small">—</span>
-              </td>
-
-              <!-- Assigned Managers -->
-              <td>
-                <div v-if="client.managers && client.managers.length > 0" class="d-flex flex-wrap gap-1 align-items-center">
+                <template v-else-if="client.managers.length <= 2">
                   <span
-                    v-if="client.managers.length === 1"
+                    v-for="mgr in client.managers"
+                    :key="mgr.id"
                     class="badge bg-dark border border-secondary text-light small d-inline-flex align-items-center gap-1 py-1 px-2"
                   >
                     <i class="bi bi-person-fill text-primary"></i>
-                    {{ client.managers[0].name }}
+                    {{ mgr.name.split(' ')[0] }}
                   </span>
-                  <template v-else-if="client.managers.length <= 2">
-                    <span
-                      v-for="mgr in client.managers"
-                      :key="mgr.id"
-                      class="badge bg-dark border border-secondary text-light small d-inline-flex align-items-center gap-1 py-1 px-2"
-                    >
-                      <i class="bi bi-person-fill text-primary"></i>
-                      {{ mgr.name.split(' ')[0] }}
-                    </span>
-                  </template>
-                  <template v-else>
-                    <span
-                      v-for="mgr in client.managers.slice(0, 2)"
-                      :key="mgr.id"
-                      class="badge bg-dark border border-secondary text-light small d-inline-flex align-items-center gap-1 py-1 px-2"
-                    >
-                      {{ mgr.name.split(' ')[0] }}
-                    </span>
-                    <span
-                      class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-50 small cursor-pointer"
-                      :title="client.managers.map((m: any) => m.name).join(', ')"
-                    >
-                      +{{ client.managers.length - 2 }}
-                    </span>
-                  </template>
-                </div>
-                <span v-else class="text-muted small fst-italic">
-                  Unassigned (Admin)
-                </span>
-              </td>
+                </template>
+                <template v-else>
+                  <span
+                    v-for="mgr in client.managers.slice(0, 2)"
+                    :key="mgr.id"
+                    class="badge bg-dark border border-secondary text-light small d-inline-flex align-items-center gap-1 py-1 px-2"
+                  >
+                    {{ mgr.name.split(' ')[0] }}
+                  </span>
+                  <span
+                    class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-50 small cursor-pointer"
+                    :title="client.managers.map((m: any) => m.name).join(', ')"
+                  >
+                    +{{ client.managers.length - 2 }}
+                  </span>
+                </template>
+              </div>
+              <span v-else class="text-muted small fst-italic">
+                Unassigned (Admin)
+              </span>
+            </td>
 
-              <!-- Status Toggle (Active / Released) -->
-              <td style="text-align: center;">
-                <button
-                  type="button"
-                  class="badge-btn"
-                  :class="client.isActive ? 'badge-active' : 'badge-inactive'"
-                  :title="client.isActive ? 'Active under your firm (Click to Release client)' : 'Released (Click to Re-activate / Restore)'"
-                  :disabled="!can('clients.edit')"
-                  @click="handleToggleActive(client)"
+            <!-- Status Toggle (Active / Released) -->
+            <td style="text-align: center;">
+              <button
+                type="button"
+                class="badge-btn"
+                :class="client.isActive ? 'badge-active' : 'badge-inactive'"
+                :title="client.isActive ? 'Active under your firm (Click to Release client)' : 'Released (Click to Re-activate / Restore)'"
+                :disabled="!can('clients.edit')"
+                @click="handleToggleActive(client)"
+              >
+                <span class="dot"></span>
+                {{ client.isActive ? 'Active' : 'Released' }}
+              </button>
+            </td>
+
+            <!-- Actions -->
+            <td style="text-align: right;">
+              <div class="d-inline-flex align-items-center gap-1">
+                <router-link
+                  :to="`/admin/clients/${client.id}`"
+                  target="_blank"
+                  class="action-btn btn-view text-decoration-none"
+                  title="View Client Details (New Tab)"
                 >
-                  <span class="dot"></span>
-                  {{ client.isActive ? 'Active' : 'Released' }}
+                  <i class="bi bi-eye"></i>
+                </router-link>
+                <router-link
+                  v-if="can('clients.edit')"
+                  :to="`/admin/clients/${client.id}/edit`"
+                  class="action-btn btn-edit text-decoration-none"
+                  title="Edit Client"
+                >
+                  <i class="bi bi-pencil"></i>
+                </router-link>
+                <button
+                  v-if="can('clients.delete')"
+                  type="button"
+                  class="action-btn btn-del"
+                  title="Delete Client"
+                  @click="openDeleteModal(client)"
+                >
+                  <i class="bi bi-trash"></i>
                 </button>
-              </td>
-
-              <!-- Actions -->
-              <td style="text-align: right;">
-                <div class="d-inline-flex align-items-center gap-1">
-                  <router-link
-                    :to="`/admin/clients/${client.id}`"
-                    target="_blank"
-                    class="action-btn btn-view text-decoration-none"
-                    title="View Client Details (New Tab)"
-                  >
-                    <i class="bi bi-eye"></i>
-                  </router-link>
-                  <router-link
-                    v-if="can('clients.edit')"
-                    :to="`/admin/clients/${client.id}/edit`"
-                    class="action-btn btn-edit text-decoration-none"
-                    title="Edit Client"
-                  >
-                    <i class="bi bi-pencil"></i>
-                  </router-link>
-                  <button
-                    v-if="can('clients.delete')"
-                    type="button"
-                    class="action-btn btn-del"
-                    title="Delete Client"
-                    @click="openDeleteModal(client)"
-                  >
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Pagination for Clients -->
@@ -895,33 +893,5 @@ const handleConfirmDelete = async () => {
   max-height: 34px;
   border-radius: 6px;
   transition: all 0.15s ease;
-}
-
-/* Responsive Breakpoints */
-@media (max-width: 767px) {
-  .clients-page {
-    padding-top: 0.25rem !important;
-  }
-  .filter-panel {
-    padding: 0.75rem !important;
-  }
-  .table-custom th,
-  .table-custom td {
-    padding: 10px 12px;
-  }
-}
-
-@media (max-width: 575px) {
-  .clients-header-actions {
-    width: 100%;
-    display: flex;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-  .clients-header-actions .btn {
-    flex: 1 1 auto;
-    justify-content: center;
-  }
 }
 </style>

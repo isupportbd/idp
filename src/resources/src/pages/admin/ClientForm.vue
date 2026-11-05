@@ -338,7 +338,7 @@ const handleSubmit = async () => {
         </h4>
       </div>
 
-      <div class="client-form-actions d-flex align-items-center gap-2">
+      <div class="d-flex align-items-center gap-2">
         <router-link to="/admin/clients" class="btn btn-outline-secondary btn-sm px-3">
           Cancel
         </router-link>
@@ -802,7 +802,7 @@ const handleSubmit = async () => {
           </button>
         </div>
 
-        <div class="client-form-actions d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2">
           <button
             v-if="activeTab !== 'managers'"
             type="button"
@@ -928,29 +928,5 @@ const handleSubmit = async () => {
   justify-content: center;
   font-weight: 700;
   font-size: 0.9rem;
-}
-
-@media (max-width: 767px) {
-  .idp-card {
-    padding: 1rem !important;
-  }
-}
-
-@media (max-width: 575px) {
-  .client-form-actions {
-    width: 100%;
-    display: flex;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-  .client-form-actions .btn {
-    flex: 1 1 auto;
-    justify-content: center;
-  }
-  .settings-tabs-wrapper .nav-link {
-    font-size: 0.8rem;
-    padding: 6px 12px;
-  }
 }
 </style>
