@@ -194,21 +194,32 @@ export const processUpload = async (c: AppContext) => {
 
     const processedData: Record<string, unknown>[] = [];
 
+    // Pre-calculate clean Excel headers once outside row loop to eliminate O(Rows * Columns) regex operations
+    const preparedMappings = dbMappings
+      .filter((m) => m.excelHeader && m.excelHeader.trim())
+      .map((m) => ({
+        ...m,
+        cleanHeader: m.excelHeader!.trim().toLowerCase().replace(/[\s\.\_\-\/]+/g, ""),
+        camelKey: toCamel(m.dbColumn)
+      }));
+
     for (const row of rawData) {
       const mappedRow: Record<string, unknown> = {};
       const rowKeys = Object.keys(row);
 
+      // Pre-normalize row keys once per row
+      const normalizedRowKeys = new Map<string, string>();
+      for (const k of rowKeys) {
+        normalizedRowKeys.set(k.trim().toLowerCase().replace(/[\s\.\_\-\/]+/g, ""), k);
+      }
+
       // Map strictly using database column mappings
-      for (const mapping of dbMappings) {
-        if (!mapping.excelHeader || !mapping.excelHeader.trim()) continue;
-        const cleanExcelHeader = mapping.excelHeader.trim().toLowerCase().replace(/[\s\.\_\-\/]+/g, "");
-        const rowKey = rowKeys.find(
-          (k) => k.trim().toLowerCase().replace(/[\s\.\_\-\/]+/g, "") === cleanExcelHeader
-        );
+      for (const mapping of preparedMappings) {
+        const rowKey = normalizedRowKeys.get(mapping.cleanHeader);
 
         if (rowKey && row[rowKey] !== undefined && row[rowKey] !== null && String(row[rowKey]).trim() !== "") {
           let val = row[rowKey];
-          const camelKey = toCamel(mapping.dbColumn);
+          const camelKey = mapping.camelKey;
 
           // Smart regex extraction for excess_qty
           if (camelKey === "excessQty" || mapping.dbColumn === "excess_qty" || mapping.isRegexExtracted) {
