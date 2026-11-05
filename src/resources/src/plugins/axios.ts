@@ -33,7 +33,11 @@ function clearStoredAuth() {
   } catch (storageErr) { console.warn("[Axios Plugin Warning]: Failed to access storage", storageErr); }
 }
 
+let isRedirecting = false;
+
 function redirectToLogin() {
+  if (isRedirecting) return;
+  isRedirecting = true;
   const redirect = encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
   window.location.href = `/login?redirect=${redirect}`;
 }

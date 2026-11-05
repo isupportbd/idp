@@ -167,6 +167,8 @@ const fetchClientsList = async () => {
   }
 };
 
+let isInitialized = false;
+
 const loadData = async () => {
   try {
     await Promise.all([
@@ -177,6 +179,8 @@ const loadData = async () => {
     ]);
   } catch (err: any) {
     toast.error("Failed to load initial client data");
+  } finally {
+    isInitialized = true;
   }
 };
 
@@ -185,6 +189,7 @@ onMounted(() => {
 });
 
 const debouncedFetchClients = debounce(() => {
+  if (!isInitialized) return;
   saveFilters();
   currentPage.value = 1;
   fetchClientsList();
@@ -195,6 +200,7 @@ watch(searchQuery, debouncedFetchClients);
 watch([selectedTypeFilter, selectedReferenceFilter, selectedServiceTypeFilter, selectedStatusFilter], debouncedFetchClients);
 
 watch(currentPage, () => {
+  if (!isInitialized) return;
   fetchClientsList();
 });
 

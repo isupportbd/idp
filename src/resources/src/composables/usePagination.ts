@@ -1,4 +1,4 @@
-import { ref, computed, watch, type Ref, type ComputedRef } from "vue";
+import { ref, computed, watch, onMounted, type Ref, type ComputedRef } from "vue";
 import { useRouter, useRoute } from "vue-router";
 
 export interface PaginationOptions {
@@ -53,11 +53,21 @@ export function usePagination(storageKey: string, options: PaginationOptions = {
   }
 
   // Sync to sessionStorage and URL query param (debounced to avoid navigation thrash)
+  // Guard with hasMounted to ignore spurious initial navigation on component mount
+  let hasMounted = false;
+  onMounted(() => {
+    // Enable sync only after initial mount and paint
+    setTimeout(() => {
+      hasMounted = true;
+    }, 50);
+  });
+
   let urlSyncTimer: ReturnType<typeof setTimeout> | null = null;
   watch(currentPage, (newPage) => {
     if (typeof window !== "undefined" && window.sessionStorage) {
       sessionStorage.setItem(`idp_page_${storageKey}`, String(newPage));
     }
+    if (!hasMounted) return;
     if (syncUrl && router && route && Number(route.query?.page) !== newPage) {
       if (urlSyncTimer) clearTimeout(urlSyncTimer);
       urlSyncTimer = setTimeout(() => {

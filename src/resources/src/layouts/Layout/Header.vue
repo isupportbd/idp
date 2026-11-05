@@ -95,8 +95,16 @@ const getRoleBadgeStyle = (role?: string) => {
   return "background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.35); font-size: 0.65rem; padding: 2px 6px;";
 };
 
-const fetchStats = async () => {
+let lastStatsFetchTime = 0;
+const STATS_TTL_MS = 30000; // 30s cache TTL to avoid hitting users-stats on every fast navigation
+
+const fetchStats = async (force = false) => {
   if (!authStore.user) return;
+  const now = Date.now();
+  if (!force && lastStatsFetchTime && now - lastStatsFetchTime < STATS_TTL_MS) {
+    return;
+  }
+  lastStatsFetchTime = now;
   try {
     const res = await axios.get("/api/auth/users-stats");
     if (res.data?.success && res.data?.stats) {
@@ -268,7 +276,7 @@ const toggleNotifications = () => {
 const toggleStatsDropdown = () => {
   showStatsDropdown.value = !showStatsDropdown.value;
   if (showStatsDropdown.value) {
-    fetchStats();
+    fetchStats(true);
   }
 };
 
