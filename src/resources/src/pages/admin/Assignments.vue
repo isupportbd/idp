@@ -104,6 +104,8 @@ const managerOptions = computed(() => [
 const pendingAssignments = ref<Record<number, number[]>>({});
 const savingIds = ref<Record<number, boolean>>({});
 
+let isInitialized = false;
+
 const loadData = async () => {
   try {
     await Promise.all([
@@ -114,6 +116,8 @@ const loadData = async () => {
     ]);
   } catch (err: any) {
     toast.error("Failed to load assignments");
+  } finally {
+    isInitialized = true;
   }
 };
 
@@ -142,6 +146,7 @@ onMounted(() => {
 // Debounce search-driven reloads so typing does not fire a request per keystroke.
 let loadTimer: ReturnType<typeof setTimeout> | null = null;
 const scheduleLoad = () => {
+  if (!isInitialized) return;
   if (loadTimer) clearTimeout(loadTimer);
   loadTimer = setTimeout(() => {
     loadTimer = null;
@@ -154,6 +159,7 @@ onBeforeUnmount(() => {
 });
 
 watch([activeFilter, searchQuery], () => {
+  if (!isInitialized) return;
   scheduleLoad();
 });
 

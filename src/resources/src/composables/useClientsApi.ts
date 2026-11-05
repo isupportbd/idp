@@ -60,6 +60,7 @@ const cachedAssignmentStats = ref<{ total: number; assigned: number; shared: num
 const cachedAssignableUsers = ref<AssignableUser[]>([]);
 const cachedTotalCount = ref(0);
 const hasLoadedClientsOnce = ref(false);
+const hasLoadedAssignmentsOnce = ref(false);
 const hasLoadedUsersOnce = ref(false);
 
 export function useClientsApi() {
@@ -209,7 +210,9 @@ export function useClientsApi() {
   };
 
   const fetchAssignments = async (params: { search?: string; filter?: "all" | "assigned" | "shared" | "unassigned" } = {}) => {
-    loading.value = true;
+    if (!hasLoadedAssignmentsOnce.value || assignments.value.length === 0) {
+      loading.value = true;
+    }
     error.value = null;
     try {
       const res = await axios.get("/api/clients/assignments", { params });
@@ -217,6 +220,7 @@ export function useClientsApi() {
       if (res.data?.stats) {
         assignmentStats.value = res.data.stats;
       }
+      hasLoadedAssignmentsOnce.value = true;
       return res.data;
     } catch (err) {
       error.value = getErrorMessage(err, "Failed to fetch assignments");
