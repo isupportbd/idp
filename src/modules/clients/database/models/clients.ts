@@ -32,6 +32,7 @@ export const clients = pgTable(
   },
   (table) => ({
     createdByActiveIdx: index("clients_created_by_active_idx").on(table.createdBy, table.isActive),
+    createdByActiveBinIdx: index("clients_created_by_active_bin_idx").on(table.createdBy, table.isActive, table.binNumber),
     binNumberIdx: index("clients_bin_number_idx").on(table.binNumber),
     customerTypeIdIdx: index("clients_customer_type_id_idx").on(table.customerTypeId),
     referenceIdIdx: index("clients_reference_id_idx").on(table.referenceId),

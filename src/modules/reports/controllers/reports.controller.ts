@@ -300,21 +300,25 @@ export const getStatementReport = async (c: AppContext) => {
         rate: baseRate
       });
 
+      // Optimize date range scanning: Pre-sort dates and pre-parse once for O(K + M) prefix-like computation
+      const parsedDateEntries = Object.entries(datesObj)
+        .map(([beDate, qty]) => ({ time: parseDate(beDate), qty }))
+        .sort((a, b) => a.time - b.time);
+
       for (let i = 0; i < ranges.length; i++) {
         const range = ranges[i];
         let totalQty = 0;
-        const rangeStart = parseDate(range.startDate);
-        const rangeEnd = parseDate(range.endDate);
+        const rangeStartTime = parseDate(range.startDate);
+        const rangeEndTime = parseDate(range.endDate);
 
-        for (const [beDate, qty] of Object.entries(datesObj)) {
-          const bDate = parseDate(beDate);
+        for (const entry of parsedDateEntries) {
           if (i === 0) {
-            if (bDate <= rangeEnd) {
-              totalQty += qty;
+            if (entry.time <= rangeEndTime) {
+              totalQty += entry.qty;
             }
           } else {
-            if (bDate > rangeStart && bDate <= rangeEnd) {
-              totalQty += qty;
+            if (entry.time > rangeStartTime && entry.time <= rangeEndTime) {
+              totalQty += entry.qty;
             }
           }
         }

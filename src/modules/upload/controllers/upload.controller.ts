@@ -636,6 +636,7 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
   });
 
   // ── Step 3: Preload existing purchases for duplicate check ────────
+  // Optimized: Select only essential fields needed for duplicate detection (beNo, beDate, itemId, office, etc.)
   const existingPurchases = await db
     .select({
       id: purchases.id,
@@ -649,15 +650,9 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
       excessQty: purchases.excessQty,
       baseValueOfVat: purchases.baseValueOfVat,
       vat: purchases.vat,
-      at: purchases.at,
-      clientName: clients.companyName,
-      clientBin: clients.binNumber,
-      itemName: globalItems.name,
-      hsCode: globalItems.hsCode
+      at: purchases.at
     })
     .from(purchases)
-    .leftJoin(clients, eq(purchases.clientId, clients.id))
-    .leftJoin(globalItems, eq(purchases.itemId, globalItems.id))
     .where(isSuperAdmin ? undefined : eq(purchases.adminId, tenantAdminId));
 
   const existingKeys = new Set(
