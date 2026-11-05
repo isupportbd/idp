@@ -38,15 +38,23 @@ export interface SubmitterOption {
   count: number;
 }
 
+// Module-scoped persistent reactive state (SWR / Stale-While-Revalidate)
+// Ensures that on route transitions, existing submissions data is rendered immediately
+// (0ms latency, no empty table flash / prolonged loading spinner) while background revalidation occurs.
+const cachedSubmissions = shallowRef<SubmissionItem[]>([]);
+const cachedStats = ref<SubmissionsStats>({
+  totalActive: 0,
+  submittedCount: 0,
+  pendingCount: 0,
+  lateSubmittedCount: 0
+});
+const cachedSubmitters = ref<SubmitterOption[]>([]);
+const hasLoadedSubmissionsOnce = ref(false);
+
 export function useSubmissionsApi() {
-  const submissions = shallowRef<SubmissionItem[]>([]);
-  const stats = ref<SubmissionsStats>({
-    totalActive: 0,
-    submittedCount: 0,
-    pendingCount: 0,
-    lateSubmittedCount: 0
-  });
-  const submitters = ref<SubmitterOption[]>([]);
+  const submissions = cachedSubmissions;
+  const stats = cachedStats;
+  const submitters = cachedSubmitters;
   const loading = ref(false);
   const error = ref<string | null>(null);
 
@@ -60,7 +68,9 @@ export function useSubmissionsApi() {
     status?: string;
     search?: string;
   } = {}) => {
-    loading.value = true;
+    if (!hasLoadedSubmissionsOnce.value || submissions.value.length === 0) {
+      loading.value = true;
+    }
     error.value = null;
     try {
       const cleanParams: Record<string, any> = {};
@@ -79,6 +89,7 @@ export function useSubmissionsApi() {
         stats.value = res.data.stats;
       }
       submitters.value = res.data?.submitters || [];
+      hasLoadedSubmissionsOnce.value = true;
       return res.data;
     } catch (err: any) {
       error.value = err.response?.data?.message || "Failed to fetch submissions";

@@ -165,6 +165,7 @@ const selectedClientItem = computed(() => {
 });
 
 let searchTimeout: any = null;
+let isInitialized = false;
 
 const loadSubmissionsList = async () => {
   try {
@@ -190,6 +191,8 @@ const loadData = async () => {
     ]);
   } catch (err: any) {
     toast.error("Failed to load initial submissions data");
+  } finally {
+    isInitialized = true;
   }
 };
 
@@ -276,6 +279,7 @@ onUnmounted(() => {
 
 // Watch Search Query with Debounce
 watch(searchQuery, () => {
+  if (!isInitialized) return;
   selectedIds.value = [];
   currentPage.value = 1;
   if (searchTimeout) clearTimeout(searchTimeout);
@@ -286,6 +290,7 @@ watch(searchQuery, () => {
 
 // Watch Filters
 watch([selectedMonth, selectedCustomerTypeId, selectedReferenceId, selectedSubmitterId, statusFilter], () => {
+  if (!isInitialized) return;
   selectedIds.value = [];
   currentPage.value = 1;
   loadSubmissionsList();
