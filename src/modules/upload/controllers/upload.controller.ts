@@ -837,13 +837,13 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
   }
 
   if (toInsert.length > 0) {
-    const CHUNK_SIZE = 500;
+    const CHUNK_SIZE = 1000;
     await db.transaction(async (tx) => {
       for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
         const chunk = toInsert.slice(i, i + CHUNK_SIZE);
         await tx.insert(purchases).values(chunk);
 
-        if (toInsert.length > 500) {
+        if (toInsert.length > 1000) {
           const processedCount = Math.min(toInsert.length, i + chunk.length);
           onProgress?.({ total: toInsert.length, processed: processedCount });
         }
