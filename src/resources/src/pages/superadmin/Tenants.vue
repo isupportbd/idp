@@ -3,6 +3,9 @@ import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import { debounce } from "lodash-es";
 import { pulse } from "@/plugins/pulse";
+import PendingRechargesCard from "./tenants/PendingRechargesCard.vue";
+import PendingSignupsCard from "./tenants/PendingSignupsCard.vue";
+import ExtendSubscriptionModal from "./tenants/ExtendSubscriptionModal.vue";
 import {
   useSuperAdminApi,
   type Tenant,
@@ -199,15 +202,14 @@ const handleRejectRechargeAction = async (txId: number) => {
 
 const openExtendModal = (t: Tenant) => {
   selectedTenant.value = t;
-  extendDaysCount.value = 30;
   showExtendModal.value = true;
 };
 
-const handleConfirmExtend = async () => {
-  if (!selectedTenant.value || extendDaysCount.value < 1) return;
+const handleConfirmExtend = async (days: number = 30) => {
+  if (!selectedTenant.value || days < 1) return;
   isSubmittingAction.value = true;
   try {
-    await extendTenant(selectedTenant.value.id, extendDaysCount.value);
+    await extendTenant(selectedTenant.value.id, days);
     showExtendModal.value = false;
     selectedTenant.value = null;
   } catch (e: any) {
@@ -313,209 +315,20 @@ onUnmounted(() => {
     </div>
 
     <!-- 0. PENDING WALLET RECHARGES & STORAGE REQUESTS QUEUE -->
-    <div v-if="pendingRecharges.length > 0" class="table-card p-4 mb-4 border-info shadow-lg">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="text-info fw-bold mb-0 d-flex align-items-center gap-2">
-          <i class="bi bi-wallet2 fs-5"></i> Pending Recharges & Storage Requests (bKash TrxID Verification)
-        </h6>
-        <span class="badge bg-info text-dark px-3 py-1.5 fw-bold rounded-pill">
-          {{ pendingRecharges.length }} Awaiting Verification
-        </span>
-      </div>
-
-      <div class="table-responsive">
-        <table class="table-custom mb-0">
-          <thead>
-            <tr>
-              <th>Tenant / Request Type</th>
-              <th>Contact Info</th>
-              <th>Amount Sent (Gross)</th>
-              <th>bKash Fee & Net Credit</th>
-              <th>bKash Trx ID</th>
-              <th>Submission Date</th>
-              <th class="text-end">Verification Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="r in pendingRecharges" :key="r.id">
-              <td>
-                <div class="d-flex align-items-center gap-2">
-                  <div class="fw-bold text-white fs-6">{{ r.userName || 'Tenant' }}</div>
-                  <span
-                    v-if="r.type === 'storage_addon'"
-                    class="badge text-white px-2 py-0.5"
-                    style="font-size: 0.68rem; background-color: #7952b3 !important;"
-                  >
-                    <i class="bi bi-hdd-network me-1"></i>Extra Storage
-                  </span>
-                  <span
-                    v-else
-                    class="badge bg-info text-dark px-2 py-0.5"
-                    style="font-size: 0.68rem;"
-                  >
-                    <i class="bi bi-wallet2 me-1"></i>Recharge
-                  </span>
-                </div>
-                <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary" style="font-size: 0.7rem;">
-                  Tenant ID: #{{ r.userId }}
-                </span>
-              </td>
-              <td>
-                <div class="text-light small">{{ r.userEmail }}</div>
-                <div class="text-muted small font-monospace">{{ r.userMobile || 'No mobile' }}</div>
-              </td>
-              <td>
-                <span class="text-white fw-bold font-monospace fs-6">
-                  ৳ {{ (r.grossAmount || r.paidAmount || 0).toLocaleString() }}
-                </span>
-              </td>
-              <td>
-                <div class="d-flex flex-column gap-0.5">
-                  <span class="text-muted small" style="font-size: 0.74rem;">
-                    bKash Fee: <strong class="text-danger">-৳{{ r.gatewayCharge || 0 }}</strong>
-                  </span>
-                  <span class="text-success fw-bold font-monospace fs-6">
-                    Net Credit: +৳{{ (r.netAmount || ((r.grossAmount || r.paidAmount || 0) - (r.gatewayCharge || 0))).toLocaleString() }}
-                  </span>
-                </div>
-              </td>
-              <td>
-                <span class="badge bg-dark border border-secondary font-monospace text-light fs-6 px-2 py-1">
-                  {{ extractRawTrxId(r.trxId) }}
-                </span>
-              </td>
-              <td>
-                <div class="text-light font-monospace small">
-                  {{ r.createdAt ? r.createdAt.slice(0, 10) : 'Just now' }}
-                </div>
-                <div class="text-muted small" style="font-size: 0.72rem;">
-                  {{ r.createdAt ? r.createdAt.slice(11, 16) : '' }}
-                </div>
-              </td>
-              <td class="text-end">
-                <div class="d-flex gap-2 justify-content-end align-items-center">
-                  <button
-                    class="btn btn-sm btn-success d-inline-flex align-items-center gap-1"
-                    title="Approve Recharge"
-                    :disabled="isSubmittingAction"
-                    @click="handleApproveRechargeAction(r.id)"
-                  >
-                    <i class="bi bi-check-lg"></i>
-                    <span>Approve & Credit</span>
-                  </button>
-                  <button
-                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
-                    title="Reject Recharge"
-                    :disabled="isSubmittingAction"
-                    @click="handleRejectRechargeAction(r.id)"
-                  >
-                    <i class="bi bi-x-lg"></i>
-                    <span>Reject</span>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <PendingRechargesCard
+      :pending-recharges="pendingRecharges"
+      :is-submitting-action="isSubmittingAction"
+      @approve="handleApproveRechargeAction"
+      @reject="handleRejectRechargeAction"
+    />
 
     <!-- 1. PENDING REGISTRATIONS QUEUE -->
-    <div v-if="pendingSignups.length > 0" class="table-card p-4 mb-4 border-warning shadow-lg">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="text-warning fw-bold mb-0 d-flex align-items-center gap-2">
-          <i class="bi bi-exclamation-diamond-fill fs-5"></i> Pending Registrations & bKash TrxID Approvals
-        </h6>
-        <span class="badge bg-warning text-dark px-3 py-1.5 fw-bold rounded-pill">
-          {{ pendingSignups.length }} Awaiting Verification
-        </span>
-      </div>
-
-      <div class="table-responsive">
-        <table class="table-custom mb-0">
-          <thead>
-            <tr>
-              <th>Organization / Name</th>
-              <th>Contact Info</th>
-              <th>Selected Plan</th>
-              <th>Paid Amount</th>
-              <th>bKash Trx ID</th>
-              <th class="text-end">Verification Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="p in pendingSignups" :key="p.id">
-              <td>
-                <div class="fw-bold text-white fs-6">{{ p.name }}</div>
-                <div class="text-muted small">Registered: {{ p.createdAt ? p.createdAt.slice(0, 10) : 'Just now' }}</div>
-              </td>
-              <td>
-                <div class="text-light small">{{ p.email }}</div>
-                <div class="text-muted small font-monospace">{{ p.mobile || 'No mobile' }}</div>
-              </td>
-              <td>
-                <div class="text-light fw-semibold">{{ p.planName }}</div>
-                <div class="text-muted small">{{ getBillingCycleText(p.trxId, p.billingCycle) }}</div>
-              </td>
-              <td>
-                <div class="d-flex flex-column gap-1">
-                  <div class="d-flex align-items-center gap-1.5">
-                    <span class="text-white fw-bold font-monospace fs-6">
-                      ৳ {{ (p.grossAmount || p.paidAmount || 0).toLocaleString() }}
-                    </span>
-                    <span class="text-muted small" style="font-size: 0.72rem;">
-                      (Fee: -৳{{ p.gatewayCharge || 0 }})
-                    </span>
-                  </div>
-                  <div class="text-info font-monospace small" style="font-size: 0.76rem;">
-                    Net Wallet: <strong>৳{{ (p.netAmount || 0).toLocaleString() }}</strong> / Plan: ৳{{ (p.planPrice || p.requiredFee || 0).toLocaleString() }}
-                  </div>
-                  <div>
-                    <span
-                      v-if="p.willActivate"
-                      class="badge bg-success text-white px-2 py-1 shadow-sm"
-                      style="font-size: 0.75rem;"
-                    >
-                      <i class="bi bi-check-circle-fill me-1"></i>Activates Plan <span v-if="p.excessCredit && p.excessCredit > 0">(+৳{{ p.excessCredit }} Wallet)</span>
-                    </span>
-                    <span
-                      v-else
-                      class="badge bg-warning text-dark px-2 py-1 fw-bold shadow-sm"
-                      style="font-size: 0.75rem;"
-                    >
-                      <i class="bi bi-exclamation-circle-fill me-1"></i>Shortage -৳{{ p.shortage }} (Needs Recharge)
-                    </span>
-                  </div>
-                </div>
-              </td>
-              <td>
-                <div class="text-light font-monospace">{{ extractRawTrxId(p.trxId) }}</div>
-              </td>
-              <td class="text-end">
-                <div class="d-flex gap-2 justify-content-end align-items-center">
-                  <button
-                    class="btn btn-sm btn-success uniform-icon-btn d-inline-flex align-items-center justify-content-center"
-                    title="Approve Registration"
-                    :disabled="isSubmittingAction"
-                    @click="handleApprove(p)"
-                  >
-                    <i class="bi bi-check-lg fs-5"></i>
-                  </button>
-                  <button
-                    class="btn btn-sm btn-outline-danger uniform-icon-btn d-inline-flex align-items-center justify-content-center"
-                    title="Reject Registration"
-                    :disabled="isSubmittingAction"
-                    @click="handleReject(p)"
-                  >
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <PendingSignupsCard
+      :pending-signups="pendingSignups"
+      :is-submitting-action="isSubmittingAction"
+      @approve="handleApprove"
+      @reject="handleReject"
+    />
 
     <!-- 2. ORGANIZATION TENANTS DIRECTORY -->
     <div class="table-card shadow-sm mb-4">
@@ -774,90 +587,13 @@ onUnmounted(() => {
 
 
     <!-- EXTEND SUBSCRIPTION MODAL -->
-    <div
-      v-if="showExtendModal && selectedTenant"
-      class="modal fade show d-block"
-      tabindex="-1"
-      style="background: rgba(0, 0, 0, 0.75);"
-    >
-      <div class="modal-dialog modal-dialog-centered" style="max-width: 460px;">
-        <div class="modal-content table-card border-secondary">
-          <div class="modal-header border-secondary" style="background: #181b1f;">
-            <h5 class="modal-title text-white fw-bold">
-              <i class="bi bi-calendar-plus text-primary me-2"></i> Extend Subscription
-            </h5>
-            <button type="button" class="btn-close btn-close-white" @click="showExtendModal = false"></button>
-          </div>
-          <div class="modal-body p-4">
-            <div class="mb-3">
-              <label class="form-label text-muted small">Organization Tenant</label>
-              <div class="fw-bold text-white fs-6">{{ selectedTenant.name }}</div>
-              <div class="text-muted small">{{ selectedTenant.email }}</div>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label text-muted small">Current Expiration Date</label>
-              <div class="text-light font-monospace">{{ selectedTenant.expDate ? selectedTenant.expDate.slice(0, 10) : 'Not Set (Default 30d)' }}</div>
-            </div>
-
-            <div class="mb-4">
-              <label class="form-label text-light">Add Duration (Days)</label>
-              <div class="d-flex gap-2 mb-2">
-                <button
-                  type="button"
-                  class="btn btn-sm"
-                  :class="extendDaysCount === 30 ? 'btn-primary' : 'btn-outline-secondary'"
-                  @click="extendDaysCount = 30"
-                >
-                  +30 Days (1 Mo)
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-sm"
-                  :class="extendDaysCount === 90 ? 'btn-primary' : 'btn-outline-secondary'"
-                  @click="extendDaysCount = 90"
-                >
-                  +90 Days (3 Mo)
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-sm"
-                  :class="extendDaysCount === 365 ? 'btn-primary' : 'btn-outline-secondary'"
-                  @click="extendDaysCount = 365"
-                >
-                  +365 Days (1 Yr)
-                </button>
-              </div>
-              <input
-                v-model.number="extendDaysCount"
-                type="number"
-                class="form-control idp-search-input font-monospace"
-                min="1"
-                placeholder="Enter custom days..."
-              />
-            </div>
-
-            <div class="d-flex gap-2">
-              <button
-                type="button"
-                class="btn btn-secondary flex-grow-1"
-                @click="showExtendModal = false"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                class="btn btn-primary flex-grow-1"
-                :disabled="isSubmittingAction || extendDaysCount < 1"
-                @click="handleConfirmExtend"
-              >
-                {{ isSubmittingAction ? 'Extending...' : 'Confirm Extension' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <ExtendSubscriptionModal
+      :show="showExtendModal"
+      :tenant="selectedTenant"
+      :is-submitting="isSubmittingAction"
+      @close="showExtendModal = false"
+      @confirm="handleConfirmExtend"
+    />
   </div>
 </template>
 

@@ -3,6 +3,8 @@ import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import StatusBadge from "@/components/common/StatusBadge.vue";
+import SubmissionsStatsCards from "./submissions/SubmissionsStatsCards.vue";
+import RecordSubmissionModal from "./submissions/RecordSubmissionModal.vue";
 import { useSubmissionsApi, type SubmissionItem } from "@/composables/useSubmissionsApi";
 import { useServicesApi } from "@/composables/useServicesApi";
 import { useToast } from "@/composables/useToast";
@@ -518,63 +520,11 @@ const printReport = () => {
     </div>
 
     <!-- Quick Stats Cards (Clickable to Filter!) -->
-    <div class="row g-3 mb-3 d-print-none">
-      <div class="col-6 col-md-3">
-        <div
-          class="stat-pill cursor-pointer"
-          :class="{ 'stat-pill-active': statusFilter === 'all' }"
-          @click="selectCardFilter('all')"
-        >
-          <div class="d-flex justify-content-between align-items-center mb-1">
-            <span class="text-muted stat-label">All Active Clients</span>
-            <i class="bi bi-building text-primary"></i>
-          </div>
-          <div class="stat-val text-white">{{ stats.totalActive }}</div>
-        </div>
-      </div>
-
-      <div class="col-6 col-md-3">
-        <div
-          class="stat-pill cursor-pointer"
-          :class="{ 'stat-pill-active': statusFilter === 'submitted' }"
-          @click="selectCardFilter('submitted')"
-        >
-          <div class="d-flex justify-content-between align-items-center mb-1">
-            <span class="text-muted stat-label">Submitted</span>
-            <i class="bi bi-check-circle-fill text-success"></i>
-          </div>
-          <div class="stat-val text-success">{{ stats.submittedCount }}</div>
-        </div>
-      </div>
-
-      <div class="col-6 col-md-3">
-        <div
-          class="stat-pill cursor-pointer"
-          :class="{ 'stat-pill-active': statusFilter === 'pending' }"
-          @click="selectCardFilter('pending')"
-        >
-          <div class="d-flex justify-content-between align-items-center mb-1">
-            <span class="text-muted stat-label">Pending</span>
-            <i class="bi bi-hourglass-split text-warning"></i>
-          </div>
-          <div class="stat-val text-warning">{{ stats.pendingCount }}</div>
-        </div>
-      </div>
-
-      <div class="col-6 col-md-3">
-        <div
-          class="stat-pill cursor-pointer"
-          :class="{ 'stat-pill-active': statusFilter === 'late_submitted' }"
-          @click="selectCardFilter('late_submitted')"
-        >
-          <div class="d-flex justify-content-between align-items-center mb-1">
-            <span class="text-muted stat-label">Late Submitted</span>
-            <i class="bi bi-clock-history text-danger"></i>
-          </div>
-          <div class="stat-val text-danger">{{ stats.lateSubmittedCount }}</div>
-        </div>
-      </div>
-    </div>
+    <SubmissionsStatsCards
+      :status-filter="statusFilter"
+      :stats="stats"
+      @update:status-filter="selectCardFilter($event)"
+    />
 
     <!-- Filter & Search Toolbar -->
     <div class="filter-panel px-3 py-2 mb-3 d-print-none d-flex align-items-center gap-2">
@@ -836,133 +786,18 @@ const printReport = () => {
       </div>
     </div>
 
-    <!-- Record Submission ID Modal (Minimal Design) -->
-    <div
-      v-if="showModal"
-      class="modal fade show d-block"
-      tabindex="-1"
-      style="background: rgba(0, 0, 0, 0.75); z-index: 1060;"
-    >
-      <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
-        <div class="modal-content idp-modal-content text-white border border-secondary shadow-lg rounded-3">
-          <div class="modal-header border-bottom border-secondary py-3 px-4">
-            <h6 class="modal-title fw-bold d-flex align-items-center gap-2 mb-0">
-              <i class="bi bi-file-earmark-check text-primary fs-5"></i>
-              <span>Record Return Submission ID</span>
-            </h6>
-            <button
-              type="button"
-              class="btn-close btn-close-white"
-              @click="showModal = false"
-            ></button>
-          </div>
-
-          <form @submit.prevent="handleSaveSubmission">
-            <div class="modal-body p-4">
-              <!-- Client & Period Info Card (When client is selected) -->
-              <div v-if="selectedClientItem" class="p-3 mb-3 rounded-2 bg-dark border border-secondary border-opacity-50">
-                <div class="d-flex align-items-center justify-content-between mb-1">
-                  <span class="text-muted small fw-semibold">Client Organization</span>
-                  <button
-                    type="button"
-                    class="btn btn-link btn-sm text-primary p-0 text-decoration-none small"
-                    @click="form.clientId = null"
-                  >
-                    Change Client
-                  </button>
-                </div>
-                <div class="fw-bold text-white fs-6">
-                  {{ selectedClientItem.companyName }}
-                </div>
-                <div class="d-flex align-items-center gap-3 mt-1 small">
-                  <span v-if="selectedClientItem.binNumber" class="text-info font-monospace">
-                    BIN: {{ selectedClientItem.binNumber }}
-                  </span>
-                  <span class="text-muted">
-                    Tax Period: <strong class="text-light">{{ form.taxPeriod }}</strong>
-                  </span>
-                </div>
-              </div>
-
-              <!-- Client Selector if not selected -->
-              <div v-else class="mb-3">
-                <label class="form-label small text-secondary fw-semibold">
-                  Select Active Client Organization <span class="text-danger">*</span>
-                </label>
-                <ClientSearchSelect
-                  v-model="form.clientId"
-                  :clients="submissions"
-                  placeholder="Type to search company name, BIN, or mobile..."
-                />
-              </div>
-
-              <!-- Tax Period Input Field -->
-              <div class="mb-3">
-                <label class="form-label small text-secondary fw-semibold">
-                  Tax Period <span class="text-danger">*</span>
-                </label>
-                <input
-                  v-model="form.taxPeriod"
-                  type="month"
-                  class="form-control idp-modal-input font-monospace"
-                  required
-                  style="height: 40px;"
-                />
-              </div>
-
-              <!-- Submission ID Input -->
-              <div class="mb-3">
-                <label class="form-label small text-secondary fw-semibold">
-                  Submission ID <span class="text-danger">*</span>
-                </label>
-                <input
-                  :value="form.submissionId"
-                  type="text"
-                  class="form-control form-control-lg idp-modal-input font-monospace"
-                  placeholder="e.g. 202608001"
-                  required
-                  autofocus
-                  style="font-size: 1rem; height: 42px;"
-                  @input="handleSubmissionIdInput"
-                />
-              </div>
-
-              <!-- Remarks (Optional) -->
-              <div class="mb-1">
-                <label class="form-label small text-secondary fw-semibold">
-                  Remarks / Notes <span class="text-muted fw-normal">(Optional)</span>
-                </label>
-                <input
-                  v-model="form.remarks"
-                  type="text"
-                  class="form-control form-control-sm idp-modal-input"
-                  placeholder="Optional submission note..."
-                />
-              </div>
-            </div>
-
-            <div class="modal-footer border-top border-secondary py-2 px-4 d-flex justify-content-between">
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-secondary px-3"
-                @click="showModal = false"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="btn btn-sm btn-primary px-4 fw-semibold d-flex align-items-center gap-1 shadow-sm"
-                :disabled="isSaving"
-              >
-                <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span>
-                <i v-else class="bi bi-check2"></i>
-                <span>Save Submission</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+    <!-- Record Submission ID Modal -->
+    <RecordSubmissionModal
+      :show="showModal"
+      :is-saving="isSaving"
+      :selected-client-item="selectedClientItem"
+      :submissions="submissions"
+      :form="form"
+      @close="showModal = false"
+      @save="handleSaveSubmission"
+      @change-client="form.clientId = null"
+      @update:submission-id="form.submissionId = $event"
+    />
   </div>
 </template>
 

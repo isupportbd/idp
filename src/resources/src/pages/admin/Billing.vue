@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
-import MonthNavigator from "@/components/MonthNavigator.vue";
-import SearchInput from "@/components/common/SearchInput.vue";
-import IdpSelect from "@/components/common/IdpSelect.vue";
-import StatusBadge from "@/components/common/StatusBadge.vue";
+import BillingStatsCards from "./billing/BillingStatsCards.vue";
+import BillingToolbar from "./billing/BillingToolbar.vue";
+import InvoicesTable from "./billing/InvoicesTable.vue";
+import CollectionsTable from "./billing/CollectionsTable.vue";
+import MissingBillsTable from "./billing/MissingBillsTable.vue";
 import { useBillingApi, type Bill, type Collection } from "@/composables/useBillingApi";
 import { useServicesApi } from "@/composables/useServicesApi";
 import { useClientsApi } from "@/composables/useClientsApi";
@@ -20,36 +21,6 @@ const toast = useToast();
 
 const openInvoiceInNewTab = (billId: number) => {
   window.open(`/admin/billing/invoices/${billId}`, "_blank");
-};
-
-// ── Invoice row actions ("..." dropdown) ──────────────────────────────
-// The invoices table sits inside `.table-card`, which sets `overflow: hidden`
-// (to clip its rounded corners), so a normally-positioned dropdown would be cut
-// off. We therefore teleport the menu to <body> and position it with
-// `position: fixed` from the trigger button's viewport rect.
-const openActionsBillId = ref<number | null>(null);
-const actionsMenuStyle = ref<Record<string, string>>({});
-
-const closeInvoiceActions = () => {
-  openActionsBillId.value = null;
-};
-
-const toggleInvoiceActions = (event: MouseEvent, billId: number) => {
-  if (openActionsBillId.value === billId) {
-    closeInvoiceActions();
-    return;
-  }
-
-  const trigger = event.currentTarget as HTMLElement | null;
-  const rect = trigger?.getBoundingClientRect();
-  const menuWidth = 190;
-  const left = rect
-    ? Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8))
-    : 8;
-  const top = rect ? rect.bottom + 4 : 8;
-
-  actionsMenuStyle.value = { top: `${top}px`, left: `${left}px` };
-  openActionsBillId.value = billId;
 };
 
 const {
@@ -234,10 +205,6 @@ onMounted(async () => {
   } finally {
     isInitialized = true;
   }
-  // Dismiss the row-actions dropdown on any outside click / scroll / resize.
-  document.addEventListener("click", closeInvoiceActions);
-  window.addEventListener("scroll", closeInvoiceActions, true);
-  window.addEventListener("resize", closeInvoiceActions);
 });
 
 // Debounce filter-driven reloads so typing in the search box no longer fires
@@ -254,9 +221,6 @@ const scheduleLoadData = () => {
 onBeforeUnmount(() => {
   if (loadTimer) clearTimeout(loadTimer);
   if (filterSyncTimer) clearTimeout(filterSyncTimer);
-  document.removeEventListener("click", closeInvoiceActions);
-  window.removeEventListener("scroll", closeInvoiceActions, true);
-  window.removeEventListener("resize", closeInvoiceActions);
 });
 
 const referenceOptions = computed(() => [
@@ -511,528 +475,73 @@ const printReport = () => {
     </div>
 
     <!-- Quick Stats Cards -->
-    <div class="row g-3 mb-3 d-print-none">
-      <!-- Total Invoices -->
-      <div class="col-6 col-md-3">
-        <div
-          class="stat-pill cursor-pointer"
-          :class="{ 'stat-pill-active': activeTab === 'invoices' }"
-          @click="activeTab = 'invoices'"
-        >
-          <div class="d-flex justify-content-between align-items-center mb-1">
-            <span class="text-muted stat-label">Total Invoiced</span>
-            <i class="bi bi-receipt text-primary"></i>
-          </div>
-          <div class="stat-val text-white">{{ stats.totalBilledAmount.toLocaleString() }} <span class="fs-6 fw-normal text-muted">Tk</span></div>
-          <div class="text-secondary small mt-1 font-monospace">{{ stats.totalInvoicesCount }} Invoices</div>
-        </div>
-      </div>
-
-      <!-- Total Collections -->
-      <div class="col-6 col-md-3">
-        <div
-          class="stat-pill cursor-pointer"
-          :class="{ 'stat-pill-active': activeTab === 'collections' }"
-          @click="activeTab = 'collections'"
-        >
-          <div class="d-flex justify-content-between align-items-center mb-1">
-            <span class="text-muted stat-label">Total Collections</span>
-            <i class="bi bi-check-circle-fill text-success"></i>
-          </div>
-          <div class="stat-val text-success">{{ totalCollectionsAmount.toLocaleString() }} <span class="fs-6 fw-normal text-muted">Tk</span></div>
-          <div class="text-secondary small mt-1 font-monospace">{{ collections.length }} Receipts</div>
-        </div>
-      </div>
-
-      <!-- Total Outstanding Dues -->
-      <div class="col-6 col-md-3">
-        <div
-          class="stat-pill cursor-pointer"
-          :class="{ 'stat-pill-active': activeTab === 'dues' }"
-          @click="activeTab = 'dues'"
-        >
-          <div class="d-flex justify-content-between align-items-center mb-1">
-            <span class="text-muted stat-label">Total Dues</span>
-            <i class="bi bi-exclamation-octagon text-danger"></i>
-          </div>
-          <div class="stat-val text-danger">{{ stats.totalDueAmount.toLocaleString() }} <span class="fs-6 fw-normal text-muted">Tk</span></div>
-          <div class="text-secondary small mt-1 font-monospace">{{ dueClientsList.length }} Due Invoices</div>
-        </div>
-      </div>
-
-      <!-- Missing Bills -->
-      <div class="col-6 col-md-3">
-        <div
-          class="stat-pill cursor-pointer"
-          :class="{ 'stat-pill-active': activeTab === 'missing' }"
-          @click="activeTab = 'missing'"
-        >
-          <div class="d-flex justify-content-between align-items-center mb-1">
-            <span class="text-muted stat-label">Missing Bills</span>
-            <i class="bi bi-clock-history text-warning"></i>
-          </div>
-          <div class="stat-val text-warning">{{ filteredMissingBills.length }} <span class="fs-6 fw-normal text-muted">Clients</span></div>
-          <div class="text-secondary small mt-1 font-monospace">{{ filteredMissingBills.filter(m => m.isSubmitted).length }} Ready to Bill</div>
-        </div>
-      </div>
-    </div>
+    <BillingStatsCards
+      :active-tab="activeTab"
+      :stats="stats"
+      :total-collections-amount="totalCollectionsAmount"
+      :collections-count="collections.length"
+      :due-clients-count="dueClientsList.length"
+      :missing-bills-count="filteredMissingBills.length"
+      :missing-ready-count="filteredMissingBills.filter(m => m.isSubmitted).length"
+      @update:active-tab="activeTab = $event"
+    />
 
     <!-- Navigation Tabs & Toolbar -->
-    <div class="filter-panel p-2 mb-3 d-print-none d-flex align-items-center justify-content-between gap-2">
-      <!-- Left: Navigation Tabs with matching 38px height -->
-      <div class="d-flex align-items-center gap-1 flex-nowrap overflow-x-auto custom-scrollbar pe-1">
-        <button
-          type="button"
-          class="btn tab-btn"
-          :class="activeTab === 'invoices' ? 'tab-btn-active' : 'tab-btn-inactive'"
-          @click="activeTab = 'invoices'"
-        >
-          <i class="bi bi-receipt"></i>
-          <span>Invoices ({{ bills.length }})</span>
-        </button>
-
-        <button
-          type="button"
-          class="btn tab-btn"
-          :class="activeTab === 'collections' ? 'tab-btn-active' : 'tab-btn-inactive'"
-          @click="activeTab = 'collections'"
-        >
-          <i class="bi bi-wallet2"></i>
-          <span>Collections ({{ collections.length }})</span>
-        </button>
-
-        <button
-          type="button"
-          class="btn tab-btn"
-          :class="activeTab === 'dues' ? 'tab-btn-active' : 'tab-btn-inactive'"
-          @click="activeTab = 'dues'"
-        >
-          <i class="bi bi-exclamation-circle"></i>
-          <span>Due ({{ dueClientsList.length }})</span>
-        </button>
-
-        <button
-          type="button"
-          class="btn tab-btn"
-          :class="activeTab === 'missing' ? 'tab-btn-warning-active' : 'tab-btn-inactive'"
-          @click="activeTab = 'missing'"
-        >
-          <i class="bi bi-file-earmark-plus"></i>
-          <span>Missing ({{ searchQuery ? filteredMissingBills.length : missingBills.length }})</span>
-        </button>
-      </div>
-
-      <!-- Right: Reference Filter, Search & Month Navigator (Fixed 38px heights) -->
-      <div class="d-flex align-items-center gap-1 flex-nowrap ms-auto flex-shrink-0">
-        <div class="ref-filter-slot">
-          <IdpSelect
-            v-model="selectedReferenceId"
-            :options="referenceOptions"
-            min-width="180px"
-            placeholder="All References"
-          />
-        </div>
-
-        <div class="search-slot">
-          <SearchInput
-            v-model="searchQuery"
-            placeholder="Search invoice, client, receipt..."
-            size="md"
-            max-width="240px"
-            min-width="200px"
-          />
-        </div>
-
-        <div class="month-nav-container" style="width: 175px; flex-shrink: 0;">
-          <MonthNavigator v-model="selectedMonth" />
-        </div>
-      </div>
-    </div>
+    <BillingToolbar
+      :active-tab="activeTab"
+      :bills-count="bills.length"
+      :collections-count="collections.length"
+      :dues-count="dueClientsList.length"
+      :missing-count="searchQuery ? filteredMissingBills.length : missingBills.length"
+      :selected-reference-id="selectedReferenceId"
+      :reference-options="referenceOptions"
+      :search-query="searchQuery"
+      :selected-month="selectedMonth"
+      @update:active-tab="activeTab = $event"
+      @update:selected-reference-id="selectedReferenceId = $event"
+      @update:search-query="searchQuery = $event"
+      @update:selected-month="selectedMonth = $event"
+    />
 
     <!-- TAB 1 & 3: INVOICES TABLE (Active for 'invoices', 'dues') -->
-    <div v-if="activeTab === 'invoices' || activeTab === 'dues'" class="table-card shadow-sm">
-      <table class="table-custom">
-        <thead>
-          <tr>
-            <th style="width: 14%;">Invoice No</th>
-            <th style="width: 28%;">Client Organization & BIN</th>
-            <th style="width: 12%;">Tax Period</th>
-            <th style="width: 12%; text-align: right;">Total (Tk)</th>
-            <th style="width: 12%; text-align: right;">Paid (Tk)</th>
-            <th style="width: 12%; text-align: right;">Due (Tk)</th>
-            <th style="width: 10%;">Status</th>
-            <th style="width: 10%; text-align: right;" class="d-print-none">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="loading && bills.length === 0">
-            <td colspan="8" class="text-center py-4 text-muted">
-              <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-              Loading invoices...
-            </td>
-          </tr>
-
-          <tr v-else-if="(activeTab === 'dues' ? dueClientsList : bills).length === 0">
-            <td colspan="8" class="text-center py-5 text-muted">
-              <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
-              No invoices found for {{ selectedMonth }}.
-            </td>
-          </tr>
-
-          <tr v-for="bill in (paginatedList as Bill[])" :key="bill.id">
-            <!-- Invoice No (Clicking opens Invoice View in New Tab) -->
-            <td>
-              <a
-                :href="`/admin/billing/invoices/${bill.id}`"
-                target="_blank"
-                class="font-monospace fw-bold text-info text-decoration-none hover-underline cursor-pointer d-inline-block"
-                style="font-size: 0.88rem;"
-                title="Click to View Invoice (Opens in New Tab)"
-                @click.prevent="openInvoiceInNewTab(bill.id)"
-              >
-                {{ bill.billNo }}
-              </a>
-              <div class="text-muted small" style="font-size: 0.76rem;">{{ new Date(bill.billDate).toLocaleDateString() }}</div>
-            </td>
-
-            <!-- Client Name & BIN -->
-            <td>
-              <div class="fw-bold text-white text-truncate" style="max-width: 320px; font-size: 0.92rem;">
-                {{ bill.clientName }}
-              </div>
-              <div class="d-flex align-items-center gap-2 mt-1">
-                <span v-if="bill.clientBin" class="badge bg-dark border border-secondary text-info font-monospace" style="font-size: 0.78rem;">
-                  BIN: {{ bill.clientBin }}
-                </span>
-                <span v-if="bill.referenceName" class="text-muted small" style="font-size: 0.78rem;">
-                  Ref: {{ bill.referenceName }}
-                </span>
-              </div>
-            </td>
-
-            <!-- Tax Period -->
-            <td>
-              <span class="font-monospace text-light fw-medium">{{ bill.taxPeriod }}</span>
-            </td>
-
-            <!-- Grand Total -->
-            <td style="text-align: right;">
-              <span class="font-monospace fw-bold text-white fs-6">{{ bill.grandTotal.toFixed(2) }}</span>
-            </td>
-
-            <!-- Paid Amount -->
-            <td style="text-align: right;">
-              <span class="font-monospace text-success fw-semibold">{{ bill.paidAmount.toFixed(2) }}</span>
-            </td>
-
-            <!-- Due Amount -->
-            <td style="text-align: right;">
-              <span class="font-monospace fw-bold" :class="bill.dueAmount > 0 ? 'text-danger' : 'text-muted'">
-                {{ bill.dueAmount.toFixed(2) }}
-              </span>
-            </td>
-
-            <!-- Status -->
-            <td>
-              <StatusBadge :status="bill.status" />
-            </td>
-
-            <!-- Actions (Horizontal "..." dropdown) -->
-            <td style="text-align: right;" class="d-print-none">
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-secondary p-1"
-                title="Invoice Actions"
-                aria-haspopup="true"
-                :aria-expanded="openActionsBillId === bill.id"
-                @click.stop="toggleInvoiceActions($event, bill.id)"
-              >
-                <i class="bi bi-three-dots"></i>
-              </button>
-
-              <Teleport to="body">
-                <div
-                  v-if="openActionsBillId === bill.id"
-                  class="dropdown-menu show invoice-actions-menu"
-                  :style="actionsMenuStyle"
-                  @click.stop
-                >
-                  <!-- View Invoice -->
-                  <button
-                    type="button"
-                    class="dropdown-item d-flex align-items-center gap-2"
-                    @click="closeInvoiceActions(); openInvoiceInNewTab(bill.id)"
-                  >
-                    <i class="bi bi-eye"></i>
-                    <span>View Invoice</span>
-                  </button>
-
-                  <!-- Edit Invoice -->
-                  <button
-                    v-if="can('billing.edit')"
-                    type="button"
-                    class="dropdown-item d-flex align-items-center gap-2"
-                    @click="closeInvoiceActions(); goToEditBill(bill.id)"
-                  >
-                    <i class="bi bi-pencil"></i>
-                    <span>Edit Invoice</span>
-                  </button>
-
-                  <!-- Receive Payment (only when a balance is outstanding) -->
-                  <button
-                    v-if="bill.dueAmount > 0 && can('collections.create')"
-                    type="button"
-                    class="dropdown-item d-flex align-items-center gap-2"
-                    @click="closeInvoiceActions(); goToCreateCollection(bill.clientId, bill.id)"
-                  >
-                    <i class="bi bi-cash-coin"></i>
-                    <span>Receive Payment</span>
-                  </button>
-
-                  <!-- Delete Invoice -->
-                  <button
-                    v-if="can('billing.delete')"
-                    type="button"
-                    class="dropdown-item d-flex align-items-center gap-2 text-danger"
-                    @click="closeInvoiceActions(); handleDeleteBill(bill)"
-                  >
-                    <i class="bi bi-trash"></i>
-                    <span>Delete Invoice</span>
-                  </button>
-                </div>
-              </Teleport>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <InvoicesTable
+      v-if="activeTab === 'invoices' || activeTab === 'dues'"
+      :bills="(paginatedList as Bill[])"
+      :loading="loading"
+      :selected-month="selectedMonth"
+      :can-edit="can('billing.edit')"
+      :can-delete="can('billing.delete')"
+      :can-collect="can('collections.create')"
+      @view-invoice="openInvoiceInNewTab"
+      @edit-invoice="goToEditBill"
+      @create-collection="goToCreateCollection"
+      @delete-invoice="handleDeleteBill"
+    />
 
     <!-- TAB 2: COLLECTIONS & MONEY RECEIPTS -->
-    <div v-else-if="activeTab === 'collections'" class="table-card shadow-sm">
-      <table class="table-custom">
-        <thead>
-          <tr>
-            <th style="width: 15%;">Receipt No</th>
-            <th style="width: 30%;">Client Organization & BIN</th>
-            <th style="width: 15%;">Date</th>
-            <th style="width: 15%;">Payment Mode</th>
-            <th style="width: 15%; text-align: right;">Amount (Tk)</th>
-            <th style="width: 10%; text-align: right;" class="d-print-none">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="loading && collections.length === 0">
-            <td colspan="6" class="text-center py-4 text-muted">
-              <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-              Loading payment receipts...
-            </td>
-          </tr>
+    <CollectionsTable
+      v-else-if="activeTab === 'collections'"
+      :collections="(paginatedList as Collection[])"
+      :loading="loading"
+      :selected-month="selectedMonth"
+      :can-delete="can('collections.delete')"
+      @cancel-receipt="handleCancelReceipt"
+    />
 
-          <tr v-else-if="collections.length === 0">
-            <td colspan="6" class="text-center py-5 text-muted">
-              <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
-              No payment receipts recorded for {{ selectedMonth }}.
-            </td>
-          </tr>
-
-          <tr v-for="col in (paginatedList as Collection[])" :key="col.id">
-            <!-- Receipt No -->
-            <td>
-              <router-link
-                :to="`/admin/billing/receipts/${col.id}`"
-                class="font-monospace fw-bold text-success text-decoration-none hover-underline"
-                style="font-size: 0.88rem;"
-                title="View Money Receipt"
-              >
-                {{ col.receiptNo }}
-              </router-link>
-              <div v-if="col.billNo" class="text-muted small" style="font-size: 0.76rem;">Inv: {{ col.billNo }}</div>
-            </td>
-
-            <!-- Client Name & BIN -->
-            <td>
-              <router-link
-                :to="`/admin/billing/receipts/${col.id}`"
-                class="fw-bold text-white text-truncate text-decoration-none d-block"
-                style="max-width: 320px; font-size: 0.92rem;"
-              >
-                {{ col.clientName }}
-              </router-link>
-              <div v-if="col.clientBin" class="badge bg-dark border border-secondary text-info font-monospace mt-1" style="font-size: 0.78rem;">
-                BIN: {{ col.clientBin }}
-              </div>
-            </td>
-
-            <!-- Date -->
-            <td>
-              <span class="text-light font-monospace">{{ new Date(col.collectionDate).toLocaleDateString() }}</span>
-            </td>
-
-            <!-- Payment Mode -->
-            <td>
-              <span class="badge bg-secondary text-uppercase">{{ col.paymentMethod }}</span>
-              <div v-if="col.referenceNo" class="text-muted small font-monospace mt-1">{{ col.referenceNo }}</div>
-            </td>
-
-            <!-- Amount -->
-            <td style="text-align: right;">
-              <span class="font-monospace fw-bold text-success fs-6">{{ col.amount.toFixed(2) }}</span>
-            </td>
-
-            <!-- Actions -->
-            <td style="text-align: right;" class="d-print-none">
-              <div class="d-inline-flex align-items-center gap-1">
-                <!-- View / Share Receipt -->
-                <router-link
-                  :to="`/admin/billing/receipts/${col.id}`"
-                  class="btn btn-sm btn-outline-info p-1"
-                  title="View & Share Money Receipt"
-                >
-                  <i class="bi bi-eye"></i>
-                </router-link>
-
-                <!-- Cancel Receipt -->
-                <button
-                  v-if="can('collections.delete')"
-                  type="button"
-                  class="btn btn-sm btn-outline-danger p-1"
-                  title="Cancel Receipt"
-                  :disabled="col.status === 'cancelled'"
-                  @click="handleCancelReceipt(col)"
-                >
-                  <i class="bi bi-x-circle"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- TAB 5: MISSING BILLS WITH BATCH GENERATION -->
-    <div v-else-if="activeTab === 'missing'" class="table-card shadow-sm">
-      <!-- Missing Bills Action Banner -->
-      <div class="px-3 py-2 bg-dark bg-opacity-40 border-bottom border-secondary border-opacity-25 d-flex align-items-center justify-content-between flex-wrap gap-2">
-        <div class="d-flex align-items-center gap-2">
-          <span class="badge bg-warning text-dark px-2 py-1 fw-bold" style="font-size: 0.8rem;">
-            {{ filteredMissingBills.length }} Missing Clients
-          </span>
-          <span class="text-secondary small">
-            Target Tax Period: <strong class="text-light font-monospace">{{ selectedMonth }}</strong>
-          </span>
-        </div>
-
-        <button
-          v-if="can('billing.create')"
-          type="button"
-          class="btn btn-sm btn-warning text-dark fw-bold px-3 shadow-sm d-flex align-items-center gap-1.5"
-          style="height: 32px; font-size: 0.82rem;"
-          :disabled="isBatchGenerating || filteredMissingBills.filter(m => m.isSubmitted).length === 0"
-          @click="handleBatchGenerate"
-        >
-          <span v-if="isBatchGenerating" class="spinner-border spinner-border-sm text-dark"></span>
-          <i v-else class="bi bi-lightning-charge-fill"></i>
-          <span>Batch Generate Bills ({{ filteredMissingBills.filter(m => m.isSubmitted).length }})</span>
-        </button>
-      </div>
-
-      <table class="table-custom">
-        <thead>
-          <tr>
-            <th style="width: 5%;">#</th>
-            <th style="width: 30%;">Client Name & BIN</th>
-            <th style="width: 15%;">Reference</th>
-            <th style="width: 12%;">Service Scope</th>
-            <th style="width: 14%;">Submission ID</th>
-            <th style="width: 12%; text-align: right;">Service Fee (Tk)</th>
-            <th style="width: 12%; text-align: right;" class="d-print-none">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="loading && missingBills.length === 0">
-            <td colspan="7" class="text-center py-4 text-muted">
-              <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-              Loading missing clients...
-            </td>
-          </tr>
-
-          <tr v-else-if="missingBills.length === 0">
-            <td colspan="7" class="text-center py-5 text-success">
-              <i class="bi bi-check-circle-fill fs-2 d-block mb-2"></i>
-              All active clients have been billed for {{ selectedMonth }}!
-            </td>
-          </tr>
-
-          <tr v-else-if="filteredMissingBills.length === 0">
-            <td colspan="7" class="text-center py-5 text-muted">
-              <i class="bi bi-search fs-2 d-block mb-2"></i>
-              No missing clients match "{{ searchQuery }}"
-            </td>
-          </tr>
-
-          <tr v-for="(item, idx) in (paginatedList as any[])" :key="item.id">
-            <!-- Index -->
-            <td class="text-muted">{{ (currentPage - 1) * itemsPerPage + idx + 1 }}</td>
-
-            <!-- Client Name & BIN -->
-            <td>
-              <div class="fw-bold text-white text-truncate" style="max-width: 320px; font-size: 0.92rem;">
-                {{ item.companyName }}
-              </div>
-              <div v-if="item.proprietorName" class="text-secondary small text-truncate" style="max-width: 320px; font-size: 0.78rem;">
-                Proprietor: {{ item.proprietorName }}
-              </div>
-              <div v-if="item.binNumber" class="badge bg-dark border border-secondary text-info font-monospace mt-1" style="font-size: 0.78rem;">
-                BIN: {{ item.binNumber }}
-              </div>
-            </td>
-
-            <!-- Reference -->
-            <td>
-              <span class="text-light small">{{ item.referenceName || 'Direct Acquisition' }}</span>
-            </td>
-
-            <!-- Scope -->
-            <td>
-              <span class="badge" :class="item.vatServiceType === 'FULL' ? 'bg-primary' : 'bg-secondary'">
-                {{ item.vatServiceType }}
-              </span>
-            </td>
-
-            <!-- Submission ID -->
-            <td>
-              <div v-if="item.isSubmitted" class="d-flex align-items-center gap-1">
-                <i class="bi bi-check-circle-fill text-success" style="font-size: 0.85rem;"></i>
-                <span class="font-monospace fw-bold text-success" style="font-size: 0.88rem;">#{{ item.submissionId }}</span>
-              </div>
-              <div v-else class="d-flex align-items-center gap-1 text-danger small">
-                <i class="bi bi-dash-circle" style="font-size: 0.82rem;"></i>
-                <span>Not Submitted</span>
-              </div>
-            </td>
-
-            <!-- Service Fee -->
-            <td style="text-align: right;">
-              <span class="font-monospace fw-bold text-white">{{ item.monthlyServiceFee.toFixed(2) }}</span>
-            </td>
-
-            <!-- Action -->
-            <td style="text-align: right;" class="d-print-none">
-              <button
-                v-if="can('billing.create')"
-                type="button"
-                class="btn btn-sm btn-primary px-3 fw-semibold shadow-sm d-flex align-items-center gap-1 ms-auto"
-                :disabled="!item.isSubmitted"
-                @click="goToCreateBill(item.id, item.targetMonth)"
-              >
-                <i class="bi bi-plus-lg"></i>
-                <span>Create Bill</span>
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <!-- TAB 4: MISSING BILLS WITH BATCH GENERATION -->
+    <MissingBillsTable
+      v-else-if="activeTab === 'missing'"
+      :missing-bills="(paginatedList as any[])"
+      :loading="loading"
+      :selected-month="selectedMonth"
+      :search-query="searchQuery"
+      :current-page="currentPage"
+      :items-per-page="itemsPerPage"
+      :is-batch-generating="isBatchGenerating"
+      :can-create="can('billing.create')"
+      @batch-generate="handleBatchGenerate"
+      @create-bill="goToCreateBill"
+    />
 
     <!-- Pagination for Billing -->
     <div v-if="currentTabList.length > 0" class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-2">
