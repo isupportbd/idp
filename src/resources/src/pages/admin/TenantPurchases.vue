@@ -8,10 +8,14 @@ import { usePagination } from "@/composables/usePagination";
 import { can } from "@/composables/useAuth";
 import SearchInput from "@/components/common/SearchInput.vue";
 import IdpSelect from "@/components/common/IdpSelect.vue";
+import { useServicesApi } from "@/composables/useServicesApi";
+import { useClientsApi } from "@/composables/useClientsApi";
 
 const router = useRouter();
 const route = useRoute();
 const toast = useToast();
+const { references: masterReferences, fetchReferences } = useServicesApi();
+const { clients: masterClients, fetchClients } = useClientsApi();
 
 interface Purchase {
   id: number;
@@ -40,10 +44,15 @@ interface Purchase {
   hsCode?: string;
 }
 
-const purchases = ref<Purchase[]>([]);
-const clients = ref<any[]>([]);
-const references = ref<any[]>([]);
-const totalCount = ref(0);
+// Module-level persistent cache for purchases SWR
+const cachedPurchases = ref<Purchase[]>([]);
+const cachedTotalPurchasesCount = ref(0);
+const hasLoadedPurchasesOnce = ref(false);
+
+const purchases = cachedPurchases;
+const clients = masterClients;
+const references = masterReferences;
+const totalCount = cachedTotalPurchasesCount;
 const isLoading = ref(false);
 
 const { currentPage, itemsPerPage, totalPages } = usePagination("purchases", {
@@ -186,7 +195,7 @@ const referenceOptions = computed(() => [
 
 const clientOptions = computed(() => [
   { value: "", label: "All Clients" },
-  ...availableClients.value.map((c) => ({ value: String(c.id), label: c.companyName || c.name }))
+  ...availableClients.value.map((c) => ({ value: String(c.id), label: c.companyName || "" }))
 ]);
 
 
@@ -200,7 +209,9 @@ const clientOptions = computed(() => [
 
 // Fetch Purchases
 const fetchPurchases = async () => {
-  isLoading.value = true;
+  if (!hasLoadedPurchasesOnce.value || purchases.value.length === 0) {
+    isLoading.value = true;
+  }
   try {
     const res = await axios.get("/api/purchases", {
       params: {
@@ -216,6 +227,7 @@ const fetchPurchases = async () => {
     if (res.data?.success || res.status === 200) {
       purchases.value = res.data.data || [];
       totalCount.value = res.data.pagination?.totalCount ?? res.data.pagination?.totalRows ?? (res.data.data?.length || 0);
+      hasLoadedPurchasesOnce.value = true;
     } else {
       purchases.value = [];
       totalCount.value = 0;
@@ -232,25 +244,12 @@ const fetchPurchases = async () => {
 // Fetch Clients & Master Data
 const fetchMasterData = async () => {
   try {
-    const [clientsRes, refRes] = await Promise.allSettled([
-      axios.get("/api/clients", { params: { limit: 1000 } }),
-      axios.get("/api/services/references")
+    await Promise.all([
+      fetchClients({ limit: 1000 }),
+      fetchReferences()
     ]);
-
-    if (clientsRes.status === "fulfilled" && clientsRes.value.data?.data) {
-      clients.value = clientsRes.value.data.data;
-    } else {
-      clients.value = [];
-    }
-
-    if (refRes.status === "fulfilled" && refRes.value.data?.data) {
-      references.value = refRes.value.data.data;
-    } else {
-      references.value = [];
-    }
   } catch (e) {
-    clients.value = [];
-    references.value = [];
+    console.warn("Failed to load master data in TenantPurchases", e);
   }
 };
 
@@ -293,24 +292,37 @@ const executeDelete = async () => {
 
 // Watchers for filtering
 let filterTimer: any = null;
+let isInitialized = false;
+
 watch([selectedMonth, selectedClient, selectedReference, searchQuery], () => {
+  if (!isInitialized) return;
   currentPage.value = 1;
   clearTimeout(filterTimer);
   filterTimer = setTimeout(fetchPurchases, 300);
 });
 
 watch(selectedReference, () => {
+  if (!isInitialized) return;
   if (selectedClient.value) {
     const valid = availableClients.value.some((c) => String(c.id) === String(selectedClient.value));
     if (!valid) selectedClient.value = "";
   }
 });
 
-watch(currentPage, fetchPurchases);
+watch(currentPage, () => {
+  if (!isInitialized) return;
+  fetchPurchases();
+});
 
 onMounted(async () => {
-  await fetchMasterData();
-  await fetchPurchases();
+  try {
+    await Promise.all([
+      fetchMasterData(),
+      fetchPurchases()
+    ]);
+  } finally {
+    isInitialized = true;
+  }
 });
 </script>
 
