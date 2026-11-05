@@ -1,9 +1,44 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { hasRole, isTenantAdmin, canAccessModule, can } from "@/composables/useAuth";
+import { useClientsApi } from "@/composables/useClientsApi";
+import { useServicesApi } from "@/composables/useServicesApi";
+import { useSubmissionsApi } from "@/composables/useSubmissionsApi";
 
 const authStore = useAuthStore();
+const { fetchClients, fetchAssignableUsers } = useClientsApi();
+const { fetchCustomerTypes, fetchReferences } = useServicesApi();
+const { fetchSubmissions } = useSubmissionsApi();
+
+// Warm up critical master data and initial page caches in the background (during browser idle)
+// so that when the user clicks any card for the first time, the data is ALREADY in memory!
+onMounted(() => {
+  if (typeof window === "undefined") return;
+  const warmup = () => {
+    // 1. Warm common lookups (shared across Clients, Submissions, Purchases, Billing)
+    void fetchCustomerTypes();
+    void fetchReferences();
+
+    if (!isSuperAdmin.value) {
+      if (canAccessModule("clients")) {
+        void fetchClients({ page: 1, limit: 10 });
+        if (isTenantAdmin()) {
+          void fetchAssignableUsers();
+        }
+      }
+      if (canAccessModule("submissions")) {
+        void fetchSubmissions();
+      }
+    }
+  };
+
+  if ("requestIdleCallback" in window) {
+    (window as any).requestIdleCallback(warmup, { timeout: 1500 });
+  } else {
+    setTimeout(warmup, 300);
+  }
+});
 
 const isSuperAdmin = computed(() => {
   const r = (authStore.user as any)?.role;
