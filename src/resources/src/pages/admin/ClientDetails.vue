@@ -126,7 +126,7 @@ onMounted(() => {
       </div>
 
       <!-- Action Buttons -->
-      <div class="d-flex align-items-center gap-2 no-print">
+      <div class="client-details-actions d-flex align-items-center gap-2 no-print">
         <button
           type="button"
           class="btn btn-outline-secondary btn-sm px-3 d-flex align-items-center gap-1"
@@ -624,6 +624,32 @@ onMounted(() => {
 .detail-row .label {
   margin-bottom: 2px;
   font-weight: 500;
+}
+
+@media (max-width: 767px) {
+  .idp-card {
+    padding: 1.15rem !important;
+  }
+  .client-avatar-badge {
+    width: 46px;
+    height: 46px;
+    font-size: 1.45rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .client-details-actions {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .client-details-actions .btn,
+  .client-details-actions .btn-primary {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
 }
 
 @media print {

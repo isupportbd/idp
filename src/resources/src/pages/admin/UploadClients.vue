@@ -329,7 +329,7 @@ const handleConfirmUpload = async () => {
         </div>
 
         <!-- Right / Action Zone: Download + Choose File + Action -->
-        <div class="d-flex flex-wrap align-items-center gap-2">
+        <div class="upload-action-zone d-flex flex-wrap align-items-center gap-2">
           <!-- Download Template Button -->
           <button
             type="button"
@@ -707,5 +707,29 @@ const handleConfirmUpload = async () => {
 
 .cursor-pointer {
   cursor: pointer;
+}
+
+@media (max-width: 767px) {
+  .upload-clients-page {
+    padding-top: 0.25rem !important;
+  }
+  .table-custom th,
+  .table-custom td {
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 575px) {
+  .upload-action-zone {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+  }
+  .upload-action-zone .btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>
