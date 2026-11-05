@@ -384,7 +384,7 @@ onMounted(() => {
       </div>
 
       <!-- Action Buttons -->
-      <div class="activity-filter-actions d-flex align-items-center gap-2 d-print-none flex-wrap">
+      <div class="d-flex align-items-center gap-2 d-print-none flex-wrap">
         <!-- Export Excel -->
         <button
           type="button"
@@ -539,7 +539,7 @@ onMounted(() => {
     <!-- Filter & Search Toolbar -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
       <!-- Left: Search Input, Client Type Dropdown, Reference Dropdown -->
-      <div class="activity-filter-controls d-flex flex-wrap align-items-center gap-2 flex-grow-1">
+      <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1" style="max-width: 800px;">
         <!-- Search Input -->
         <SearchInput
           v-model="searchQuery"
@@ -575,7 +575,7 @@ onMounted(() => {
       </div>
 
       <!-- Right: Month Navigator (Equal 38px Height) -->
-      <div class="activity-month-nav d-flex align-items-center gap-2 ms-auto flex-shrink-0" style="width: 200px;">
+      <div class="d-flex align-items-center gap-2 ms-auto flex-shrink-0" style="width: 200px;">
         <MonthNavigator v-model="selectedMonth" />
       </div>
     </div>
@@ -584,135 +584,133 @@ onMounted(() => {
 
     <!-- Activity Clients Table Card -->
     <div class="table-card shadow-sm">
-      <div class="table-responsive">
-        <table class="table-custom">
-          <thead>
-            <tr>
-              <th style="min-width: 45px; width: 50px;">#</th>
-              <th style="min-width: 220px;">Company & BIN</th>
-              <th style="min-width: 140px; width: 150px;">Username</th>
-              <th style="min-width: 140px; width: 165px;">Password</th>
-              <th style="min-width: 160px; width: 185px;">Reference</th>
-              <th style="min-width: 140px; width: 160px;">Submission ID</th>
-              <th style="min-width: 140px; width: 160px;">Submitted By</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Loading State -->
-            <tr v-if="loading && matrixData.length === 0">
-              <td colspan="7" class="text-center py-5 text-muted">
-                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                Loading client activity matrix from database...
-              </td>
-            </tr>
+      <table class="table-custom">
+        <thead>
+          <tr>
+            <th style="width: 50px;">#</th>
+            <th>Company & BIN</th>
+            <th style="width: 150px;">Username</th>
+            <th style="width: 165px;">Password</th>
+            <th style="width: 185px;">Reference</th>
+            <th style="width: 160px;">Submission ID</th>
+            <th style="width: 160px;">Submitted By</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Loading State -->
+          <tr v-if="loading && matrixData.length === 0">
+            <td colspan="7" class="text-center py-5 text-muted">
+              <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+              Loading client activity matrix from database...
+            </td>
+          </tr>
 
-            <!-- Client Rows -->
-            <tr v-else-if="paginatedClients.length > 0" v-for="(client, index) in paginatedClients" :key="client.id">
-              <!-- 1. Serial # -->
-              <td class="text-muted font-monospace">
-                {{ (currentPage - 1) * itemsPerPage + index + 1 }}
-              </td>
+          <!-- Client Rows -->
+          <tr v-else-if="paginatedClients.length > 0" v-for="(client, index) in paginatedClients" :key="client.id">
+            <!-- 1. Serial # -->
+            <td class="text-muted font-monospace">
+              {{ (currentPage - 1) * itemsPerPage + index + 1 }}
+            </td>
 
-              <!-- 2. Company Name & BIN Combined -->
-              <td>
-                <div>
-                  <div class="d-flex align-items-center gap-2">
-                    <span
-                      class="status-indicator-dot"
-                      :class="(client.purchaseAmount || 0) > 0 ? 'dot-active' : 'dot-inactive'"
-                    ></span>
-                    <span class="text-white fw-semibold">{{ client.name }}</span>
-                  </div>
-                  <div class="text-info font-monospace" style="margin-left: 16px; font-size: 0.77rem; letter-spacing: 0.3px;">
-                    BIN: {{ formatBin(client.bin) }}
-                  </div>
+            <!-- 2. Company Name & BIN Combined -->
+            <td>
+              <div>
+                <div class="d-flex align-items-center gap-2">
+                  <span
+                    class="status-indicator-dot"
+                    :class="(client.purchaseAmount || 0) > 0 ? 'dot-active' : 'dot-inactive'"
+                  ></span>
+                  <span class="text-white fw-semibold">{{ client.name }}</span>
                 </div>
-              </td>
-
-              <!-- 3. Username -->
-              <td>
-                <div v-if="client.username" class="d-flex align-items-center gap-1">
-                  <span class="text-light font-monospace small user-select-all cred-text">{{ client.username }}</span>
-                  <button
-                    type="button"
-                    class="btn btn-link btn-sm p-0 text-muted copy-icon-btn"
-                    title="Copy Username"
-                    @click="copyToClipboard(client.username, 'user-' + client.id)"
-                  >
-                    <i class="bi" :class="copiedField === 'user-' + client.id ? 'bi-check2 text-success' : 'bi-copy'"></i>
-                  </button>
+                <div class="text-info font-monospace" style="margin-left: 16px; font-size: 0.77rem; letter-spacing: 0.3px;">
+                  BIN: {{ formatBin(client.bin) }}
                 </div>
-                <span v-else class="text-muted small">—</span>
-              </td>
+              </div>
+            </td>
 
-              <!-- 4. Password -->
-              <td>
-                <div v-if="client.password" class="d-flex align-items-center gap-1">
-                  <span class="text-light font-monospace small cred-text" style="letter-spacing: 1px;">
-                    ••••••••
-                  </span>
-                  <button
-                    type="button"
-                    class="btn btn-link btn-sm p-0 text-muted copy-icon-btn ms-1"
-                    title="Copy Password"
-                    @click="copyToClipboard(client.password, 'pass-' + client.id)"
-                  >
-                    <i class="bi" :class="copiedField === 'pass-' + client.id ? 'bi-check2 text-success' : 'bi-copy'"></i>
-                  </button>
-                </div>
-                <span v-else class="text-muted small">—</span>
-              </td>
-
-              <!-- 5. Reference -->
-              <td>
-                <div
-                  v-if="client.reference"
-                  class="d-inline-flex align-items-center gap-1 text-light cursor-pointer ref-link"
-                  title="Click to filter by this reference"
-                  @click="filterBySpecificReference(client.reference)"
+            <!-- 3. Username -->
+            <td>
+              <div v-if="client.username" class="d-flex align-items-center gap-1">
+                <span class="text-light font-monospace small user-select-all cred-text">{{ client.username }}</span>
+                <button
+                  type="button"
+                  class="btn btn-link btn-sm p-0 text-muted copy-icon-btn"
+                  title="Copy Username"
+                  @click="copyToClipboard(client.username, 'user-' + client.id)"
                 >
-                  <i class="bi bi-person text-primary small"></i>
-                  <span>{{ client.reference }}</span>
-                </div>
-                <span v-else class="text-muted small">—</span>
-              </td>
+                  <i class="bi" :class="copiedField === 'user-' + client.id ? 'bi-check2 text-success' : 'bi-copy'"></i>
+                </button>
+              </div>
+              <span v-else class="text-muted small">—</span>
+            </td>
 
-              <!-- 6. Submission ID -->
-              <td>
-                <span
-                  v-if="client.isSubmitted && client.submission?.submissionId"
-                  class="text-info font-monospace fw-semibold"
-                >
-                  {{ client.submission.submissionId }}
+            <!-- 4. Password -->
+            <td>
+              <div v-if="client.password" class="d-flex align-items-center gap-1">
+                <span class="text-light font-monospace small cred-text" style="letter-spacing: 1px;">
+                  ••••••••
                 </span>
-                <span
-                  v-else
-                  class="badge badge-not-filed font-monospace"
+                <button
+                  type="button"
+                  class="btn btn-link btn-sm p-0 text-muted copy-icon-btn ms-1"
+                  title="Copy Password"
+                  @click="copyToClipboard(client.password, 'pass-' + client.id)"
                 >
-                  Not-Filed
-                </span>
-              </td>
+                  <i class="bi" :class="copiedField === 'pass-' + client.id ? 'bi-check2 text-success' : 'bi-copy'"></i>
+                </button>
+              </div>
+              <span v-else class="text-muted small">—</span>
+            </td>
 
-              <!-- 7. Submitted By -->
-              <td>
-                <div v-if="client.submission?.submittedBy" class="d-flex align-items-center gap-1">
-                  <i class="bi bi-person text-secondary small"></i>
-                  <span class="text-light small fw-medium">{{ client.submission.submittedBy }}</span>
-                </div>
-                <span v-else class="text-muted small">—</span>
-              </td>
-            </tr>
+            <!-- 5. Reference -->
+            <td>
+              <div
+                v-if="client.reference"
+                class="d-inline-flex align-items-center gap-1 text-light cursor-pointer ref-link"
+                title="Click to filter by this reference"
+                @click="filterBySpecificReference(client.reference)"
+              >
+                <i class="bi bi-person text-primary small"></i>
+                <span>{{ client.reference }}</span>
+              </div>
+              <span v-else class="text-muted small">—</span>
+            </td>
 
-            <!-- Empty State -->
-            <tr v-else>
-              <td colspan="7" class="text-center py-5 text-muted">
-                <i class="bi bi-inbox fs-3 d-block mb-2 text-secondary"></i>
-                No client records found matching the current filters.
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+            <!-- 6. Submission ID -->
+            <td>
+              <span
+                v-if="client.isSubmitted && client.submission?.submissionId"
+                class="text-info font-monospace fw-semibold"
+              >
+                {{ client.submission.submissionId }}
+              </span>
+              <span
+                v-else
+                class="badge badge-not-filed font-monospace"
+              >
+                Not-Filed
+              </span>
+            </td>
+
+            <!-- 7. Submitted By -->
+            <td>
+              <div v-if="client.submission?.submittedBy" class="d-flex align-items-center gap-1">
+                <i class="bi bi-person text-secondary small"></i>
+                <span class="text-light small fw-medium">{{ client.submission.submittedBy }}</span>
+              </div>
+              <span v-else class="text-muted small">—</span>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr v-else>
+            <td colspan="7" class="text-center py-5 text-muted">
+              <i class="bi bi-inbox fs-3 d-block mb-2 text-secondary"></i>
+              No client records found matching the current filters.
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Pagination -->
@@ -949,53 +947,5 @@ onMounted(() => {
   max-height: 38px;
   border-radius: 6px;
   transition: all 0.15s ease;
-}
-
-/* Responsive Breakpoints */
-@media (max-width: 991px) {
-  .activity-filter-page {
-    padding-top: 0.25rem !important;
-  }
-  .summary-card {
-    padding: 1rem 1.15rem;
-  }
-}
-
-@media (max-width: 767px) {
-  .table-custom thead th,
-  .table-custom tbody td {
-    padding: 10px 12px;
-  }
-  .activity-month-nav {
-    width: 100% !important;
-    margin-left: 0 !important;
-    margin-top: 0.5rem;
-  }
-}
-
-@media (max-width: 575px) {
-  .activity-filter-actions {
-    width: 100%;
-    display: flex;
-    gap: 0.5rem;
-  }
-  .activity-filter-actions .btn {
-    flex: 1 1 auto;
-    justify-content: center;
-  }
-  .activity-filter-controls {
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch !important;
-  }
-  .activity-filter-controls > * {
-    width: 100% !important;
-  }
-  .clear-filter-btn {
-    width: 100% !important;
-  }
-  .summary-card .card-value {
-    font-size: 1.45rem;
-  }
 }
 </style>
