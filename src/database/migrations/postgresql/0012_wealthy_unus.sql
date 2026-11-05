@@ -1,0 +1,1 @@
+CREATE INDEX "clients_created_by_active_bin_idx" ON "clients" USING btree ("created_by","is_active","bin_number");
