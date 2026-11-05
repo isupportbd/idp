@@ -1156,11 +1156,9 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
     const previousDue = batchDueMap.get(client.id) || 0;
     const grandTotal = r2(subtotal + previousDue);
 
-    // Generate sequential billNo
-    const billNo = await generateNextBillNo(year);
-
-    // Insert Bill and Items atomically in a transaction
+    // Insert Bill and Items atomically in a transaction with sequence generation
     const billRecord = await db.transaction(async (tx) => {
+      const billNo = await generateNextBillNo(year, undefined, creatorId, tx);
       const [insertedBill] = await tx
         .insert(bills)
         .values({
@@ -2004,23 +2002,23 @@ export const getCollectionDetails = async (c: AppContext) => {
       return c.json({ message: "Payment receipt not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
-    // Fetch overall client outstanding balance
+    // Fetch overall client outstanding balance using numeric aggregation
     const clientBilledSum = await db
       .select({
-        totalBilled: sql<number>`COALESCE(SUM(${bills.grandTotal}), 0)::float`
+        totalBilled: sql<number>`COALESCE(SUM(${bills.grandTotal}), 0)`
       })
       .from(bills)
       .where(and(eq(bills.clientId, col.clientId), ne(bills.status, "cancelled")));
 
     const clientCollectedSum = await db
       .select({
-        totalCollected: sql<number>`COALESCE(SUM(${collections.amount}), 0)::float`
+        totalCollected: sql<number>`COALESCE(SUM(${collections.amount}), 0)`
       })
       .from(collections)
       .where(and(eq(collections.clientId, col.clientId), eq(collections.status, "completed")));
 
-    const totalBilled = clientBilledSum[0]?.totalBilled || 0;
-    const totalCollected = clientCollectedSum[0]?.totalCollected || 0;
+    const totalBilled = r2(Number(clientBilledSum[0]?.totalBilled) || 0);
+    const totalCollected = r2(Number(clientCollectedSum[0]?.totalCollected) || 0);
     const currentOutstandingDue = r2(Math.max(0, totalBilled - totalCollected));
 
     // Tenant-scoped company branding — resolved from the client owner's Firm
