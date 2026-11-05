@@ -115,6 +115,12 @@ export const getSalesReport = async (c: AppContext) => {
     const result = await db.execute(rawSql);
     const rows = (Array.isArray(result) ? result : (result as { rows?: Record<string, unknown>[] }).rows || []) as Record<string, unknown>[];
     const allVatNotes = await db.select().from(vatNotes);
+    const vatNotesMap = new Map<number, string>();
+    for (const v of allVatNotes) {
+      if (v.vatRate !== null && v.vatRate !== undefined) {
+        vatNotesMap.set(Number(v.vatRate), v.noteName ? String(v.noteName) : "8");
+      }
+    }
 
     const reportItems = rows.map((row) => {
       const totQty = Number(row.totalQty) || 0;
@@ -141,12 +147,7 @@ export const getSalesReport = async (c: AppContext) => {
         vatRate = 15;
         note = "4";
       } else {
-        const mapping = allVatNotes.find((v) => Number(v.vatRate) === vatRate);
-        if (mapping) {
-          note = mapping.noteName ? String(mapping.noteName) : "8";
-        } else {
-          note = vatRate === 0 ? "3" : "8";
-        }
+        note = vatNotesMap.get(vatRate) || (vatRate === 0 ? "3" : "8");
       }
 
       return {
