@@ -13,7 +13,6 @@ import IdpSelect from "@/components/common/IdpSelect.vue";
 import { usePagination } from "@/composables/usePagination";
 import { usePulseListener } from "@/composables/usePulseListener";
 import { useExcelExport } from "@/composables/useExcelExport";
-import { useVirtualizer } from "@tanstack/vue-virtual";
 import { pulse } from "@/plugins/pulse";
 
 const toast = useToast();
@@ -244,52 +243,14 @@ const { currentPage, itemsPerPage, totalPages, paginateList } = usePagination("s
 
 const paginatedSubmissions = computed(() => paginateList(filteredSubmissions.value));
 
-// ── Virtual scrolling for high-density result sets ────────────────────
-// Why: 500+ active clients would otherwise mount thousands of DOM nodes at once.
-// How: Above the threshold, drop page slicing and render only the visible window
-//      inside a fixed-height scroll container (TanStack Virtual). Printing keeps
-//      every row in the DOM so the A4 report is never truncated.
-const VIRTUAL_SCROLL_THRESHOLD = 100;
-const ROW_HEIGHT_ESTIMATE = 64;
-const tableScrollRef = ref<HTMLElement | null>(null);
-const isPrinting = ref(false);
-
-const virtualScrollEnabled = computed(
-  () => !isPrinting.value && filteredSubmissions.value.length > VIRTUAL_SCROLL_THRESHOLD
-);
-
-const virtualizer = useVirtualizer(
-  computed(() => ({
-    count: virtualScrollEnabled.value ? filteredSubmissions.value.length : 0,
-    getScrollElement: () => tableScrollRef.value,
-    estimateSize: () => ROW_HEIGHT_ESTIMATE,
-    overscan: 8
-  }))
-);
-
-const virtualRows = computed(() => virtualizer.value.getVirtualItems());
-const virtualTotalSize = computed(() => virtualizer.value.getTotalSize());
-const virtualPaddingTop = computed(() => (virtualRows.value.length ? virtualRows.value[0]!.start : 0));
-const virtualPaddingBottom = computed(() => {
-  const rows = virtualRows.value;
-  if (!rows.length) return 0;
-  return Math.max(0, virtualTotalSize.value - rows[rows.length - 1]!.end);
-});
-
 // Row shape kept identical to SubmissionItem so the template stays untouched.
 type VisibleRow = SubmissionItem & { __index: number };
+
+const isPrinting = ref(false);
 
 const visibleRows = computed<VisibleRow[]>(() => {
   if (isPrinting.value) {
     return filteredSubmissions.value.map((item, index) => ({ ...item, __index: index }));
-  }
-  if (virtualScrollEnabled.value) {
-    return virtualRows.value
-      .map((row) => {
-        const item = filteredSubmissions.value[row.index];
-        return item ? { ...item, __index: row.index } : null;
-      })
-      .filter((row): row is VisibleRow => row !== null);
   }
   return paginatedSubmissions.value.map((item, index) => ({ ...item, __index: index }));
 });
@@ -311,10 +272,6 @@ onUnmounted(() => {
   window.removeEventListener("afterprint", handleAfterPrint);
 });
 
-// Entering/leaving virtual mode changes the scroll model — always restart at the top.
-watch(virtualScrollEnabled, () => {
-  tableScrollRef.value?.scrollTo({ top: 0 });
-});
 
 
 // Watch Search Query with Debounce
@@ -685,9 +642,7 @@ const printReport = () => {
 
     <!-- Submissions Table Card -->
     <div
-      ref="tableScrollRef"
       class="table-card shadow-sm"
-      :class="{ 'table-card--virtual': virtualScrollEnabled }"
     >
       <table class="table-custom">
         <thead>
@@ -721,11 +676,6 @@ const printReport = () => {
               <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
               No active clients found matching the selected filters.
             </td>
-          </tr>
-
-          <!-- Virtual scroll top spacer (keeps scrollbar proportional to total rows) -->
-          <tr v-if="virtualScrollEnabled" aria-hidden="true" class="virtual-spacer">
-            <td colspan="7" :style="{ height: `${virtualPaddingTop}px`, padding: 0, border: 0 }"></td>
           </tr>
 
           <tr v-for="item in visibleRows" :key="item.id">
@@ -829,17 +779,12 @@ const printReport = () => {
               </div>
             </td>
           </tr>
-
-          <!-- Virtual scroll bottom spacer -->
-          <tr v-if="virtualScrollEnabled" aria-hidden="true" class="virtual-spacer">
-            <td colspan="7" :style="{ height: `${virtualPaddingBottom}px`, padding: 0, border: 0 }"></td>
-          </tr>
         </tbody>
       </table>
     </div>
 
     <!-- Pagination for Submissions -->
-    <div v-if="filteredSubmissions.length > 0 && !virtualScrollEnabled" class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-2">
+    <div v-if="filteredSubmissions.length > 0" class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-2">
       <span class="text-muted small">
         Showing <strong>{{ (currentPage - 1) * itemsPerPage + 1 }}</strong> to
         <strong>{{ Math.min(currentPage * itemsPerPage, filteredSubmissions.length) }}</strong> of
@@ -884,19 +829,6 @@ const printReport = () => {
           Next <i class="bi bi-chevron-right"></i>
         </button>
       </div>
-    </div>
-
-    <!-- Virtualized result summary (replaces pagination above 100 rows) -->
-    <div
-      v-if="virtualScrollEnabled"
-      class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-2 text-muted small"
-    >
-      <span>
-        <i class="bi bi-lightning-charge-fill text-warning me-1"></i>
-        Virtualized view — rendering only visible rows of
-        <strong class="text-light">{{ filteredSubmissions.length }}</strong> submissions
-      </span>
-      <span class="text-secondary">Scroll the table to load more</span>
     </div>
 
     <!-- Record Submission ID Modal (Minimal Design) -->
@@ -1164,35 +1096,7 @@ const printReport = () => {
   overflow: hidden;
 }
 
-/* Virtual scrolling: the card becomes the scroll container above the row threshold. */
-.table-card--virtual {
-  max-height: 65vh;
-  overflow-y: auto;
-  overflow-x: auto;
-}
 
-.table-card--virtual .table-custom thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #16191d;
-}
-
-.virtual-spacer td {
-  padding: 0 !important;
-  border: 0 !important;
-}
-
-@media print {
-  .table-card--virtual {
-    max-height: none;
-    overflow: visible;
-  }
-
-  .table-card--virtual .table-custom thead th {
-    position: static;
-  }
-}
 
 .table-custom {
   width: 100%;
