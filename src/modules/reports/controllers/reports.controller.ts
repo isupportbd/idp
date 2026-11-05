@@ -240,6 +240,13 @@ export const getStatementReport = async (c: AppContext) => {
     }
 
     const allVatNotes = await db.select().from(vatNotes);
+    const vatNotesMap = new Map<number, string>();
+    for (const v of allVatNotes) {
+      if (v.vatRate !== null && v.vatRate !== undefined) {
+        vatNotesMap.set(Number(v.vatRate), v.noteName ? String(v.noteName) : "8");
+      }
+    }
+
     const itemNameMap = new Map<number, string>();
     for (const p of purchaseData) {
       if (p.itemId && p.itemName && !itemNameMap.has(p.itemId)) {
@@ -324,13 +331,7 @@ export const getStatementReport = async (c: AppContext) => {
 
           const itemName = itemNameMap.get(itemId);
 
-          let note = "8";
-          const mapping = allVatNotes.find((v) => Number(v.vatRate) === vatRateVal);
-          if (mapping) {
-            note = mapping.noteName ? String(mapping.noteName) : "8";
-          } else if (vatRateVal === 0) {
-            note = "3";
-          }
+          let note = vatNotesMap.get(vatRateVal) || (vatRateVal === 0 ? "3" : "8");
 
           statementRows.push({
             itemId,
