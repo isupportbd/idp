@@ -300,10 +300,31 @@ export const getStatementReport = async (c: AppContext) => {
         rate: baseRate
       });
 
-      // Optimize date range scanning: Pre-sort dates and pre-parse once for O(K + M) prefix-like computation
+      // Optimize date range scanning: Pre-sort dates and compute prefix sums for O(K + log M) range queries
       const parsedDateEntries = Object.entries(datesObj)
         .map(([beDate, qty]) => ({ time: parseDate(beDate), qty }))
         .sort((a, b) => a.time - b.time);
+
+      const n = parsedDateEntries.length;
+      const prefixSums = new Float64Array(n + 1);
+      for (let idx = 0; idx < n; idx++) {
+        prefixSums[idx + 1] = prefixSums[idx] + parsedDateEntries[idx].qty;
+      }
+
+      // Binary search: returns the first index where parsedDateEntries[mid].time > targetTime
+      const upperBound = (targetTime: number): number => {
+        let low = 0;
+        let high = n;
+        while (low < high) {
+          const mid = (low + high) >>> 1;
+          if (parsedDateEntries[mid].time <= targetTime) {
+            low = mid + 1;
+          } else {
+            high = mid;
+          }
+        }
+        return low;
+      };
 
       for (let i = 0; i < ranges.length; i++) {
         const range = ranges[i];
@@ -311,15 +332,11 @@ export const getStatementReport = async (c: AppContext) => {
         const rangeStartTime = parseDate(range.startDate);
         const rangeEndTime = parseDate(range.endDate);
 
-        for (const entry of parsedDateEntries) {
-          if (i === 0) {
-            if (entry.time <= rangeEndTime) {
-              totalQty += entry.qty;
-            }
-          } else {
-            if (entry.time > rangeStartTime && entry.time <= rangeEndTime) {
-              totalQty += entry.qty;
-            }
+        if (n > 0) {
+          const rightIdx = upperBound(rangeEndTime);
+          const leftIdx = i === 0 ? 0 : upperBound(rangeStartTime);
+          if (rightIdx > leftIdx) {
+            totalQty = prefixSums[rightIdx] - prefixSums[leftIdx];
           }
         }
 

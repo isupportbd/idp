@@ -1,5 +1,5 @@
 import type { AppContext } from "@/framework/facade.js";
-import { db } from "@/framework/facade.js";
+import { db, cache } from "@/framework/facade.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
@@ -10,7 +10,9 @@ import { notifySettingsUpdated } from "./platform.controller.js";
 // 7. Client Types CRUD (Operating on master customer_types table)
 export async function getClientTypes(c: AppContext) {
   try {
-    const list = await db.select().from(customerTypes).orderBy(desc(customerTypes.id));
+    const list = await cache.remember("master:client-types", 3600, async () => {
+      return await db.select().from(customerTypes).orderBy(desc(customerTypes.id));
+    });
     return c.json({ success: true, data: list });
   } catch (error: unknown) {
     console.error("Error fetching client types:", error);
@@ -110,13 +112,15 @@ export async function deleteClientType(c: AppContext) {
 // 10. Client References CRUD (Operating on master client_references table)
 export async function getClientReferences(c: AppContext) {
   try {
-    const refs = await db.select().from(clientReferences).orderBy(desc(clientReferences.id));
-    const allClients = await db.select({ referenceId: clients.referenceId }).from(clients);
+    const enriched = await cache.remember("master:references", 3600, async () => {
+      const refs = await db.select().from(clientReferences).orderBy(desc(clientReferences.id));
+      const allClients = await db.select({ referenceId: clients.referenceId }).from(clients);
 
-    const enriched = refs.map((r) => ({
-      ...r,
-      referredClientsCount: allClients.filter((cl) => cl.referenceId === r.id).length
-    }));
+      return refs.map((r) => ({
+        ...r,
+        referredClientsCount: allClients.filter((cl) => cl.referenceId === r.id).length
+      }));
+    });
 
     return c.json({ success: true, data: enriched });
   } catch (error: unknown) {
@@ -234,11 +238,11 @@ const DEFAULT_SYSTEM_COLUMN_MAPPINGS = [
 // 11. Column Mappings (Operating on master column_mappings table)
 export async function getColumnMappings(c: AppContext) {
   try {
-    const rawList = await db.select().from(columnMappings).orderBy(asc(columnMappings.id));
-    const list = rawList.filter((r) => r.dbColumn !== "client_name");
-    if (list.length === 0) {
-      return c.json({ success: true, data: DEFAULT_SYSTEM_COLUMN_MAPPINGS });
-    }
+    const list = await cache.remember("master:column-mappings", 3600, async () => {
+      const rawList = await db.select().from(columnMappings).orderBy(asc(columnMappings.id));
+      const filtered = rawList.filter((r) => r.dbColumn !== "client_name");
+      return filtered.length === 0 ? DEFAULT_SYSTEM_COLUMN_MAPPINGS : filtered;
+    });
     return c.json({ success: true, data: list });
   } catch (error: unknown) {
     console.error("Error fetching column mappings:", error);

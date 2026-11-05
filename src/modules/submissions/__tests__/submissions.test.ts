@@ -61,13 +61,6 @@ describe("Submissions Module Real Database Tests (PostgreSQL)", () => {
   beforeAll(async () => {
     await initDatabase();
 
-    // Tests only connect (`initDatabase`); the schema normally lands on app boot
-    // via `syncDatabaseSchemaAndSuperAdmin()` / migration 0009. Ensure the audit
-    // column exists before any `select()` expands the full model column set.
-    await db.execute(sql`
-      ALTER TABLE vat_submissions ADD COLUMN IF NOT EXISTS updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL
-    `);
-
     // Ensure user
     const existingUser = (await db.select().from(users).limit(1))[0];
     if (existingUser) {
@@ -258,9 +251,6 @@ describe("recordSubmission: submittedBy stays immutable, editor audited in updat
 
     try {
       await initDatabase();
-      await db.execute(sql`
-        ALTER TABLE vat_submissions ADD COLUMN IF NOT EXISTS updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL
-      `);
 
       const mkUser = async (name: string, adminId: number | null) => {
         const [u] = await db

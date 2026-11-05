@@ -304,10 +304,12 @@ export async function deleteMeasurementUnit(c: AppContext) {
 // ── Global Service Units CRUD ────────────────────────────────
 export async function getServiceUnits(c: AppContext) {
   try {
-    const list = await db
-      .select()
-      .from(serviceUnits)
-      .orderBy(desc(serviceUnits.id));
+    const list = await cache.remember("master:service-units", 3600, async () => {
+      return await db
+        .select()
+        .from(serviceUnits)
+        .orderBy(desc(serviceUnits.id));
+    });
 
     return c.json({ success: true, data: list });
   } catch (error: unknown) {

@@ -345,6 +345,33 @@ export async function sendTransactionalSms(payload: SendTransactionalSmsPayload)
   const sentByNum = Number(payload.triggeredByUserId);
   const sentBy = payload.triggeredByUserId && Number.isFinite(sentByNum) ? sentByNum : null;
 
+  // Validate FK constraints before audit log insertions to avoid DB errors on mock/purged IDs
+  let safeAdminId = adminId;
+  if (safeAdminId) {
+    try {
+      const u = await db.query.users.findFirst({
+        where: eq(users.id, safeAdminId),
+        columns: { id: true }
+      });
+      if (!u) safeAdminId = null;
+    } catch {
+      safeAdminId = null;
+    }
+  }
+
+  let safeSentBy = sentBy;
+  if (safeSentBy) {
+    try {
+      const u = await db.query.users.findFirst({
+        where: eq(users.id, safeSentBy),
+        columns: { id: true }
+      });
+      if (!u) safeSentBy = null;
+    } catch {
+      safeSentBy = null;
+    }
+  }
+
   // 1. Gateway settings for the owning tenant (global row when ownerless —
   //    same convention sendTestSms already uses).
   let smsApiKey = "";
@@ -395,14 +422,14 @@ export async function sendTransactionalSms(payload: SendTransactionalSmsPayload)
     await db
       .insert(smsLogs)
       .values({
-        adminId,
+        adminId: safeAdminId,
         recipientMobile: payload.recipientPhone || "NO_MOBILE",
         message: renderedMessage,
         templateKey,
         submissionId: payload.referenceType === "submission" ? payload.referenceId || null : null,
         status: "FAILED",
         providerResponse: "No valid Bangladesh mobile number found for client",
-        sentBy
+        sentBy: safeSentBy
       })
       .catch((logErr) => {
         console.warn("[SMS Service Warning]: Failed to log missing mobile number:", logErr?.message || logErr);
@@ -415,14 +442,14 @@ export async function sendTransactionalSms(payload: SendTransactionalSmsPayload)
     await db
       .insert(smsLogs)
       .values({
-        adminId,
+        adminId: safeAdminId,
         recipientMobile: recipient,
         message: renderedMessage,
         templateKey,
         submissionId: payload.referenceType === "submission" ? payload.referenceId || null : null,
         status: "FAILED",
         providerResponse: "SMS Gateway API Key or Sender ID not configured in Firm Settings",
-        sentBy
+        sentBy: safeSentBy
       })
       .catch((logErr) => {
         console.warn("[SMS Service Warning]: Failed to log unconfigured gateway:", logErr?.message || logErr);
@@ -445,14 +472,14 @@ export async function sendTransactionalSms(payload: SendTransactionalSmsPayload)
   await db
     .insert(smsLogs)
     .values({
-      adminId,
+      adminId: safeAdminId,
       recipientMobile: recipient,
       message: renderedMessage,
       templateKey,
       submissionId: payload.referenceType === "submission" ? payload.referenceId || null : null,
       status: finalStatus,
       providerResponse: result.raw,
-      sentBy
+      sentBy: safeSentBy
     })
     .catch((logErr) => {
       console.warn("[SMS Service Warning]: Failed to log SMS delivery status:", logErr?.message || logErr);
