@@ -46,17 +46,28 @@ export interface AssignableUser {
   email: string;
 }
 
+// Module-scoped persistent reactive state (SWR / Stale-While-Revalidate)
+// Ensures that on route transitions, existing client & lookup data is rendered immediately
+// (0ms latency, no empty table flash / prolonged loading spinner) while background revalidation occurs.
+const cachedClients = ref<ClientItem[]>([]);
+const cachedAssignments = ref<ClientManagerAssignment[]>([]);
+const cachedAssignmentStats = ref<{ total: number; assigned: number; shared: number; unassigned: number }>({
+  total: 0,
+  assigned: 0,
+  shared: 0,
+  unassigned: 0
+});
+const cachedAssignableUsers = ref<AssignableUser[]>([]);
+const cachedTotalCount = ref(0);
+const hasLoadedClientsOnce = ref(false);
+const hasLoadedUsersOnce = ref(false);
+
 export function useClientsApi() {
-  const clients = ref<ClientItem[]>([]);
-  const assignments = ref<ClientManagerAssignment[]>([]);
-  const assignmentStats = ref<{ total: number; assigned: number; shared: number; unassigned: number }>({
-    total: 0,
-    assigned: 0,
-    shared: 0,
-    unassigned: 0
-  });
-  const assignableUsers = ref<AssignableUser[]>([]);
-  const totalCount = ref(0);
+  const clients = cachedClients;
+  const assignments = cachedAssignments;
+  const assignmentStats = cachedAssignmentStats;
+  const assignableUsers = cachedAssignableUsers;
+  const totalCount = cachedTotalCount;
   const loading = ref(false);
   const error = ref<string | null>(null);
 
@@ -79,12 +90,16 @@ export function useClientsApi() {
     page?: number;
     limit?: number;
   } = {}) => {
-    loading.value = true;
+    // Only display blocking loader if we don't have any cached clients yet
+    if (!hasLoadedClientsOnce.value || clients.value.length === 0) {
+      loading.value = true;
+    }
     error.value = null;
     try {
       const res = await axios.get("/api/clients", { params });
       clients.value = res.data?.data || [];
       totalCount.value = res.data?.pagination?.total || clients.value.length;
+      hasLoadedClientsOnce.value = true;
       return res.data;
     } catch (err) {
       error.value = getErrorMessage(err, "Failed to fetch clients");
@@ -225,10 +240,14 @@ export function useClientsApi() {
     }
   };
 
-  const fetchAssignableUsers = async () => {
+  const fetchAssignableUsers = async (force = false) => {
+    if (hasLoadedUsersOnce.value && !force && assignableUsers.value.length > 0) {
+      return assignableUsers.value;
+    }
     try {
       const res = await axios.get("/api/clients/users");
       assignableUsers.value = res.data?.data || [];
+      hasLoadedUsersOnce.value = true;
       return assignableUsers.value;
     } catch (err) {
       console.error("Failed to fetch assignable users", err);
