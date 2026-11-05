@@ -1,7 +1,7 @@
 import type { AppContext } from "@/framework/facade.js";
 import { and, asc, desc, eq, isNull, or, sql } from "drizzle-orm";
 import type { Context, Handler } from "hono";
-import { broadcast, db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
+import { broadcast, db, HttpStatusCodes, resolveTenantContext, cache } from "@/framework/facade.js";
 import { fetchProviderBalance } from "@/framework/facade.js";
 import { users } from "@/modules/auth/database/models/user.js";
 import { companySettings } from "../database/models/company_settings.js";
@@ -157,6 +157,8 @@ export const updateCompanySettings = async (c: AppContext) => {
           .returning()
       )[0];
     }
+
+    cache.forget(`company-settings:${targetAdminId ?? "global"}`);
 
     // If SMS API key is updated, sync real-time stock directly from provider
     if (isUpdatingSmsKey && rawKey) {

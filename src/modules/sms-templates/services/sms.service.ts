@@ -1,4 +1,4 @@
-import { db } from "@/framework/facade.js";
+import { db, cache } from "@/framework/facade.js";
 import { eq, and, isNull, or } from "drizzle-orm";
 import { smsTemplates, type SmsTemplateVariable } from "../database/models/sms_templates.js";
 import { smsLogs } from "../database/models/sms_logs.js";
@@ -29,6 +29,7 @@ export interface SendTransactionalSmsPayload {
   referenceType?: "invoice" | "collection" | "submission" | "payout";
   referenceId?: string;
   triggeredByUserId?: string;
+  companySettings?: typeof companySettings.$inferSelect | null;
 }
 
 export type TransactionalSmsResult = {
@@ -85,9 +86,13 @@ export function isSmsEventEnabled(
  */
 export async function isTenantSmsEventEnabled(
   tenantId: string | number | null | undefined,
-  templateKey: TransactionalSmsTemplateKey
+  templateKey: TransactionalSmsTemplateKey,
+  existingSettings?: typeof companySettings.$inferSelect | null
 ): Promise<boolean> {
   if (!isSmsToggleGated(templateKey)) return true;
+  if (existingSettings !== undefined) {
+    return isSmsEventEnabled(existingSettings, templateKey);
+  }
   const adminIdNum = Number(tenantId);
   const adminId = Number.isFinite(adminIdNum) && adminIdNum > 0 ? adminIdNum : null;
   try {
@@ -231,15 +236,17 @@ export async function resolveSenderRoleLabel(userId: number | null | undefined):
 
 export async function getEffectiveTemplate(key: string, adminId?: number | null) {
   try {
-    // Always use the global master template (adminId = null).
-    // Admins do not have tenant-specific templates per design.
-    const globalTpl = await db.query.smsTemplates.findFirst({
-      where: and(eq(smsTemplates.key, key), isNull(smsTemplates.adminId), eq(smsTemplates.isActive, true))
-    });
-    if (globalTpl) return globalTpl;
+    return await cache.remember(`master:sms-template:${key}`, 3600, async () => {
+      // Always use the global master template (adminId = null).
+      // Admins do not have tenant-specific templates per design.
+      const globalTpl = await db.query.smsTemplates.findFirst({
+        where: and(eq(smsTemplates.key, key), isNull(smsTemplates.adminId), eq(smsTemplates.isActive, true))
+      });
+      if (globalTpl) return globalTpl;
 
-    // Fallback to built-in default
-    return DEFAULT_TEMPLATES.find((t) => t.key === key) || null;
+      // Fallback to built-in default
+      return DEFAULT_TEMPLATES.find((t) => t.key === key) || null;
+    });
   } catch {
     return DEFAULT_TEMPLATES.find((t) => t.key === key) || null;
   }
@@ -343,17 +350,19 @@ export async function sendTransactionalSms(payload: SendTransactionalSmsPayload)
   let smsApiKey = "";
   let senderId = "";
   let companyName = "IDP System";
-  let settings: typeof companySettings.$inferSelect | null | undefined = null;
-  try {
-    settings = await db.query.companySettings.findFirst({
-      where: adminId ? eq(companySettings.adminId, adminId) : isNull(companySettings.adminId)
-    });
-    if (settings) {
-      smsApiKey = settings.smsApiKey || "";
-      senderId = settings.smsSenderId || "";
-      companyName = settings.companyName || companyName;
-    }
-  } catch (smsServiceErr: unknown) { console.warn("[SMS Service Warning]:", (smsServiceErr as Error)?.message || smsServiceErr); }
+  let settings: typeof companySettings.$inferSelect | null | undefined = payload.companySettings;
+  if (settings === undefined) {
+    try {
+      settings = await db.query.companySettings.findFirst({
+        where: adminId ? eq(companySettings.adminId, adminId) : isNull(companySettings.adminId)
+      });
+    } catch (smsServiceErr: unknown) { console.warn("[SMS Service Warning]:", (smsServiceErr as Error)?.message || smsServiceErr); }
+  }
+  if (settings) {
+    smsApiKey = settings.smsApiKey || "";
+    senderId = settings.smsSenderId || "";
+    companyName = settings.companyName || companyName;
+  }
 
   // 1b. Fail-safe per-event gate: a firm may enable SMS for only some events.
   //     A disabled event is a deliberate no-op — no gateway call and no FAILED

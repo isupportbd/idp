@@ -1,5 +1,5 @@
 import type { AppContext } from "@/framework/facade.js";
-import { db } from "@/framework/facade.js";
+import { db, cache } from "@/framework/facade.js";
 import { plans } from "@/modules/superadmin/database/models/plans.js";
 import { eq, desc, asc } from "drizzle-orm";
 import { notifySettingsUpdated } from "./platform.controller.js";
@@ -7,7 +7,9 @@ import { notifySettingsUpdated } from "./platform.controller.js";
 // 7. Plans CRUD
 export async function getPlans(c: AppContext) {
   try {
-    const allPlans = await db.select().from(plans).orderBy(plans.id);
+    const allPlans = await cache.remember("master:plans", 3600, async () => {
+      return db.select().from(plans).orderBy(plans.id);
+    });
     return c.json({ success: true, data: allPlans });
   } catch (error: unknown) {
     console.error("Error fetching plans:", error);

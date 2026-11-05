@@ -1,6 +1,6 @@
 import type { AppContext } from "@/framework/facade.js";
 import type { Context } from "hono";
-import { db, resolveTenantContext } from "@/framework/facade.js";
+import { db, resolveTenantContext, cache } from "@/framework/facade.js";
 import { eq, and, isNull, desc, sql } from "drizzle-orm";
 import { smsTemplates } from "../database/models/sms_templates.js";
 import { smsLogs } from "../database/models/sms_logs.js";
@@ -123,6 +123,8 @@ export async function updateTemplate(c: AppContext) {
 
     await db.update(smsTemplates).set(updateData).where(eq(smsTemplates.id, id));
 
+    cache.forget(`master:sms-template:${existing.key}`);
+
     const updated = await db.query.smsTemplates.findFirst({
       where: eq(smsTemplates.id, id)
     });
@@ -168,6 +170,8 @@ export async function resetTemplate(c: AppContext) {
       isActive: true,
       updatedAt: new Date()
     }).where(eq(smsTemplates.id, id));
+
+    cache.forget(`master:sms-template:${existing.key}`);
 
     const updated = await db.query.smsTemplates.findFirst({
       where: eq(smsTemplates.id, id)
@@ -351,6 +355,8 @@ export async function updateGatewaySettings(c: AppContext) {
         companyName: "IDP"
       });
     }
+
+    cache.forget(`company-settings:${adminId ?? "global"}`);
 
     if (isUpdatingKey && trimmedKey && adminId) {
       try {

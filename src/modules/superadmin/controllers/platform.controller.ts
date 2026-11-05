@@ -26,22 +26,24 @@ export function notifySettingsUpdated(settingType: string) {
 // 8. Payment Settings (bKash Gateway)
 export async function getPaymentSettings(c: AppContext) {
   try {
-    let [config] = await db.select().from(paymentSettings).limit(1);
-    if (!config) {
-      [config] = await db.insert(paymentSettings).values({
-        bkashNumber: "01719950891",
-        bkashCharge: 1.8
-      }).returning();
-    }
-    const sanitized = {
-      id: config.id,
-      bkashNumber: config.bkashNumber,
-      bkashCharge: config.bkashCharge,
-      nagadNumber: config.nagadNumber,
-      rocketNumber: config.rocketNumber,
-      createdAt: config.createdAt,
-      updatedAt: config.updatedAt
-    };
+    const sanitized = await cache.remember("master:payment-settings", 3600, async () => {
+      let [config] = await db.select().from(paymentSettings).limit(1);
+      if (!config) {
+        [config] = await db.insert(paymentSettings).values({
+          bkashNumber: "01719950891",
+          bkashCharge: 1.8
+        }).returning();
+      }
+      return {
+        id: config.id,
+        bkashNumber: config.bkashNumber,
+        bkashCharge: config.bkashCharge,
+        nagadNumber: config.nagadNumber,
+        rocketNumber: config.rocketNumber,
+        createdAt: config.createdAt,
+        updatedAt: config.updatedAt
+      };
+    });
     return c.json({ success: true, data: sanitized });
   } catch (error: unknown) {
     console.error("Error fetching payment settings:", error);

@@ -1,18 +1,20 @@
 import type { AppContext } from "@/framework/facade.js";
-import { db } from "@/framework/facade.js";
+import { db, cache } from "@/framework/facade.js";
 import { locations, commercialAreas } from "@/modules/superadmin/database/models/locations.js";
 import { eq, desc, asc, and, or, ne, sql } from "drizzle-orm";
 import { notifySettingsUpdated } from "./platform.controller.js";
 
 export async function getLocations(c: AppContext) {
   try {
-    const locs = await db.select().from(locations).orderBy(desc(locations.id));
-    const allAreas = await db.select().from(commercialAreas);
+    const enriched = await cache.remember("master:locations", 3600, async () => {
+      const locs = await db.select().from(locations).orderBy(desc(locations.id));
+      const allAreas = await db.select().from(commercialAreas);
 
-    const enriched = locs.map((l) => ({
-      ...l,
-      areasCount: allAreas.filter((a) => a.locationId === l.id).length
-    }));
+      return locs.map((l) => ({
+        ...l,
+        areasCount: allAreas.filter((a) => a.locationId === l.id).length
+      }));
+    });
 
     return c.json({ success: true, data: enriched });
   } catch (error: unknown) {
@@ -105,20 +107,22 @@ export async function deleteLocation(c: AppContext) {
 // 9. Commercial Areas CRUD
 export async function getCommercialAreas(c: AppContext) {
   try {
-    const areaList = await db
-      .select({
-        id: commercialAreas.id,
-        locationId: commercialAreas.locationId,
-        name: commercialAreas.name,
-        postalCode: commercialAreas.postalCode,
-        isActive: commercialAreas.isActive,
-        createdAt: commercialAreas.createdAt,
-        updatedAt: commercialAreas.updatedAt,
-        locationName: locations.name
-      })
-      .from(commercialAreas)
-      .leftJoin(locations, eq(commercialAreas.locationId, locations.id))
-      .orderBy(desc(commercialAreas.id));
+    const areaList = await cache.remember("master:commercial-areas", 3600, async () => {
+      return db
+        .select({
+          id: commercialAreas.id,
+          locationId: commercialAreas.locationId,
+          name: commercialAreas.name,
+          postalCode: commercialAreas.postalCode,
+          isActive: commercialAreas.isActive,
+          createdAt: commercialAreas.createdAt,
+          updatedAt: commercialAreas.updatedAt,
+          locationName: locations.name
+        })
+        .from(commercialAreas)
+        .leftJoin(locations, eq(commercialAreas.locationId, locations.id))
+        .orderBy(desc(commercialAreas.id));
+    });
 
     return c.json({ success: true, data: areaList });
   } catch (error: unknown) {
