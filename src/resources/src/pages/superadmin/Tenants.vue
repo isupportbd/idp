@@ -727,23 +727,42 @@ onUnmounted(() => {
           </div>
 
           <!-- Page Navigation -->
-          <div class="d-flex align-items-center gap-1">
+          <div v-if="totalPages > 1" class="d-flex align-items-center gap-1">
             <button
-              class="btn btn-sm btn-outline-secondary px-2.5"
-              :disabled="currentPage === 1"
+              type="button"
+              class="btn btn-dark border-secondary btn-sm"
+              :disabled="currentPage <= 1"
               @click="currentPage--"
             >
-              <i class="bi bi-chevron-left"></i>
+              <i class="bi bi-chevron-left"></i> Prev
             </button>
-            <span class="text-light small px-2">
-              Page <strong class="text-white">{{ currentPage }}</strong> of <strong>{{ totalPages }}</strong>
-            </span>
+
+            <template v-for="p in totalPages" :key="p">
+              <button
+                v-if="p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2)"
+                type="button"
+                class="btn btn-sm"
+                :class="currentPage === p ? 'btn-primary' : 'btn-dark border-secondary text-muted'"
+                style="min-width: 32px;"
+                @click="currentPage = p"
+              >
+                {{ p }}
+              </button>
+              <span
+                v-else-if="p === currentPage - 3 || p === currentPage + 3"
+                class="text-muted px-1"
+              >
+                ...
+              </span>
+            </template>
+
             <button
-              class="btn btn-sm btn-outline-secondary px-2.5"
+              type="button"
+              class="btn btn-dark border-secondary btn-sm"
               :disabled="currentPage >= totalPages"
               @click="currentPage++"
             >
-              <i class="bi bi-chevron-right"></i>
+              Next <i class="bi bi-chevron-right"></i>
             </button>
           </div>
         </div>

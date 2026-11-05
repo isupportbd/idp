@@ -677,23 +677,42 @@ const resetUpload = () => {
         <!-- Pagination & Footer Actions -->
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pt-3 border-top border-secondary border-opacity-25">
           <!-- Pagination -->
-          <div class="d-flex align-items-center gap-2">
+          <div v-if="totalPages > 1" class="d-flex align-items-center gap-1">
             <button
-              class="btn btn-sm btn-outline-secondary px-3"
-              :disabled="currentPage === 1"
+              type="button"
+              class="btn btn-dark border-secondary btn-sm"
+              :disabled="currentPage <= 1"
               @click="currentPage--"
             >
-              Previous
+              <i class="bi bi-chevron-left"></i> Prev
             </button>
-            <span class="text-muted small">
-              Page <strong class="text-white">{{ currentPage }}</strong> of <strong class="text-white">{{ totalPages }}</strong>
-            </span>
+
+            <template v-for="p in totalPages" :key="p">
+              <button
+                v-if="p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2)"
+                type="button"
+                class="btn btn-sm"
+                :class="currentPage === p ? 'btn-primary' : 'btn-dark border-secondary text-muted'"
+                style="min-width: 32px;"
+                @click="currentPage = p"
+              >
+                {{ p }}
+              </button>
+              <span
+                v-else-if="p === currentPage - 3 || p === currentPage + 3"
+                class="text-muted px-1"
+              >
+                ...
+              </span>
+            </template>
+
             <button
-              class="btn btn-sm btn-outline-secondary px-3"
-              :disabled="currentPage === totalPages"
+              type="button"
+              class="btn btn-dark border-secondary btn-sm"
+              :disabled="currentPage >= totalPages"
               @click="currentPage++"
             >
-              Next
+              Next <i class="bi bi-chevron-right"></i>
             </button>
           </div>
 

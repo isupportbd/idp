@@ -113,7 +113,9 @@ export function useClientsApi() {
     error.value = null;
     try {
       const res = await axios.post("/api/clients", payload);
-      await fetchClients();
+      const created = res.data?.data;
+      if (created) clients.value = [created, ...clients.value];
+      totalCount.value += 1;
       return res.data;
     } catch (err) {
       error.value = getErrorMessage(err, "Failed to create client");
@@ -128,7 +130,9 @@ export function useClientsApi() {
     error.value = null;
     try {
       const res = await axios.patch(`/api/clients/${id}`, payload);
-      await fetchClients();
+      const updated = res.data?.data;
+      const idx = clients.value.findIndex((c) => c.id === id);
+      if (idx !== -1 && updated) clients.value[idx] = { ...clients.value[idx], ...updated };
       return res.data;
     } catch (err) {
       error.value = getErrorMessage(err, "Failed to update client");

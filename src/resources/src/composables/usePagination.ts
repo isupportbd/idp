@@ -52,18 +52,22 @@ export function usePagination(storageKey: string, options: PaginationOptions = {
     });
   }
 
-  // Sync to sessionStorage and URL query param
+  // Sync to sessionStorage and URL query param (debounced to avoid navigation thrash)
+  let urlSyncTimer: ReturnType<typeof setTimeout> | null = null;
   watch(currentPage, (newPage) => {
     if (typeof window !== "undefined" && window.sessionStorage) {
       sessionStorage.setItem(`idp_page_${storageKey}`, String(newPage));
     }
     if (syncUrl && router && route && Number(route.query?.page) !== newPage) {
-      router.replace({
-        query: {
-          ...route.query,
-          page: newPage > 1 ? String(newPage) : undefined
-        }
-      });
+      if (urlSyncTimer) clearTimeout(urlSyncTimer);
+      urlSyncTimer = setTimeout(() => {
+        router.replace({
+          query: {
+            ...route.query,
+            page: newPage > 1 ? String(newPage) : undefined
+          }
+        });
+      }, 300);
     }
   });
 
