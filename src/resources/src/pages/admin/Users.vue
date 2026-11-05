@@ -560,6 +560,7 @@ onMounted(async () => {
 
       <div v-if="totalPages > 1" class="d-flex align-items-center gap-1">
         <button
+          type="button"
           class="btn btn-dark border-secondary btn-sm"
           :disabled="currentPage <= 1"
           @click="currentPage--"
@@ -567,18 +568,27 @@ onMounted(async () => {
           <i class="bi bi-chevron-left"></i> Prev
         </button>
 
-        <button
-          v-for="p in totalPages"
-          :key="p"
-          class="btn btn-sm"
-          :class="currentPage === p ? 'btn-primary' : 'btn-dark border-secondary text-muted'"
-          style="min-width: 32px;"
-          @click="currentPage = p"
-        >
-          {{ p }}
-        </button>
+        <template v-for="p in totalPages" :key="p">
+          <button
+            v-if="p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2)"
+            type="button"
+            class="btn btn-sm"
+            :class="currentPage === p ? 'btn-primary' : 'btn-dark border-secondary text-muted'"
+            style="min-width: 32px;"
+            @click="currentPage = p"
+          >
+            {{ p }}
+          </button>
+          <span
+            v-else-if="p === currentPage - 3 || p === currentPage + 3"
+            class="text-muted px-1"
+          >
+            ...
+          </span>
+        </template>
 
         <button
+          type="button"
           class="btn btn-dark border-secondary btn-sm"
           :disabled="currentPage >= totalPages"
           @click="currentPage++"

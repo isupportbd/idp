@@ -795,16 +795,49 @@ onMounted(async () => {
       </div>
 
       <!-- Pagination -->
-      <div class="d-flex justify-content-between align-items-center p-3 border-top border-secondary border-opacity-25" v-if="totalPages > 1">
-        <div class="text-muted small">
-          Page {{ currentPage }} of {{ totalPages }}
-        </div>
-        <div class="btn-group btn-group-sm">
-          <button class="btn btn-outline-secondary" :disabled="currentPage === 1" @click="currentPage--">
-            Previous
+      <div v-if="filteredRates.length > 0" class="d-flex flex-wrap justify-content-between align-items-center p-3 border-top border-secondary border-opacity-25">
+        <span class="text-muted small">
+          Showing <strong>{{ (currentPage - 1) * itemsPerPage + 1 }}</strong> to
+          <strong>{{ Math.min(currentPage * itemsPerPage, filteredRates.length) }}</strong> of
+          <strong>{{ filteredRates.length }}</strong> rates
+        </span>
+
+        <div v-if="totalPages > 1" class="d-flex align-items-center gap-1">
+          <button
+            type="button"
+            class="btn btn-dark border-secondary btn-sm"
+            :disabled="currentPage <= 1"
+            @click="currentPage--"
+          >
+            <i class="bi bi-chevron-left"></i> Prev
           </button>
-          <button class="btn btn-outline-secondary" :disabled="currentPage === totalPages" @click="currentPage++">
-            Next
+
+          <template v-for="p in totalPages" :key="p">
+            <button
+              v-if="p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2)"
+              type="button"
+              class="btn btn-sm"
+              :class="currentPage === p ? 'btn-primary' : 'btn-dark border-secondary text-muted'"
+              style="min-width: 32px;"
+              @click="currentPage = p"
+            >
+              {{ p }}
+            </button>
+            <span
+              v-else-if="p === currentPage - 3 || p === currentPage + 3"
+              class="text-muted px-1"
+            >
+              ...
+            </span>
+          </template>
+
+          <button
+            type="button"
+            class="btn btn-dark border-secondary btn-sm"
+            :disabled="currentPage >= totalPages"
+            @click="currentPage++"
+          >
+            Next <i class="bi bi-chevron-right"></i>
           </button>
         </div>
       </div>
