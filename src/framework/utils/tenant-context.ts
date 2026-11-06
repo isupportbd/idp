@@ -69,17 +69,49 @@ export async function assertClientAccess(ctx: TenantContext, clientId: number): 
   }
 }
 
+interface CachedTenantEntry {
+  context: TenantContext;
+  cachedAt: number;
+}
+const TENANT_CACHE_TTL_MS = 30_000; // 30s short TTL to eliminate redundant db queries across concurrent requests
+const tenantContextCache = new Map<number, CachedTenantEntry>();
+
+export function invalidateTenantContextCache(userId?: number) {
+  if (userId) {
+    tenantContextCache.delete(userId);
+  } else {
+    tenantContextCache.clear();
+  }
+}
+
 /**
  * Resolves the authenticated user and tenant context from Hono Context.
  * Fails closed (throws UnauthenticatedTenantError) when auth is missing or invalid.
  */
 export async function resolveTenantContext(c: Context): Promise<TenantContext> {
-  const auth = (c.get("auth" as never) || c.get("user" as never)) as { id?: number | string; role?: string } | undefined;
+  const cachedOnRequest = typeof c.get === "function" ? (c.get("tenantContext" as never) as TenantContext | undefined) : undefined;
+  if (cachedOnRequest) return cachedOnRequest;
+
+  const auth = (typeof c.get === "function" ? c.get("auth" as never) || c.get("user" as never) : undefined) as
+    | { id?: number | string; role?: string }
+    | undefined;
   if (!auth?.id) {
     throw new UnauthenticatedTenantError();
   }
 
   const userId = Number(auth.id);
+  const isTest = process.env.NODE_ENV === "test" || process.env.BUN_ENV === "test";
+  const now = Date.now();
+  if (!isTest) {
+    const cachedEntry = tenantContextCache.get(userId);
+    if (cachedEntry && now - cachedEntry.cachedAt < TENANT_CACHE_TTL_MS) {
+      if (typeof c.set === "function") {
+        c.set("tenantContext" as never, cachedEntry.context as never);
+      }
+      return cachedEntry.context;
+    }
+  }
+
   const currentUser = await db.query.users.findFirst({
     where: eq(users.id, userId),
     with: { role: true }
@@ -93,13 +125,21 @@ export async function resolveTenantContext(c: Context): Promise<TenantContext> {
   const isTenantAdmin = currentUser.role?.name?.toLowerCase() === "admin" || !currentUser.adminId;
   const tenantAdminId = isSuperAdmin ? null : currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
 
-  return {
+  const ctx: TenantContext = {
     currentUser,
     isSuperAdmin,
     isTenantAdmin,
     tenantAdminId,
     userId
   };
+
+  if (!isTest) {
+    tenantContextCache.set(userId, { context: ctx, cachedAt: now });
+  }
+  if (typeof c.set === "function") {
+    c.set("tenantContext" as never, ctx as never);
+  }
+  return ctx;
 }
 
 /**

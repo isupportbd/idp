@@ -5,6 +5,7 @@ import { onBeforeRouteLeave } from "vue-router";
 import { can } from "@/composables/useAuth";
 import { usePagination } from "@/composables/usePagination";
 import { usePulseListener } from "@/composables/usePulseListener";
+import { useMasterDataStore } from "@/stores/masterData";
 import RateHistoryModal from "./sales-rates/RateHistoryModal.vue";
 import SalesRateModal from "./sales-rates/SalesRateModal.vue";
 import SalesRatesTable from "./sales-rates/SalesRatesTable.vue";
@@ -200,35 +201,31 @@ const historyClientItem = ref<{ clientName: string; itemName: string; records: S
   records: []
 });
 
+const masterStore = useMasterDataStore();
+
 const fetchMasterData = async () => {
   try {
-    const [cRes, iRes, uRes] = await Promise.allSettled([
-      axios.get("/api/clients", { params: { limit: 1000, isActive: "all" } }),
-      axios.get("/api/items", { params: { limit: 1000 } }),
-      axios.get("/api/superadmin/unit-conversions", { params: { all: "true" } })
+    const [cList, iList, uList] = await Promise.all([
+      masterStore.fetchClientsLookup(),
+      masterStore.fetchItemsLookup(),
+      masterStore.fetchUnitConversions()
     ]);
-    if (cRes.status === "fulfilled" && cRes.value.data?.data) {
-      clientsList.value = cRes.value.data.data.map((c: any) => ({
-        id: c.id,
-        name: c.companyName || c.name,
-        bin: c.binNumber || c.bin || ""
-      }));
-    }
-    if (iRes.status === "fulfilled" && iRes.value.data?.data) {
-      itemsList.value = iRes.value.data.data.map((i: any) => ({
-        id: i.id,
-        name: i.itemName || i.name,
-        hsCode: i.hsCode || ""
-      }));
-    }
-    if (uRes.status === "fulfilled" && uRes.value.data?.data) {
-      unitsList.value = uRes.value.data.data.map((u: any) => ({
-        id: u.id,
-        purchaseUnit: u.purchaseUnit,
-        salesUnit: u.salesUnit,
-        factor: Number(u.factor || 1)
-      }));
-    }
+    clientsList.value = cList.map((c) => ({
+      id: c.id,
+      name: c.name,
+      bin: c.bin || ""
+    }));
+    itemsList.value = iList.map((i) => ({
+      id: i.id,
+      name: i.name,
+      hsCode: i.hsCode || ""
+    }));
+    unitsList.value = uList.map((u) => ({
+      id: u.id,
+      purchaseUnit: u.purchaseUnit,
+      salesUnit: u.salesUnit,
+      factor: u.factor
+    }));
   } catch (err) {
     console.error("Failed to load master data:", err);
   }

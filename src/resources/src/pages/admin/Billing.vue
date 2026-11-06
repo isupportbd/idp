@@ -137,11 +137,26 @@ watch(
   onFilterChange
 );
 
-watch(activeTab, () => {
+watch(activeTab, (newTab) => {
   if (!isInitialized) return;
   saveFilters();
   updateUrlParams();
   currentPage.value = 1;
+  if (newTab === "collections" && collections.value.length === 0) {
+    void fetchCollections({
+      month: selectedMonth.value,
+      paymentMethod: selectedPaymentMethod.value,
+      referenceId: selectedReferenceId.value,
+      search: searchQuery.value
+    });
+  } else if (newTab === "missing" && missingBills.value.length === 0) {
+    void fetchMissingBills({
+      month: selectedMonth.value,
+      customerTypeId: selectedCustomerTypeId.value,
+      referenceId: selectedReferenceId.value,
+      search: searchQuery.value
+    });
+  }
 });
 
 onBeforeRouteLeave((to) => {
@@ -170,28 +185,39 @@ const isBatchGenerating = ref(false);
 
 // Load data based on active tab and filters
 const loadData = async () => {
+  const billsParams = {
+    month: selectedMonth.value,
+    customerTypeId: selectedCustomerTypeId.value,
+    referenceId: selectedReferenceId.value,
+    status: selectedStatusFilter.value,
+    search: searchQuery.value
+  };
+
+  const collectionsParams = {
+    month: selectedMonth.value,
+    paymentMethod: selectedPaymentMethod.value,
+    referenceId: selectedReferenceId.value,
+    search: searchQuery.value
+  };
+
+  const missingParams = {
+    month: selectedMonth.value,
+    customerTypeId: selectedCustomerTypeId.value,
+    referenceId: selectedReferenceId.value,
+    search: searchQuery.value
+  };
+
   try {
-    await Promise.all([
-      fetchBills({
-        month: selectedMonth.value,
-        customerTypeId: selectedCustomerTypeId.value,
-        referenceId: selectedReferenceId.value,
-        status: selectedStatusFilter.value,
-        search: searchQuery.value
-      }),
-      fetchCollections({
-        month: selectedMonth.value,
-        paymentMethod: selectedPaymentMethod.value,
-        referenceId: selectedReferenceId.value,
-        search: searchQuery.value
-      }),
-      fetchMissingBills({
-        month: selectedMonth.value,
-        customerTypeId: selectedCustomerTypeId.value,
-        referenceId: selectedReferenceId.value,
-        search: searchQuery.value
-      })
-    ]);
+    if (activeTab.value === "collections") {
+      await fetchCollections(collectionsParams);
+      void Promise.all([fetchBills(billsParams), fetchMissingBills(missingParams)]).catch(() => {});
+    } else if (activeTab.value === "missing") {
+      await fetchMissingBills(missingParams);
+      void Promise.all([fetchBills(billsParams), fetchCollections(collectionsParams)]).catch(() => {});
+    } else {
+      await fetchBills(billsParams);
+      void Promise.all([fetchCollections(collectionsParams), fetchMissingBills(missingParams)]).catch(() => {});
+    }
   } catch (err: any) {
     toast.error("Failed to load billing data");
   }

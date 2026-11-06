@@ -27,6 +27,9 @@ export const listCustomerTypes = async (c: AppContext) => {
     const list = await cache.remember("master:client-types", 3600, async () => {
       return await db.select().from(customerTypes).orderBy(desc(customerTypes.id));
     });
+    if (typeof c.header === "function") {
+      c.header("Cache-Control", "private, max-age=120, stale-while-revalidate=300");
+    }
     return c.json({ message: "Customer types fetched successfully", data: list }, HttpStatusCodes.OK);
   } catch (err: unknown) {
     return c.json({ message: "Failed to fetch customer types" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
@@ -89,6 +92,9 @@ export const listReferences = async (c: AppContext) => {
     const list = await cache.remember("master:references", 3600, async () => {
       return await db.select().from(clientReferences).orderBy(asc(clientReferences.id));
     });
+    if (typeof c.header === "function") {
+      c.header("Cache-Control", "private, max-age=120, stale-while-revalidate=300");
+    }
     return c.json({ message: "References fetched successfully", data: list }, HttpStatusCodes.OK);
   } catch (err: unknown) {
     return c.json({ message: "Failed to fetch references" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
@@ -213,6 +219,9 @@ export const listServiceItems = async (c: AppContext) => {
     const list = await cache.remember("master:service-items", 3600, async () => {
       return await db.select().from(serviceItems).orderBy(asc(serviceItems.id));
     });
+    if (typeof c.header === "function") {
+      c.header("Cache-Control", "private, max-age=120, stale-while-revalidate=300");
+    }
     return c.json({ message: "Service items fetched successfully", data: list }, HttpStatusCodes.OK);
   } catch (err: unknown) {
     return c.json({ message: "Failed to fetch service items" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
@@ -321,6 +330,9 @@ export const listServiceRates = async (c: AppContext) => {
       });
     });
 
+    if (typeof c.header === "function") {
+      c.header("Cache-Control", "private, max-age=120, stale-while-revalidate=300");
+    }
     return c.json({ message: "Service rates fetched successfully", data: rates }, HttpStatusCodes.OK);
   } catch (err: unknown) {
     return c.json({ message: "Failed to fetch service rates" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);

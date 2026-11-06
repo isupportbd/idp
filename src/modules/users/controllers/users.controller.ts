@@ -2,6 +2,7 @@ import { and, asc, eq, gt, ne, or, sql } from "drizzle-orm";
 import type { Context, Handler } from "hono";
 import type { AppContext } from "@/framework/facade.js";
 import { db, HttpStatusCodes, password, resolveTenantContext, validate } from "@/framework/facade.js";
+import { invalidateTenantContextCache } from "@/framework/utils/tenant-context.js";
 import { roles } from "@/modules/auth/database/models/role.js";
 import { refreshTokens, users } from "@/modules/auth/database/models/user.js";
 import { payouts } from "@/modules/payouts/database/models/payouts.js";
@@ -272,6 +273,7 @@ export const updateUser = async (c: AppContext) => {
     // Role changes are not accepted here: sub-users stay "user", the firm owner stays "admin"
 
     const [updated] = await db.update(users).set(updateData).where(eq(users.id, userId)).returning();
+    invalidateTenantContextCache(userId);
 
     // Never send the password hash or other internal columns back to the client
     const data = {
@@ -373,6 +375,7 @@ export const updateUserStatus = async (c: AppContext) => {
     }
 
     await db.update(users).set({ status: newStatus, updatedAt: new Date() }).where(eq(users.id, userId));
+    invalidateTenantContextCache(userId);
 
     return c.json({ success: true, message: `User status changed to ${newStatus}`, status: newStatus }, HttpStatusCodes.OK);
   } catch (err: unknown) {
@@ -419,6 +422,7 @@ export const deleteUser = async (c: AppContext) => {
     }
 
     await db.delete(users).where(eq(users.id, userId));
+    invalidateTenantContextCache(userId);
 
     return c.json({ success: true, message: "User deleted successfully" }, HttpStatusCodes.OK);
   } catch (err: unknown) {

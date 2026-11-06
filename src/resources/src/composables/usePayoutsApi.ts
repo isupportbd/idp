@@ -155,14 +155,17 @@ export function currentMonthValue(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+const cachedMeta = ref<PayoutMeta>({
+  staff: [],
+  expenseHeads: [],
+  bankAccounts: [],
+  serviceItems: [],
+  staffExpenseHead: null
+});
+const hasLoadedMetaOnce = ref(false);
+
 export function usePayoutsApi() {
-  const meta = ref<PayoutMeta>({
-    staff: [],
-    expenseHeads: [],
-    bankAccounts: [],
-    serviceItems: [],
-    staffExpenseHead: null
-  });
+  const meta = cachedMeta;
   const dashboard = ref<{
     month: string;
     summary: PayoutDashboardSummary;
@@ -177,7 +180,10 @@ export function usePayoutsApi() {
   const saving = ref(false);
   const error = ref<string | null>(null);
 
-  const fetchMeta = async () => {
+  const fetchMeta = async (force = false) => {
+    if (hasLoadedMetaOnce.value && !force && meta.value.staff.length > 0) {
+      return { data: meta.value };
+    }
     try {
       const res = await axios.get("/api/payouts/meta");
       meta.value = res.data?.data || {
@@ -187,6 +193,7 @@ export function usePayoutsApi() {
         serviceItems: [],
         staffExpenseHead: null
       };
+      hasLoadedMetaOnce.value = true;
       return res.data;
     } catch (err: any) {
       error.value = err.response?.data?.message || "Failed to fetch payout metadata";

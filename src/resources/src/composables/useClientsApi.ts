@@ -1,5 +1,6 @@
 import axios from "axios";
-import { ref } from "vue";
+import { computed, ref } from "vue";
+import { useMasterDataStore } from "@/stores/masterData";
 
 export interface ClientItem {
   id: number;
@@ -46,10 +47,31 @@ export interface AssignableUser {
   email: string;
 }
 
+function getSession<T>(key: string): T | null {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      const raw = sessionStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    }
+  } catch {}
+  return null;
+}
+
+function setSession(key: string, val: unknown) {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.setItem(key, JSON.stringify(val));
+    }
+  } catch {}
+}
+
+const initialClients = getSession<ClientItem[]>("idp_cache_clients") || [];
+const initialCount = getSession<number>("idp_cache_clients_count") || 0;
+
 // Module-scoped persistent reactive state (SWR / Stale-While-Revalidate)
 // Ensures that on route transitions, existing client & lookup data is rendered immediately
 // (0ms latency, no empty table flash / prolonged loading spinner) while background revalidation occurs.
-const cachedClients = ref<ClientItem[]>([]);
+const cachedClients = ref<ClientItem[]>(initialClients);
 const cachedAssignments = ref<ClientManagerAssignment[]>([]);
 const cachedAssignmentStats = ref<{ total: number; assigned: number; shared: number; unassigned: number }>({
   total: 0,
@@ -58,16 +80,17 @@ const cachedAssignmentStats = ref<{ total: number; assigned: number; shared: num
   unassigned: 0
 });
 const cachedAssignableUsers = ref<AssignableUser[]>([]);
-const cachedTotalCount = ref(0);
-const hasLoadedClientsOnce = ref(false);
+const cachedTotalCount = ref(initialCount || initialClients.length);
+const hasLoadedClientsOnce = ref(initialClients.length > 0);
 const hasLoadedAssignmentsOnce = ref(false);
 const hasLoadedUsersOnce = ref(false);
 
 export function useClientsApi() {
+  const masterStore = useMasterDataStore();
   const clients = cachedClients;
   const assignments = cachedAssignments;
   const assignmentStats = cachedAssignmentStats;
-  const assignableUsers = cachedAssignableUsers;
+  const assignableUsers = computed(() => masterStore.assignableUsers);
   const totalCount = cachedTotalCount;
   const loading = ref(false);
   const error = ref<string | null>(null);
@@ -103,6 +126,10 @@ export function useClientsApi() {
       clients.value = res.data?.data || [];
       totalCount.value = res.data?.pagination?.total || clients.value.length;
       hasLoadedClientsOnce.value = true;
+      if (!params.search && (!params.page || params.page === 1) && !params.customerTypeId && !params.referenceId) {
+        setSession("idp_cache_clients", clients.value);
+        setSession("idp_cache_clients_count", totalCount.value);
+      }
       return res.data;
     } catch (err) {
       error.value = getErrorMessage(err, "Failed to fetch clients");
@@ -247,18 +274,7 @@ export function useClientsApi() {
   };
 
   const fetchAssignableUsers = async (force = false) => {
-    if (hasLoadedUsersOnce.value && !force && assignableUsers.value.length > 0) {
-      return assignableUsers.value;
-    }
-    try {
-      const res = await axios.get("/api/clients/users");
-      assignableUsers.value = res.data?.data || [];
-      hasLoadedUsersOnce.value = true;
-      return assignableUsers.value;
-    } catch (err) {
-      console.error("Failed to fetch assignable users", err);
-      return [];
-    }
+    return masterStore.fetchAssignableUsers(force);
   };
 
   return {

@@ -1,7 +1,5 @@
-import { eq } from "drizzle-orm";
 import type { Context, Next } from "hono";
-import { db } from "@/framework/facade.js";
-import { users } from "@/modules/auth/database/models/user.js";
+import { resolveTenantContext } from "@/framework/utils/tenant-context.js";
 import { normalizePermissions } from "@/modules/users/controllers/permissions.js";
 
 type ResolvedPermissions = {
@@ -12,29 +10,28 @@ type ResolvedPermissions = {
 /**
  * Why: Permissions must be read from the database on every request so that changes made by
  * the tenant admin take effect immediately (JWT payloads can be stale for up to their TTL).
- * How: Loads the current user once per request and caches the result on the context.
+ * How: Reuses the tenant context cache and caches the resolved permissions on the request context.
  */
 export async function resolvePermissions(c: Context): Promise<ResolvedPermissions | null> {
-  const cached = c.get("permissions" as never) as ResolvedPermissions | undefined;
+  const cached = typeof c.get === "function" ? (c.get("permissions" as never) as ResolvedPermissions | undefined) : undefined;
   if (cached) return cached;
 
-  const auth = c.get("auth") as { id?: number } | undefined;
+  const auth = (typeof c.get === "function" ? c.get("auth" as never) || c.get("user" as never) : undefined) as { id?: number } | undefined;
   if (!auth?.id) return null;
 
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, Number(auth.id)),
-    with: { role: true }
-  });
-  if (!user) return null;
-
-  // Same tenant-admin definition as framework/utils/tenant-context.ts
-  const isTenantAdmin = user.role?.name?.toLowerCase() === "admin" || !user.adminId;
-  const resolved: ResolvedPermissions = {
-    isTenantAdmin,
-    keys: isTenantAdmin ? [] : normalizePermissions(user.permissions)
-  };
-  c.set("permissions" as never, resolved as never);
-  return resolved;
+  try {
+    const ctx = await resolveTenantContext(c);
+    const resolved: ResolvedPermissions = {
+      isTenantAdmin: ctx.isTenantAdmin,
+      keys: ctx.isTenantAdmin ? [] : normalizePermissions(ctx.currentUser.permissions)
+    };
+    if (typeof c.set === "function") {
+      c.set("permissions" as never, resolved as never);
+    }
+    return resolved;
+  } catch {
+    return null;
+  }
 }
 
 /**

@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import type { AppContext } from "@/framework/facade.js";
-import { db, HttpStatusCodes } from "@/framework/facade.js";
+import { db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
 import { roles } from "@/modules/auth/database/models/role.js";
 import { users } from "@/modules/auth/database/models/user.js";
 
@@ -8,20 +8,7 @@ import { users } from "@/modules/auth/database/models/user.js";
 
 export const listAssignableUsers = async (c: AppContext) => {
   try {
-    const auth = c.get("auth") || c.get("user");
-    let tenantAdminId: number | null = null;
-    let isSuperAdmin = false;
-
-    if (auth?.id) {
-      const currentUser = await db.query.users.findFirst({
-        where: eq(users.id, Number(auth.id)),
-        with: { role: true }
-      });
-      if (currentUser) {
-        isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin";
-        tenantAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
-      }
-    }
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
     const adminRoles = await db
       .select({ id: roles.id })
@@ -51,6 +38,9 @@ export const listAssignableUsers = async (c: AppContext) => {
       .where(and(...conditions))
       .orderBy(asc(users.name));
 
+    if (typeof c.header === "function") {
+      c.header("Cache-Control", "private, max-age=60, stale-while-revalidate=180");
+    }
     return c.json({ message: "Users fetched", data: list }, HttpStatusCodes.OK);
   } catch (err: unknown) {
     return c.json({ message: "Failed to fetch users" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);

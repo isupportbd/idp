@@ -8,6 +8,7 @@ import { can, canAccessModule } from "@/composables/useAuth";
 import { useExcelExport } from "@/composables/useExcelExport";
 import { usePulseListener } from "@/composables/usePulseListener";
 import { pulse } from "@/plugins/pulse";
+import { useMasterDataStore } from "@/stores/masterData";
 import BalanceStatementSection from "./reports/BalanceStatementSection.vue";
 import MushakReturnSection from "./reports/MushakReturnSection.vue";
 import PurchaseSummarySection from "./reports/PurchaseSummarySection.vue";
@@ -600,50 +601,40 @@ const showReturnRow = (v1: number, v2 = 0, v3 = 0) => {
 };
 
 // ==================== MASTER DATA & API INTEGRATION ====================
+const masterStore = useMasterDataStore();
+
 // Fetch Master Data (Clients, Units)
 const fetchMasterData = async () => {
   try {
-    const [cRes, uRes] = await Promise.allSettled([
-      axios.get("/api/clients", { params: { limit: 1000, isActive: "all" } }),
-      axios.get("/api/superadmin/unit-conversions", { params: { all: "true" } })
-    ]);
+    const [cList, uList] = await Promise.all([masterStore.fetchClientsLookup(), masterStore.fetchUnitConversions()]);
 
-    if (cRes.status === "fulfilled" && cRes.value.data?.data) {
-      clients.value = cRes.value.data.data.map((c: any) => ({
-        id: c.id,
-        name: c.companyName || c.name || "Client #" + c.id,
-        bin: c.binNumber || c.bin || "",
-        referenceId: c.referenceId,
-        openingBalance: c.openingBalance || 0,
-        serviceScope: c.vatServiceType || "FULL",
-        vatUserId: c.vatUserId || "",
-        vatPassword: c.vatPassword || ""
-      }));
+    clients.value = cList.map((c: any) => ({
+      id: c.id,
+      name: c.name || "Client #" + c.id,
+      bin: c.bin || "",
+      referenceId: c.referenceId,
+      openingBalance: c.openingBalance || 0,
+      serviceScope: c.vatServiceType || "FULL",
+      vatUserId: c.vatUserId || "",
+      vatPassword: c.vatPassword || ""
+    }));
 
-      // If client is already selected, sync credentials
-      if (selectedClientId.value) {
-        const curr = clients.value.find((c) => c.id === selectedClientId.value);
-        if (curr && (curr.vatUserId || curr.vatPassword)) {
-          eVatCredentials.value = {
-            loginId: curr.vatUserId || "",
-            loginPassword: curr.vatPassword || ""
-          };
-        }
+    if (selectedClientId.value) {
+      const curr = clients.value.find((c) => c.id === selectedClientId.value);
+      if (curr && (curr.vatUserId || curr.vatPassword)) {
+        eVatCredentials.value = {
+          loginId: curr.vatUserId || "",
+          loginPassword: curr.vatPassword || ""
+        };
       }
-    } else {
-      clients.value = [];
     }
 
-    if (uRes.status === "fulfilled" && uRes.value.data?.data) {
-      unitConversions.value = uRes.value.data.data.map((u: any) => ({
-        id: u.id,
-        purchaseUnit: u.purchaseUnit,
-        salesUnit: u.salesUnit,
-        factor: Number(u.factor || 1)
-      }));
-    } else {
-      unitConversions.value = [];
-    }
+    unitConversions.value = uList.map((u: any) => ({
+      id: u.id,
+      purchaseUnit: u.purchaseUnit,
+      salesUnit: u.salesUnit,
+      factor: u.factor
+    }));
   } catch (e) {
     clients.value = [];
     unitConversions.value = [];
