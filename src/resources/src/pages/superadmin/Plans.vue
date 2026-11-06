@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import { useSuperAdminApi, type Plan } from "@/composables/useSuperAdminApi";
+import { onMounted, ref } from "vue";
+import { type Plan, useSuperAdminApi } from "@/composables/useSuperAdminApi";
 import { useToast } from "@/composables/useToast";
 
 const toast = useToast();
@@ -18,7 +18,7 @@ const {
   savePaymentSettings
 } = useSuperAdminApi();
 
-const activeTab = ref<'plans' | 'form' | 'gateway'>('plans');
+const activeTab = ref<"plans" | "form" | "gateway">("plans");
 const editingPlanId = ref<number | null>(null);
 const isSubmittingPlan = ref(false);
 
@@ -71,7 +71,7 @@ const openCreatePlanTab = () => {
     featuresText: "",
     status: "active"
   };
-  activeTab.value = 'form';
+  activeTab.value = "form";
 };
 
 const openEditPlanTab = (plan: Plan) => {
@@ -88,12 +88,12 @@ const openEditPlanTab = (plan: Plan) => {
     featuresText: (plan.features || []).join("\n"),
     status: plan.status || "active"
   };
-  activeTab.value = 'form';
+  activeTab.value = "form";
 };
 
 const cancelForm = () => {
   editingPlanId.value = null;
-  activeTab.value = 'plans';
+  activeTab.value = "plans";
 };
 
 const handleSavePlan = async () => {
@@ -105,7 +105,7 @@ const handleSavePlan = async () => {
   try {
     const features = planForm.value.featuresText
       .split("\n")
-      .map(s => s.trim())
+      .map((s) => s.trim())
       .filter(Boolean);
 
     const payload = {
@@ -130,7 +130,7 @@ const handleSavePlan = async () => {
     }
     await fetchPlans();
     editingPlanId.value = null;
-    activeTab.value = 'plans';
+    activeTab.value = "plans";
   } catch (e: any) {
     toast.error(e?.response?.data?.error || "Failed to save plan");
   } finally {

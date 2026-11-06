@@ -1,12 +1,12 @@
 import { and, asc, desc, eq, gt, ilike, inArray, or, sql } from "drizzle-orm";
 import { db, round2 } from "@/framework/facade.js";
-import { clients } from "@/modules/clients/database/models/clients.js";
-import { purchases } from "@/modules/purchases/database/models/purchases.js";
-import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
-import { serviceItems } from "@/modules/services/database/models/service_items.js";
 import { users } from "@/modules/auth/database/models/user.js";
+import { clients } from "@/modules/clients/database/models/clients.js";
 import { expenseHeads } from "@/modules/firm/database/models/expense_heads.js";
+import { purchases } from "@/modules/purchases/database/models/purchases.js";
+import { serviceItems } from "@/modules/services/database/models/service_items.js";
 import { formatPeriodLabel, sendTransactionalSms } from "@/modules/sms-templates/services/sms.service.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 import { payouts } from "../database/models/payouts.js";
 import { userServiceRates } from "../database/models/user_service_rates.js";
 
@@ -161,9 +161,7 @@ function rateForMonth(rateRows: StaffRateRow[], itemId: number | null, month?: s
   if (itemId == null) return 0;
   const endTs = monthEndTimestamp(month);
   const startTs = monthStartTimestamp(month);
-  const matching = rateRows.filter(
-    (r) => r.serviceItemId === itemId && rateVersionApplies(r.effectiveFrom, r.effectiveTo, startTs, endTs)
-  );
+  const matching = rateRows.filter((r) => r.serviceItemId === itemId && rateVersionApplies(r.effectiveFrom, r.effectiveTo, startTs, endTs));
   matching.sort((a, b) => {
     const at = a.effectiveFrom ? new Date(a.effectiveFrom).getTime() : 0;
     const bt = b.effectiveFrom ? new Date(b.effectiveFrom).getTime() : 0;
@@ -172,11 +170,7 @@ function rateForMonth(rateRows: StaffRateRow[], itemId: number | null, month?: s
   return round2(Number(matching[0]?.rate ?? 0));
 }
 
-async function getStaffRateContext(
-  tenantAdminId: number,
-  staffId: number,
-  targetMonth?: string
-): Promise<RateContext> {
+async function getStaffRateContext(tenantAdminId: number, staffId: number, targetMonth?: string): Promise<RateContext> {
   const items = await resolveReturnServiceItems();
   const rateRows = await loadStaffRateRows(tenantAdminId, staffId);
   const rateOf = (itemId: number | null) => rateForMonth(rateRows, itemId, targetMonth);
@@ -202,10 +196,7 @@ export interface StaffRateVersion {
  * Every rate version recorded for a staff member (append-only history),
  * ordered by service item name and then newest effective date first.
  */
-export async function listStaffRateVersions(
-  tenantAdminId: number,
-  staffId: number
-): Promise<StaffRateVersion[]> {
+export async function listStaffRateVersions(tenantAdminId: number, staffId: number): Promise<StaffRateVersion[]> {
   const rows = await db
     .select({
       serviceItemId: userServiceRates.serviceItemId,
@@ -217,13 +208,7 @@ export async function listStaffRateVersions(
     })
     .from(userServiceRates)
     .leftJoin(serviceItems, eq(userServiceRates.serviceItemId, serviceItems.id))
-    .where(
-      and(
-        eq(userServiceRates.adminId, tenantAdminId),
-        eq(userServiceRates.userId, staffId),
-        gt(userServiceRates.rate, 0)
-      )
-    )
+    .where(and(eq(userServiceRates.adminId, tenantAdminId), eq(userServiceRates.userId, staffId), gt(userServiceRates.rate, 0)))
     .orderBy(asc(serviceItems.itemName), desc(userServiceRates.effectiveFrom));
 
   return rows.map((r) => ({
@@ -241,15 +226,10 @@ export async function listStaffRateVersions(
  * [effectiveFrom, effectiveTo) window overlaps that month. With no month, the
  * current calendar month is used.
  */
-export function ratesEffectiveForMonth(
-  versions: StaffRateVersion[],
-  month?: string
-): StaffRateVersion[] {
+export function ratesEffectiveForMonth(versions: StaffRateVersion[], month?: string): StaffRateVersion[] {
   const endTs = monthEndTimestamp(month);
   const startTs = monthStartTimestamp(month);
-  const applicable = versions.filter(
-    (v) => rateVersionApplies(v.effectiveFrom, v.effectiveTo, startTs, endTs)
-  );
+  const applicable = versions.filter((v) => rateVersionApplies(v.effectiveFrom, v.effectiveTo, startTs, endTs));
   // Versions arrive newest-first within each item, so the first hit is the winner.
   const byItem = new Map<number, StaffRateVersion>();
   for (const version of applicable) {
@@ -263,10 +243,7 @@ export function ratesEffectiveForMonth(
  *      with net weight > 0) and "Zero" otherwise — the exact rule the billing
  *      module uses to pick the return line item.
  */
-async function purchasesByClientMonth(
-  month: string,
-  clientIds: number[]
-): Promise<Set<number>> {
+async function purchasesByClientMonth(month: string, clientIds: number[]): Promise<Set<number>> {
   const pairs = await turnoverPairs(clientIds, [month]);
   const out = new Set<number>();
   for (const key of pairs) {
@@ -286,22 +263,12 @@ async function turnoverPairs(clientIds: number[], months: string[]): Promise<Set
   const rows = await db
     .select({ clientId: purchases.clientId, month: purchases.month })
     .from(purchases)
-    .where(
-      and(
-        inArray(purchases.clientId, clientIds),
-        inArray(purchases.month, months),
-        sql`${purchases.netWt} > 0`
-      )
-    );
+    .where(and(inArray(purchases.clientId, clientIds), inArray(purchases.month, months), sql`${purchases.netWt} > 0`));
   return new Set(rows.map((r) => `${r.clientId}:${r.month}`));
 }
 
 /** Finalized submissions filed by a staff member (tenant-scoped) within a month. */
-async function staffSubmissionsForMonth(
-  tenantAdminId: number,
-  staffId: number,
-  month: string
-): Promise<Array<{ clientId: number }>> {
+async function staffSubmissionsForMonth(tenantAdminId: number, staffId: number, month: string): Promise<Array<{ clientId: number }>> {
   return db
     .select({ clientId: vatSubmissions.clientId })
     .from(vatSubmissions)
@@ -336,11 +303,7 @@ export interface StaffEarnings {
  * How: Classify each finalized submission they filed this month as Zero/Regular
  *      (via client purchases) and multiply the counts by their configured rates.
  */
-export async function calculateStaffEarnings(
-  tenantAdminId: number,
-  staffId: number,
-  month: string
-): Promise<StaffEarnings> {
+export async function calculateStaffEarnings(tenantAdminId: number, staffId: number, month: string): Promise<StaffEarnings> {
   const target = isValidMonth(month) ? month : currentMonth();
   const ctx = await getStaffRateContext(tenantAdminId, staffId, target);
   const subs = await staffSubmissionsForMonth(tenantAdminId, staffId, target);
@@ -556,11 +519,7 @@ export async function resolveStaffLedgerHistory(
 }
 
 /** Single-month view of {@link resolveStaffLedgerHistory}. */
-export async function resolveStaffLedger(
-  tenantAdminId: number,
-  staffId: number,
-  month: string
-): Promise<StaffLedger> {
+export async function resolveStaffLedger(tenantAdminId: number, staffId: number, month: string): Promise<StaffLedger> {
   const walk = await resolveStaffLedgerHistory(tenantAdminId, staffId, month);
   const row = walk.months[walk.months.length - 1];
   return {
@@ -602,10 +561,7 @@ export interface StaffLifetimeLedger {
  * for a staff member, or null when they have none. Used to size the lifetime
  * aggregate so future-dated (early-filed) periods are still included.
  */
-async function latestStaffActivityMonth(
-  tenantAdminId: number,
-  staffId: number
-): Promise<string | null> {
+async function latestStaffActivityMonth(tenantAdminId: number, staffId: number): Promise<string | null> {
   const subRow = (
     await db
       .select({ m: sql<string>`MAX(${vatSubmissions.taxPeriod})` })
@@ -639,10 +595,7 @@ async function latestStaffActivityMonth(
  *      month or the latest month with data — summing each month's accrued bill
  *      and payments while keeping the final carried balance.
  */
-export async function resolveStaffLifetimeLedger(
-  tenantAdminId: number,
-  staffId: number
-): Promise<StaffLifetimeLedger> {
+export async function resolveStaffLifetimeLedger(tenantAdminId: number, staffId: number): Promise<StaffLifetimeLedger> {
   const current = currentMonth();
   const latest = await latestStaffActivityMonth(tenantAdminId, staffId);
   const target = latest && latest > current ? latest : current;
@@ -692,12 +645,7 @@ export async function resolveStaffExpenseHead(tenantAdminId: number) {
     await db
       .select()
       .from(expenseHeads)
-      .where(
-        and(
-          eq(expenseHeads.adminId, tenantAdminId),
-          or(eq(expenseHeads.code, "EXP-02"), ilike(expenseHeads.name, "Staff Salaries%"))
-        )
-      )
+      .where(and(eq(expenseHeads.adminId, tenantAdminId), or(eq(expenseHeads.code, "EXP-02"), ilike(expenseHeads.name, "Staff Salaries%"))))
       .limit(1)
   )[0];
   if (existing) return existing;
@@ -722,9 +670,7 @@ export async function resolveStaffExpenseHead(tenantAdminId: number) {
  *      on the payout row (`sms_status` / `sms_response`).
  * Note: Never throws — a delivery failure must not roll back a recorded payout.
  */
-export async function sendPayoutSms(
-  payoutId: number
-): Promise<{ status: "SENT" | "FAILED" | "SKIPPED"; response: string }> {
+export async function sendPayoutSms(payoutId: number): Promise<{ status: "SENT" | "FAILED" | "SKIPPED"; response: string }> {
   const row = (
     await db
       .select({
@@ -803,7 +749,10 @@ export async function sendPayoutSms(
       .set({ smsStatus: "FAILED", smsResponse: response, updatedAt: new Date() })
       .where(eq(payouts.id, payoutId))
       .catch((updateErr) => {
-        console.warn(`[Payout SMS Update Warning]: Failed to update status to FAILED for payout #${payoutId}:`, updateErr?.message || updateErr);
+        console.warn(
+          `[Payout SMS Update Warning]: Failed to update status to FAILED for payout #${payoutId}:`,
+          updateErr?.message || updateErr
+        );
       });
     return { status: "FAILED", response };
   }

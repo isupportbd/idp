@@ -1,5 +1,5 @@
-import { ref } from "vue";
 import axios from "axios";
+import { ref } from "vue";
 import { useToast } from "./useToast";
 
 export interface ActivityClientSubmission {
@@ -111,12 +111,7 @@ export function useActivityFilterApi() {
     }
   };
 
-  const recordSubmission = async (payload: {
-    clientId: number;
-    taxPeriod: string;
-    submissionId: string;
-    remarks?: string;
-  }) => {
+  const recordSubmission = async (payload: { clientId: number; taxPeriod: string; submissionId: string; remarks?: string }) => {
     try {
       const res = await axios.post("/api/submissions", payload);
       toast.success("Submission ID recorded successfully", 1000);

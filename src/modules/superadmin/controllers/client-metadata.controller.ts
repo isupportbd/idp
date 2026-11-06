@@ -1,10 +1,10 @@
+import { and, asc, desc, eq, ne, or, sql } from "drizzle-orm";
 import type { AppContext } from "@/framework/facade.js";
-import { db, cache } from "@/framework/facade.js";
+import { cache, db } from "@/framework/facade.js";
+import { clients } from "@/modules/clients/database/models/clients.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
-import { clients } from "@/modules/clients/database/models/clients.js";
 import { columnMappings } from "@/modules/superadmin/database/models/column_mappings.js";
-import { eq, desc, asc, and, or, ne, sql } from "drizzle-orm";
 import { notifySettingsUpdated } from "./platform.controller.js";
 
 // 7. Client Types CRUD (Operating on master customer_types table)
@@ -228,7 +228,14 @@ const DEFAULT_SYSTEM_COLUMN_MAPPINGS = [
   { dbColumn: "cd", label: "cd", excelHeader: "CD", isCalculated: false, isFromDb: false, isRegexExtracted: false },
   { dbColumn: "rd", label: "rd", excelHeader: "RD", isCalculated: false, isFromDb: false, isRegexExtracted: false },
   { dbColumn: "sd", label: "sd", excelHeader: "SD", isCalculated: false, isFromDb: false, isRegexExtracted: false },
-  { dbColumn: "base_value_of_vat", label: "base_value_of_vat", excelHeader: "", isCalculated: true, isFromDb: false, isRegexExtracted: false },
+  {
+    dbColumn: "base_value_of_vat",
+    label: "base_value_of_vat",
+    excelHeader: "",
+    isCalculated: true,
+    isFromDb: false,
+    isRegexExtracted: false
+  },
   { dbColumn: "vat", label: "vat", excelHeader: "VAT", isCalculated: false, isFromDb: false, isRegexExtracted: false },
   { dbColumn: "unit_value", label: "unit_value", excelHeader: "", isCalculated: true, isFromDb: false, isRegexExtracted: false },
   { dbColumn: "at", label: "at", excelHeader: "AT", isCalculated: false, isFromDb: false, isRegexExtracted: false },

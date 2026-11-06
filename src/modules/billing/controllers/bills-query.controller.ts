@@ -1,16 +1,16 @@
+import { and, asc, desc, eq, ilike, inArray, like, ne, or, type SQL, sql } from "drizzle-orm";
 import type { AppContext } from "@/framework/facade.js";
-import { and, asc, desc, eq, ilike, inArray, like, ne, or, sql, type SQL } from "drizzle-orm";
 import { db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
-import { bills } from "../database/models/bills.js";
-import { billItems } from "../database/models/bill_items.js";
-import { collections } from "../database/models/collections.js";
+import { users } from "@/modules/auth/database/models/user.js";
+import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
-import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
+import { companySettings } from "@/modules/firm/database/models/company_settings.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
-import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
-import { users } from "@/modules/auth/database/models/user.js";
-import { companySettings } from "@/modules/firm/database/models/company_settings.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
+import { billItems } from "../database/models/bill_items.js";
+import { bills } from "../database/models/bills.js";
+import { collections } from "../database/models/collections.js";
 import { loadScopedBill, r2, resolvePaymentInfo } from "./billing.helpers.js";
 
 // ── 3. LIST INVOICES / BILLS ─────────────────────────────────────────
@@ -21,7 +21,7 @@ export const listBills = async (c: AppContext) => {
     const month = query.month || query.taxPeriod;
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
-    let conditions: SQL[] = [];
+    const conditions: SQL[] = [];
     if (!isSuperAdmin && tenantAdminId) {
       conditions.push(eq(clients.createdBy, tenantAdminId));
     }
@@ -76,7 +76,7 @@ export const listBills = async (c: AppContext) => {
       .leftJoin(clientReferences, eq(clients.referenceId, clientReferences.id))
       .where(whereClause);
 
-    let billsQuery = db
+    const billsQuery = db
       .select({
         id: bills.id,
         billNo: bills.billNo,
@@ -112,18 +112,13 @@ export const listBills = async (c: AppContext) => {
       .where(whereClause)
       .orderBy(desc(bills.id));
 
-    const rows = limit
-      ? await billsQuery.limit(limit).offset(offset || 0)
-      : await billsQuery;
+    const rows = limit ? await billsQuery.limit(limit).offset(offset || 0) : await billsQuery;
 
     // Fetch line items ONLY for the paginated bills
     const billIds = rows.map((r) => r.id);
-    let itemsMap: Record<number, (typeof billItems.$inferSelect)[]> = {};
+    const itemsMap: Record<number, (typeof billItems.$inferSelect)[]> = {};
     if (billIds.length > 0) {
-      const allItems = await db
-        .select()
-        .from(billItems)
-        .where(inArray(billItems.billId, billIds));
+      const allItems = await db.select().from(billItems).where(inArray(billItems.billId, billIds));
 
       for (const it of allItems) {
         if (!itemsMap[it.billId]) itemsMap[it.billId] = [];
@@ -164,10 +159,7 @@ export const listBills = async (c: AppContext) => {
       HttpStatusCodes.OK
     );
   } catch (err: unknown) {
-    return c.json(
-      { message: "Failed to fetch bills" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ message: "Failed to fetch bills" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -227,27 +219,16 @@ export const getBillDetails = async (c: AppContext) => {
       return c.json({ message: "Bill not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
-    const items = await db
-      .select()
-      .from(billItems)
-      .where(eq(billItems.billId, id));
+    const items = await db.select().from(billItems).where(eq(billItems.billId, id));
 
-    const linkedCollections = await db
-      .select()
-      .from(collections)
-      .where(eq(collections.billId, id));
+    const linkedCollections = await db.select().from(collections).where(eq(collections.billId, id));
 
     // Fetch matching VAT return submission, if present
     const submission = (
       await db
         .select({ submissionId: vatSubmissions.submissionId, submittedAt: vatSubmissions.submittedAt })
         .from(vatSubmissions)
-        .where(
-          and(
-            eq(vatSubmissions.clientId, bill.clientId),
-            eq(vatSubmissions.taxPeriod, bill.taxPeriod)
-          )
-        )
+        .where(and(eq(vatSubmissions.clientId, bill.clientId), eq(vatSubmissions.taxPeriod, bill.taxPeriod)))
         .limit(1)
     )[0];
 
@@ -257,7 +238,7 @@ export const getBillDetails = async (c: AppContext) => {
     // fallback, so one firm's clients can never be shown another firm's (or the
     // superadmin's) account details.
     const tenantAdminId = bill.clientOwner ? Number(bill.clientOwner) : null;
-    let firmSetting: (typeof companySettings.$inferSelect) | null = null;
+    let firmSetting: typeof companySettings.$inferSelect | null = null;
     try {
       if (tenantAdminId) {
         firmSetting =
@@ -291,18 +272,20 @@ export const getBillDetails = async (c: AppContext) => {
           ...billData,
           submissionId: submission?.submissionId || null,
           submittedAt: submission?.submittedAt || null,
-          companySettings: firmSetting ? {
-            companyName: firmSetting.companyName,
-            proprietorName: firmSetting.proprietorName,
-            phone: firmSetting.phone,
-            email: firmSetting.email,
-            website: firmSetting.website,
-            address: firmSetting.address,
-            binNumber: firmSetting.binNumber,
-            tinNumber: firmSetting.tinNumber,
-            tradeLicenseNo: firmSetting.tradeLicenseNo,
-            invoiceTerms: firmSetting.invoiceTerms
-          } : null,
+          companySettings: firmSetting
+            ? {
+                companyName: firmSetting.companyName,
+                proprietorName: firmSetting.proprietorName,
+                phone: firmSetting.phone,
+                email: firmSetting.email,
+                website: firmSetting.website,
+                address: firmSetting.address,
+                binNumber: firmSetting.binNumber,
+                tinNumber: firmSetting.tinNumber,
+                tradeLicenseNo: firmSetting.tradeLicenseNo,
+                invoiceTerms: firmSetting.invoiceTerms
+              }
+            : null,
           items,
           collections: linkedCollections,
           payment: paymentInfo
@@ -311,10 +294,7 @@ export const getBillDetails = async (c: AppContext) => {
       HttpStatusCodes.OK
     );
   } catch (err: unknown) {
-    return c.json(
-      { message: "Failed to fetch bill details" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ message: "Failed to fetch bill details" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 

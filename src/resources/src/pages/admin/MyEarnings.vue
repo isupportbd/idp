@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import MonthNavigator from "@/components/MonthNavigator.vue";
-import { usePayoutsApi, formatBdt, formatMonth, currentMonthValue } from "@/composables/usePayoutsApi";
+import { currentMonthValue, formatBdt, formatMonth, usePayoutsApi } from "@/composables/usePayoutsApi";
 import { useToast } from "@/composables/useToast";
 
 const toast = useToast();
@@ -30,10 +30,7 @@ const currentHasActivity = computed(() => {
   );
 });
 const currentSettled = computed(
-  () =>
-    currentHasActivity.value &&
-    (current.value?.closingDue ?? 0) <= 0 &&
-    (current.value?.advanceBalance ?? 0) <= 0
+  () => currentHasActivity.value && (current.value?.closingDue ?? 0) <= 0 && (current.value?.advanceBalance ?? 0) <= 0
 );
 
 const load = async () => {

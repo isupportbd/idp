@@ -1,13 +1,13 @@
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { and, eq, sql } from "drizzle-orm";
 import { initDatabase } from "@/framework/database/connection.js";
 import { db } from "@/framework/facade.js";
-import { companySettings } from "@/modules/firm/database/models/company_settings.js";
-import { clients } from "@/modules/clients/database/models/clients.js";
-import { bills } from "@/modules/billing/database/models/bills.js";
-import { smsLogs } from "../database/models/sms_logs.js";
 import { users } from "@/modules/auth/database/models/user.js";
+import { bills } from "@/modules/billing/database/models/bills.js";
+import { clients } from "@/modules/clients/database/models/clients.js";
+import { companySettings } from "@/modules/firm/database/models/company_settings.js";
+import { smsLogs } from "../database/models/sms_logs.js";
 import { runDueReminderScan } from "../services/due-reminder.service.js";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 
 describe("Due Reminder SMS scan (runDueReminderScan)", () => {
   const SUFFIX = Date.now().toString().slice(-6);
@@ -50,12 +50,31 @@ describe("Due Reminder SMS scan (runDueReminderScan)", () => {
       .returning();
 
     // Clients — BD-valid 11-digit mobiles ("01711" + 6-digit suffix).
-    const [cA] = await db.insert(clients).values({ companyName: `DueReminder Client A ${SUFFIX}`, mobile: `01711${SUFFIX}`, isActive: true, createdBy: adminId }).returning();
-    const [cB] = await db.insert(clients).values({ companyName: `DueReminder Client B ${SUFFIX}`, mobile: `01722${SUFFIX}`, isActive: true, createdBy: adminId }).returning();
-    const [cC] = await db.insert(clients).values({ companyName: `DueReminder Client C ${SUFFIX}`, mobile: `01733${SUFFIX}`, isActive: true, createdBy: adminId }).returning();
-    const [cD] = await db.insert(clients).values({ companyName: `DueReminder Client D ${SUFFIX}`, mobile: `01744${SUFFIX}`, isActive: true, createdBy: adminId }).returning();
-    const [cI] = await db.insert(clients).values({ companyName: `DueReminder Client Inactive ${SUFFIX}`, mobile: `01755${SUFFIX}`, isActive: false, createdBy: adminId }).returning();
-    clientAId = cA.id; clientBId = cB.id; clientCId = cC.id; clientDId = cD.id; clientInactiveId = cI.id;
+    const [cA] = await db
+      .insert(clients)
+      .values({ companyName: `DueReminder Client A ${SUFFIX}`, mobile: `01711${SUFFIX}`, isActive: true, createdBy: adminId })
+      .returning();
+    const [cB] = await db
+      .insert(clients)
+      .values({ companyName: `DueReminder Client B ${SUFFIX}`, mobile: `01722${SUFFIX}`, isActive: true, createdBy: adminId })
+      .returning();
+    const [cC] = await db
+      .insert(clients)
+      .values({ companyName: `DueReminder Client C ${SUFFIX}`, mobile: `01733${SUFFIX}`, isActive: true, createdBy: adminId })
+      .returning();
+    const [cD] = await db
+      .insert(clients)
+      .values({ companyName: `DueReminder Client D ${SUFFIX}`, mobile: `01744${SUFFIX}`, isActive: true, createdBy: adminId })
+      .returning();
+    const [cI] = await db
+      .insert(clients)
+      .values({ companyName: `DueReminder Client Inactive ${SUFFIX}`, mobile: `01755${SUFFIX}`, isActive: false, createdBy: adminId })
+      .returning();
+    clientAId = cA.id;
+    clientBId = cB.id;
+    clientCId = cC.id;
+    clientDId = cD.id;
+    clientInactiveId = cI.id;
 
     const tenDaysAgo = new Date(Date.now() - 10 * 24 * 3600 * 1000);
     const twoDaysAgo = new Date(Date.now() - 2 * 24 * 3600 * 1000);
@@ -142,9 +161,9 @@ describe("Due Reminder SMS scan (runDueReminderScan)", () => {
   });
 
   afterAll(async () => {
-    await db.delete(smsLogs).where(sql`${smsLogs.message} LIKE ${'%' + SUFFIX + '%'}`);
-    await db.delete(bills).where(sql`${bills.billNo} LIKE ${'INV-DR-' + SUFFIX + '%'}`);
-    await db.delete(clients).where(sql`${clients.companyName} LIKE ${'DueReminder ' + SUFFIX + '%'}`);
+    await db.delete(smsLogs).where(sql`${smsLogs.message} LIKE ${"%" + SUFFIX + "%"}`);
+    await db.delete(bills).where(sql`${bills.billNo} LIKE ${"INV-DR-" + SUFFIX + "%"}`);
+    await db.delete(clients).where(sql`${clients.companyName} LIKE ${"DueReminder " + SUFFIX + "%"}`);
     await db.delete(companySettings).where(eq(companySettings.adminId, adminId));
     await db.delete(users).where(eq(users.id, adminId));
   });
@@ -156,7 +175,10 @@ describe("Due Reminder SMS scan (runDueReminderScan)", () => {
     expect(res.dispatched).toBe(2);
 
     // A: rendered with all four template variables (customer_name, date, due, company_name)
-    const logsA = await db.select().from(smsLogs).where(and(eq(smsLogs.templateKey, "due_reminder"), sql`${smsLogs.message} LIKE ${'%DueReminder Client A ' + SUFFIX + '%'}`));
+    const logsA = await db
+      .select()
+      .from(smsLogs)
+      .where(and(eq(smsLogs.templateKey, "due_reminder"), sql`${smsLogs.message} LIKE ${"%DueReminder Client A " + SUFFIX + "%"}`));
     expect(logsA.length).toBe(1);
     expect(logsA[0].message).toContain("DueReminder Client A " + SUFFIX);
     expect(logsA[0].message).toContain("5000"); // running due (openingBalance + billed - collected)
@@ -165,13 +187,19 @@ describe("Due Reminder SMS scan (runDueReminderScan)", () => {
     expect(logsA[0].adminId).toBe(adminId); // tenant isolation in the audit trail
 
     // B: the other eligible client
-    const logsB = await db.select().from(smsLogs).where(and(eq(smsLogs.templateKey, "due_reminder"), sql`${smsLogs.message} LIKE ${'%DueReminder Client B ' + SUFFIX + '%'}`));
+    const logsB = await db
+      .select()
+      .from(smsLogs)
+      .where(and(eq(smsLogs.templateKey, "due_reminder"), sql`${smsLogs.message} LIKE ${"%DueReminder Client B " + SUFFIX + "%"}`));
     expect(logsB.length).toBe(1);
 
     // C (invoice only 2 days old), D (due below threshold) and the inactive client
     // must have no audit rows at all.
     for (const name of [`Client C`, `Client D`, `Client Inactive`]) {
-      const rows = await db.select().from(smsLogs).where(sql`${smsLogs.message} LIKE ${'%DueReminder ' + name + ' ' + SUFFIX + '%'}`);
+      const rows = await db
+        .select()
+        .from(smsLogs)
+        .where(sql`${smsLogs.message} LIKE ${"%DueReminder " + name + " " + SUFFIX + "%"}`);
       expect(rows.length).toBe(0);
     }
   });
@@ -190,7 +218,10 @@ describe("Due Reminder SMS scan (runDueReminderScan)", () => {
 
     const res2 = await runDueReminderScan({ adminIds: [adminId] });
     // B should not be dispatched again
-    const logsB = await db.select().from(smsLogs).where(and(eq(smsLogs.templateKey, "due_reminder"), sql`${smsLogs.message} LIKE ${'%DueReminder Client B ' + SUFFIX + '%'}`));
+    const logsB = await db
+      .select()
+      .from(smsLogs)
+      .where(and(eq(smsLogs.templateKey, "due_reminder"), sql`${smsLogs.message} LIKE ${"%DueReminder Client B " + SUFFIX + "%"}`));
     // Inline with local endpoint fails → FAILED; first run created FAILED log; cool-off blocks re-dispatch
     expect(logsB.length).toBe(1);
   });

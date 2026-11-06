@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from "vue";
-import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
-import MonthNavigator from "@/components/MonthNavigator.vue";
-import { useToast } from "@/composables/useToast";
-import { usePagination } from "@/composables/usePagination";
-import { can } from "@/composables/useAuth";
-import SearchInput from "@/components/common/SearchInput.vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
 import IdpSelect from "@/components/common/IdpSelect.vue";
-import { useServicesApi } from "@/composables/useServicesApi";
+import SearchInput from "@/components/common/SearchInput.vue";
+import MonthNavigator from "@/components/MonthNavigator.vue";
+import { can } from "@/composables/useAuth";
 import { useClientsApi } from "@/composables/useClientsApi";
+import { usePagination } from "@/composables/usePagination";
+import { useServicesApi } from "@/composables/useServicesApi";
+import { useToast } from "@/composables/useToast";
 
 const router = useRouter();
 const route = useRoute();
@@ -77,7 +77,9 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(PURCHASES_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: TenantPurchases.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: TenantPurchases.vue]", uiErr?.message || uiErr);
+  }
   return {};
 };
 
@@ -101,7 +103,9 @@ const saveFilters = () => {
         })
       );
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: TenantPurchases.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: TenantPurchases.vue]", uiErr?.message || uiErr);
+  }
 };
 
 watch([selectedMonth, searchQuery, selectedClient, selectedReference], saveFilters);
@@ -112,16 +116,14 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(PURCHASES_FILTER_KEY);
       }
-    } catch (uiErr: any) { console.warn("[UI Component Warning: TenantPurchases.vue]", uiErr?.message || uiErr); }
+    } catch (uiErr: any) {
+      console.warn("[UI Component Warning: TenantPurchases.vue]", uiErr?.message || uiErr);
+    }
   }
 });
 
 const hasActiveFilters = computed(() => {
-  return (
-    searchQuery.value.trim() !== "" ||
-    selectedReference.value !== "" ||
-    selectedClient.value !== ""
-  );
+  return searchQuery.value.trim() !== "" || selectedReference.value !== "" || selectedClient.value !== "";
 });
 
 const clearAllFilters = () => {
@@ -133,7 +135,9 @@ const clearAllFilters = () => {
     if (typeof window !== "undefined" && window.sessionStorage) {
       sessionStorage.removeItem(PURCHASES_FILTER_KEY);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: TenantPurchases.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: TenantPurchases.vue]", uiErr?.message || uiErr);
+  }
 };
 
 // Deletion Modal State
@@ -198,15 +202,6 @@ const clientOptions = computed(() => [
   ...availableClients.value.map((c) => ({ value: String(c.id), label: c.companyName || "" }))
 ]);
 
-
-
-
-
-
-
-
-
-
 // Fetch Purchases
 const fetchPurchases = async () => {
   if (!hasLoadedPurchasesOnce.value || purchases.value.length === 0) {
@@ -244,10 +239,7 @@ const fetchPurchases = async () => {
 // Fetch Clients & Master Data
 const fetchMasterData = async () => {
   try {
-    await Promise.all([
-      fetchClients({ limit: 1000 }),
-      fetchReferences()
-    ]);
+    await Promise.all([fetchClients({ limit: 1000 }), fetchReferences()]);
   } catch (e) {
     console.warn("Failed to load master data in TenantPurchases", e);
   }
@@ -316,10 +308,7 @@ watch(currentPage, () => {
 
 onMounted(async () => {
   try {
-    await Promise.all([
-      fetchMasterData(),
-      fetchPurchases()
-    ]);
+    await Promise.all([fetchMasterData(), fetchPurchases()]);
   } finally {
     isInitialized = true;
   }

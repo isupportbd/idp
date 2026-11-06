@@ -1,23 +1,19 @@
 import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
-import { denyRole, requireRole } from "@/middlewares/role-middleware.js";
 import { requireTenantAdmin } from "@/middlewares/permission-middleware.js";
+import { denyRole, requireRole } from "@/middlewares/role-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
+  checkGatewayBalance,
+  getGatewaySettings,
+  listSmsLogs,
   listTemplates,
-  updateTemplate,
   resetTemplate,
   sendTestSms,
-  listSmsLogs,
-  getGatewaySettings,
   updateGatewaySettings,
-  checkGatewayBalance
+  updateTemplate
 } from "../controllers/sms-templates.controller.js";
-import {
-  UpdateTemplateSchema,
-  SendTestSmsSchema,
-  UpdateGatewaySettingsSchema
-} from "../controllers/sms-templates.schema.js";
+import { SendTestSmsSchema, UpdateGatewaySettingsSchema, UpdateTemplateSchema } from "../controllers/sms-templates.schema.js";
 
 const smsTemplatesRouter = createRouter();
 

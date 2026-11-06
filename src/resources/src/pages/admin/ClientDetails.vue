@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
-import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
+import { computed, onMounted, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { can } from "@/composables/useAuth";
 
 interface ClientDetail {

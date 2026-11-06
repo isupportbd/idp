@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import axios from "axios";
-import MonthNavigator from "@/components/MonthNavigator.vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
-import { usePulseListener } from "@/composables/usePulseListener";
+import MonthNavigator from "@/components/MonthNavigator.vue";
 import { useExcelExport } from "@/composables/useExcelExport";
+import { usePulseListener } from "@/composables/usePulseListener";
 
 const { exportSingleSheet } = useExcelExport();
 
@@ -194,9 +194,7 @@ const exportToExcel = async () => {
   const rows: any[] = [];
   const fromLabel = formatMonthDisplay(fromMonth.value).replace(/\s+/g, "_");
   const toLabel = formatMonthDisplay(toMonth.value).replace(/\s+/g, "_");
-  const unitLabel = selectedUnitConversion.value
-    ? ` (${selectedUnitConversion.value.salesUnit})`
-    : "";
+  const unitLabel = selectedUnitConversion.value ? ` (${selectedUnitConversion.value.salesUnit})` : "";
 
   const clientName = statementRows.value[0]?.companyName || "Client";
   const clientBin = statementRows.value[0]?.binNumber || "BIN Not Set";
@@ -204,10 +202,10 @@ const exportToExcel = async () => {
   let sl = 1;
   for (const r of statementRows.value) {
     rows.push({
-      "SL": sl++,
+      SL: sl++,
       "Client Name": r.companyName,
       "BIN Number": r.binNumber || "BIN Not Set",
-      "Month": formatMonthDisplay(r.month),
+      Month: formatMonthDisplay(r.month),
       [`Total Qty${unitLabel}`]: Number(((Number(r.totalQty) || 0) * currentConvFactor.value).toFixed(3)),
       "B/E Count": r.beCount,
       "Submission ID": r.submissionId || "Not Submitted"
@@ -216,10 +214,10 @@ const exportToExcel = async () => {
 
   // Subtotal / Total Row
   rows.push({
-    "SL": "",
+    SL: "",
     "Client Name": `TOTAL (${clientName})`,
     "BIN Number": clientBin,
-    "Month": `${statementRows.value.length} Months`,
+    Month: `${statementRows.value.length} Months`,
     [`Total Qty${unitLabel}`]: Number((grandTotalQty.value * currentConvFactor.value).toFixed(3)),
     "B/E Count": grandTotalBeCount.value,
     "Submission ID": `${grandTotalSubmissions.value} of ${statementRows.value.length} Submitted`

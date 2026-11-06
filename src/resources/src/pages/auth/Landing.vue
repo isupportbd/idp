@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
-import { useRouter } from "vue-router";
 import axios from "axios";
+import { computed, onMounted, ref, watch } from "vue";
+import { useRouter } from "vue-router";
 
 const router = useRouter();
 
@@ -37,7 +37,7 @@ const successMsg = ref("");
 
 const basePlanFee = computed(() => {
   if (!selectedPlan.value) return 0;
-  return billingCycle.value === "yearly" ? (selectedPlan.value.rateYearly || 0) : (selectedPlan.value.rateMonthly || 0);
+  return billingCycle.value === "yearly" ? selectedPlan.value.rateYearly || 0 : selectedPlan.value.rateMonthly || 0;
 });
 
 const recommendedPayableAmount = computed(() => {
@@ -82,7 +82,9 @@ const fetchStatusAndPlans = async () => {
       if (statusRes.data?.success) {
         hasSuperAdmin.value = statusRes.data.hasSuperAdmin;
       }
-    } catch (uiErr: any) { console.warn("[UI Component Warning: Landing.vue]", uiErr?.message || uiErr); }
+    } catch (uiErr: any) {
+      console.warn("[UI Component Warning: Landing.vue]", uiErr?.message || uiErr);
+    }
 
     const [plansRes, payRes] = await Promise.allSettled([
       axios.get("/api/superadmin/plans"),
@@ -123,7 +125,12 @@ const formatApiError = (err: any): string => {
     try {
       const parsed = JSON.parse(data);
       if (parsed.issues && Array.isArray(parsed.issues)) {
-        return parsed.issues.map((i: any) => i.message).filter(Boolean).join(", ") || "Invalid input data";
+        return (
+          parsed.issues
+            .map((i: any) => i.message)
+            .filter(Boolean)
+            .join(", ") || "Invalid input data"
+        );
       }
       return parsed.message || parsed.error || data;
     } catch {
@@ -132,7 +139,12 @@ const formatApiError = (err: any): string => {
   }
 
   if (data.issues && Array.isArray(data.issues)) {
-    return data.issues.map((i: any) => i.message).filter(Boolean).join(", ") || "Invalid input data";
+    return (
+      data.issues
+        .map((i: any) => i.message)
+        .filter(Boolean)
+        .join(", ") || "Invalid input data"
+    );
   }
 
   if (data.error) {
@@ -140,7 +152,10 @@ const formatApiError = (err: any): string => {
       try {
         const parsed = JSON.parse(data.error);
         if (parsed.issues && Array.isArray(parsed.issues)) {
-          return parsed.issues.map((i: any) => i.message).filter(Boolean).join(", ");
+          return parsed.issues
+            .map((i: any) => i.message)
+            .filter(Boolean)
+            .join(", ");
         }
         return parsed.message || parsed.error || data.error;
       } catch {
@@ -148,7 +163,10 @@ const formatApiError = (err: any): string => {
       }
     }
     if (typeof data.error === "object" && data.error.issues) {
-      return data.error.issues.map((i: any) => i.message).filter(Boolean).join(", ");
+      return data.error.issues
+        .map((i: any) => i.message)
+        .filter(Boolean)
+        .join(", ");
     }
     return String(data.error);
   }
@@ -158,9 +176,14 @@ const formatApiError = (err: any): string => {
       try {
         const parsed = JSON.parse(data.message);
         if (parsed.issues && Array.isArray(parsed.issues)) {
-          return parsed.issues.map((i: any) => i.message).filter(Boolean).join(", ");
+          return parsed.issues
+            .map((i: any) => i.message)
+            .filter(Boolean)
+            .join(", ");
         }
-      } catch (uiErr: any) { console.warn("[UI Component Warning: Landing.vue]", uiErr?.message || uiErr); }
+      } catch (uiErr: any) {
+        console.warn("[UI Component Warning: Landing.vue]", uiErr?.message || uiErr);
+      }
       return data.message;
     }
     return String(data.message);

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
-import { usePayoutsApi, formatBdt, formatMonth } from "@/composables/usePayoutsApi";
+import { formatBdt, formatMonth, usePayoutsApi } from "@/composables/usePayoutsApi";
 import { useToast } from "@/composables/useToast";
 
 const route = useRoute();
@@ -11,11 +11,7 @@ const { currentPayout: payout, loading, fetchPayout } = usePayoutsApi();
 const totalPayable = computed(() => {
   if (!payout.value) return 0;
   return Number(
-    (
-      Number(payout.value.amount || 0) +
-      Number(payout.value.closingDueSnapshot || 0) -
-      Number(payout.value.advanceSnapshot || 0)
-    ).toFixed(2)
+    (Number(payout.value.amount || 0) + Number(payout.value.closingDueSnapshot || 0) - Number(payout.value.advanceSnapshot || 0)).toFixed(2)
   );
 });
 

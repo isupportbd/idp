@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { useToast } from "@/composables/useToast";
+import { computed, ref } from "vue";
 import ServiceItemSearchSelect from "@/components/common/ServiceItemSearchSelect.vue";
+import { useToast } from "@/composables/useToast";
 
 export type ServiceItem = { id: number; itemName: string };
 export type RateVersion = { rate: number; effectiveFrom: string; effectiveTo?: string; isActive?: boolean };
@@ -27,8 +27,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   "update:rates": [val: AssignedRate[]];
   "update:ratesDirty": [val: boolean];
-  "assign": [rate: AssignedRate];
-  "remove": [serviceItemId: number];
+  assign: [rate: AssignedRate];
+  remove: [serviceItemId: number];
 }>();
 
 const toast = useToast();
@@ -39,9 +39,7 @@ const newEffectiveFrom = ref<string>(new Date().toISOString().slice(0, 10));
 
 const assignedIds = computed(() => new Set(props.rates.map((r) => r.serviceItemId)));
 
-const assignableItems = computed(() =>
-  props.serviceCatalog.filter((item) => !assignedIds.value.has(item.id))
-);
+const assignableItems = computed(() => props.serviceCatalog.filter((item) => !assignedIds.value.has(item.id)));
 
 const totalRate = computed(() => props.rates.reduce((sum, r) => sum + (Number(r.rate) || 0), 0));
 

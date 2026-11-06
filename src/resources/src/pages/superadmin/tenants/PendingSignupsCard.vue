@@ -7,8 +7,8 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
-  "approve": [signup: PendingSignup];
-  "reject": [signup: PendingSignup];
+  approve: [signup: PendingSignup];
+  reject: [signup: PendingSignup];
 }>();
 
 const extractRawTrxId = (trx: string | null | undefined): string => {

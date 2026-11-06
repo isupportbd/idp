@@ -42,7 +42,7 @@ function rolesFromPayload(payload: Record<string, unknown>) {
  * How: Parses access cookie, verifies JWT, then normalizes user/role claims.
  */
 export async function authFromSocketHandshake(socket: Socket): Promise<RealtimeAuthContext> {
-  let token: string | undefined = undefined;
+  let token: string | undefined;
 
   // 1. Check socket handshake auth payload
   if (socket.handshake.auth?.token) {

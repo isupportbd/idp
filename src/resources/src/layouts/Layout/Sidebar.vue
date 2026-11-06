@@ -293,11 +293,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted } from "vue";
 import { useRoute } from "vue-router";
+import { can, canAccessModule, hasAccountsAccess, hasRole, isTenantAdmin } from "@/composables/useAuth";
 import { useAdminUiStore } from "@/stores/admin-ui";
 import { useAuthStore } from "@/stores/auth";
-import { hasRole, isTenantAdmin, canAccessModule, hasAccountsAccess, can } from "@/composables/useAuth";
 
-const props = defineProps<{ onToggleSidebar: () => void; }>();
+const props = defineProps<{ onToggleSidebar: () => void }>();
 
 const ui = useAdminUiStore();
 const authStore = useAuthStore();
@@ -307,10 +307,7 @@ const isSuperAdmin = computed(() => hasRole("superadmin"));
 
 const hasAnyAdminPlatformItem = computed(() => {
   return (
-    isTenantAdmin() ||
-    (hasAccountsAccess() && canAccessModule('billing')) ||
-    canAccessModule('payouts') ||
-    canAccessModule('settings')
+    isTenantAdmin() || (hasAccountsAccess() && canAccessModule("billing")) || canAccessModule("payouts") || canAccessModule("settings")
   );
 });
 

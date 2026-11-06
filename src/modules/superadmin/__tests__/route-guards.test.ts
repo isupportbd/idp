@@ -1,8 +1,8 @@
-import { describe, expect, it, beforeAll } from "vitest";
 import { Hono } from "hono";
+import { beforeAll, describe, expect, it } from "vitest";
+import { initDatabase } from "@/framework/database/connection.js";
 import { db, jwt } from "@/framework/facade.js";
 import { users } from "@/modules/auth/database/models/user.js";
-import { initDatabase } from "@/framework/database/connection.js";
 import superAdminRouter from "@/modules/superadmin/routes/api.js";
 
 /**
@@ -61,9 +61,7 @@ describe("superadmin.route-guards", () => {
 
   it("protects /metrics for superadmin only", async () => {
     expect((await app.request("/api/superadmin/metrics")).status).toBe(401);
-    expect(
-      (await app.request("/api/superadmin/metrics", { headers: await tokenFor("tenant") })).status
-    ).toBe(403);
+    expect((await app.request("/api/superadmin/metrics", { headers: await tokenFor("tenant") })).status).toBe(403);
   });
 
   it("requires login for master-data reads", async () => {

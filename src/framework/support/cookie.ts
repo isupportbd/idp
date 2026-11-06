@@ -19,8 +19,7 @@ function needsCrossSiteCookie() {
 
 function isHttps() {
   return Boolean(
-    (appConfig.url && appConfig.url.startsWith("https:")) ||
-    (appConfig.frontendUrl && appConfig.frontendUrl.startsWith("https:"))
+    (appConfig.url && appConfig.url.startsWith("https:")) || (appConfig.frontendUrl && appConfig.frontendUrl.startsWith("https:"))
   );
 }
 

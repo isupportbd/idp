@@ -10,11 +10,7 @@ import { pulse } from "@/plugins/pulse";
  *      registration per event is enough — never register the same event twice
  *      or the handler fires twice. Must be called during setup().
  */
-export function usePulseListener<T = unknown>(
-  event: string,
-  callback: (payload: T) => void,
-  channel = "auth"
-) {
+export function usePulseListener<T = unknown>(event: string, callback: (payload: T) => void, channel = "auth") {
   const ch = pulse.channel(channel);
   const handler = (payload: unknown) => callback(payload as T);
 

@@ -145,12 +145,7 @@ export const PERMISSION_MODULES: PermissionModule[] = [
 export const ALL_PERMISSION_KEYS: string[] = PERMISSION_MODULES.flatMap((m) => m.actions.map((a) => a.key));
 
 /** Default permissions for a newly created sub-user (view-only on routine modules). */
-export const DEFAULT_SUB_USER_PERMISSIONS: string[] = [
-  "activity_filter.view",
-  "submissions.view",
-  "sales_rates.view",
-  "reports.view"
-];
+export const DEFAULT_SUB_USER_PERMISSIONS: string[] = ["activity_filter.view", "submissions.view", "sales_rates.view", "reports.view"];
 
 /**
  * Why: Users saved before action-level permissions stored only module ids (e.g. "clients").

@@ -3,33 +3,33 @@ import { authMiddleware } from "@/middlewares/auth-middleware.js";
 import { requireTenantAdmin } from "@/middlewares/permission-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
-  listCustomerTypes,
   createCustomerType,
-  toggleCustomerType,
-  listReferences,
   createReference,
-  updateReference,
-  deleteReference,
-  toggleReference,
-  listServiceItems,
   createServiceItem,
-  updateServiceItem,
-  toggleServiceItem,
-  deleteServiceItem,
-  listServiceRates,
   createServiceRate,
-  updateServiceRate,
-  deleteServiceRate
+  deleteReference,
+  deleteServiceItem,
+  deleteServiceRate,
+  listCustomerTypes,
+  listReferences,
+  listServiceItems,
+  listServiceRates,
+  toggleCustomerType,
+  toggleReference,
+  toggleServiceItem,
+  updateReference,
+  updateServiceItem,
+  updateServiceRate
 } from "../controllers/services.controller.js";
 import {
   CreateCustomerTypeSchema,
   CreateReferenceSchema,
-  UpdateReferenceSchema,
   CreateServiceItemSchema,
-  UpdateServiceItemSchema,
   CreateServiceRateSchema,
-  UpdateServiceRateSchema,
-  IdParamSchema
+  IdParamSchema,
+  UpdateReferenceSchema,
+  UpdateServiceItemSchema,
+  UpdateServiceRateSchema
 } from "../controllers/services.schema.js";
 
 // ── CUSTOMER TYPES ROUTES ───────────────────────────────────────────

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import { onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
-import { pulse } from "@/plugins/pulse";
-import { useToast } from "@/composables/useToast";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { onBeforeRouteLeave } from "vue-router";
 import SearchInput from "@/components/common/SearchInput.vue";
+import { useToast } from "@/composables/useToast";
+import { pulse } from "@/plugins/pulse";
 
 const toast = useToast();
 
@@ -61,9 +61,8 @@ const loadData = async () => {
     if (convRes.data?.success && Array.isArray(convRes.data.data)) {
       units.value = convRes.data.data.map((u: any) => {
         const factorNum = Number(u.factor || 1);
-        const revFactor = u.reverseFactor !== undefined
-          ? Number(u.reverseFactor)
-          : factorNum > 0 ? Math.round((1 / factorNum) * 100000000) / 100000000 : 0;
+        const revFactor =
+          u.reverseFactor !== undefined ? Number(u.reverseFactor) : factorNum > 0 ? Math.round((1 / factorNum) * 100000000) / 100000000 : 0;
         return {
           id: u.id,
           purchaseUnit: u.purchaseUnit || u.purchase_unit || "",
@@ -111,10 +110,7 @@ const filteredUnits = computed(() => {
   if (!searchQuery.value.trim()) return units.value;
   const q = searchQuery.value.toLowerCase().trim();
   return units.value.filter(
-    (u) =>
-      u.purchaseUnit.toLowerCase().includes(q) ||
-      u.salesUnit.toLowerCase().includes(q) ||
-      u.factor.toString().includes(q)
+    (u) => u.purchaseUnit.toLowerCase().includes(q) || u.salesUnit.toLowerCase().includes(q) || u.factor.toString().includes(q)
   );
 });
 
@@ -140,7 +136,7 @@ const isPairDuplicate = computed(() => {
   return units.value.some(
     (u) =>
       ((u.purchaseUnit.toUpperCase() === p && u.salesUnit.toUpperCase() === s) ||
-       (u.purchaseUnit.toUpperCase() === s && u.salesUnit.toUpperCase() === p)) &&
+        (u.purchaseUnit.toUpperCase() === s && u.salesUnit.toUpperCase() === p)) &&
       (!isEditing.value || u.id !== form.value.id)
   );
 });
@@ -198,7 +194,7 @@ const handleSave = async () => {
   const duplicate = units.value.find(
     (u) =>
       ((u.purchaseUnit.toUpperCase() === p && u.salesUnit.toUpperCase() === s) ||
-       (u.purchaseUnit.toUpperCase() === s && u.salesUnit.toUpperCase() === p)) &&
+        (u.purchaseUnit.toUpperCase() === s && u.salesUnit.toUpperCase() === p)) &&
       (!isEditing.value || u.id !== form.value.id)
   );
   if (duplicate) {
@@ -240,8 +236,7 @@ const handleSave = async () => {
       }
     }
   } catch (err: any) {
-    formError.value =
-      err?.response?.data?.error || err?.response?.data?.message || err?.message || "Server error";
+    formError.value = err?.response?.data?.error || err?.response?.data?.message || err?.message || "Server error";
     toast.error(formError.value);
   } finally {
     isSaving.value = false;

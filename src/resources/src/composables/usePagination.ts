@@ -1,5 +1,5 @@
-import { ref, computed, watch, onMounted, type Ref, type ComputedRef } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { type ComputedRef, computed, onMounted, type Ref, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 
 export interface PaginationOptions {
   defaultPage?: number;

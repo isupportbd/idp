@@ -1,13 +1,15 @@
 import { relations } from "drizzle-orm";
 import { doublePrecision, index, integer, numeric, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
-import { bills } from "./bills.js";
 import { serviceItems } from "@/modules/services/database/models/service_items.js";
+import { bills } from "./bills.js";
 
 export const billItems = pgTable(
   "bill_items",
   {
     id: serial("id").primaryKey(),
-    billId: integer("bill_id").notNull().references(() => bills.id, { onDelete: "cascade" }),
+    billId: integer("bill_id")
+      .notNull()
+      .references(() => bills.id, { onDelete: "cascade" }),
     serviceItemId: integer("service_item_id").references(() => serviceItems.id, { onDelete: "set null" }),
     itemName: varchar("item_name", { length: 255 }).notNull(),
     unit: varchar("unit", { length: 50 }).default("Month"), // 'Month' | 'MT' | 'KG' | 'Item' | 'Fixed'

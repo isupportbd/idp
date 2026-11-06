@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { useAuthStore } from "@/stores/auth";
 import axios from "axios";
+import { computed, ref } from "vue";
 import { useToast } from "@/composables/useToast";
+import { useAuthStore } from "@/stores/auth";
 
 const authStore = useAuthStore();
 const toast = useToast();

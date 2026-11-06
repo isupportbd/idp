@@ -1,21 +1,15 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db, round2 as r2 } from "@/framework/facade.js";
+import { clients } from "@/modules/clients/database/models/clients.js";
 import { bills } from "../database/models/bills.js";
 import { collections } from "../database/models/collections.js";
-import { clients } from "@/modules/clients/database/models/clients.js";
 
 /**
  * Calculates client's running balance (positive = due, negative = advance)
  */
 export async function getClientRunningDue(clientId: number, excludeBillId?: number): Promise<number> {
   // Fetch Client's Opening Balance
-  const clientRow = (
-    await db
-      .select({ openingBalance: clients.openingBalance })
-      .from(clients)
-      .where(eq(clients.id, clientId))
-      .limit(1)
-  )[0];
+  const clientRow = (await db.select({ openingBalance: clients.openingBalance }).from(clients).where(eq(clients.id, clientId)).limit(1))[0];
   const openingBalance = clientRow?.openingBalance || 0;
 
   // Sum of finalized/active bills (grandTotal - paidAmount)
@@ -28,17 +22,12 @@ export async function getClientRunningDue(clientId: number, excludeBillId?: numb
       status: bills.status
     })
     .from(bills)
-    .where(
-      and(
-        eq(bills.clientId, clientId),
-        sql`${bills.status} != 'cancelled'`
-      )
-    );
+    .where(and(eq(bills.clientId, clientId), sql`${bills.status} != 'cancelled'`));
 
   let totalBilledNet = openingBalance;
   for (const b of clientBills) {
     if (excludeBillId && b.id === excludeBillId) continue;
-    totalBilledNet += (b.subtotal - b.discountAmount);
+    totalBilledNet += b.subtotal - b.discountAmount;
   }
 
   // Sum of completed collections
@@ -48,12 +37,7 @@ export async function getClientRunningDue(clientId: number, excludeBillId?: numb
       status: collections.status
     })
     .from(collections)
-    .where(
-      and(
-        eq(collections.clientId, clientId),
-        eq(collections.status, "completed")
-      )
-    );
+    .where(and(eq(collections.clientId, clientId), eq(collections.status, "completed")));
 
   let totalCollected = 0;
   for (const c of clientCollections) {
@@ -88,12 +72,7 @@ export async function getBatchClientsRunningDue(clientIds: number[]): Promise<Ma
       totalBilled: sql<number>`COALESCE(SUM(${bills.subtotal} - ${bills.discountAmount}), 0)::numeric(14,2)`
     })
     .from(bills)
-    .where(
-      and(
-        inArray(bills.clientId, clientIds),
-        sql`${bills.status} != 'cancelled'`
-      )
-    )
+    .where(and(inArray(bills.clientId, clientIds), sql`${bills.status} != 'cancelled'`))
     .groupBy(bills.clientId);
 
   for (const b of billSums) {
@@ -108,12 +87,7 @@ export async function getBatchClientsRunningDue(clientIds: number[]): Promise<Ma
       totalCollected: sql<number>`COALESCE(SUM(${collections.amount}), 0)::numeric(14,2)`
     })
     .from(collections)
-    .where(
-      and(
-        inArray(collections.clientId, clientIds),
-        eq(collections.status, "completed")
-      )
-    )
+    .where(and(inArray(collections.clientId, clientIds), eq(collections.status, "completed")))
     .groupBy(collections.clientId);
 
   for (const c of collectionSums) {

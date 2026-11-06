@@ -1,10 +1,10 @@
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
 import { initDatabase } from "@/framework/database/connection.js";
 import { db } from "@/framework/facade.js";
 import { customerTypes } from "../database/models/customer_types.js";
 import { serviceItems } from "../database/models/service_items.js";
 import { serviceRates } from "../database/models/service_rates.js";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 
 describe("Services Module Real Database Tests", () => {
   const createdCustomerTypeIds: number[] = [];
@@ -28,11 +28,16 @@ describe("Services Module Real Database Tests", () => {
   });
 
   it("should create and fetch a real customer type", async () => {
-    const inserted = (await db.insert(customerTypes).values({
-      typeName: "Test Importer " + Date.now(),
-      description: "Test commercial importer",
-      isActive: true
-    }).returning())[0];
+    const inserted = (
+      await db
+        .insert(customerTypes)
+        .values({
+          typeName: "Test Importer " + Date.now(),
+          description: "Test commercial importer",
+          isActive: true
+        })
+        .returning()
+    )[0];
 
     createdCustomerTypeIds.push(inserted.id);
     expect(inserted.id).toBeGreaterThan(0);
@@ -40,10 +45,15 @@ describe("Services Module Real Database Tests", () => {
   });
 
   it("should create and fetch a real service item", async () => {
-    const inserted = (await db.insert(serviceItems).values({
-      itemName: "Test Mushak 9.1 Filing " + Date.now(),
-      isActive: true
-    }).returning())[0];
+    const inserted = (
+      await db
+        .insert(serviceItems)
+        .values({
+          itemName: "Test Mushak 9.1 Filing " + Date.now(),
+          isActive: true
+        })
+        .returning()
+    )[0];
 
     createdServiceItemIds.push(inserted.id);
     expect(inserted.id).toBeGreaterThan(0);
@@ -51,25 +61,40 @@ describe("Services Module Real Database Tests", () => {
   });
 
   it("should create and fetch a real service rate with foreign keys", async () => {
-    const item = (await db.insert(serviceItems).values({
-      itemName: "Test Bookkeeping " + Date.now(),
-      isActive: true
-    }).returning())[0];
+    const item = (
+      await db
+        .insert(serviceItems)
+        .values({
+          itemName: "Test Bookkeeping " + Date.now(),
+          isActive: true
+        })
+        .returning()
+    )[0];
     createdServiceItemIds.push(item.id);
 
-    const cType = (await db.insert(customerTypes).values({
-      typeName: "Test Manufacturer " + Date.now(),
-      isActive: true
-    }).returning())[0];
+    const cType = (
+      await db
+        .insert(customerTypes)
+        .values({
+          typeName: "Test Manufacturer " + Date.now(),
+          isActive: true
+        })
+        .returning()
+    )[0];
     createdCustomerTypeIds.push(cType.id);
 
-    const rate = (await db.insert(serviceRates).values({
-      serviceItemId: item.id,
-      customerTypeId: cType.id,
-      regularRate: 2500,
-      minimumCharge: 1500,
-      effectiveFrom: "2026-09-01"
-    }).returning())[0];
+    const rate = (
+      await db
+        .insert(serviceRates)
+        .values({
+          serviceItemId: item.id,
+          customerTypeId: cType.id,
+          regularRate: 2500,
+          minimumCharge: 1500,
+          effectiveFrom: "2026-09-01"
+        })
+        .returning()
+    )[0];
     createdServiceRateIds.push(rate.id);
 
     expect(rate.id).toBeGreaterThan(0);

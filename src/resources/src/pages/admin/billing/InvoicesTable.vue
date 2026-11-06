@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import StatusBadge from "@/components/common/StatusBadge.vue";
 import type { Bill } from "@/composables/useBillingApi";
 
@@ -36,9 +36,7 @@ const toggleInvoiceActions = (event: MouseEvent, billId: number) => {
   const trigger = event.currentTarget as HTMLElement | null;
   const rect = trigger?.getBoundingClientRect();
   const menuWidth = 190;
-  const left = rect
-    ? Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8))
-    : 8;
+  const left = rect ? Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)) : 8;
   const top = rect ? rect.bottom + 4 : 8;
 
   actionsMenuStyle.value = { top: `${top}px`, left: `${left}px` };

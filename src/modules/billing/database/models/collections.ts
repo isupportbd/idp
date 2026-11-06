@@ -1,8 +1,8 @@
 import { relations } from "drizzle-orm";
 import { index, integer, numeric, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { users } from "@/modules/auth/database/models/user.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { bills } from "./bills.js";
-import { users } from "@/modules/auth/database/models/user.js";
 
 export const collections = pgTable(
   "collections",
@@ -10,7 +10,9 @@ export const collections = pgTable(
     id: serial("id").primaryKey(),
     receiptNo: varchar("receipt_no", { length: 50 }).notNull().unique(), // e.g. MR-2026-000001
     billId: integer("bill_id").references(() => bills.id, { onDelete: "set null" }),
-    clientId: integer("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
+    clientId: integer("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
     collectionDate: timestamp("collection_date", { withTimezone: true }).notNull(),
     amount: numeric("amount", { precision: 14, scale: 2, mode: "number" }).notNull(),
     paymentMethod: varchar("payment_method", { length: 50 }).default("cash").notNull(), // 'cash' | 'bank' | 'cheque' | 'bkash' | 'nagad' | 'rocket' | 'other'

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import Header from "./Header.vue";
-import WalletRechargeModal from "@/components/WalletRechargeModal.vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import BuyStorageModal from "@/components/BuyStorageModal.vue";
+import WalletRechargeModal from "@/components/WalletRechargeModal.vue";
 import { useAuthStore } from "@/stores/auth";
+import Header from "./Header.vue";
 
 const showContactModal = ref(false);
 const showRechargeModal = ref(false);

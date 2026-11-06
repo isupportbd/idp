@@ -1,34 +1,21 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
-import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import { debounce } from "lodash-es";
-import { useClientsApi, type ClientManagerAssignment, type AssignableUser } from "@/composables/useClientsApi";
-import { useServicesApi, type CustomerType, type ClientReference } from "@/composables/useServicesApi";
-import { useToast } from "@/composables/useToast";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
+import IdpSelect from "@/components/common/IdpSelect.vue";
 import ManagersMultiSelect from "@/components/common/ManagersMultiSelect.vue";
 import SearchInput from "@/components/common/SearchInput.vue";
-import IdpSelect from "@/components/common/IdpSelect.vue";
+import { type AssignableUser, type ClientManagerAssignment, useClientsApi } from "@/composables/useClientsApi";
 import { usePagination } from "@/composables/usePagination";
+import { type ClientReference, type CustomerType, useServicesApi } from "@/composables/useServicesApi";
+import { useToast } from "@/composables/useToast";
 
 const router = useRouter();
 const route = useRoute();
 const toast = useToast();
-const {
-  assignments,
-  assignmentStats,
-  assignableUsers,
-  loading,
-  fetchAssignments,
-  saveAssignments,
-  fetchAssignableUsers
-} = useClientsApi();
+const { assignments, assignmentStats, assignableUsers, loading, fetchAssignments, saveAssignments, fetchAssignableUsers } = useClientsApi();
 
-const {
-  customerTypes,
-  references,
-  fetchCustomerTypes,
-  fetchReferences
-} = useServicesApi();
+const { customerTypes, references, fetchCustomerTypes, fetchReferences } = useServicesApi();
 
 const ASSIGNMENTS_FILTER_KEY = "idp_assignments_filters";
 
@@ -38,7 +25,9 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(ASSIGNMENTS_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: Assignments.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: Assignments.vue]", uiErr?.message || uiErr);
+  }
   return {};
 };
 
@@ -49,9 +38,7 @@ const searchQuery = ref(savedFilters.searchQuery || "");
 const selectedTypeFilter = ref<number | "all">(savedFilters.selectedTypeFilter ?? "all");
 const selectedReferenceFilter = ref<number | "all">(savedFilters.selectedReferenceFilter ?? "all");
 const selectedManagerFilter = ref<number | "all">(
-  savedFilters.selectedManagerFilter && savedFilters.selectedManagerFilter !== "unassigned"
-    ? savedFilters.selectedManagerFilter
-    : "all"
+  savedFilters.selectedManagerFilter && savedFilters.selectedManagerFilter !== "unassigned" ? savedFilters.selectedManagerFilter : "all"
 );
 const activeFilter = ref<"all" | "assigned" | "shared" | "unassigned">(savedFilters.activeFilter ?? "all");
 
@@ -69,7 +56,9 @@ const saveFilters = () => {
         })
       );
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: Assignments.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: Assignments.vue]", uiErr?.message || uiErr);
+  }
 };
 
 const debouncedSaveFilters = debounce(saveFilters, 250);
@@ -82,7 +71,9 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(ASSIGNMENTS_FILTER_KEY);
       }
-    } catch (uiErr: any) { console.warn("[UI Component Warning: Assignments.vue]", uiErr?.message || uiErr); }
+    } catch (uiErr: any) {
+      console.warn("[UI Component Warning: Assignments.vue]", uiErr?.message || uiErr);
+    }
   }
 });
 
@@ -135,7 +126,9 @@ const selectCardFilter = (key: "all" | "assigned" | "shared" | "unassigned") => 
 const loadLookups = async () => {
   try {
     await Promise.all([fetchAssignableUsers(), fetchCustomerTypes(), fetchReferences()]);
-  } catch (uiErr: any) { console.warn("[UI Component Warning: Assignments.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: Assignments.vue]", uiErr?.message || uiErr);
+  }
 };
 
 onMounted(() => {

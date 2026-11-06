@@ -1,13 +1,15 @@
 import { relations } from "drizzle-orm";
 import { index, integer, numeric, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { serviceItems } from "./service_items.js";
 import { customerTypes } from "./customer_types.js";
+import { serviceItems } from "./service_items.js";
 
 export const serviceRates = pgTable(
   "service_rates",
   {
     id: serial("id").primaryKey(),
-    serviceItemId: integer("service_item_id").notNull().references(() => serviceItems.id, { onDelete: "cascade" }),
+    serviceItemId: integer("service_item_id")
+      .notNull()
+      .references(() => serviceItems.id, { onDelete: "cascade" }),
     customerTypeId: integer("customer_type_id").references(() => customerTypes.id, { onDelete: "set null" }),
     unit: varchar("unit", { length: 50 }).default("Month").notNull(),
     regularRate: numeric("regular_rate", { precision: 14, scale: 2, mode: "number" }).default(0).notNull(),

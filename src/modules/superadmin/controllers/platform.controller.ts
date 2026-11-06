@@ -1,16 +1,15 @@
+import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import type { AppContext } from "@/framework/facade.js";
 import { broadcast, cache, db } from "@/framework/facade.js";
-import { users } from "@/modules/auth/database/models/user.js";
 import { roles } from "@/modules/auth/database/models/role.js";
-import { plans } from "@/modules/superadmin/database/models/plans.js";
+import { users } from "@/modules/auth/database/models/user.js";
 import { bills } from "@/modules/billing/database/models/bills.js";
-import { paymentSettings } from "@/modules/superadmin/database/models/payment_settings.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
+import { paymentSettings } from "@/modules/superadmin/database/models/payment_settings.js";
+import { plans } from "@/modules/superadmin/database/models/plans.js";
 import { subscriptionTransactions } from "@/modules/superadmin/database/models/subscription_transactions.js";
-import { eq, desc, asc, and, or, ne, isNotNull, isNull, sql, inArray } from "drizzle-orm";
-
 
 export function notifySettingsUpdated(settingType: string) {
   try {
@@ -22,17 +21,19 @@ export function notifySettingsUpdated(settingType: string) {
   }
 }
 
-
 // 8. Payment Settings (bKash Gateway)
 export async function getPaymentSettings(c: AppContext) {
   try {
     const sanitized = await cache.remember("master:payment-settings", 3600, async () => {
       let [config] = await db.select().from(paymentSettings).limit(1);
       if (!config) {
-        [config] = await db.insert(paymentSettings).values({
-          bkashNumber: "01719950891",
-          bkashCharge: 1.8
-        }).returning();
+        [config] = await db
+          .insert(paymentSettings)
+          .values({
+            bkashNumber: "01719950891",
+            bkashCharge: 1.8
+          })
+          .returning();
       }
       return {
         id: config.id,
@@ -54,25 +55,32 @@ export async function getPaymentSettings(c: AppContext) {
 export async function savePaymentSettings(c: AppContext) {
   try {
     const body = c.req.valid("json");
-    let [existing] = await db.select().from(paymentSettings).limit(1);
+    const [existing] = await db.select().from(paymentSettings).limit(1);
 
     if (existing) {
-      const [updated] = await db.update(paymentSettings).set({
-        bkashNumber: body.bkashNumber,
-        bkashCharge: Number(body.bkashCharge || 1.8),
-        nagadNumber: body.nagadNumber,
-        rocketNumber: body.rocketNumber,
-        updatedAt: new Date()
-      }).where(eq(paymentSettings.id, existing.id)).returning();
+      const [updated] = await db
+        .update(paymentSettings)
+        .set({
+          bkashNumber: body.bkashNumber,
+          bkashCharge: Number(body.bkashCharge || 1.8),
+          nagadNumber: body.nagadNumber,
+          rocketNumber: body.rocketNumber,
+          updatedAt: new Date()
+        })
+        .where(eq(paymentSettings.id, existing.id))
+        .returning();
       notifySettingsUpdated("payment-settings");
       return c.json({ success: true, message: "Payment settings updated", data: updated });
     } else {
-      const [created] = await db.insert(paymentSettings).values({
-        bkashNumber: body.bkashNumber,
-        bkashCharge: Number(body.bkashCharge || 1.8),
-        nagadNumber: body.nagadNumber,
-        rocketNumber: body.rocketNumber
-      }).returning();
+      const [created] = await db
+        .insert(paymentSettings)
+        .values({
+          bkashNumber: body.bkashNumber,
+          bkashCharge: Number(body.bkashCharge || 1.8),
+          nagadNumber: body.nagadNumber,
+          rocketNumber: body.rocketNumber
+        })
+        .returning();
       notifySettingsUpdated("payment-settings");
       return c.json({ success: true, message: "Payment settings saved", data: created });
     }
@@ -145,11 +153,7 @@ export async function getStorageStats(c: AppContext) {
       .where(
         and(
           ne(users.status, "pending"),
-          or(
-            eq(users.roleId, adminRoleId),
-            eq(users.adminId, users.id),
-            and(isNull(users.adminId), ne(users.roleId, superadminRoleId))
-          )
+          or(eq(users.roleId, adminRoleId), eq(users.adminId, users.id), and(isNull(users.adminId), ne(users.roleId, superadminRoleId)))
         )
       )
       .orderBy(desc(users.createdAt));
@@ -157,18 +161,12 @@ export async function getStorageStats(c: AppContext) {
     const tenantStatsRaw = await Promise.all(
       tenantsList.map(async (t) => {
         // Count purchases created by or associated with tenant
-        const [purchasesCountRes] = await db
-          .select({ count: sql<number>`count(*)` })
-          .from(purchases)
-          .where(eq(purchases.adminId, t.id));
+        const [purchasesCountRes] = await db.select({ count: sql<number>`count(*)` }).from(purchases).where(eq(purchases.adminId, t.id));
 
         const pCount = Number(purchasesCountRes?.count || 0);
 
         // Count clients created by or associated with tenant
-        const [clientCountRes] = await db
-          .select({ count: sql<number>`count(*)` })
-          .from(clients)
-          .where(eq(clients.createdBy, t.id));
+        const [clientCountRes] = await db.select({ count: sql<number>`count(*)` }).from(clients).where(eq(clients.createdBy, t.id));
 
         const cCount = Number(clientCountRes?.count || 0);
 
@@ -181,10 +179,7 @@ export async function getStorageStats(c: AppContext) {
         const sCount = Number(submissionCountRes?.count || 0);
 
         // Count bills created by tenant
-        const [billCountRes] = await db
-          .select({ count: sql<number>`count(*)` })
-          .from(bills)
-          .where(eq(bills.createdBy, t.id));
+        const [billCountRes] = await db.select({ count: sql<number>`count(*)` }).from(bills).where(eq(bills.createdBy, t.id));
 
         const bCount = Number(billCountRes?.count || 0);
 
@@ -282,23 +277,15 @@ export async function getPlatformPublicStats(c: AppContext) {
       .where(
         and(
           eq(users.status, "active"),
-          or(
-            eq(users.roleId, adminRoleId),
-            eq(users.adminId, users.id),
-            and(isNull(users.adminId), ne(users.roleId, superadminRoleId))
-          )
+          or(eq(users.roleId, adminRoleId), eq(users.adminId, users.id), and(isNull(users.adminId), ne(users.roleId, superadminRoleId)))
         )
       );
 
     // Count all users
-    const [allUsersCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(users);
+    const [allUsersCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
 
     // Count clients
-    const [clientsCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(clients);
+    const [clientsCount] = await db.select({ count: sql<number>`count(*)` }).from(clients);
 
     const tenants = Number(tenantCount?.count || 0);
     const totalUsers = Number(allUsersCount?.count || 0);
@@ -339,18 +326,11 @@ export async function getGlobalMetrics(c: AppContext) {
       .where(
         and(
           eq(users.status, "active"),
-          or(
-            eq(users.roleId, adminRoleId),
-            eq(users.adminId, users.id),
-            and(isNull(users.adminId), ne(users.roleId, superadminRoleId))
-          )
+          or(eq(users.roleId, adminRoleId), eq(users.adminId, users.id), and(isNull(users.adminId), ne(users.roleId, superadminRoleId)))
         )
       );
 
-    const [clientsCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(clients)
-      .where(eq(clients.isActive, true));
+    const [clientsCount] = await db.select({ count: sql<number>`count(*)` }).from(clients).where(eq(clients.isActive, true));
 
     const [purchaseTotals] = await db
       .select({
@@ -431,12 +411,7 @@ export async function getNotifications(c: AppContext) {
       })
       .from(subscriptionTransactions)
       .leftJoin(users, eq(subscriptionTransactions.userId, users.id))
-      .where(
-        and(
-          inArray(subscriptionTransactions.type, ["deposit", "storage_addon"]),
-          eq(subscriptionTransactions.status, "pending")
-        )
-      )
+      .where(and(inArray(subscriptionTransactions.type, ["deposit", "storage_addon"]), eq(subscriptionTransactions.status, "pending")))
       .orderBy(desc(subscriptionTransactions.createdAt));
 
     const rechargeNotifs = pendingTransactions.map((tx) => {
@@ -450,7 +425,7 @@ export async function getNotifications(c: AppContext) {
         userEmail: tx.userEmail || "",
         grossAmount: tx.grossAmount || tx.paidAmount || 0,
         gatewayCharge: tx.gatewayCharge || 0,
-        netAmount: tx.netAmount || ((tx.grossAmount || tx.paidAmount || 0) - (tx.gatewayCharge || 0)),
+        netAmount: tx.netAmount || (tx.grossAmount || tx.paidAmount || 0) - (tx.gatewayCharge || 0),
         trxId: tx.trxId,
         message: isStorage
           ? `Storage Add-on: ${tx.userName || "Tenant"} requested extra storage (Paid: ৳${tx.paidAmount}, Net: ৳${tx.netAmount}) - bKash TrxID: ${tx.trxId || "N/A"}`
@@ -465,4 +440,3 @@ export async function getNotifications(c: AppContext) {
     return c.json({ success: true, data: [] });
   }
 }
-

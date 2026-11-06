@@ -1,10 +1,10 @@
 import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
-import { denyRole } from "@/middlewares/role-middleware.js";
 import { requirePermission } from "@/middlewares/permission-middleware.js";
+import { denyRole } from "@/middlewares/role-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import { getActivityMatrix } from "../controllers/activity-filter.controller.js";
-import { QueryActivityFilterSchema, ActivityMatrixResponseSchema } from "../controllers/activity-filter.schema.js";
+import { ActivityMatrixResponseSchema, QueryActivityFilterSchema } from "../controllers/activity-filter.schema.js";
 
 // ── 1. GET ACTIVITY FILTER MATRIX ────────────────────────────────────
 // authMiddleware is required: without it the controller cannot resolve the tenant

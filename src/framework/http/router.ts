@@ -1,5 +1,5 @@
-import { OpenAPIHono } from "@hono/zod-openapi";
 import type { RouteConfig } from "@hono/zod-openapi";
+import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Context, MiddlewareHandler, Next } from "hono";
 import { defaultHook } from "stoker/openapi";
 import type { AppContext } from "@/framework/http/context.js";
@@ -15,11 +15,7 @@ export type ApiMiddleware = (c: Context, next: () => Promise<void>) => Response 
 
 export type NexgenRouter = OpenAPIHono & {
   group: (...middlewares: MiddlewareHandler[]) => NexgenRouter;
-  api: (
-    route: RouteConfig,
-    handlerOrMiddlewares: ApiHandler | ApiMiddleware[],
-    handler?: ApiHandler
-  ) => NexgenRouter;
+  api: (route: RouteConfig, handlerOrMiddlewares: ApiHandler | ApiMiddleware[], handler?: ApiHandler) => NexgenRouter;
 };
 
 type OpenApiHandler = (c: Context, next: Next) => Response | Promise<Response>;

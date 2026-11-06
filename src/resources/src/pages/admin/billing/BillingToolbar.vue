@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import MonthNavigator from "@/components/MonthNavigator.vue";
-import SearchInput from "@/components/common/SearchInput.vue";
 import IdpSelect from "@/components/common/IdpSelect.vue";
+import SearchInput from "@/components/common/SearchInput.vue";
+import MonthNavigator from "@/components/MonthNavigator.vue";
 
 defineProps<{
   activeTab: string;

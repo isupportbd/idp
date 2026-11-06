@@ -1,5 +1,5 @@
-import { ref, onMounted, onUnmounted } from "vue";
 import axios from "axios";
+import { onMounted, onUnmounted, ref } from "vue";
 import { pulse } from "@/plugins/pulse";
 
 export interface Plan {
@@ -134,7 +134,9 @@ export function useSuperAdminApi() {
     onUnmounted(() => {
       pulse.channel("auth").stopListening("global:settings-updated", onSettingsUpdated);
     });
-  } catch (uiErr) { console.warn("[SuperAdmin API Warning]:", uiErr); }
+  } catch (uiErr) {
+    console.warn("[SuperAdmin API Warning]:", uiErr);
+  }
 
   // Fetch Tenants
   async function fetchTenants() {

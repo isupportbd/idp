@@ -14,7 +14,9 @@ export const mailConfig = {
   username: env.MAIL_USERNAME || undefined,
   password: env.MAIL_PASSWORD || undefined,
   fromAddress: env.MAIL_FROM_ADDRESS
-    ? (env.MAIL_FROM_NAME ? `"${env.MAIL_FROM_NAME}" <${env.MAIL_FROM_ADDRESS}>` : env.MAIL_FROM_ADDRESS)
+    ? env.MAIL_FROM_NAME
+      ? `"${env.MAIL_FROM_NAME}" <${env.MAIL_FROM_ADDRESS}>`
+      : env.MAIL_FROM_ADDRESS
     : "no-reply@example.com",
   failSilent: env.APP_ENV === "production",
   maildev: {

@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory, type RouteLocationNormalized } from "vue-router";
+import { can, canAccessModule, hasRole, isTenantAdmin } from "@/composables/useAuth";
 import { useAuthStore } from "@/stores/auth";
-import { hasRole, isTenantAdmin, canAccessModule, can } from "@/composables/useAuth";
 
 export const routes = [
   {

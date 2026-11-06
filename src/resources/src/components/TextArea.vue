@@ -59,9 +59,7 @@ const inputLabel = computed(() => ($attrs.label as string | undefined) || "");
 const placeholderText = computed(() => ($attrs.placeholder as string | undefined) || "");
 const topclass = computed(() => ($attrs.topclass as string | undefined) || "");
 
-const wrapperClass = computed(() =>
-  topclass.value ? `${topclass.value} position-relative` : "mb-2"
-);
+const wrapperClass = computed(() => (topclass.value ? `${topclass.value} position-relative` : "mb-2"));
 
 const max = computed<number | null>(() => {
   const raw = $attrs.maxlength as string | number | undefined;
@@ -69,9 +67,7 @@ const max = computed<number | null>(() => {
 });
 
 const maxLengthAttr = computed<number | undefined>(() => max.value ?? undefined);
-const maxCounter = computed(() =>
-  max.value == null ? "" : max.value - String(props.modelValue).length
-);
+const maxCounter = computed(() => (max.value == null ? "" : max.value - String(props.modelValue).length));
 
 const emit = defineEmits<(event: "update:modelValue", value: string) => void>();
 const updateModel = (e: Event) => {

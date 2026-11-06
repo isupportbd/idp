@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import SearchInput from "@/components/common/SearchInput.vue";
 import IdpSelect from "@/components/common/IdpSelect.vue";
+import SearchInput from "@/components/common/SearchInput.vue";
 
 const props = defineProps<{
   searchQuery: string;
@@ -20,7 +20,7 @@ const emit = defineEmits<{
   "update:selectedItem": [val: any];
   "update:selectedStatus": [val: any];
   "update:itemsPerPage": [val: number];
-  "clearFilters": [];
+  clearFilters: [];
 }>();
 </script>
 

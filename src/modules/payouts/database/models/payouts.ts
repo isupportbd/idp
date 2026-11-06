@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { integer, numeric, pgTable, serial, text, timestamp, varchar, index } from "drizzle-orm/pg-core";
+import { index, integer, numeric, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { users } from "@/modules/auth/database/models/user.js";
 import { bankAccounts } from "@/modules/firm/database/models/bank_accounts.js";
 import { expenseHeads } from "@/modules/firm/database/models/expense_heads.js";

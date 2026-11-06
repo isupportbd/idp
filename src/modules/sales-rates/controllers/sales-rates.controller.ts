@@ -1,12 +1,9 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
+import { clients, globalItems, unitConversions, users } from "@/database/schema.js";
+import type { AppContext } from "@/framework/facade.js";
 import { broadcast, db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
 import { salesRates } from "../database/models/sales_rates.js";
-import { clients } from "@/database/schema.js";
-import { globalItems } from "@/database/schema.js";
-import { unitConversions } from "@/database/schema.js";
-import { users } from "@/database/schema.js";
 
 // ── 1. LIST SALES RATES ───────────────────────────────────────────────
 export const listSalesRates = async (c: AppContext) => {
@@ -150,13 +147,7 @@ export const createSalesRate = async (c: AppContext) => {
       await db
         .update(salesRates)
         .set({ status: "Frozen", updatedAt: new Date() })
-        .where(
-          and(
-            eq(salesRates.clientId, clientId),
-            eq(salesRates.itemId, itemId),
-            eq(salesRates.status, "Active")
-          )
-        );
+        .where(and(eq(salesRates.clientId, clientId), eq(salesRates.itemId, itemId), eq(salesRates.status, "Active")));
     }
 
     const [newRate] = await db
@@ -217,9 +208,7 @@ export const updateSalesRate = async (c: AppContext) => {
     const tenantId = tenantAdminId ?? 0;
 
     // Tenant guard: never allow editing another tenant's sales rate by id.
-    const owned = (
-      await db.select({ adminId: salesRates.adminId }).from(salesRates).where(eq(salesRates.id, id)).limit(1)
-    )[0];
+    const owned = (await db.select({ adminId: salesRates.adminId }).from(salesRates).where(eq(salesRates.id, id)).limit(1))[0];
     if (!owned || (!isSuperAdmin && Number(owned.adminId) !== tenantId)) {
       return c.json({ success: false, message: "Sales rate not found" }, HttpStatusCodes.NOT_FOUND);
     }
@@ -238,11 +227,7 @@ export const updateSalesRate = async (c: AppContext) => {
       updateData.vatableValue = Number((updateData.salesRate / (1 + updateData.vatRate / 100)).toFixed(6));
     }
 
-    const [updated] = await db
-      .update(salesRates)
-      .set(updateData)
-      .where(eq(salesRates.id, id))
-      .returning();
+    const [updated] = await db.update(salesRates).set(updateData).where(eq(salesRates.id, id)).returning();
 
     if (!updated) {
       return c.json({ success: false, message: "Sales rate not found" }, HttpStatusCodes.NOT_FOUND);
@@ -305,20 +290,12 @@ export const deleteSalesRate = async (c: AppContext) => {
       const remainingFrozen = await db
         .select()
         .from(salesRates)
-        .where(
-          and(
-            eq(salesRates.clientId, rate.clientId),
-            eq(salesRates.itemId, rate.itemId)
-          )
-        )
+        .where(and(eq(salesRates.clientId, rate.clientId), eq(salesRates.itemId, rate.itemId)))
         .orderBy(desc(salesRates.activationDate), desc(salesRates.id))
         .limit(1);
 
       if (remainingFrozen.length > 0) {
-        await db
-          .update(salesRates)
-          .set({ status: "Active", updatedAt: new Date() })
-          .where(eq(salesRates.id, remainingFrozen[0].id));
+        await db.update(salesRates).set({ status: "Active", updatedAt: new Date() }).where(eq(salesRates.id, remainingFrozen[0].id));
       }
     }
 

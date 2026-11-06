@@ -1,14 +1,21 @@
-import type { AppContext } from "@/framework/facade.js";
+import crypto from "node:crypto";
 import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
-import crypto from "node:crypto";
-import { broadcast, db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
-import { columnMappings } from "@/modules/superadmin/database/models/column_mappings.js";
-import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
+import type { AppContext } from "@/framework/facade.js";
+import {
+  broadcast,
+  db,
+  HttpStatusCodes,
+  handleAsyncEndpoint,
+  handleControllerError,
+  isAsyncFlagEnabled,
+  resolveTenantContext
+} from "@/framework/facade.js";
+import { users } from "@/modules/auth/database/models/user.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { purchases } from "@/modules/purchases/database/models/purchases.js";
-import { users } from "@/modules/auth/database/models/user.js";
-import { handleControllerError, handleAsyncEndpoint, isAsyncFlagEnabled } from "@/framework/facade.js";
+import { columnMappings } from "@/modules/superadmin/database/models/column_mappings.js";
+import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
 import { round2 } from "@/utils/number.js";
 
 // Upload hardening: reject oversized or unexpected files before they reach the
@@ -85,7 +92,14 @@ const DEFAULT_SYSTEM_COLUMN_MAPPINGS = [
   { dbColumn: "cd", label: "cd", excelHeader: "CD", isCalculated: false, isFromDb: false, isRegexExtracted: false },
   { dbColumn: "rd", label: "rd", excelHeader: "RD", isCalculated: false, isFromDb: false, isRegexExtracted: false },
   { dbColumn: "sd", label: "sd", excelHeader: "SD", isCalculated: false, isFromDb: false, isRegexExtracted: false },
-  { dbColumn: "base_value_of_vat", label: "base_value_of_vat", excelHeader: "", isCalculated: true, isFromDb: false, isRegexExtracted: false },
+  {
+    dbColumn: "base_value_of_vat",
+    label: "base_value_of_vat",
+    excelHeader: "",
+    isCalculated: true,
+    isFromDb: false,
+    isRegexExtracted: false
+  },
   { dbColumn: "vat", label: "vat", excelHeader: "VAT", isCalculated: false, isFromDb: false, isRegexExtracted: false },
   { dbColumn: "unit_value", label: "unit_value", excelHeader: "", isCalculated: true, isFromDb: false, isRegexExtracted: false },
   { dbColumn: "at", label: "at", excelHeader: "AT", isCalculated: false, isFromDb: false, isRegexExtracted: false },
@@ -154,7 +168,10 @@ export const processUpload = async (c: AppContext) => {
       let matchCount = 0;
       for (const cell of rowCells) {
         if (cell === undefined || cell === null || cell === "") continue;
-        const cleanCell = String(cell).trim().toLowerCase().replace(/[\s\.\_\-\/]+/g, "");
+        const cleanCell = String(cell)
+          .trim()
+          .toLowerCase()
+          .replace(/[\s\.\_\-\/]+/g, "");
         if (!cleanCell) continue;
 
         if (mappingHeaderAliases.includes(cleanCell)) {
@@ -199,7 +216,10 @@ export const processUpload = async (c: AppContext) => {
       .filter((m) => m.excelHeader && m.excelHeader.trim())
       .map((m) => ({
         ...m,
-        cleanHeader: m.excelHeader!.trim().toLowerCase().replace(/[\s\.\_\-\/]+/g, ""),
+        cleanHeader: m
+          .excelHeader!.trim()
+          .toLowerCase()
+          .replace(/[\s\.\_\-\/]+/g, ""),
         camelKey: toCamel(m.dbColumn)
       }));
 
@@ -210,7 +230,13 @@ export const processUpload = async (c: AppContext) => {
       // Pre-normalize row keys once per row
       const normalizedRowKeys = new Map<string, string>();
       for (const k of rowKeys) {
-        normalizedRowKeys.set(k.trim().toLowerCase().replace(/[\s\.\_\-\/]+/g, ""), k);
+        normalizedRowKeys.set(
+          k
+            .trim()
+            .toLowerCase()
+            .replace(/[\s\.\_\-\/]+/g, ""),
+          k
+        );
       }
 
       // Map strictly using database column mappings
@@ -249,7 +275,10 @@ export const processUpload = async (c: AppContext) => {
       // Auto-extract item description from Excel columns if itemName wasn't explicitly mapped or is empty
       if (!mappedRow.itemName || String(mappedRow.itemName).trim() === "") {
         const descKey = rowKeys.find((k) => {
-          const cleanK = k.trim().toLowerCase().replace(/[\s\.\_\-\/]+/g, "");
+          const cleanK = k
+            .trim()
+            .toLowerCase()
+            .replace(/[\s\.\_\-\/]+/g, "");
           return (
             cleanK.includes("description") ||
             cleanK.includes("goodsdesc") ||
@@ -269,7 +298,10 @@ export const processUpload = async (c: AppContext) => {
       // Auto-extract client/importer name from Excel columns (e.g. "Importer's Name", "Importer Name", "Client Name")
       if (!mappedRow.clientName || String(mappedRow.clientName).trim() === "") {
         const importerKey = rowKeys.find((k) => {
-          const cleanK = k.trim().toLowerCase().replace(/[\s\.\_\-\/'"`]+/g, "");
+          const cleanK = k
+            .trim()
+            .toLowerCase()
+            .replace(/[\s\.\_\-\/'"`]+/g, "");
           return (
             cleanK.includes("importername") ||
             cleanK.includes("importersname") ||
@@ -329,8 +361,7 @@ export const processUpload = async (c: AppContext) => {
       return c.json(
         {
           success: false,
-          message:
-            "No valid rows found in the uploaded file. Please ensure Excel headers match Database Column Mappings."
+          message: "No valid rows found in the uploaded file. Please ensure Excel headers match Database Column Mappings."
         },
         HttpStatusCodes.BAD_REQUEST
       );
@@ -361,7 +392,7 @@ export const processUpload = async (c: AppContext) => {
     }
 
     const dbGlobalItems = await db.select().from(globalItems);
-    const dbItemMap = new Map<string, typeof dbGlobalItems[0]>();
+    const dbItemMap = new Map<string, (typeof dbGlobalItems)[0]>();
     dbGlobalItems.forEach((item) => {
       const awCode = String(item.awHsCode || item.hsCode.replace(/[\.\s]/g, "")).trim();
       if (awCode) dbItemMap.set(awCode, item);
@@ -413,17 +444,10 @@ export const processUpload = async (c: AppContext) => {
     const existingClients = await db
       .select()
       .from(clients)
-      .where(
-        isSuperAdmin
-          ? undefined
-          : or(
-              eq(clients.createdBy, tenantAdminId ?? -1),
-              sql`${clients.createdBy} IS NULL`
-            )
-      );
+      .where(isSuperAdmin ? undefined : or(eq(clients.createdBy, tenantAdminId ?? -1), sql`${clients.createdBy} IS NULL`));
 
-    const clientByBinMap = new Map<string, typeof existingClients[0]>();
-    const clientByNameMap = new Map<string, typeof existingClients[0]>();
+    const clientByBinMap = new Map<string, (typeof existingClients)[0]>();
+    const clientByNameMap = new Map<string, (typeof existingClients)[0]>();
 
     existingClients.forEach((cl) => {
       if (cl.binNumber) {
@@ -433,7 +457,10 @@ export const processUpload = async (c: AppContext) => {
         if (digits) clientByBinMap.set(digits, cl);
       }
       if (cl.companyName) {
-        const nameKey = cl.companyName.trim().toLowerCase().replace(/^m\/s\s+/i, "");
+        const nameKey = cl.companyName
+          .trim()
+          .toLowerCase()
+          .replace(/^m\/s\s+/i, "");
         clientByNameMap.set(cl.companyName.trim().toLowerCase(), cl);
         clientByNameMap.set(nameKey, cl);
       }
@@ -442,7 +469,7 @@ export const processUpload = async (c: AppContext) => {
     const unmappedBins = new Map<string, string>();
 
     for (const row of processedData) {
-      let matchedClient: typeof existingClients[0] | undefined;
+      let matchedClient: (typeof existingClients)[0] | undefined;
 
       if (row.bin) {
         const rawBin = String(row.bin).trim();
@@ -465,7 +492,9 @@ export const processUpload = async (c: AppContext) => {
       } else if (row.bin && String(row.bin).trim()) {
         const stdBin = formatStandardBin(String(row.bin));
         row.bin = stdBin;
-        const cleanDigits = String(row.bin).trim().replace(/[^0-9]/g, "");
+        const cleanDigits = String(row.bin)
+          .trim()
+          .replace(/[^0-9]/g, "");
         const mapKey = stdBin || cleanDigits || String(row.bin).trim();
         if (!unmappedBins.has(mapKey)) {
           unmappedBins.set(mapKey, row.clientName ? String(row.clientName) : "Unknown Client");
@@ -596,14 +625,7 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
   const existingClients = await db
     .select()
     .from(clients)
-    .where(
-      isSuperAdmin
-        ? undefined
-        : or(
-            eq(clients.createdBy, tenantAdminId),
-            sql`${clients.createdBy} IS NULL`
-          )
-    );
+    .where(isSuperAdmin ? undefined : or(eq(clients.createdBy, tenantAdminId), sql`${clients.createdBy} IS NULL`));
 
   const clientByBin = new Map<string, (typeof existingClients)[number]>();
   const clientByName = new Map<string, (typeof existingClients)[number]>();
@@ -616,7 +638,10 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
       if (digits) clientByBin.set(digits, cl);
     }
     if (cl.companyName) {
-      const nameKey = cl.companyName.trim().toLowerCase().replace(/^m\/s\s+/i, "");
+      const nameKey = cl.companyName
+        .trim()
+        .toLowerCase()
+        .replace(/^m\/s\s+/i, "");
       clientByName.set(cl.companyName.trim().toLowerCase(), cl);
       clientByName.set(nameKey, cl);
     }
@@ -626,13 +651,7 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
   const uniqueHsCodes = [
     ...new Set(
       data
-        .map((r) =>
-          r.awHsCode
-            ? String(r.awHsCode).trim()
-            : r.hsCode
-            ? String(r.hsCode).trim().replace(/[.\s]/g, "")
-            : null
-        )
+        .map((r) => (r.awHsCode ? String(r.awHsCode).trim() : r.hsCode ? String(r.hsCode).trim().replace(/[.\s]/g, "") : null))
         .filter(Boolean)
     )
   ] as string[];
@@ -666,9 +685,7 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
     .from(purchases)
     .where(isSuperAdmin ? undefined : eq(purchases.adminId, tenantAdminId));
 
-  const existingKeys = new Set(
-    existingPurchases.map((p) => `${p.beNo || ""}|${p.beDate}|${p.itemId}|${(p.office || "").trim()}`)
-  );
+  const existingKeys = new Set(existingPurchases.map((p) => `${p.beNo || ""}|${p.beDate}|${p.itemId}|${(p.office || "").trim()}`));
 
   // ── Step 4: Process Rows & Build Inserts ─────────────────────────
   const toInsert: (typeof purchases.$inferInsert)[] = [];
@@ -678,7 +695,7 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
   for (const mappedRow of data) {
     if (Object.keys(mappedRow).length === 0 || (Object.keys(mappedRow).length === 1 && mappedRow.tempId)) continue;
 
-    let formattedDate = mappedRow.beDate ? parseDateValue(mappedRow.beDate) : new Date().toISOString().slice(0, 10);
+    const formattedDate = mappedRow.beDate ? parseDateValue(mappedRow.beDate) : new Date().toISOString().slice(0, 10);
 
     // Resolve client
     let clientId: number | null = mappedRow.clientId ? Number(mappedRow.clientId) : null;
@@ -690,7 +707,12 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
         (bin ? clientByBin.get(bin) || (cleanBinDigits ? clientByBin.get(cleanBinDigits) : undefined) : undefined) ||
         (typeof mappedRow.clientName === "string"
           ? clientByName.get(mappedRow.clientName.trim().toLowerCase()) ||
-            clientByName.get(mappedRow.clientName.trim().toLowerCase().replace(/^m\/s\s+/i, ""))
+            clientByName.get(
+              mappedRow.clientName
+                .trim()
+                .toLowerCase()
+                .replace(/^m\/s\s+/i, "")
+            )
           : undefined);
 
       if (cachedClient) {
@@ -717,7 +739,9 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
     // Resolve item
     let itemId: number | null = mappedRow.itemId ? Number(mappedRow.itemId) : null;
     if (!itemId && (mappedRow.hsCode || mappedRow.awHsCode || mappedRow.itemName)) {
-      const normalizedHsCode = String(mappedRow.awHsCode || mappedRow.hsCode || "").trim().replace(/[.\s]/g, "");
+      const normalizedHsCode = String(mappedRow.awHsCode || mappedRow.hsCode || "")
+        .trim()
+        .replace(/[.\s]/g, "");
       const stdHs = formatStandardHsCode(mappedRow.hsCode ? String(mappedRow.hsCode) : normalizedHsCode);
       const cachedItem = itemByHsCode.get(normalizedHsCode) || itemByHsCode.get(stdHs);
       if (cachedItem) {
@@ -786,11 +810,7 @@ export async function runPurchaseImport(params: PurchaseImportParams): Promise<P
 
     if (existingKeys.has(dedupKey)) {
       const existing = existingPurchases.find(
-        (p) =>
-          p.beNo === beNo &&
-          String(p.beDate) === formattedDate &&
-          p.itemId === itemId &&
-          (p.office || "").trim() === office
+        (p) => p.beNo === beNo && String(p.beDate) === formattedDate && p.itemId === itemId && (p.office || "").trim() === office
       );
       const incomingData = {
         ...mappedRow,

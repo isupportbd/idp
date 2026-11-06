@@ -1,8 +1,8 @@
+import { and, asc, desc, eq, ne, or, sql } from "drizzle-orm";
 import type { AppContext } from "@/framework/facade.js";
-import { db, cache } from "@/framework/facade.js";
-import { unitConversions } from "@/modules/superadmin/database/models/unit_conversions.js";
+import { cache, db } from "@/framework/facade.js";
 import { measurementUnits } from "@/modules/superadmin/database/models/measurement_units.js";
-import { eq, desc, asc, and, or, ne, sql } from "drizzle-orm";
+import { unitConversions } from "@/modules/superadmin/database/models/unit_conversions.js";
 import { notifySettingsUpdated } from "./platform.controller.js";
 
 export async function getUnitConversions(c: AppContext) {
@@ -65,10 +65,13 @@ export async function createUnitConversion(c: AppContext) {
     const sUnit = salesUnit.trim().toUpperCase();
 
     if (pUnit === sUnit) {
-      return c.json({
-        success: false,
-        error: "Purchase Unit and Sales Unit cannot be the same unit (e.g. KG to KG is not allowed). Please select different units."
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: "Purchase Unit and Sales Unit cannot be the same unit (e.g. KG to KG is not allowed). Please select different units."
+        },
+        400
+      );
     }
 
     const numFactor = parseFloat(factor);
@@ -88,10 +91,13 @@ export async function createUnitConversion(c: AppContext) {
       .where(and(eq(unitConversions.purchaseUnit, sUnit), eq(unitConversions.salesUnit, pUnit)));
 
     if (existingForward || existingReverse) {
-      return c.json({
-        success: false,
-        error: `Conversion pair between "${pUnit}" and "${sUnit}" already exists in the database!`
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: `Conversion pair between "${pUnit}" and "${sUnit}" already exists in the database!`
+        },
+        400
+      );
     }
 
     const reverseFactor = Math.round((1 / numFactor) * 100000000) / 100000000;
@@ -109,25 +115,26 @@ export async function createUnitConversion(c: AppContext) {
       .returning();
 
     // Automatically insert bi-directional reverse record for reporting/lookup
-    await db
-      .insert(unitConversions)
-      .values({
-        purchaseUnit: sUnit,
-        salesUnit: pUnit,
-        factor: reverseFactor,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
+    await db.insert(unitConversions).values({
+      purchaseUnit: sUnit,
+      salesUnit: pUnit,
+      factor: reverseFactor,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
 
     notifySettingsUpdated("unit-conversions");
-    return c.json({
-      success: true,
-      data: {
-        ...inserted,
-        reverseFactor
+    return c.json(
+      {
+        success: true,
+        data: {
+          ...inserted,
+          reverseFactor
+        },
+        message: "Unit conversion pair created successfully"
       },
-      message: "Unit conversion pair created successfully"
-    }, 201);
+      201
+    );
   } catch (error: unknown) {
     console.error("Error creating unit conversion:", error);
     return c.json({ success: false, error: "Failed to create unit conversion" }, 500);
@@ -150,10 +157,13 @@ export async function updateUnitConversion(c: AppContext) {
     const sUnit = salesUnit ? salesUnit.trim().toUpperCase() : oldS;
 
     if (pUnit === sUnit) {
-      return c.json({
-        success: false,
-        error: "Purchase Unit and Sales Unit cannot be the same unit (e.g. KG to KG is not allowed). Please select different units."
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: "Purchase Unit and Sales Unit cannot be the same unit (e.g. KG to KG is not allowed). Please select different units."
+        },
+        400
+      );
     }
 
     let numFactor = found.factor;
@@ -176,27 +186,24 @@ export async function updateUnitConversion(c: AppContext) {
       );
 
     const conflicting = existingList.find(
-      (e) =>
-        !(
-          (e.purchaseUnit === oldP && e.salesUnit === oldS) ||
-          (e.purchaseUnit === oldS && e.salesUnit === oldP)
-        )
+      (e) => !((e.purchaseUnit === oldP && e.salesUnit === oldS) || (e.purchaseUnit === oldS && e.salesUnit === oldP))
     );
 
     if (conflicting) {
-      return c.json({
-        success: false,
-        error: `Conversion pair between "${pUnit}" and "${sUnit}" already exists.`
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: `Conversion pair between "${pUnit}" and "${sUnit}" already exists.`
+        },
+        400
+      );
     }
 
     const reverseFactor = Math.round((1 / numFactor) * 100000000) / 100000000;
 
     // Delete old reverse record if unit names changed
     if (oldP !== pUnit || oldS !== sUnit) {
-      await db
-        .delete(unitConversions)
-        .where(and(eq(unitConversions.purchaseUnit, oldS), eq(unitConversions.salesUnit, oldP)));
+      await db.delete(unitConversions).where(and(eq(unitConversions.purchaseUnit, oldS), eq(unitConversions.salesUnit, oldP)));
     }
 
     // Update main forward record
@@ -226,15 +233,13 @@ export async function updateUnitConversion(c: AppContext) {
         })
         .where(eq(unitConversions.id, existingReverse.id));
     } else {
-      await db
-        .insert(unitConversions)
-        .values({
-          purchaseUnit: sUnit,
-          salesUnit: pUnit,
-          factor: reverseFactor,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        });
+      await db.insert(unitConversions).values({
+        purchaseUnit: sUnit,
+        salesUnit: pUnit,
+        factor: reverseFactor,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
     }
 
     notifySettingsUpdated("unit-conversions");
@@ -277,4 +282,3 @@ export async function deleteUnitConversion(c: AppContext) {
     return c.json({ success: false, error: "Failed to delete unit conversion" }, 500);
   }
 }
-

@@ -1,11 +1,11 @@
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
 import { initDatabase } from "@/framework/database/connection.js";
 import { db } from "@/framework/facade.js";
-import { companySettings } from "@/modules/firm/database/models/company_settings.js";
 import { users } from "@/modules/auth/database/models/user.js";
+import { companySettings } from "@/modules/firm/database/models/company_settings.js";
 import { smsLogs } from "../database/models/sms_logs.js";
 import { isSmsEventEnabled, isTenantSmsEventEnabled, sendTransactionalSms } from "../services/sms.service.js";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 
 /**
  * Granular per-event SMS toggles — verifies the pure mapping, the tenant

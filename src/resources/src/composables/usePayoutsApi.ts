@@ -1,5 +1,5 @@
-import { ref } from "vue";
 import axios from "axios";
+import { ref } from "vue";
 
 export interface PayoutStaffOption {
   id: number;
@@ -281,10 +281,7 @@ export function usePayoutsApi() {
     }
   };
 
-  const saveUserRates = async (
-    userId: number,
-    rates: Array<{ serviceItemId: number; rate: number; effectiveFrom?: string }>
-  ) => {
+  const saveUserRates = async (userId: number, rates: Array<{ serviceItemId: number; rate: number; effectiveFrom?: string }>) => {
     saving.value = true;
     error.value = null;
     try {

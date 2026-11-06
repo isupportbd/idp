@@ -1,18 +1,17 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
-import type { Handler } from "hono";
 import { alias } from "drizzle-orm/pg-core";
-import { db, getDefaultTaxPeriod, getSubmissionDeadline, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
-import { broadcast } from "@/framework/facade.js";
-import { clients } from "@/modules/clients/database/models/clients.js";
+import type { Handler } from "hono";
+import type { AppContext } from "@/framework/facade.js";
+import { broadcast, db, getDefaultTaxPeriod, getSubmissionDeadline, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
+import { users } from "@/modules/auth/database/models/user.js";
 import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
-import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
+import { clients } from "@/modules/clients/database/models/clients.js";
+import { calculateStaffEarnings, computeSubmissionEarning } from "@/modules/payouts/services/payouts.service.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
-import { users } from "@/modules/auth/database/models/user.js";
-import { enqueueTransactionalSms } from "@/modules/sms-templates/services/sms-queue.service.js";
 import { buildVatSubmissionSmsPayload, isTenantSmsEventEnabled } from "@/modules/sms-templates/services/sms.service.js";
-import { calculateStaffEarnings, computeSubmissionEarning } from "@/modules/payouts/services/payouts.service.js";
+import { enqueueTransactionalSms } from "@/modules/sms-templates/services/sms-queue.service.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 
 // ── 1. LIST SUBMISSIONS FOR A TAX PERIOD ──────────────────────────────
 
@@ -27,9 +26,7 @@ export interface SubmitterSummary {
  * submission rows. Pending clients (no submittedById/name) are excluded.
  * Sorted alphabetically by submitter name for stable UI ordering.
  */
-export function deriveSubmitters(
-  rows: Array<{ submittedById: number | null; submittedByName: string | null }>
-): SubmitterSummary[] {
+export function deriveSubmitters(rows: Array<{ submittedById: number | null; submittedByName: string | null }>): SubmitterSummary[] {
   const map = new Map<number, SubmitterSummary>();
   for (const r of rows) {
     if (r.submittedById == null || !r.submittedByName) continue;
@@ -56,9 +53,7 @@ export const listSubmissions = async (c: AppContext) => {
       clientConditions.push(eq(clients.createdBy, tenantAdminId));
     }
     if (!isSuperAdmin && !isTenantAdmin) {
-      clientConditions.push(
-        sql`${clients.id} IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`
-      );
+      clientConditions.push(sql`${clients.id} IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`);
     }
 
     // 1. Fetch all ACTIVE clients only
@@ -120,12 +115,7 @@ export const listSubmissions = async (c: AppContext) => {
       .from(vatSubmissions)
       .leftJoin(users, eq(vatSubmissions.submittedBy, users.id))
       .leftJoin(updatedUser, eq(vatSubmissions.updatedBy, updatedUser.id))
-      .where(
-        and(
-          eq(vatSubmissions.taxPeriod, taxPeriod),
-          inArray(vatSubmissions.clientId, activeClientIds)
-        )
-      );
+      .where(and(eq(vatSubmissions.taxPeriod, taxPeriod), inArray(vatSubmissions.clientId, activeClientIds)));
 
     const submissionMap: Record<number, (typeof existingSubmissions)[0]> = {};
     for (const sub of existingSubmissions) {
@@ -268,10 +258,7 @@ export const listSubmissions = async (c: AppContext) => {
       HttpStatusCodes.OK
     );
   } catch (err: unknown) {
-    return c.json(
-      { message: "Failed to fetch submissions" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ message: "Failed to fetch submissions" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -327,11 +314,7 @@ export const recordSubmission = async (c: AppContext) => {
     let managerId: number | null = payload.submittedBy ? Number(payload.submittedBy) : currentUserId;
     if (!managerId) {
       const assignedManager = (
-        await db
-          .select({ managerId: clientManagers.managerId })
-          .from(clientManagers)
-          .where(eq(clientManagers.clientId, clientId))
-          .limit(1)
+        await db.select({ managerId: clientManagers.managerId }).from(clientManagers).where(eq(clientManagers.clientId, clientId)).limit(1)
       )[0];
       if (assignedManager) {
         managerId = assignedManager.managerId;
@@ -351,12 +334,7 @@ export const recordSubmission = async (c: AppContext) => {
       await db
         .select({ id: vatSubmissions.id, submittedBy: vatSubmissions.submittedBy })
         .from(vatSubmissions)
-        .where(
-          and(
-            eq(vatSubmissions.clientId, clientId),
-            eq(vatSubmissions.taxPeriod, taxPeriod)
-          )
-        )
+        .where(and(eq(vatSubmissions.clientId, clientId), eq(vatSubmissions.taxPeriod, taxPeriod)))
         .limit(1)
     )[0];
 
@@ -406,26 +384,14 @@ export const recordSubmission = async (c: AppContext) => {
     const targetUserId = storedSubmittedBy || currentUserId;
     if (targetUserId) {
       if (!submitterName || targetUserId !== currentUserId) {
-        const submitterUser = (
-          await db
-            .select({ name: users.name })
-            .from(users)
-            .where(eq(users.id, targetUserId))
-            .limit(1)
-        )[0];
+        const submitterUser = (await db.select({ name: users.name }).from(users).where(eq(users.id, targetUserId)).limit(1))[0];
         if (submitterUser?.name) {
           submitterName = submitterUser.name;
         }
       }
     }
     if (!submitterName && currentUserId) {
-      const currentUserObj = (
-        await db
-          .select({ name: users.name })
-          .from(users)
-          .where(eq(users.id, currentUserId))
-          .limit(1)
-      )[0];
+      const currentUserObj = (await db.select({ name: users.name }).from(users).where(eq(users.id, currentUserId)).limit(1))[0];
       if (currentUserObj?.name) {
         submitterName = currentUserObj.name;
       }
@@ -460,10 +426,11 @@ export const recordSubmission = async (c: AppContext) => {
     // falls back to an inline background send when the queue is unavailable.
     // Use client.createdBy as the authoritative adminId for gateway lookup.
     // Fall back to the authenticated user's tenant admin. Never fall back to 1.
-    const adminId: number | null = client.createdBy
-      || (currentUser?.adminId ? Number(currentUser.adminId) : null)
-      || (currentUser?.id ? Number(currentUser.id) : null)
-      || null;
+    const adminId: number | null =
+      client.createdBy ||
+      (currentUser?.adminId ? Number(currentUser.adminId) : null) ||
+      (currentUser?.id ? Number(currentUser.id) : null) ||
+      null;
 
     if (adminId) {
       // Gate on the firm's per-event SMS toggle (VAT return submission).
@@ -517,10 +484,7 @@ export const recordSubmission = async (c: AppContext) => {
       HttpStatusCodes.OK
     );
   } catch (err: unknown) {
-    return c.json(
-      { message: "Failed to record submission" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ message: "Failed to record submission" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -566,10 +530,7 @@ export const deleteSubmission = async (c: AppContext) => {
 
     return c.json({ message: "Submission record deleted successfully" }, HttpStatusCodes.OK);
   } catch (err: unknown) {
-    return c.json(
-      { message: "Failed to delete submission" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ message: "Failed to delete submission" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -614,10 +575,7 @@ export const batchDeleteSubmissions = async (c: AppContext) => {
 
     return c.json({ message: `${deletableIds.length} submission records deleted` }, HttpStatusCodes.OK);
   } catch (err: unknown) {
-    return c.json(
-      { message: "Failed to batch delete submissions" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ message: "Failed to batch delete submissions" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -634,17 +592,12 @@ export const getSingleSubmission = async (c: AppContext) => {
 
     const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
 
-    const subConditions: import("drizzle-orm").SQL[] = [
-      eq(vatSubmissions.clientId, clientId),
-      eq(vatSubmissions.taxPeriod, taxPeriod)
-    ];
+    const subConditions: import("drizzle-orm").SQL[] = [eq(vatSubmissions.clientId, clientId), eq(vatSubmissions.taxPeriod, taxPeriod)];
     if (!isSuperAdmin && tenantAdminId) {
       subConditions.push(eq(clients.createdBy, tenantAdminId));
     }
     if (!isSuperAdmin && !isTenantAdmin) {
-      subConditions.push(
-        sql`${vatSubmissions.clientId} IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`
-      );
+      subConditions.push(sql`${vatSubmissions.clientId} IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`);
     }
 
     const sub = (
@@ -676,9 +629,6 @@ export const getSingleSubmission = async (c: AppContext) => {
       HttpStatusCodes.OK
     );
   } catch (err: unknown) {
-    return c.json(
-      { message: "Failed to fetch submission", data: null },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ message: "Failed to fetch submission", data: null }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };

@@ -1,11 +1,11 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from "drizzle-orm";
+import type { AppContext } from "@/framework/facade.js";
 import { broadcast, db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
-import { clients } from "../database/models/clients.js";
-import { clientManagers } from "../database/models/client_managers.js";
+import { users } from "@/modules/auth/database/models/user.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
-import { users } from "@/modules/auth/database/models/user.js";
+import { clientManagers } from "../database/models/client_managers.js";
+import { clients } from "../database/models/clients.js";
 
 // ── 9. ASSIGNMENTS: LIST CLIENT ASSIGNMENTS ──────────────────────────
 
@@ -39,18 +39,19 @@ export const listAssignments = async (c: AppContext) => {
       .orderBy(asc(clients.companyName));
 
     const clientIds = allClients.map((c) => c.id);
-    const allManagers = clientIds.length > 0
-      ? await db
-          .select({
-            clientId: clientManagers.clientId,
-            managerId: clientManagers.managerId,
-            managerName: users.name,
-            managerEmail: users.email
-          })
-          .from(clientManagers)
-          .innerJoin(users, eq(clientManagers.managerId, users.id))
-          .where(inArray(clientManagers.clientId, clientIds))
-      : [];
+    const allManagers =
+      clientIds.length > 0
+        ? await db
+            .select({
+              clientId: clientManagers.clientId,
+              managerId: clientManagers.managerId,
+              managerName: users.name,
+              managerEmail: users.email
+            })
+            .from(clientManagers)
+            .innerJoin(users, eq(clientManagers.managerId, users.id))
+            .where(inArray(clientManagers.clientId, clientIds))
+        : [];
 
     const managerMap: Record<number, any[]> = {};
     for (const m of allManagers) {
@@ -113,7 +114,9 @@ export const assignManagers = async (c: AppContext) => {
     const { clientId, managerIds } = c.req.valid("json");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
-    const existingClient = (await db.select({ id: clients.id, createdBy: clients.createdBy }).from(clients).where(eq(clients.id, clientId)).limit(1))[0];
+    const existingClient = (
+      await db.select({ id: clients.id, createdBy: clients.createdBy }).from(clients).where(eq(clients.id, clientId)).limit(1)
+    )[0];
     if (!existingClient) {
       return c.json({ message: "Client not found" }, HttpStatusCodes.NOT_FOUND);
     }

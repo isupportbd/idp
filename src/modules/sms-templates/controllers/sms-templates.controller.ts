@@ -1,17 +1,12 @@
-import type { AppContext } from "@/framework/facade.js";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { Context } from "hono";
-import { db, resolveTenantContext, cache } from "@/framework/facade.js";
-import { eq, and, isNull, desc, sql } from "drizzle-orm";
-import { smsTemplates } from "../database/models/sms_templates.js";
-import { smsLogs } from "../database/models/sms_logs.js";
-import { companySettings } from "@/modules/firm/database/models/company_settings.js";
+import type { AppContext } from "@/framework/facade.js";
+import { broadcast, cache, db, fetchProviderBalance, resolveTenantContext } from "@/framework/facade.js";
 import { users } from "@/modules/auth/database/models/user.js";
-import { fetchProviderBalance, broadcast } from "@/framework/facade.js";
-import {
-  DEFAULT_TEMPLATES,
-  callBulkSmsBd,
-  normalizeBdMobile
-} from "../services/sms.service.js";
+import { companySettings } from "@/modules/firm/database/models/company_settings.js";
+import { smsLogs } from "../database/models/sms_logs.js";
+import { smsTemplates } from "../database/models/sms_templates.js";
+import { callBulkSmsBd, DEFAULT_TEMPLATES, normalizeBdMobile } from "../services/sms.service.js";
 
 function getAuthUser(c: AppContext) {
   return c.get("auth") || c.get("user");
@@ -27,22 +22,22 @@ function isSuperAdmin(user: { role?: { name?: string } | string } | null | undef
 export async function listTemplates(c: AppContext) {
   try {
     // Ensure global master templates exist in DB
-    const globalCount = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(smsTemplates)
-      .where(isNull(smsTemplates.adminId));
+    const globalCount = await db.select({ count: sql<number>`count(*)` }).from(smsTemplates).where(isNull(smsTemplates.adminId));
 
     if (Number(globalCount[0]?.count || 0) === 0) {
       for (const def of DEFAULT_TEMPLATES) {
-        await db.insert(smsTemplates).values({
-          adminId: null,
-          key: def.key,
-          name: def.name,
-          description: def.description,
-          body: def.body,
-          variables: def.variables,
-          isActive: true
-        }).onConflictDoNothing();
+        await db
+          .insert(smsTemplates)
+          .values({
+            adminId: null,
+            key: def.key,
+            name: def.name,
+            description: def.description,
+            body: def.body,
+            variables: def.variables,
+            isActive: true
+          })
+          .onConflictDoNothing();
       }
     }
 
@@ -54,18 +49,21 @@ export async function listTemplates(c: AppContext) {
 
     return c.json({
       success: true,
-      data: templates.length > 0 ? templates : DEFAULT_TEMPLATES.map((t, idx) => ({
-        id: idx + 1,
-        adminId: null,
-        key: t.key,
-        name: t.name,
-        description: t.description,
-        body: t.body,
-        variables: t.variables,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }))
+      data:
+        templates.length > 0
+          ? templates
+          : DEFAULT_TEMPLATES.map((t, idx) => ({
+              id: idx + 1,
+              adminId: null,
+              key: t.key,
+              name: t.name,
+              description: t.description,
+              body: t.body,
+              variables: t.variables,
+              isActive: true,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }))
     });
   } catch (error: unknown) {
     return c.json({
@@ -162,14 +160,17 @@ export async function resetTemplate(c: AppContext) {
       return c.json({ success: false, message: "No default template found for this key" }, 400);
     }
 
-    await db.update(smsTemplates).set({
-      body: def.body,
-      name: def.name,
-      description: def.description,
-      variables: def.variables,
-      isActive: true,
-      updatedAt: new Date()
-    }).where(eq(smsTemplates.id, id));
+    await db
+      .update(smsTemplates)
+      .set({
+        body: def.body,
+        name: def.name,
+        description: def.description,
+        variables: def.variables,
+        isActive: true,
+        updatedAt: new Date()
+      })
+      .where(eq(smsTemplates.id, id));
 
     cache.forget(`master:sms-template:${existing.key}`);
 
@@ -209,10 +210,13 @@ export async function sendTestSms(c: AppContext) {
     });
 
     if (!settings?.smsApiKey || !settings?.smsSenderId) {
-      return c.json({
-        success: false,
-        message: "SMS Gateway API Key or Sender ID is missing in Gateway Settings. Please configure them first."
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          message: "SMS Gateway API Key or Sender ID is missing in Gateway Settings. Please configure them first."
+        },
+        400
+      );
     }
 
     const result = await callBulkSmsBd({
@@ -224,17 +228,20 @@ export async function sendTestSms(c: AppContext) {
       provider: settings.smsProvider || undefined
     });
 
-    await db.insert(smsLogs).values({
-      adminId: adminId ?? null,
-      recipientMobile: recipient,
-      message: message.trim(),
-      templateKey: "test_sms",
-      status: result.ok ? "SENT" : "FAILED",
-      providerResponse: result.raw,
-      sentBy: user?.id ?? null
-    }).catch((logErr) => {
-      console.warn("[SMS Log Warning]: Failed to record test SMS log:", logErr?.message || logErr);
-    });
+    await db
+      .insert(smsLogs)
+      .values({
+        adminId: adminId ?? null,
+        recipientMobile: recipient,
+        message: message.trim(),
+        templateKey: "test_sms",
+        status: result.ok ? "SENT" : "FAILED",
+        providerResponse: result.raw,
+        sentBy: user?.id ?? null
+      })
+      .catch((logErr) => {
+        console.warn("[SMS Log Warning]: Failed to record test SMS log:", logErr?.message || logErr);
+      });
 
     if (result.ok && adminId && settings.smsApiKey) {
       try {
@@ -297,11 +304,7 @@ export async function getGatewaySettings(c: AppContext) {
 
     const rawKey = settings?.smsApiKey || "";
     const isConfigured = Boolean(rawKey && rawKey.trim().length > 0);
-    const maskedApiKey = isConfigured
-      ? rawKey.length > 8
-        ? `${rawKey.slice(0, 4)}••••••••••${rawKey.slice(-4)}`
-        : "••••••••••••"
-      : "";
+    const maskedApiKey = isConfigured ? (rawKey.length > 8 ? `${rawKey.slice(0, 4)}••••••••••${rawKey.slice(-4)}` : "••••••••••••") : "";
 
     return c.json({
       success: true,
@@ -400,10 +403,13 @@ export async function checkGatewayBalance(c: AppContext) {
     const apiKey = settings?.smsApiKey?.trim();
     const providerUrl = settings?.smsEndpointUrl?.trim();
     if (!apiKey) {
-      return c.json({
-        success: false,
-        message: "SMS API Key is not configured yet. Please enter and save your API Key first."
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          message: "SMS API Key is not configured yet. Please enter and save your API Key first."
+        },
+        400
+      );
     }
 
     // Attempt to dynamically construct balance URL if possible, otherwise fallback
@@ -415,7 +421,7 @@ export async function checkGatewayBalance(c: AppContext) {
       const url = new URL(providerUrl);
       balanceUrl = `${url.origin}/api/getBalanceApi?api_key=${apiKey}`;
     } else {
-       balanceUrl = `http://bulksmsbd.net/api/getBalanceApi?api_key=${apiKey}`; // fallback
+      balanceUrl = `http://bulksmsbd.net/api/getBalanceApi?api_key=${apiKey}`; // fallback
     }
 
     const res = await fetch(balanceUrl, { method: "GET" });
@@ -428,10 +434,13 @@ export async function checkGatewayBalance(c: AppContext) {
         // Only return the numeric balance string (e.g. "150.00")
         balance = String(parsed.balance).replace(/[^0-9.]/g, "");
       } else if (parsed?.response_code && parsed.response_code !== 202) {
-        return c.json({
-          success: false,
-          message: parsed?.error_message || `API returned code ${parsed.response_code}`
-        }, 400);
+        return c.json(
+          {
+            success: false,
+            message: parsed?.error_message || `API returned code ${parsed.response_code}`
+          },
+          400
+        );
       }
     } catch {
       // If response is plain text number
@@ -444,9 +453,13 @@ export async function checkGatewayBalance(c: AppContext) {
 
     if (adminId && !isNaN(parseFloat(balance))) {
       const numBal = parseFloat(balance);
-      await db.update(users).set({ smsBalance: numBal, updatedAt: new Date() }).where(eq(users.id, adminId)).catch((balErr) => {
-        console.warn(`[SMS Balance Update Warning]: Failed to update balance for admin #${adminId}:`, balErr?.message || balErr);
-      });
+      await db
+        .update(users)
+        .set({ smsBalance: numBal, updatedAt: new Date() })
+        .where(eq(users.id, adminId))
+        .catch((balErr) => {
+          console.warn(`[SMS Balance Update Warning]: Failed to update balance for admin #${adminId}:`, balErr?.message || balErr);
+        });
       try {
         broadcast(
           "tenant:sms-updated",
@@ -457,7 +470,9 @@ export async function checkGatewayBalance(c: AppContext) {
           },
           { tenant: adminId }
         );
-      } catch (smsTmplErr: unknown) { console.warn("[SMS Template Controller Warning]:", (smsTmplErr as Error)?.message || smsTmplErr); }
+      } catch (smsTmplErr: unknown) {
+        console.warn("[SMS Template Controller Warning]:", (smsTmplErr as Error)?.message || smsTmplErr);
+      }
     }
 
     return c.json({

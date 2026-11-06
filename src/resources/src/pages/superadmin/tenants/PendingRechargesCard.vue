@@ -21,8 +21,8 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
-  "approve": [id: number];
-  "reject": [id: number];
+  approve: [id: number];
+  reject: [id: number];
 }>();
 
 const extractRawTrxId = (trx: string | null | undefined): string => {

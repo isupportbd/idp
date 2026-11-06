@@ -9,9 +9,7 @@ const props = defineProps<{
   canEdit: boolean;
 }>();
 
-const emit = defineEmits<{
-  (e: "saved"): void;
-}>();
+const emit = defineEmits<(e: "saved") => void>();
 
 const toast = useToast();
 const { company, updateCompanySettings } = useFirmApi();

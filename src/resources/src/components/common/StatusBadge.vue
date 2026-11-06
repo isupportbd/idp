@@ -14,7 +14,9 @@ const props = withDefaults(
 );
 
 const badgeConfig = computed(() => {
-  const val = String(props.status ?? "").toLowerCase().trim();
+  const val = String(props.status ?? "")
+    .toLowerCase()
+    .trim();
 
   if (val === "true" || val === "active" || val === "paid" || val === "submitted" || val === "completed") {
     return {

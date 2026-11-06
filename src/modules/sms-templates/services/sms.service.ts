@@ -1,19 +1,36 @@
-import { db, cache } from "@/framework/facade.js";
-import { eq, and, isNull, or } from "drizzle-orm";
-import { smsTemplates, type SmsTemplateVariable } from "../database/models/sms_templates.js";
-import { smsLogs } from "../database/models/sms_logs.js";
-import { companySettings } from "@/modules/firm/database/models/company_settings.js";
-import { users } from "@/modules/auth/database/models/user.js";
+import { and, eq, isNull, or } from "drizzle-orm";
+import { broadcast, cache, db, fetchProviderBalance } from "@/framework/facade.js";
 import { roles } from "@/modules/auth/database/models/role.js";
-
-import { fetchProviderBalance, broadcast } from "@/framework/facade.js";
+import { users } from "@/modules/auth/database/models/user.js";
+import { companySettings } from "@/modules/firm/database/models/company_settings.js";
+import { smsLogs } from "../database/models/sms_logs.js";
+import { type SmsTemplateVariable, smsTemplates } from "../database/models/sms_templates.js";
 
 const BULKSMSBD_ENDPOINT = "http://bulksmsbd.net/api/smsapi";
 
-const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December"
+];
 
 /** Transactional SMS event keys (one template row per key in `sms_templates`). */
-export type TransactionalSmsTemplateKey = "bill_notification" | "collection_receipt" | "vat_submission" | "mushak_submission" | "due_reminder" | "staff_payout";
+export type TransactionalSmsTemplateKey =
+  | "bill_notification"
+  | "collection_receipt"
+  | "vat_submission"
+  | "mushak_submission"
+  | "due_reminder"
+  | "staff_payout";
 
 /**
  * Why: One stable wire format for every transactional SMS so controllers only
@@ -196,10 +213,7 @@ export const DEFAULT_TEMPLATES = [
   }
 ];
 
-export function renderTemplate(
-  body: string,
-  vars: Record<string, string | number | null | undefined>
-): string {
+export function renderTemplate(body: string, vars: Record<string, string | number | null | undefined>): string {
   if (!body) return "";
   return body.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, key: string) => {
     const v = vars[key];
@@ -270,7 +284,7 @@ export async function callSmsGateway(opts: {
       number: opts.number.trim(),
       message: opts.message
     });
-    
+
     if (isBulkSmsBd) {
       params.append("senderid", opts.senderId.trim());
     } else {
@@ -300,7 +314,9 @@ export async function callSmsGateway(opts: {
         };
         if (code !== null && !ok && errMap[code]) friendly = `[${code}] ${errMap[code]}`;
       }
-    } catch (smsServiceErr: unknown) { console.warn("[SMS Service Warning]:", (smsServiceErr as Error)?.message || smsServiceErr); }
+    } catch (smsServiceErr: unknown) {
+      console.warn("[SMS Service Warning]:", (smsServiceErr as Error)?.message || smsServiceErr);
+    }
 
     return { ok, raw: friendly.slice(0, 500), code, networkError: false };
   } catch (e: unknown) {
@@ -383,7 +399,9 @@ export async function sendTransactionalSms(payload: SendTransactionalSmsPayload)
       settings = await db.query.companySettings.findFirst({
         where: adminId ? eq(companySettings.adminId, adminId) : isNull(companySettings.adminId)
       });
-    } catch (smsServiceErr: unknown) { console.warn("[SMS Service Warning]:", (smsServiceErr as Error)?.message || smsServiceErr); }
+    } catch (smsServiceErr: unknown) {
+      console.warn("[SMS Service Warning]:", (smsServiceErr as Error)?.message || smsServiceErr);
+    }
   }
   if (settings) {
     smsApiKey = settings.smsApiKey || "";
@@ -530,11 +548,7 @@ export function buildVatSubmissionSmsPayload(params: {
   return {
     tenantId: String(params.adminId),
     templateKey: "vat_submission",
-    recipientPhone:
-      normalizeBdMobile(params.clientMobile) ||
-      normalizeBdMobile(params.clientAltMobile) ||
-      params.clientMobile ||
-      "",
+    recipientPhone: normalizeBdMobile(params.clientMobile) || normalizeBdMobile(params.clientAltMobile) || params.clientMobile || "",
     variables: {
       customer_name: params.clientName,
       tax_period: params.taxPeriod,

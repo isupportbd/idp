@@ -1,6 +1,6 @@
+import { sql } from "drizzle-orm";
 import { initDatabase } from "../framework/database/connection.js";
 import { db } from "../framework/facade.js";
-import { sql } from "drizzle-orm";
 import { roles, users } from "./schema.js";
 
 async function main() {
@@ -43,13 +43,15 @@ async function main() {
   console.log(await db.select().from(roles));
 
   console.log("Current Users:");
-  console.log(await db.select({ id: users.id, name: users.name, email: users.email, roleId: users.roleId, status: users.status }).from(users));
+  console.log(
+    await db.select({ id: users.id, name: users.name, email: users.email, roleId: users.roleId, status: users.status }).from(users)
+  );
 
   console.log("Done!");
   process.exit(0);
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });

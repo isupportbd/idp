@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
 import axios from "axios";
+import { onMounted, ref } from "vue";
 import { useToast } from "@/composables/useToast";
-import UploadDropzone from "./purchases/UploadDropzone.vue";
-import PurchasesPreviewTable from "./purchases/PurchasesPreviewTable.vue";
-import MissingItemsModal, { type MissingItem } from "./purchases/MissingItemsModal.vue";
-import MissingClientsModal, { type MissingClient } from "./purchases/MissingClientsModal.vue";
 import DuplicateCompareModal from "./purchases/DuplicateCompareModal.vue";
 import FfsResolutionModal from "./purchases/FfsResolutionModal.vue";
+import MissingClientsModal, { type MissingClient } from "./purchases/MissingClientsModal.vue";
+import MissingItemsModal, { type MissingItem } from "./purchases/MissingItemsModal.vue";
+import PurchasesPreviewTable from "./purchases/PurchasesPreviewTable.vue";
+import UploadDropzone from "./purchases/UploadDropzone.vue";
 
 const toast = useToast();
 
@@ -178,9 +178,7 @@ const cancelMissingItems = () => {
 };
 
 const skipMissingItems = () => {
-  const missingHsSet = new Set(
-    missingItems.value.map((i) => (i.awHsCode || i.hsCode || "").replace(/[.\s]/g, ""))
-  );
+  const missingHsSet = new Set(missingItems.value.map((i) => (i.awHsCode || i.hsCode || "").replace(/[.\s]/g, "")));
   const beforeCount = tempData.value.length;
   tempData.value = tempData.value.filter((row) => {
     const rawAw = (row.awHsCode || row.hsCode || "").replace(/[.\s]/g, "");
@@ -299,10 +297,7 @@ const saveToDatabase = async () => {
         showFfsModal.value = true;
       }
 
-      if (
-        (!data.duplicatesList || data.duplicatesList.length === 0) &&
-        (!data.ffsPendingList || data.ffsPendingList.length === 0)
-      ) {
+      if ((!data.duplicatesList || data.duplicatesList.length === 0) && (!data.ffsPendingList || data.ffsPendingList.length === 0)) {
         toast.success(`${data.totalRowsProcessed || tempData.value.length} records saved to database successfully!`);
         resetUpload();
       }

@@ -51,9 +51,7 @@ const props = defineProps<{
   formatBeDate: (date?: string | null) => string;
 }>();
 
-const emit = defineEmits<{
-  (e: "openChangeMonthModal", p: Purchase): void;
-}>();
+const emit = defineEmits<(e: "openChangeMonthModal", p: Purchase) => void>();
 </script>
 
 <template>

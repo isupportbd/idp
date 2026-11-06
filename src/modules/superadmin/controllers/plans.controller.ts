@@ -1,7 +1,7 @@
+import { asc, desc, eq } from "drizzle-orm";
 import type { AppContext } from "@/framework/facade.js";
-import { db, cache } from "@/framework/facade.js";
+import { cache, db } from "@/framework/facade.js";
 import { plans } from "@/modules/superadmin/database/models/plans.js";
-import { eq, desc, asc } from "drizzle-orm";
 import { notifySettingsUpdated } from "./platform.controller.js";
 
 // 7. Plans CRUD
@@ -20,18 +20,21 @@ export async function getPlans(c: AppContext) {
 export async function createPlan(c: AppContext) {
   try {
     const body = c.req.valid("json");
-    const [newPlan] = await db.insert(plans).values({
-      name: body.name,
-      rateMonthly: Number(body.rateMonthly),
-      rateYearly: Number(body.rateYearly),
-      maxUsers: Number(body.maxUsers || 1),
-      maxClients: Number(body.maxClients || 50),
-      maxStorageMB: Number(body.maxStorageMB || 1024),
-      hasAccounts: Boolean(body.hasAccounts),
-      yearlyDiscountPercent: Number(body.yearlyDiscountPercent || 0),
-      features: body.features || [],
-      status: body.status || "active"
-    }).returning();
+    const [newPlan] = await db
+      .insert(plans)
+      .values({
+        name: body.name,
+        rateMonthly: Number(body.rateMonthly),
+        rateYearly: Number(body.rateYearly),
+        maxUsers: Number(body.maxUsers || 1),
+        maxClients: Number(body.maxClients || 50),
+        maxStorageMB: Number(body.maxStorageMB || 1024),
+        hasAccounts: Boolean(body.hasAccounts),
+        yearlyDiscountPercent: Number(body.yearlyDiscountPercent || 0),
+        features: body.features || [],
+        status: body.status || "active"
+      })
+      .returning();
 
     notifySettingsUpdated("plans");
     return c.json({ success: true, message: "Plan created successfully", data: newPlan });
@@ -47,19 +50,23 @@ export async function updatePlan(c: AppContext) {
     if (isNaN(id)) return c.json({ success: false, error: "Invalid plan ID" }, 400);
 
     const body = c.req.valid("json");
-    const [updatedPlan] = await db.update(plans).set({
-      name: body.name,
-      rateMonthly: Number(body.rateMonthly),
-      rateYearly: Number(body.rateYearly),
-      maxUsers: Number(body.maxUsers || 1),
-      maxClients: Number(body.maxClients || 50),
-      maxStorageMB: Number(body.maxStorageMB || 1024),
-      hasAccounts: Boolean(body.hasAccounts),
-      yearlyDiscountPercent: Number(body.yearlyDiscountPercent || 0),
-      features: body.features || [],
-      status: body.status || "active",
-      updatedAt: new Date()
-    }).where(eq(plans.id, id)).returning();
+    const [updatedPlan] = await db
+      .update(plans)
+      .set({
+        name: body.name,
+        rateMonthly: Number(body.rateMonthly),
+        rateYearly: Number(body.rateYearly),
+        maxUsers: Number(body.maxUsers || 1),
+        maxClients: Number(body.maxClients || 50),
+        maxStorageMB: Number(body.maxStorageMB || 1024),
+        hasAccounts: Boolean(body.hasAccounts),
+        yearlyDiscountPercent: Number(body.yearlyDiscountPercent || 0),
+        features: body.features || [],
+        status: body.status || "active",
+        updatedAt: new Date()
+      })
+      .where(eq(plans.id, id))
+      .returning();
 
     notifySettingsUpdated("plans");
     return c.json({ success: true, message: "Plan updated successfully", data: updatedPlan });

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
 import axios from "axios";
+import { computed, onMounted, ref, watch } from "vue";
 import IdpSelect from "@/components/common/IdpSelect.vue";
 
 interface ClientRecord {
@@ -104,9 +104,7 @@ const filteredDbClients = computed(() => {
 // Available BINs list
 const allAvailableBins = computed<string[]>(() => {
   if (mode.value === "db") {
-    return filteredDbClients.value
-      .filter((c) => c.bin && cleanBin(c.bin).length >= 9)
-      .map((c) => formatBin(c.bin));
+    return filteredDbClients.value.filter((c) => c.bin && cleanBin(c.bin).length >= 9).map((c) => formatBin(c.bin));
   } else {
     return manualInput.value
       .split(/[\r\n,;]+/)

@@ -1,9 +1,9 @@
 import { and, desc, eq, ilike, like, or, type SQL } from "drizzle-orm";
 import { db } from "@/framework/facade.js";
-import { bills } from "../database/models/bills.js";
-import { collections } from "../database/models/collections.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { companySettings } from "@/modules/firm/database/models/company_settings.js";
+import { bills } from "../database/models/bills.js";
+import { collections } from "../database/models/collections.js";
 
 /**
  * Generates sequential Invoice No in format: [PREFIX]-YYYY-000001 (Dynamic from firm settings)

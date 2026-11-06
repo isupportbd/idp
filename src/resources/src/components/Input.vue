@@ -49,15 +49,7 @@ const { isFirefox } = browserDetect;
 
 const $attrs = useAttrs();
 const inputRef = ref<HTMLInputElement | null>(null);
-type InputCategory =
-  | "number"
-  | "decimal"
-  | "+decimal-"
-  | "mobile"
-  | "tax-period"
-  | "bin"
-  | "challan-number"
-  | string;
+type InputCategory = "number" | "decimal" | "+decimal-" | "mobile" | "tax-period" | "bin" | "challan-number" | string;
 
 interface InputProps {
   focus?: boolean;
@@ -94,9 +86,7 @@ const inputAutocomplete = computed(() => {
 
 const maxLengthAttr = computed<number | undefined>(() => max.value ?? undefined);
 
-const hoodHtml = computed(() =>
-  props.hood === false || props.hood == null ? "" : String(props.hood)
-);
+const hoodHtml = computed(() => (props.hood === false || props.hood == null ? "" : String(props.hood)));
 
 const maxCounter = computed(() => {
   if (max.value == null) {
@@ -187,18 +177,17 @@ const updateModel = (e: Event) => {
       formatted = `${digits.slice(0, 9)}-${digits.slice(9, 14)}`;
     }
     emit("update:modelValue", (target.value = formatted));
-  } else if (props.category === 'echallan-number') {
+  } else if (props.category === "echallan-number") {
     // Format: V + 9 digits (V000517226)
-    let raw = (target.value || '').toUpperCase();
+    let raw = (target.value || "").toUpperCase();
 
     // keep only digits, but allow V (we’ll force V at start)
-    let digits = raw.replace(/[^\d]/g, '').slice(0, 9);
+    let digits = raw.replace(/[^\d]/g, "").slice(0, 9);
 
     // always prefix V
-    let formatted = 'V' + digits;
+    let formatted = "V" + digits;
 
-    emit('update:modelValue', (target.value = formatted));
-
+    emit("update:modelValue", (target.value = formatted));
   } else if (props.category === "challan-number") {
     let digits = target.value.replace(/[^\d]/g, "");
     digits = digits.slice(0, 16);

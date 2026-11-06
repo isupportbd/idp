@@ -21,7 +21,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   "update:permissions": [val: string[]];
-  "submit": [];
+  submit: [];
 }>();
 
 const STANDARD_COLUMNS = [
@@ -53,7 +53,10 @@ const enabledModuleCount = computed(() => props.availableModules.filter(isModule
 
 const toggleAction = (mod: PermissionModule, key: string) => {
   if (hasKey(key)) {
-    emit("update:permissions", props.permissions.filter((k) => k !== key));
+    emit(
+      "update:permissions",
+      props.permissions.filter((k) => k !== key)
+    );
     return;
   }
   const next = new Set([...props.permissions, key]);
@@ -108,7 +111,10 @@ const isRowPartial = (row: MatrixRow) => !isRowFull(row) && row.keys.some(hasKey
 
 const toggleRow = (row: MatrixRow) => {
   if (isRowFull(row)) {
-    emit("update:permissions", props.permissions.filter((k) => !row.keys.includes(k)));
+    emit(
+      "update:permissions",
+      props.permissions.filter((k) => !row.keys.includes(k))
+    );
   } else {
     emit("update:permissions", [...new Set([...props.permissions, ...row.keys])]);
   }

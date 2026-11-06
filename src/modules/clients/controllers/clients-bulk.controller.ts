@@ -1,13 +1,13 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, eq, inArray, or, sql } from "drizzle-orm";
-import { broadcast, db, HttpStatusCodes, resolveTenantContext, validate, round2 as r2 } from "@/framework/facade.js";
-import { BulkCreateClientsSchema } from "./clients.schema.js";
-import { clients } from "../database/models/clients.js";
+import type { AppContext } from "@/framework/facade.js";
+import { broadcast, db, HttpStatusCodes, round2 as r2, resolveTenantContext, validate } from "@/framework/facade.js";
 import { users } from "@/modules/auth/database/models/user.js";
+import { companySettings } from "@/modules/firm/database/models/company_settings.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
-import { companySettings } from "@/modules/firm/database/models/company_settings.js";
 import { plans } from "@/modules/superadmin/database/models/plans.js";
+import { clients } from "../database/models/clients.js";
+import { BulkCreateClientsSchema } from "./clients.schema.js";
 
 // Helper: Format raw BIN to canonical 9-digit or 13-digit format (e.g. 000123456-0101)
 function formatStandardBin(raw: unknown): string | null {
@@ -27,9 +27,7 @@ export const bulkCreateClients = async (c: AppContext) => {
     const { clients: rawClients } = (await validate(BulkCreateClientsSchema, rawBody)) as { clients: Record<string, unknown>[] };
 
     const { currentUser, isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
-    const tenantAdmin = currentUser.adminId
-      ? await db.query.users.findFirst({ where: eq(users.id, tenantAdminId!) })
-      : currentUser;
+    const tenantAdmin = currentUser.adminId ? await db.query.users.findFirst({ where: eq(users.id, tenantAdminId!) }) : currentUser;
 
     // Check Plan Client Limit for Bulk Upload
     if (!isSuperAdmin && tenantAdmin?.planId) {
@@ -43,7 +41,9 @@ export const bulkCreateClients = async (c: AppContext) => {
           .where(and(eq(clients.createdBy, tenantAdminId ?? -1), eq(clients.isActive, true)));
 
         const currentCount = clientCountResult?.count || 0;
-        const validClientsToUpload = rawClients.filter((item) => (String(item.companyName || "").trim() || String(item.name || "").trim())).length;
+        const validClientsToUpload = rawClients.filter(
+          (item) => String(item.companyName || "").trim() || String(item.name || "").trim()
+        ).length;
 
         if (currentCount + validClientsToUpload > maxClientsAllowed) {
           const remainingSlots = Math.max(0, maxClientsAllowed - currentCount);
@@ -69,14 +69,7 @@ export const bulkCreateClients = async (c: AppContext) => {
         companyName: clients.companyName
       })
       .from(clients)
-      .where(
-        isSuperAdmin
-          ? undefined
-          : or(
-              eq(clients.createdBy, tenantAdminId ?? -1),
-              sql`${clients.createdBy} IS NULL`
-            )
-      );
+      .where(isSuperAdmin ? undefined : or(eq(clients.createdBy, tenantAdminId ?? -1), sql`${clients.createdBy} IS NULL`));
 
     const existingBinSet = new Set<string>();
     for (const cl of existingClientRows) {
@@ -116,7 +109,9 @@ export const bulkCreateClients = async (c: AppContext) => {
       if (item.customerTypeId && !isNaN(Number(item.customerTypeId))) {
         resolvedTypeId = Number(item.customerTypeId);
       } else if (item.customerType || item.customerTypeName) {
-        const typeStr = String(item.customerType || item.customerTypeName).trim().toLowerCase();
+        const typeStr = String(item.customerType || item.customerTypeName)
+          .trim()
+          .toLowerCase();
         const found = allTypes.find((t) => t.typeName.toLowerCase() === typeStr || t.typeName.toLowerCase().includes(typeStr));
         if (found) resolvedTypeId = found.id;
       }
@@ -126,7 +121,9 @@ export const bulkCreateClients = async (c: AppContext) => {
       if (item.referenceId && !isNaN(Number(item.referenceId))) {
         resolvedRefId = Number(item.referenceId);
       } else if (item.reference || item.referenceName) {
-        const refStr = String(item.reference || item.referenceName).trim().toLowerCase();
+        const refStr = String(item.reference || item.referenceName)
+          .trim()
+          .toLowerCase();
         const found = allRefs.find((r) => r.name.toLowerCase() === refStr || r.name.toLowerCase().includes(refStr));
         if (found) resolvedRefId = found.id;
       }
@@ -155,9 +152,18 @@ export const bulkCreateClients = async (c: AppContext) => {
 
       // Opening Balance (Due > 0, Advance < 0)
       let openingBalance = 0;
-      const rawBal = item.openingBalance !== undefined ? item.openingBalance : item.previousDue !== undefined ? item.previousDue : item["Previous Due"] !== undefined ? item["Previous Due"] : item["Opening Balance"];
-      const balType = String(item.balanceType || item.openingType || item["Balance Type"] || "").toLowerCase().trim();
-      
+      const rawBal =
+        item.openingBalance !== undefined
+          ? item.openingBalance
+          : item.previousDue !== undefined
+            ? item.previousDue
+            : item["Previous Due"] !== undefined
+              ? item["Previous Due"]
+              : item["Opening Balance"];
+      const balType = String(item.balanceType || item.openingType || item["Balance Type"] || "")
+        .toLowerCase()
+        .trim();
+
       if (rawBal !== undefined && rawBal !== null && !isNaN(Number(rawBal))) {
         const num = Number(rawBal);
         if (balType.includes("adv") || balType.includes("credit")) {
@@ -213,7 +219,9 @@ export const bulkCreateClients = async (c: AppContext) => {
                 },
                 { tenant: tenantAdminId }
               );
-            } catch (clientErr: unknown) { console.warn("[Client Controller Warning]:", (clientErr as Error)?.message || clientErr); }
+            } catch (clientErr: unknown) {
+              console.warn("[Client Controller Warning]:", (clientErr as Error)?.message || clientErr);
+            }
           }
         } catch (e) {
           // Fallback to row-by-row on chunk conflict

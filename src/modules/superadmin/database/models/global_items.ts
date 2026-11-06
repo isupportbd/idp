@@ -19,5 +19,3 @@ export const globalItems = pgTable(
     nameIdx: index("global_items_name_idx").on(table.name)
   })
 );
-
-

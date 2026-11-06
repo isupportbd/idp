@@ -1,44 +1,44 @@
 import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
-import { denyRole } from "@/middlewares/role-middleware.js";
 import { requirePermission, requireTenantAdmin } from "@/middlewares/permission-middleware.js";
+import { denyRole } from "@/middlewares/role-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
-  listClients,
-  getClientById,
-  createClient,
-  updateClient,
-  toggleClientStatus,
-  deleteClient,
-  checkBinUnique,
-  checkMobileExists,
-  listAssignments,
-  assignManagers,
-  listAssignableUsers,
-  bulkCreateClients,
-  getClientPurchasedItems
-} from "../controllers/clients.controller.js";
-import {
-  listSubmissions,
-  recordSubmission,
+  batchDeleteSubmissions,
   deleteSubmission,
-  batchDeleteSubmissions
+  listSubmissions,
+  recordSubmission
 } from "@/modules/submissions/controllers/submissions.controller.js";
 import {
-  RecordSubmissionSchema,
+  BatchDeleteSubmissionsSchema,
   QuerySubmissionsSchema,
-  BatchDeleteSubmissionsSchema
+  RecordSubmissionSchema
 } from "@/modules/submissions/controllers/submissions.schema.js";
 import {
-  IdParamSchema,
-  CreateClientSchema,
-  UpdateClientSchema,
-  ToggleClientSchema,
+  assignManagers,
+  bulkCreateClients,
+  checkBinUnique,
+  checkMobileExists,
+  createClient,
+  deleteClient,
+  getClientById,
+  getClientPurchasedItems,
+  listAssignableUsers,
+  listAssignments,
+  listClients,
+  toggleClientStatus,
+  updateClient
+} from "../controllers/clients.controller.js";
+import {
+  AssignManagersSchema,
   CheckBinSchema,
   CheckMobileSchema,
-  AssignManagersSchema,
+  CreateClientSchema,
+  IdParamSchema,
   ListAssignmentsQuerySchema,
-  ListClientsQuerySchema
+  ListClientsQuerySchema,
+  ToggleClientSchema,
+  UpdateClientSchema
 } from "../controllers/clients.schema.js";
 
 // ── USERS FOR ASSIGNMENT ─────────────────────────────────────────────
@@ -120,7 +120,10 @@ const getClientsRoute = createRoute({
     query: ListClientsQuerySchema
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), data: z.array(z.unknown()), pagination: z.unknown() }), "Clients list")
+    [HttpStatusCodes.OK]: jsonContent(
+      z.object({ message: z.string(), data: z.array(z.unknown()), pagination: z.unknown() }),
+      "Clients list"
+    )
   }
 });
 
@@ -159,7 +162,10 @@ const postBulkClientsRoute = createRoute({
     body: jsonContent(z.object({ clients: z.array(z.unknown()) }), "Bulk client payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), createdCount: z.number(), skippedCount: z.number().optional() }), "Bulk clients created")
+    [HttpStatusCodes.OK]: jsonContent(
+      z.object({ message: z.string(), createdCount: z.number(), skippedCount: z.number().optional() }),
+      "Bulk clients created"
+    )
   }
 });
 
@@ -319,4 +325,3 @@ export default createRouter()
   .api(patchClientRoute, [requirePermission("clients.edit")], updateClient)
   .api(patchToggleClientRoute, [requireTenantAdmin], toggleClientStatus)
   .api(deleteClientRoute, [requireTenantAdmin], deleteClient);
-

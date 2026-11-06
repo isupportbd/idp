@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { usePagination } from "@/composables/usePagination";
 import axios from "axios";
-import MonthNavigator from "@/components/MonthNavigator.vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import IdpSelect from "@/components/common/IdpSelect.vue";
-import { usePulseListener } from "@/composables/usePulseListener";
+import MonthNavigator from "@/components/MonthNavigator.vue";
 import { useExcelExport } from "@/composables/useExcelExport";
+import { usePagination } from "@/composables/usePagination";
+import { usePulseListener } from "@/composables/usePulseListener";
 
 const { exportSingleSheet } = useExcelExport();
 
@@ -49,7 +49,6 @@ const fromMonth = ref(getDefaultFromMonth());
 const toMonth = ref(getCurrentMonth());
 const selectedCustomerTypeId = ref<string>("all");
 const selectedReferenceId = ref<string>("all");
-
 
 // Dropdown Options for IdpSelect
 const customerTypeOptions = computed(() => [
@@ -213,18 +212,16 @@ const exportToExcel = async () => {
   const rows: any[] = [];
   const fromLabel = formatMonthDisplay(fromMonth.value).replace(/\s+/g, "_");
   const toLabel = formatMonthDisplay(toMonth.value).replace(/\s+/g, "_");
-  const unitLabel = selectedUnitConversion.value
-    ? ` (${selectedUnitConversion.value.salesUnit})`
-    : "";
+  const unitLabel = selectedUnitConversion.value ? ` (${selectedUnitConversion.value.salesUnit})` : "";
 
   let sl = 1;
   for (const cs of clientSummaries.value) {
     rows.push({
-      "SL": sl++,
+      SL: sl++,
       "Client Name": cs.client.companyName,
       "BIN Number": cs.client.binNumber || "BIN Not Set",
       "Total Tax Period": cs.rows.length,
-      "Total Activity Months": cs.activityMonths ?? cs.rows.filter((r) => (r.totalQty > 0 || r.beCount > 0)).length,
+      "Total Activity Months": cs.activityMonths ?? cs.rows.filter((r) => r.totalQty > 0 || r.beCount > 0).length,
       [`Total Qty${unitLabel}`]: Number(((Number(cs.totalQty) || 0) * currentConvFactor.value).toFixed(3)),
       "Total B/E Count": cs.totalBeCount,
       "Submitted Months": cs.submittedCount
@@ -233,11 +230,11 @@ const exportToExcel = async () => {
 
   // Grand Total Row
   rows.push({
-    "SL": "",
+    SL: "",
     "Client Name": "GRAND TOTAL",
     "BIN Number": "",
     "Total Tax Period": "",
-    "Total Activity Months": "", 
+    "Total Activity Months": "",
     [`Total Qty${unitLabel}`]: Number((grandTotalQty.value * currentConvFactor.value).toFixed(3)),
     "Total B/E Count": grandTotalBeCount.value,
     "Submitted Months": grandTotalSubmissions.value

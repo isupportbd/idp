@@ -1,7 +1,7 @@
 import { appConfig } from "@/config/index.js";
 import { initDatabase } from "@/framework/database/connection.js";
 import { createHttpApp } from "@/framework/http/app.js";
-import { ensurePublicDir, uiIndexMiddleware, uiStaticMiddleware, hasUiBuild } from "@/framework/http/static.js";
+import { ensurePublicDir, hasUiBuild, uiIndexMiddleware, uiStaticMiddleware } from "@/framework/http/static.js";
 import { registerModuleRoutes } from "@/framework/modules/routes.js";
 import { bootQueueJobs } from "@/framework/queue/queue.js";
 import { setupQueueDashboard } from "@/framework/queue/ui.js";

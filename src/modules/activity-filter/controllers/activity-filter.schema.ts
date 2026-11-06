@@ -73,15 +73,18 @@ export const ActivityMatrixResponseSchema = z.object({
     totalPurchaseSum: z.number(),
     totalBeCount: z.number().int()
   }),
-  clientTypes: z.array(z.object({
-    id: z.number().int(),
-    name: z.string(),
-    description: z.string().nullable().optional()
-  })),
-  references: z.array(z.object({
-    id: z.number().int(),
-    name: z.string(),
-    phone: z.string().nullable().optional()
-  }))
+  clientTypes: z.array(
+    z.object({
+      id: z.number().int(),
+      name: z.string(),
+      description: z.string().nullable().optional()
+    })
+  ),
+  references: z.array(
+    z.object({
+      id: z.number().int(),
+      name: z.string(),
+      phone: z.string().nullable().optional()
+    })
+  )
 });
-

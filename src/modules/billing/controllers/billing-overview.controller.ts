@@ -1,16 +1,16 @@
+import { and, asc, desc, eq, ilike, inArray, like, ne, or, type SQL, sql } from "drizzle-orm";
 import type { AppContext } from "@/framework/facade.js";
-import { and, asc, desc, eq, ilike, inArray, like, ne, or, sql, type SQL } from "drizzle-orm";
 import { db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
-import { bills } from "../database/models/bills.js";
-import { billItems } from "../database/models/bill_items.js";
-import { collections } from "../database/models/collections.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
-import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
-import { serviceItems } from "@/modules/services/database/models/service_items.js";
-import { serviceRates } from "@/modules/services/database/models/service_rates.js";
+import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
-import { purchases } from "@/modules/purchases/database/models/purchases.js";
+import { serviceItems } from "@/modules/services/database/models/service_items.js";
+import { serviceRates } from "@/modules/services/database/models/service_rates.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
+import { billItems } from "../database/models/bill_items.js";
+import { bills } from "../database/models/bills.js";
+import { collections } from "../database/models/collections.js";
 import { getClientRunningDue } from "../services/billing-balance.service.js";
 import { clientBelongsToTenant, r2, type SuggestedBillItem } from "./billing.helpers.js";
 
@@ -62,10 +62,7 @@ export const getClientBillingOverview = async (c: AppContext) => {
       })
       .from(vatSubmissions)
       .where(
-        and(
-          eq(vatSubmissions.clientId, clientId),
-          sql`${vatSubmissions.submissionId} IS NOT NULL AND ${vatSubmissions.submissionId} != ''`
-        )
+        and(eq(vatSubmissions.clientId, clientId), sql`${vatSubmissions.submissionId} IS NOT NULL AND ${vatSubmissions.submissionId} != ''`)
       )
       .orderBy(desc(vatSubmissions.taxPeriod));
 
@@ -78,12 +75,7 @@ export const getClientBillingOverview = async (c: AppContext) => {
         status: bills.status
       })
       .from(bills)
-      .where(
-        and(
-          eq(bills.clientId, clientId),
-          sql`${bills.status} != 'cancelled'`
-        )
-      );
+      .where(and(eq(bills.clientId, clientId), sql`${bills.status} != 'cancelled'`));
 
     const billedMonthsMap = new Map(existingBills.map((b) => [b.taxPeriod, b]));
 
@@ -107,26 +99,16 @@ export const getClientBillingOverview = async (c: AppContext) => {
         count: sql<number>`COUNT(*)`
       })
       .from(purchases)
-      .where(
-        and(
-          eq(purchases.clientId, clientId),
-          eq(purchases.month, targetMonth)
-        )
-      );
+      .where(and(eq(purchases.clientId, clientId), eq(purchases.month, targetMonth)));
 
     const totalNetWtKg = Number(purchaseVolumeRes[0]?.totalNetWt) || 0;
     const totalNetWtMt = r2(totalNetWtKg / 1000);
     const purchaseCount = Number(purchaseVolumeRes[0]?.count) || 0;
 
     // 5. Fetch Master Service Items & Rates for this customer type
-    const allServiceItems = await db
-      .select()
-      .from(serviceItems)
-      .where(eq(serviceItems.isActive, true));
+    const allServiceItems = await db.select().from(serviceItems).where(eq(serviceItems.isActive, true));
 
-    const allRates = await db
-      .select()
-      .from(serviceRates);
+    const allRates = await db.select().from(serviceRates);
 
     // Build rate lookup map (including unit)
     const rateMap: Record<number, { unit: string; regularRate: number; minimumCharge: number }> = {};
@@ -148,13 +130,9 @@ export const getClientBillingOverview = async (c: AppContext) => {
     // Item A: VAT Return Submission (Dynamic Regular vs Zero selection)
     let returnItem = null;
     if (hasMonthlyPurchases) {
-      returnItem = allServiceItems.find(
-        (s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("regular")
-      );
+      returnItem = allServiceItems.find((s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("regular"));
     } else {
-      returnItem = allServiceItems.find(
-        (s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("zero")
-      );
+      returnItem = allServiceItems.find((s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("zero"));
     }
     if (!returnItem) {
       returnItem = allServiceItems.find((s) => s.itemName.toLowerCase().includes("return"));
@@ -175,7 +153,7 @@ export const getClientBillingOverview = async (c: AppContext) => {
       calculatedAmount: returnRate,
       finalAmount: returnRate,
       isRateMissing: isReturnRateMissing,
-      notes: `${hasMonthlyPurchases ? 'Regular' : 'Zero'} monthly VAT return filing for ${targetMonth}`
+      notes: `${hasMonthlyPurchases ? "Regular" : "Zero"} monthly VAT return filing for ${targetMonth}`
     });
 
     // Item B: Books of Accounts (Mushak 6.2.1) Maintenance (only if FULL service AND has imports/purchases)
@@ -218,7 +196,7 @@ export const getClientBillingOverview = async (c: AppContext) => {
         calculatedAmount: calculatedAmt,
         finalAmount: finalAmt,
         isRateMissing: isBooksRateMissing,
-        notes: `Purchase & Sales accounts maintenance for ${targetMonth}${qty > 0 && (unitUpper === 'MT' || unitUpper === 'KG') ? ` (${qty} ${booksUnit})` : ''}`
+        notes: `Purchase & Sales accounts maintenance for ${targetMonth}${qty > 0 && (unitUpper === "MT" || unitUpper === "KG") ? ` (${qty} ${booksUnit})` : ""}`
       });
     }
 
@@ -252,10 +230,7 @@ export const getClientBillingOverview = async (c: AppContext) => {
       HttpStatusCodes.OK
     );
   } catch (err: unknown) {
-    return c.json(
-      { message: "Failed to fetch client billing overview" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ message: "Failed to fetch client billing overview" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 

@@ -1,10 +1,10 @@
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
 import { initDatabase } from "@/framework/database/connection.js";
 import { db } from "@/framework/facade.js";
-import { companySettings } from "../database/models/company_settings.js";
 import { bankAccounts } from "../database/models/bank_accounts.js";
+import { companySettings } from "../database/models/company_settings.js";
 import { expenseHeads } from "../database/models/expense_heads.js";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 
 describe("Firm Module Real Database Tests (PostgreSQL)", () => {
   const createdBankIds: number[] = [];
@@ -31,14 +31,19 @@ describe("Firm Module Real Database Tests (PostgreSQL)", () => {
   });
 
   it("should create and fetch a real bank account", async () => {
-    const inserted = (await db.insert(bankAccounts).values({
-      bankName: "City Bank PLC " + Date.now(),
-      accountName: "Associates VAT Account",
-      accountNumber: "2201992819",
-      branchName: "Motijheel Branch",
-      isDefault: false,
-      isActive: true
-    }).returning())[0];
+    const inserted = (
+      await db
+        .insert(bankAccounts)
+        .values({
+          bankName: "City Bank PLC " + Date.now(),
+          accountName: "Associates VAT Account",
+          accountNumber: "2201992819",
+          branchName: "Motijheel Branch",
+          isDefault: false,
+          isActive: true
+        })
+        .returning()
+    )[0];
 
     createdBankIds.push(inserted.id);
     expect(inserted.id).toBeGreaterThan(0);
@@ -46,13 +51,18 @@ describe("Firm Module Real Database Tests (PostgreSQL)", () => {
   });
 
   it("should create, fetch and toggle an expense head", async () => {
-    const inserted = (await db.insert(expenseHeads).values({
-      name: "Test Audit & Legal Retainer " + Date.now(),
-      code: "EXP-TEST-" + Date.now().toString().slice(-4),
-      category: "Administrative",
-      description: "Test legal retainers",
-      isActive: true
-    }).returning())[0];
+    const inserted = (
+      await db
+        .insert(expenseHeads)
+        .values({
+          name: "Test Audit & Legal Retainer " + Date.now(),
+          code: "EXP-TEST-" + Date.now().toString().slice(-4),
+          category: "Administrative",
+          description: "Test legal retainers",
+          isActive: true
+        })
+        .returning()
+    )[0];
 
     createdExpenseIds.push(inserted.id);
     expect(inserted.id).toBeGreaterThan(0);

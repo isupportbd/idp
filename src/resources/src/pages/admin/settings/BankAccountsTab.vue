@@ -11,9 +11,7 @@ const props = defineProps<{
   canEdit: boolean;
 }>();
 
-const emit = defineEmits<{
-  (e: "refresh"): void;
-}>();
+const emit = defineEmits<(e: "refresh") => void>();
 
 const toast = useToast();
 const { createBankAccount, updateBankAccount, deleteBankAccount } = useFirmApi();

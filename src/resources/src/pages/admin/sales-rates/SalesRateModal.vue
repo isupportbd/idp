@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import type { ClientOption, ItemOption, UnitOption } from "./types";
 
 const props = defineProps<{
@@ -26,9 +26,9 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  "close": [];
-  "clientSelected": [client: ClientOption];
-  "save": [payload: any];
+  close: [];
+  clientSelected: [client: ClientOption];
+  save: [payload: any];
 }>();
 
 const form = ref({ ...props.initialData });
@@ -58,9 +58,7 @@ const todayDate = computed(() => {
 const modalFilteredClients = computed(() => {
   if (!clientSearchText.value.trim()) return [];
   const q = clientSearchText.value.toLowerCase().trim();
-  return props.clientsList.filter(
-    (c) => (c.name || "").toLowerCase().includes(q) || (c.bin || "").toLowerCase().includes(q)
-  );
+  return props.clientsList.filter((c) => (c.name || "").toLowerCase().includes(q) || (c.bin || "").toLowerCase().includes(q));
 });
 
 const modalFilteredItems = computed(() => {
@@ -69,9 +67,9 @@ const modalFilteredItems = computed(() => {
     return [];
   }
   const q = itemSearchText.value.toLowerCase().trim();
-  return props.clientPurchasedItems.filter(
-    (i) => i.name.toLowerCase().includes(q) || (i.hsCode && i.hsCode.toLowerCase().includes(q))
-  ).slice(0, 50);
+  return props.clientPurchasedItems
+    .filter((i) => i.name.toLowerCase().includes(q) || (i.hsCode && i.hsCode.toLowerCase().includes(q)))
+    .slice(0, 50);
 });
 
 const modalComputedVatableValue = computed(() => {

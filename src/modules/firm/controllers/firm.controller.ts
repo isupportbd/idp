@@ -1,13 +1,12 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, asc, desc, eq, isNull, or, sql } from "drizzle-orm";
 import type { Context, Handler } from "hono";
-import { broadcast, db, HttpStatusCodes, resolveTenantContext, cache } from "@/framework/facade.js";
-import { fetchProviderBalance } from "@/framework/facade.js";
+import type { AppContext } from "@/framework/facade.js";
+import { broadcast, cache, db, fetchProviderBalance, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
 import { users } from "@/modules/auth/database/models/user.js";
-import { companySettings } from "../database/models/company_settings.js";
-import { bankAccounts } from "../database/models/bank_accounts.js";
-import { expenseHeads } from "../database/models/expense_heads.js";
 import { payouts } from "@/modules/payouts/database/models/payouts.js";
+import { bankAccounts } from "../database/models/bank_accounts.js";
+import { companySettings } from "../database/models/company_settings.js";
+import { expenseHeads } from "../database/models/expense_heads.js";
 
 // ── COMPANY SETTINGS CONTROLLERS ─────────────────────────────────────
 
@@ -18,31 +17,34 @@ export const getCompanySettings = async (c: AppContext) => {
 
     if (!targetAdminId) {
       // If superadmin has no tenant context, return an empty template
-      return c.json({
-        message: "Company settings retrieved",
-        data: {
-          companyName: "",
-          proprietorName: "",
-          phone: "",
-          email: "",
-          website: "",
-          address: "",
-          binNumber: "",
-          tinNumber: "",
-          tradeLicenseNo: "",
-          bkashNumber: "",
-          nagadNumber: "",
-          rocketNumber: "",
-          invoicePrefix: "INV",
-          receiptPrefix: "RCP",
-          smsOnBill: true,
-          smsOnCollection: true,
-          smsOnSubmission: true,
-          autoDueReminder: false,
-          dueReminderDays: 7,
-          dueReminderMinAmount: 1000
-        }
-      }, HttpStatusCodes.OK);
+      return c.json(
+        {
+          message: "Company settings retrieved",
+          data: {
+            companyName: "",
+            proprietorName: "",
+            phone: "",
+            email: "",
+            website: "",
+            address: "",
+            binNumber: "",
+            tinNumber: "",
+            tradeLicenseNo: "",
+            bkashNumber: "",
+            nagadNumber: "",
+            rocketNumber: "",
+            invoicePrefix: "INV",
+            receiptPrefix: "RCP",
+            smsOnBill: true,
+            smsOnCollection: true,
+            smsOnSubmission: true,
+            autoDueReminder: false,
+            dueReminderDays: 7,
+            dueReminderMinAmount: 1000
+          }
+        },
+        HttpStatusCodes.OK
+      );
     }
 
     let settings = (
@@ -55,9 +57,7 @@ export const getCompanySettings = async (c: AppContext) => {
 
     if (!settings) {
       // Find the user details to prefill the tenant's company name/email/phone
-      const [adminUser] = targetAdminId 
-        ? await db.select().from(users).where(eq(users.id, targetAdminId)).limit(1)
-        : [null];
+      const [adminUser] = targetAdminId ? await db.select().from(users).where(eq(users.id, targetAdminId)).limit(1) : [null];
       settings = (
         await db
           .insert(companySettings)
@@ -125,7 +125,7 @@ export const updateCompanySettings = async (c: AppContext) => {
       delete payload.smsApiKey;
     }
 
-    let existing = (
+    const existing = (
       await db
         .select()
         .from(companySettings)
@@ -193,7 +193,7 @@ export const updateCompanySettings = async (c: AppContext) => {
 
     const sanitizedResult = {
       ...result,
-      smsApiKey: "",           // Never expose raw API key to browser
+      smsApiKey: "", // Never expose raw API key to browser
       maskedSmsApiKey,
       isSmsConfigured,
       smsSenderId: result.smsSenderId || "",
@@ -218,11 +218,7 @@ export const listBankAccounts = async (c: AppContext) => {
     const list = await db
       .select()
       .from(bankAccounts)
-      .where(
-        isSuperAdmin
-          ? undefined
-          : or(eq(bankAccounts.adminId, targetAdminId), sql`${bankAccounts.adminId} IS NULL`)
-      )
+      .where(isSuperAdmin ? undefined : or(eq(bankAccounts.adminId, targetAdminId), sql`${bankAccounts.adminId} IS NULL`))
       .orderBy(desc(bankAccounts.isDefault), asc(bankAccounts.id));
 
     return c.json({ message: "Bank accounts fetched successfully", data: list }, HttpStatusCodes.OK);
@@ -276,9 +272,7 @@ export const updateBankAccount = async (c: AppContext) => {
         .where(
           and(
             eq(bankAccounts.id, id),
-            isSuperAdmin
-              ? undefined
-              : or(eq(bankAccounts.adminId, targetAdminId), sql`${bankAccounts.adminId} IS NULL`)
+            isSuperAdmin ? undefined : or(eq(bankAccounts.adminId, targetAdminId), sql`${bankAccounts.adminId} IS NULL`)
           )
         )
         .limit(1)
@@ -323,9 +317,7 @@ export const deleteBankAccount = async (c: AppContext) => {
         .where(
           and(
             eq(bankAccounts.id, id),
-            isSuperAdmin
-              ? undefined
-              : or(eq(bankAccounts.adminId, targetAdminId), sql`${bankAccounts.adminId} IS NULL`)
+            isSuperAdmin ? undefined : or(eq(bankAccounts.adminId, targetAdminId), sql`${bankAccounts.adminId} IS NULL`)
           )
         )
         .limit(1)
@@ -336,11 +328,7 @@ export const deleteBankAccount = async (c: AppContext) => {
     }
 
     // Protect financial and audit history: Check if bank account has payouts or collections attached
-    const [associatedPayout] = await db
-      .select({ id: payouts.id })
-      .from(payouts)
-      .where(eq(payouts.bankAccountId, id))
-      .limit(1);
+    const [associatedPayout] = await db.select({ id: payouts.id }).from(payouts).where(eq(payouts.bankAccountId, id)).limit(1);
 
     if (associatedPayout) {
       return c.json(
@@ -370,11 +358,7 @@ export const listExpenseHeads = async (c: AppContext) => {
     const list = await db
       .select()
       .from(expenseHeads)
-      .where(
-        isSuperAdmin
-          ? undefined
-          : or(eq(expenseHeads.adminId, targetAdminId), sql`${expenseHeads.adminId} IS NULL`)
-      )
+      .where(isSuperAdmin ? undefined : or(eq(expenseHeads.adminId, targetAdminId), sql`${expenseHeads.adminId} IS NULL`))
       .orderBy(asc(expenseHeads.id));
 
     return c.json({ message: "Expense heads fetched successfully", data: list }, HttpStatusCodes.OK);
@@ -395,12 +379,7 @@ export const createExpenseHead = async (c: AppContext) => {
       await db
         .select()
         .from(expenseHeads)
-        .where(
-          and(
-            eq(expenseHeads.name, trimmedName),
-            or(eq(expenseHeads.adminId, targetAdminId), sql`${expenseHeads.adminId} IS NULL`)
-          )
-        )
+        .where(and(eq(expenseHeads.name, trimmedName), or(eq(expenseHeads.adminId, targetAdminId), sql`${expenseHeads.adminId} IS NULL`)))
         .limit(1)
     )[0];
 
@@ -442,9 +421,7 @@ export const updateExpenseHead = async (c: AppContext) => {
         .where(
           and(
             eq(expenseHeads.id, id),
-            isSuperAdmin
-              ? undefined
-              : or(eq(expenseHeads.adminId, targetAdminId), sql`${expenseHeads.adminId} IS NULL`)
+            isSuperAdmin ? undefined : or(eq(expenseHeads.adminId, targetAdminId), sql`${expenseHeads.adminId} IS NULL`)
           )
         )
         .limit(1)
@@ -460,10 +437,7 @@ export const updateExpenseHead = async (c: AppContext) => {
           .select()
           .from(expenseHeads)
           .where(
-            and(
-              eq(expenseHeads.name, body.name.trim()),
-              or(eq(expenseHeads.adminId, targetAdminId), sql`${expenseHeads.adminId} IS NULL`)
-            )
+            and(eq(expenseHeads.name, body.name.trim()), or(eq(expenseHeads.adminId, targetAdminId), sql`${expenseHeads.adminId} IS NULL`))
           )
           .limit(1)
       )[0];
@@ -507,9 +481,7 @@ export const toggleExpenseHead = async (c: AppContext) => {
         .where(
           and(
             eq(expenseHeads.id, id),
-            isSuperAdmin
-              ? undefined
-              : or(eq(expenseHeads.adminId, targetAdminId), sql`${expenseHeads.adminId} IS NULL`)
+            isSuperAdmin ? undefined : or(eq(expenseHeads.adminId, targetAdminId), sql`${expenseHeads.adminId} IS NULL`)
           )
         )
         .limit(1)
@@ -520,11 +492,7 @@ export const toggleExpenseHead = async (c: AppContext) => {
     }
 
     const updated = (
-      await db
-        .update(expenseHeads)
-        .set({ isActive: !existing.isActive, updatedAt: new Date() })
-        .where(eq(expenseHeads.id, id))
-        .returning()
+      await db.update(expenseHeads).set({ isActive: !existing.isActive, updatedAt: new Date() }).where(eq(expenseHeads.id, id)).returning()
     )[0];
 
     return c.json({ message: "Expense head status updated", data: updated }, HttpStatusCodes.OK);
@@ -547,9 +515,7 @@ export const deleteExpenseHead = async (c: AppContext) => {
         .where(
           and(
             eq(expenseHeads.id, id),
-            isSuperAdmin
-              ? undefined
-              : or(eq(expenseHeads.adminId, targetAdminId), sql`${expenseHeads.adminId} IS NULL`)
+            isSuperAdmin ? undefined : or(eq(expenseHeads.adminId, targetAdminId), sql`${expenseHeads.adminId} IS NULL`)
           )
         )
         .limit(1)
@@ -560,11 +526,7 @@ export const deleteExpenseHead = async (c: AppContext) => {
     }
 
     // Protect financial and audit history: Check if expense head has payouts attached
-    const [associatedPayout] = await db
-      .select({ id: payouts.id })
-      .from(payouts)
-      .where(eq(payouts.expenseHeadId, id))
-      .limit(1);
+    const [associatedPayout] = await db.select({ id: payouts.id }).from(payouts).where(eq(payouts.expenseHeadId, id)).limit(1);
 
     if (associatedPayout) {
       return c.json(

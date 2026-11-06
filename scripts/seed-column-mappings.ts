@@ -21,12 +21,26 @@ async function main() {
     { dbColumn: "cd", label: "cd", excelHeader: "CD", isCalculated: false, isFromDb: false, isRegexExtracted: false },
     { dbColumn: "rd", label: "rd", excelHeader: "RD", isCalculated: false, isFromDb: false, isRegexExtracted: false },
     { dbColumn: "sd", label: "sd", excelHeader: "SD", isCalculated: false, isFromDb: false, isRegexExtracted: false },
-    { dbColumn: "baseValueOfVat", label: "base_value_of_vat", excelHeader: "", isCalculated: true, isFromDb: false, isRegexExtracted: false },
+    {
+      dbColumn: "baseValueOfVat",
+      label: "base_value_of_vat",
+      excelHeader: "",
+      isCalculated: true,
+      isFromDb: false,
+      isRegexExtracted: false
+    },
     { dbColumn: "vat", label: "vat", excelHeader: "VAT", isCalculated: false, isFromDb: false, isRegexExtracted: false },
     { dbColumn: "unitValue", label: "unit_value", excelHeader: "", isCalculated: true, isFromDb: false, isRegexExtracted: false },
     { dbColumn: "at", label: "at", excelHeader: "AT", isCalculated: false, isFromDb: false, isRegexExtracted: false },
     { dbColumn: "bin", label: "bin", excelHeader: "BIN", isCalculated: false, isFromDb: false, isRegexExtracted: false },
-    { dbColumn: "clientName", label: "client_name", excelHeader: "Client Name", isCalculated: false, isFromDb: false, isRegexExtracted: false }
+    {
+      dbColumn: "clientName",
+      label: "client_name",
+      excelHeader: "Client Name",
+      isCalculated: false,
+      isFromDb: false,
+      isRegexExtracted: false
+    }
   ];
 
   for (const row of defaults) {

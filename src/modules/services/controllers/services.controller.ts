@@ -1,12 +1,12 @@
-import type { AppContext } from "@/framework/facade.js";
 import { asc, desc, eq } from "drizzle-orm";
 import type { Handler } from "hono";
+import type { AppContext } from "@/framework/facade.js";
 import { broadcast, cache, db, HttpStatusCodes } from "@/framework/facade.js";
+import { clients } from "@/modules/clients/database/models/clients.js";
 import { customerTypes } from "../database/models/customer_types.js";
 import { clientReferences } from "../database/models/references.js";
 import { serviceItems } from "../database/models/service_items.js";
 import { serviceRates } from "../database/models/service_rates.js";
-import { clients } from "@/modules/clients/database/models/clients.js";
 
 function notifySettingsUpdated(settingType: string) {
   try {
@@ -41,11 +41,16 @@ export const createCustomerType = async (c: AppContext) => {
       return c.json({ message: `Customer type "${body.typeName}" already exists` }, HttpStatusCodes.CONFLICT);
     }
 
-    const inserted = (await db.insert(customerTypes).values({
-      typeName: body.typeName.trim(),
-      description: body.description?.trim() || null,
-      isActive: body.isActive ?? true
-    }).returning())[0];
+    const inserted = (
+      await db
+        .insert(customerTypes)
+        .values({
+          typeName: body.typeName.trim(),
+          description: body.description?.trim() || null,
+          isActive: body.isActive ?? true
+        })
+        .returning()
+    )[0];
 
     notifySettingsUpdated("client-types");
     return c.json({ message: "Customer type created successfully", data: inserted }, HttpStatusCodes.CREATED);
@@ -62,10 +67,13 @@ export const toggleCustomerType = async (c: AppContext) => {
       return c.json({ message: "Customer type not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
-    const updated = (await db.update(customerTypes)
-      .set({ isActive: !existing.isActive, updatedAt: new Date() })
-      .where(eq(customerTypes.id, id))
-      .returning())[0];
+    const updated = (
+      await db
+        .update(customerTypes)
+        .set({ isActive: !existing.isActive, updatedAt: new Date() })
+        .where(eq(customerTypes.id, id))
+        .returning()
+    )[0];
 
     notifySettingsUpdated("client-types");
     return c.json({ message: "Customer type status updated", data: updated }, HttpStatusCodes.OK);
@@ -95,13 +103,18 @@ export const createReference = async (c: AppContext) => {
       return c.json({ message: `Reference "${body.name}" already exists` }, HttpStatusCodes.CONFLICT);
     }
 
-    const inserted = (await db.insert(clientReferences).values({
-      name: body.name.trim(),
-      phone: body.phone?.trim() || null,
-      email: body.email?.trim() || null,
-      notes: body.notes?.trim() || null,
-      isActive: body.isActive ?? true
-    }).returning())[0];
+    const inserted = (
+      await db
+        .insert(clientReferences)
+        .values({
+          name: body.name.trim(),
+          phone: body.phone?.trim() || null,
+          email: body.email?.trim() || null,
+          notes: body.notes?.trim() || null,
+          isActive: body.isActive ?? true
+        })
+        .returning()
+    )[0];
 
     notifySettingsUpdated("references");
     return c.json({ message: "Reference created successfully", data: inserted }, HttpStatusCodes.CREATED);
@@ -119,17 +132,20 @@ export const updateReference = async (c: AppContext) => {
       return c.json({ message: "Reference not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
-    const updated = (await db.update(clientReferences)
-      .set({
-        name: body.name !== undefined ? body.name.trim() : undefined,
-        phone: body.phone !== undefined ? (body.phone ? body.phone.trim() : null) : undefined,
-        email: body.email !== undefined ? (body.email ? body.email.trim() : null) : undefined,
-        notes: body.notes !== undefined ? (body.notes ? body.notes.trim() : null) : undefined,
-        isActive: body.isActive !== undefined ? body.isActive : undefined,
-        updatedAt: new Date()
-      })
-      .where(eq(clientReferences.id, id))
-      .returning())[0];
+    const updated = (
+      await db
+        .update(clientReferences)
+        .set({
+          name: body.name !== undefined ? body.name.trim() : undefined,
+          phone: body.phone !== undefined ? (body.phone ? body.phone.trim() : null) : undefined,
+          email: body.email !== undefined ? (body.email ? body.email.trim() : null) : undefined,
+          notes: body.notes !== undefined ? (body.notes ? body.notes.trim() : null) : undefined,
+          isActive: body.isActive !== undefined ? body.isActive : undefined,
+          updatedAt: new Date()
+        })
+        .where(eq(clientReferences.id, id))
+        .returning()
+    )[0];
 
     notifySettingsUpdated("references");
     return c.json({ message: "Reference updated successfully", data: updated }, HttpStatusCodes.OK);
@@ -147,11 +163,7 @@ export const deleteReference = async (c: AppContext) => {
     }
 
     // Protect client assignment history
-    const [assignedClient] = await db
-      .select({ id: clients.id })
-      .from(clients)
-      .where(eq(clients.referenceId, id))
-      .limit(1);
+    const [assignedClient] = await db.select({ id: clients.id }).from(clients).where(eq(clients.referenceId, id)).limit(1);
 
     if (assignedClient) {
       return c.json(
@@ -179,10 +191,13 @@ export const toggleReference = async (c: AppContext) => {
       return c.json({ message: "Reference not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
-    const updated = (await db.update(clientReferences)
-      .set({ isActive: !existing.isActive, updatedAt: new Date() })
-      .where(eq(clientReferences.id, id))
-      .returning())[0];
+    const updated = (
+      await db
+        .update(clientReferences)
+        .set({ isActive: !existing.isActive, updatedAt: new Date() })
+        .where(eq(clientReferences.id, id))
+        .returning()
+    )[0];
 
     notifySettingsUpdated("references");
     return c.json({ message: "Reference status updated", data: updated }, HttpStatusCodes.OK);
@@ -212,10 +227,15 @@ export const createServiceItem = async (c: AppContext) => {
       return c.json({ message: `Service item "${body.itemName}" already exists` }, HttpStatusCodes.CONFLICT);
     }
 
-    const inserted = (await db.insert(serviceItems).values({
-      itemName: body.itemName.trim(),
-      isActive: body.isActive ?? true
-    }).returning())[0];
+    const inserted = (
+      await db
+        .insert(serviceItems)
+        .values({
+          itemName: body.itemName.trim(),
+          isActive: body.isActive ?? true
+        })
+        .returning()
+    )[0];
 
     notifySettingsUpdated("service-items");
     return c.json({ message: "Service item created successfully", data: inserted }, HttpStatusCodes.CREATED);
@@ -232,10 +252,9 @@ export const toggleServiceItem = async (c: AppContext) => {
       return c.json({ message: "Service item not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
-    const updated = (await db.update(serviceItems)
-      .set({ isActive: !existing.isActive, updatedAt: new Date() })
-      .where(eq(serviceItems.id, id))
-      .returning())[0];
+    const updated = (
+      await db.update(serviceItems).set({ isActive: !existing.isActive, updatedAt: new Date() }).where(eq(serviceItems.id, id)).returning()
+    )[0];
 
     notifySettingsUpdated("service-items");
     return c.json({ message: "Service item status updated", data: updated }, HttpStatusCodes.OK);
@@ -253,14 +272,17 @@ export const updateServiceItem = async (c: AppContext) => {
       return c.json({ message: "Service item not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
-    const updated = (await db.update(serviceItems)
-      .set({
-        itemName: body.itemName ? body.itemName.trim() : undefined,
-        isActive: body.isActive !== undefined ? body.isActive : undefined,
-        updatedAt: new Date()
-      })
-      .where(eq(serviceItems.id, id))
-      .returning())[0];
+    const updated = (
+      await db
+        .update(serviceItems)
+        .set({
+          itemName: body.itemName ? body.itemName.trim() : undefined,
+          isActive: body.isActive !== undefined ? body.isActive : undefined,
+          updatedAt: new Date()
+        })
+        .where(eq(serviceItems.id, id))
+        .returning()
+    )[0];
 
     notifySettingsUpdated("service-items");
     return c.json({ message: "Service item updated successfully", data: updated }, HttpStatusCodes.OK);
@@ -323,14 +345,19 @@ export const createServiceRate = async (c: AppContext) => {
       }
     }
 
-    const inserted = (await db.insert(serviceRates).values({
-      serviceItemId: body.serviceItemId,
-      customerTypeId: body.customerTypeId || null,
-      unit: body.unit || "Month",
-      regularRate: body.regularRate,
-      minimumCharge: body.minimumCharge,
-      effectiveFrom: body.effectiveFrom
-    }).returning())[0];
+    const inserted = (
+      await db
+        .insert(serviceRates)
+        .values({
+          serviceItemId: body.serviceItemId,
+          customerTypeId: body.customerTypeId || null,
+          unit: body.unit || "Month",
+          regularRate: body.regularRate,
+          minimumCharge: body.minimumCharge,
+          effectiveFrom: body.effectiveFrom
+        })
+        .returning()
+    )[0];
 
     notifySettingsUpdated("service-rates");
     return c.json({ message: "Service rate saved successfully", data: inserted }, HttpStatusCodes.CREATED);

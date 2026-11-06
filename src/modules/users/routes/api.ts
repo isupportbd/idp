@@ -3,24 +3,24 @@ import { authMiddleware } from "@/middlewares/auth-middleware.js";
 import { requireTenantAdmin } from "@/middlewares/permission-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
-  listUsers,
   createUser,
-  updateUser,
-  resetUserPassword,
-  updateUserStatus,
   deleteUser,
-  getPermissionCatalog
+  getPermissionCatalog,
+  listUsers,
+  resetUserPassword,
+  updateUser,
+  updateUserStatus
 } from "../controllers/users.controller.js";
 import {
   CreateUserSchema,
-  UpdateUserSchema,
-  ResetPasswordSchema,
-  UpdateStatusSchema,
   IdParamSchema,
   ListUsersResponseSchema,
-  UserMutationResponseSchema,
+  PermissionCatalogResponseSchema,
+  ResetPasswordSchema,
   UpdateStatusResponseSchema,
-  PermissionCatalogResponseSchema
+  UpdateStatusSchema,
+  UpdateUserSchema,
+  UserMutationResponseSchema
 } from "../controllers/users.schema.js";
 
 const listUsersRoute = createRoute({

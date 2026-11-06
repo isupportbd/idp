@@ -34,14 +34,16 @@ export const PaymentSettingsSchema = z.object({
   rocketNumber: z.string().optional().nullable()
 });
 
-export const ClientTypeSchema = z.object({
-  name: z.string().optional(),
-  typeName: z.string().optional(),
-  description: z.string().optional().nullable(),
-  isActive: z.boolean().optional().default(true)
-}).refine(data => !!(data.name || data.typeName), {
-  message: "Name is required"
-});
+export const ClientTypeSchema = z
+  .object({
+    name: z.string().optional(),
+    typeName: z.string().optional(),
+    description: z.string().optional().nullable(),
+    isActive: z.boolean().optional().default(true)
+  })
+  .refine((data) => !!(data.name || data.typeName), {
+    message: "Name is required"
+  });
 
 export const LocationSchema = z.object({
   name: z.string().min(1, "Location name is required"),
@@ -65,14 +67,16 @@ export const ClientReferenceSchema = z.object({
 });
 
 export const ColumnMappingsSchema = z.object({
-  rows: z.array(z.object({
-    dbColumn: z.string().optional(),
-    label: z.string().optional(),
-    aliases: z.unknown().optional(),
-    excelColumn: z.string().optional().nullable(),
-    isActive: z.boolean().optional(),
-    fieldOrder: z.coerce.number().optional()
-  }))
+  rows: z.array(
+    z.object({
+      dbColumn: z.string().optional(),
+      label: z.string().optional(),
+      aliases: z.unknown().optional(),
+      excelColumn: z.string().optional().nullable(),
+      isActive: z.boolean().optional(),
+      fieldOrder: z.coerce.number().optional()
+    })
+  )
 });
 
 export const GlobalItemSchema = z.object({

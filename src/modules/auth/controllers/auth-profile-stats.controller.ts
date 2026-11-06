@@ -1,15 +1,9 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
-import {
-  broadcast,
-  db,
-  dispatchProviderSms,
-  fetchProviderBalance,
-  HttpStatusCodes
-} from "@/framework/facade.js";
+import type { AppContext } from "@/framework/facade.js";
+import { broadcast, db, dispatchProviderSms, fetchProviderBalance, HttpStatusCodes } from "@/framework/facade.js";
 import { refreshTokens, users } from "@/modules/auth/database/models/user.js";
-import { plans } from "@/modules/superadmin/database/models/plans.js";
 import { companySettings } from "@/modules/firm/database/models/company_settings.js";
+import { plans } from "@/modules/superadmin/database/models/plans.js";
 
 /**
  * Why: Returns live online & active user stats for Admin / SuperAdmin headers.
@@ -63,7 +57,7 @@ export const getUserStats = async (c: AppContext) => {
     }
 
     // Deduplicate distinct user accounts by ID
-    const uniqueMap = new Map<number, typeof rawUsers[0]>();
+    const uniqueMap = new Map<number, (typeof rawUsers)[0]>();
     for (const u of rawUsers) {
       if (!uniqueMap.has(u.id)) {
         uniqueMap.set(u.id, u);
@@ -73,10 +67,7 @@ export const getUserStats = async (c: AppContext) => {
 
     // Fetch active unrevoked refresh tokens to know which users actually have a live logged-in session
     const activeTokens = await db.query.refreshTokens.findMany({
-      where: and(
-        eq(refreshTokens.revoked, false),
-        gt(refreshTokens.expiresAt, new Date())
-      )
+      where: and(eq(refreshTokens.revoked, false), gt(refreshTokens.expiresAt, new Date()))
     });
     const loggedInUserIds = new Set(activeTokens.map((t) => Number(t.userId)));
     // Always include the current requesting user
@@ -161,22 +152,16 @@ export const sendTestSms = async (c: AppContext) => {
     }
 
     const targetAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUserId;
-    const adminUser = currentUser.adminId
-      ? await db.query.users.findFirst({ where: eq(users.id, targetAdminId) })
-      : currentUser;
+    const adminUser = currentUser.adminId ? await db.query.users.findFirst({ where: eq(users.id, targetAdminId) }) : currentUser;
 
     if (!adminUser) {
       return c.json({ success: false, message: "Admin account not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
     const body = c.req.valid("json");
-    const firmSetting = (
-      await db
-        .select()
-        .from(companySettings)
-        .where(eq(companySettings.adminId, targetAdminId))
-        .limit(1)
-    )[0] || (await db.select().from(companySettings).where(isNull(companySettings.adminId)).limit(1))[0];
+    const firmSetting =
+      (await db.select().from(companySettings).where(eq(companySettings.adminId, targetAdminId)).limit(1))[0] ||
+      (await db.select().from(companySettings).where(isNull(companySettings.adminId)).limit(1))[0];
     const mobile = body?.mobile || adminUser.mobile || "01819234567";
     // firmSetting is the correct source for smsApiKey/senderId — users table doesn't have these fields
     const apiKey = body?.apiKey || firmSetting?.smsApiKey;
@@ -215,11 +200,14 @@ export const sendTestSms = async (c: AppContext) => {
       }
 
       if (!providerRes.success) {
-        return c.json({
-          success: false,
-          message: providerRes.message || "SMS Provider rejected request",
-          smsBalance: newSmsBalance
-        }, 400);
+        return c.json(
+          {
+            success: false,
+            message: providerRes.message || "SMS Provider rejected request",
+            smsBalance: newSmsBalance
+          },
+          400
+        );
       }
 
       return c.json({
@@ -278,29 +266,31 @@ export const syncSmsBalance = async (c: AppContext) => {
     }
 
     const targetAdminId = currentUser.adminId ? Number(currentUser.adminId) : currentUserId;
-    const firmSetting = (
-      await db
-        .select()
-        .from(companySettings)
-        .where(eq(companySettings.adminId, targetAdminId))
-        .limit(1)
-    )[0] || (await db.select().from(companySettings).where(isNull(companySettings.adminId)).limit(1))[0];
+    const firmSetting =
+      (await db.select().from(companySettings).where(eq(companySettings.adminId, targetAdminId)).limit(1))[0] ||
+      (await db.select().from(companySettings).where(isNull(companySettings.adminId)).limit(1))[0];
 
     if (!firmSetting?.smsApiKey) {
-      return c.json({
-        success: false,
-        message: "SMS Gateway API Key is not configured in Firm Settings",
-        smsBalance: (currentUser as any).smsBalance || 0
-      }, HttpStatusCodes.BAD_REQUEST);
+      return c.json(
+        {
+          success: false,
+          message: "SMS Gateway API Key is not configured in Firm Settings",
+          smsBalance: (currentUser as any).smsBalance || 0
+        },
+        HttpStatusCodes.BAD_REQUEST
+      );
     }
 
     const liveBalance = await fetchProviderBalance(firmSetting.smsApiKey);
     if (liveBalance === null) {
-      return c.json({
-        success: false,
-        message: "Unable to reach SMS Gateway Provider",
-        smsBalance: (currentUser as any).smsBalance || 0
-      }, HttpStatusCodes.BAD_GATEWAY);
+      return c.json(
+        {
+          success: false,
+          message: "Unable to reach SMS Gateway Provider",
+          smsBalance: (currentUser as any).smsBalance || 0
+        },
+        HttpStatusCodes.BAD_GATEWAY
+      );
     }
 
     await db.update(users).set({ smsBalance: liveBalance, updatedAt: new Date() }).where(eq(users.id, targetAdminId));
@@ -319,11 +309,14 @@ export const syncSmsBalance = async (c: AppContext) => {
       console.error("Broadcast SMS update error:", bErr);
     }
 
-    return c.json({
-      success: true,
-      message: "SMS balance synced successfully!",
-      smsBalance: liveBalance
-    }, HttpStatusCodes.OK);
+    return c.json(
+      {
+        success: true,
+        message: "SMS balance synced successfully!",
+        smsBalance: liveBalance
+      },
+      HttpStatusCodes.OK
+    );
   } catch (err: unknown) {
     console.error("syncSmsBalance error:", err);
     return c.json({ success: false, message: "Failed to sync SMS balance" }, 500);

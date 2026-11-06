@@ -1,6 +1,6 @@
 import { computed } from "vue";
-import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
+import { useAuthStore } from "@/stores/auth";
 
 export function useSubscriptionGuard() {
   const authStore = useAuthStore();
@@ -27,9 +27,7 @@ export function useSubscriptionGuard() {
   const checkOrPromptRecharge = (actionName = "perform this action"): boolean => {
     if (isSuperAdmin.value) return true;
     if (!isSubscriptionActive.value) {
-      toast.warning(
-        `Subscription is inactive (Shortage: ৳${shortageAmount.value}). Please recharge your wallet to activate your plan.`
-      );
+      toast.warning(`Subscription is inactive (Shortage: ৳${shortageAmount.value}). Please recharge your wallet to activate your plan.`);
       window.dispatchEvent(new CustomEvent("open-wallet-recharge"));
       return false;
     }

@@ -1,5 +1,5 @@
-import { ref } from "vue";
 import axios from "axios";
+import { ref } from "vue";
 import { useToast } from "./useToast";
 
 export interface BillItem {
@@ -123,16 +123,18 @@ export function useBillingApi() {
   const totalCollectionsAmount = cachedTotalCollectionsAmount;
 
   // 1. Fetch Invoices / Bills
-  const fetchBills = async (params: {
-    month?: string;
-    clientId?: number | string;
-    status?: string;
-    search?: string;
-    customerTypeId?: number | string;
-    referenceId?: number | string;
-    page?: number;
-    limit?: number;
-  } = {}) => {
+  const fetchBills = async (
+    params: {
+      month?: string;
+      clientId?: number | string;
+      status?: string;
+      search?: string;
+      customerTypeId?: number | string;
+      referenceId?: number | string;
+      page?: number;
+      limit?: number;
+    } = {}
+  ) => {
     if (!hasLoadedBillsOnce.value || bills.value.length === 0) {
       loading.value = true;
     }
@@ -231,12 +233,7 @@ export function useBillingApi() {
   };
 
   // 4. Batch Generate Bills
-  const batchGenerateBills = async (payload: {
-    taxPeriod: string;
-    billDate?: string;
-    dueDate?: string | null;
-    clientIds?: number[];
-  }) => {
+  const batchGenerateBills = async (payload: { taxPeriod: string; billDate?: string; dueDate?: string | null; clientIds?: number[] }) => {
     loading.value = true;
     try {
       const res = await axios.post("/api/billing/batch", payload);
@@ -251,12 +248,16 @@ export function useBillingApi() {
   };
 
   // 5. Fetch Missing Bills
-  const fetchMissingBills = async (params: {
-    month?: string;
-    search?: string;
-    customerTypeId?: number | string;
-    referenceId?: number | string;
-  } | string) => {
+  const fetchMissingBills = async (
+    params:
+      | {
+          month?: string;
+          search?: string;
+          customerTypeId?: number | string;
+          referenceId?: number | string;
+        }
+      | string
+  ) => {
     if (!hasLoadedMissingBillsOnce.value || missingBills.value.length === 0) {
       loading.value = true;
     }
@@ -300,15 +301,17 @@ export function useBillingApi() {
   };
 
   // 8. Fetch Collections
-  const fetchCollections = async (params: {
-    month?: string;
-    clientId?: number | string;
-    paymentMethod?: string;
-    referenceId?: number | string;
-    search?: string;
-    page?: number;
-    limit?: number;
-  } = {}) => {
+  const fetchCollections = async (
+    params: {
+      month?: string;
+      clientId?: number | string;
+      paymentMethod?: string;
+      referenceId?: number | string;
+      search?: string;
+      page?: number;
+      limit?: number;
+    } = {}
+  ) => {
     if (!hasLoadedCollectionsOnce.value || collections.value.length === 0) {
       loading.value = true;
     }

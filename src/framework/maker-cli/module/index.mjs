@@ -1,5 +1,5 @@
-import { assertName } from "../utils/naming.mjs";
 import { runSeed } from "../db/core.mjs";
+import { assertName } from "../utils/naming.mjs";
 import {
   assertModuleHasSeeders,
   cleanModuleTrash,

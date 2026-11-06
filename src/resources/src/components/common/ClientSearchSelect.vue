@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import axios from "axios";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 export interface ClientOption {
   id: number;
@@ -54,7 +54,7 @@ let debounceTimer: any = null;
 const displayList = computed(() => {
   const q = searchText.value.trim().toLowerCase();
   if (!q || props.modelValue) return [];
-  
+
   // 1. Filter local prop clients if provided
   let localFiltered: ClientOption[] = [];
   if (Array.isArray(props.clients) && props.clients.length > 0) {

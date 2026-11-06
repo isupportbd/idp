@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
 import axios from "axios";
-import { pulse } from "@/plugins/pulse";
-import { useToast } from "@/composables/useToast";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import SearchInput from "@/components/common/SearchInput.vue";
+import { useToast } from "@/composables/useToast";
+import { pulse } from "@/plugins/pulse";
 
 const toast = useToast();
 
@@ -136,9 +136,7 @@ const saveSingleEdit = async () => {
   isSavingSingle.value = true;
   try {
     const target = singleRow.value;
-    const updatedRows = rows.value.map((r) =>
-      r.dbColumn === target.dbColumn ? { ...r, excelHeader: target.excelHeader } : r
-    );
+    const updatedRows = rows.value.map((r) => (r.dbColumn === target.dbColumn ? { ...r, excelHeader: target.excelHeader } : r));
 
     const res = await axios.post("/api/superadmin/column-mappings", {
       rows: updatedRows

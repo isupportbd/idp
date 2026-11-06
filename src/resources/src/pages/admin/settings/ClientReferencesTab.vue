@@ -1,26 +1,19 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { computed, ref } from "vue";
+import SearchInput from "@/components/common/SearchInput.vue";
 import type { ClientReference } from "@/composables/useServicesApi";
 import { useServicesApi } from "@/composables/useServicesApi";
 import { useToast } from "@/composables/useToast";
-import SearchInput from "@/components/common/SearchInput.vue";
 
 const props = defineProps<{
   references: ClientReference[];
   canEdit: boolean;
 }>();
 
-const emit = defineEmits<{
-  (e: "refresh"): void;
-}>();
+const emit = defineEmits<(e: "refresh") => void>();
 
 const toast = useToast();
-const {
-  createReference,
-  updateReference,
-  toggleReference,
-  deleteReference
-} = useServicesApi();
+const { createReference, updateReference, toggleReference, deleteReference } = useServicesApi();
 
 const showReferenceModal = ref(false);
 const isEditingReference = ref(false);

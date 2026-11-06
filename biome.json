@@ -17,21 +17,32 @@
       "correctness": {
         "noUnusedVariables": "off",
         "useVueValidTemplateRoot": "off",
-        "noUnusedImports": "off"
+        "noUnusedImports": "off",
+        "noUnusedFunctionParameters": "off",
+        "useParseIntRadix": "off"
       },
       "complexity": {
-        "noUselessEscapeInRegex": "off"
+        "noUselessEscapeInRegex": "off",
+        "noUselessStringRaw": "off",
+        "useOptionalChain": "off",
+        "useDateNow": "off",
+        "useLiteralKeys": "off"
       },
       "style": {
         "noNonNullAssertion": "off",
-        "useVueMultiWordComponentNames": "off"
+        "useVueMultiWordComponentNames": "off",
+        "useTemplate": "off",
+        "noDescendingSpecificity": "off"
       },
       "suspicious": {
         "noEmptyBlockStatements": "off",
         "noExplicitAny": "off",
         "noRedeclare": "off",
         "noAssignInExpressions": "off",
-        "useIterableCallbackReturn": "off"
+        "useIterableCallbackReturn": "off",
+        "noConfusingVoidType": "off",
+        "noGlobalIsNan": "off",
+        "noIrregularWhitespace": "off"
       }
     }
   },

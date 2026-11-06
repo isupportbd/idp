@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
-import { useRoute, useRouter, onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
-import { useAuthStore } from "@/stores/auth";
-import { useToast } from "@/composables/useToast";
-import SearchInput from "@/components/common/SearchInput.vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
 import IdpSelect from "@/components/common/IdpSelect.vue";
+import SearchInput from "@/components/common/SearchInput.vue";
 import { usePagination } from "@/composables/usePagination";
+import { useToast } from "@/composables/useToast";
+import { useAuthStore } from "@/stores/auth";
 
 const toast = useToast();
 
@@ -42,7 +42,9 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(USERS_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: Users.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: Users.vue]", uiErr?.message || uiErr);
+  }
   return {};
 };
 
@@ -77,7 +79,9 @@ const saveFilters = () => {
         })
       );
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: Users.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: Users.vue]", uiErr?.message || uiErr);
+  }
 };
 
 watch([searchQuery, roleFilter, statusFilter], saveFilters);
@@ -88,16 +92,14 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(USERS_FILTER_KEY);
       }
-    } catch (uiErr: any) { console.warn("[UI Component Warning: Users.vue]", uiErr?.message || uiErr); }
+    } catch (uiErr: any) {
+      console.warn("[UI Component Warning: Users.vue]", uiErr?.message || uiErr);
+    }
   }
 });
 
 const hasActiveFilters = computed(() => {
-  return (
-    searchQuery.value.trim() !== "" ||
-    roleFilter.value !== "all" ||
-    statusFilter.value !== "all"
-  );
+  return searchQuery.value.trim() !== "" || roleFilter.value !== "all" || statusFilter.value !== "all";
 });
 
 const clearAllFilters = () => {
@@ -109,7 +111,9 @@ const clearAllFilters = () => {
     if (typeof window !== "undefined" && window.sessionStorage) {
       sessionStorage.removeItem(USERS_FILTER_KEY);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: Users.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: Users.vue]", uiErr?.message || uiErr);
+  }
 };
 
 // Modal state (password reset only; create/edit use the full UserForm page)
@@ -141,12 +145,7 @@ const filteredUsers = computed(() => {
   // Search Filter
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.toLowerCase().trim();
-    list = list.filter(
-      (u) =>
-        u.name.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
-        (u.mobile && u.mobile.includes(q))
-    );
+    list = list.filter((u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.mobile && u.mobile.includes(q)));
   }
 
   // Role Filter

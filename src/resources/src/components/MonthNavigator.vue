@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { computed, ref } from "vue";
 
 const model = defineModel<string>({ default: "" });
 
-const emit = defineEmits<{
-  (e: "change", val: string): void;
-}>();
+const emit = defineEmits<(e: "change", val: string) => void>();
 
 const monthInputRef = ref<HTMLInputElement | null>(null);
 

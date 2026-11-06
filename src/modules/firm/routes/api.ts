@@ -1,31 +1,31 @@
 import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
-import { denyRole } from "@/middlewares/role-middleware.js";
 import { requirePermission, requireTenantAdmin } from "@/middlewares/permission-middleware.js";
+import { denyRole } from "@/middlewares/role-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
-  getCompanySettings,
-  updateCompanySettings,
-  listBankAccounts,
   createBankAccount,
-  updateBankAccount,
-  deleteBankAccount,
-  listExpenseHeads,
   createExpenseHead,
-  updateExpenseHead,
+  deleteBankAccount,
+  deleteExpenseHead,
+  getCompanySettings,
+  listBankAccounts,
+  listExpenseHeads,
   toggleExpenseHead,
-  deleteExpenseHead
+  updateBankAccount,
+  updateCompanySettings,
+  updateExpenseHead
 } from "../controllers/firm.controller.js";
 import {
+  BankAccountResponseSchema,
+  CompanySettingsResponseSchema,
   CompanySettingsSchema,
   CreateBankAccountSchema,
-  UpdateBankAccountSchema,
   CreateExpenseHeadSchema,
-  UpdateExpenseHeadSchema,
-  IdParamSchema,
-  BankAccountResponseSchema,
   ExpenseHeadResponseSchema,
-  CompanySettingsResponseSchema
+  IdParamSchema,
+  UpdateBankAccountSchema,
+  UpdateExpenseHeadSchema
 } from "../controllers/firm.schema.js";
 
 // ── COMPANY SETTINGS ROUTES ──────────────────────────────────────────

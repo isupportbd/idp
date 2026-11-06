@@ -296,9 +296,7 @@ export async function runRuntime(commandName, rawArgs = []) {
     }
 
     if (process.versions?.bun || runtime === "bun") {
-      const bunArgs = watch
-        ? ["--watch", "src/framework/server.ts", ...runtimeArgs]
-        : ["src/framework/server.ts", ...runtimeArgs];
+      const bunArgs = watch ? ["--watch", "src/framework/server.ts", ...runtimeArgs] : ["src/framework/server.ts", ...runtimeArgs];
       await runCommand("bun", bunArgs);
       return;
     }
@@ -458,4 +456,3 @@ export async function clearViteCache() {
 
   console.log("Vite cache cleared.");
 }
-

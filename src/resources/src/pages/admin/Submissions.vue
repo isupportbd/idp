@@ -1,42 +1,29 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
-import MonthNavigator from "@/components/MonthNavigator.vue";
-import StatusBadge from "@/components/common/StatusBadge.vue";
-import SubmissionsStatsCards from "./submissions/SubmissionsStatsCards.vue";
-import RecordSubmissionModal from "./submissions/RecordSubmissionModal.vue";
-import { useSubmissionsApi, type SubmissionItem } from "@/composables/useSubmissionsApi";
-import { useServicesApi } from "@/composables/useServicesApi";
-import { useToast } from "@/composables/useToast";
-import { can } from "@/composables/useAuth";
-import SearchInput from "@/components/common/SearchInput.vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
 import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
 import IdpSelect from "@/components/common/IdpSelect.vue";
+import SearchInput from "@/components/common/SearchInput.vue";
+import StatusBadge from "@/components/common/StatusBadge.vue";
+import MonthNavigator from "@/components/MonthNavigator.vue";
+import { can } from "@/composables/useAuth";
+import { useExcelExport } from "@/composables/useExcelExport";
 import { usePagination } from "@/composables/usePagination";
 import { usePulseListener } from "@/composables/usePulseListener";
-import { useExcelExport } from "@/composables/useExcelExport";
+import { useServicesApi } from "@/composables/useServicesApi";
+import { type SubmissionItem, useSubmissionsApi } from "@/composables/useSubmissionsApi";
+import { useToast } from "@/composables/useToast";
 import { pulse } from "@/plugins/pulse";
+import RecordSubmissionModal from "./submissions/RecordSubmissionModal.vue";
+import SubmissionsStatsCards from "./submissions/SubmissionsStatsCards.vue";
 
 const toast = useToast();
 const { exportSingleSheet } = useExcelExport();
 
-const {
-  submissions,
-  stats,
-  submitters,
-  loading,
-  fetchSubmissions,
-  recordSubmission,
-  deleteSubmission,
-  batchDeleteSubmissions
-} = useSubmissionsApi();
+const { submissions, stats, submitters, loading, fetchSubmissions, recordSubmission, deleteSubmission, batchDeleteSubmissions } =
+  useSubmissionsApi();
 
-const {
-  customerTypes,
-  references,
-  fetchCustomerTypes,
-  fetchReferences
-} = useServicesApi();
+const { customerTypes, references, fetchCustomerTypes, fetchReferences } = useServicesApi();
 
 // Tax Period Month (e.g. "2026-08")
 const getLastMonth = () => {
@@ -56,7 +43,9 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(SUBMISSIONS_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: Submissions.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: Submissions.vue]", uiErr?.message || uiErr);
+  }
   return {};
 };
 
@@ -84,7 +73,9 @@ const saveFilters = () => {
         })
       );
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: Submissions.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: Submissions.vue]", uiErr?.message || uiErr);
+  }
 };
 
 watch([selectedMonth, searchQuery, selectedCustomerTypeId, selectedReferenceId, selectedSubmitterId, statusFilter], saveFilters);
@@ -95,7 +86,9 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(SUBMISSIONS_FILTER_KEY);
       }
-    } catch (uiErr: any) { console.warn("[UI Component Warning: Submissions.vue]", uiErr?.message || uiErr); }
+    } catch (uiErr: any) {
+      console.warn("[UI Component Warning: Submissions.vue]", uiErr?.message || uiErr);
+    }
   }
 });
 
@@ -135,7 +128,9 @@ const clearAllFilters = () => {
     if (typeof window !== "undefined" && window.sessionStorage) {
       sessionStorage.removeItem(SUBMISSIONS_FILTER_KEY);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: Submissions.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: Submissions.vue]", uiErr?.message || uiErr);
+  }
 };
 
 // Clicking a top KPI card resets every lower toolbar filter so the two never conflict.
@@ -186,11 +181,7 @@ const loadSubmissionsList = async () => {
 
 const loadData = async () => {
   try {
-    await Promise.all([
-      loadSubmissionsList(),
-      fetchCustomerTypes(),
-      fetchReferences()
-    ]);
+    await Promise.all([loadSubmissionsList(), fetchCustomerTypes(), fetchReferences()]);
   } catch (err: any) {
     toast.error("Failed to load initial submissions data");
   } finally {
@@ -276,8 +267,6 @@ onUnmounted(() => {
   window.removeEventListener("beforeprint", handleBeforePrint);
   window.removeEventListener("afterprint", handleAfterPrint);
 });
-
-
 
 // Watch Search Query with Debounce
 watch(searchQuery, () => {
@@ -429,17 +418,17 @@ const exportToExcel = async () => {
   const exportData = submissions.value.map((s, idx) => ({
     "Sl No.": idx + 1,
     "Client / Company Name": s.companyName,
-    "Address": s.address || "—",
+    Address: s.address || "—",
     "BIN Number": s.binNumber || "—",
-    "Mobile": s.mobile || "—",
+    Mobile: s.mobile || "—",
     "Customer Type": s.customerTypeName || "Standard",
-    "Reference": s.referenceName || "Direct",
+    Reference: s.referenceName || "Direct",
     "Tax Period": s.taxPeriod,
     "Submission ID": s.submissionId || "Pending",
-    "Status": s.status === "submitted" ? "Submitted" : s.status === "late_submitted" ? "Late Submitted" : "Pending",
+    Status: s.status === "submitted" ? "Submitted" : s.status === "late_submitted" ? "Late Submitted" : "Pending",
     "Submitted By": s.submittedByName || "—",
     "Submission Date": s.submittedAt ? new Date(s.submittedAt).toLocaleDateString() : "—",
-    "Remarks": s.remarks || ""
+    Remarks: s.remarks || ""
   }));
 
   exportSingleSheet(exportData, "Submissions", `Submissions_${selectedMonth.value || "All"}.xlsx`);

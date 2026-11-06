@@ -1,5 +1,5 @@
-import { ref, shallowRef } from "vue";
 import axios from "axios";
+import { ref, shallowRef } from "vue";
 
 export interface SubmissionItem {
   id: number; // Client ID
@@ -58,16 +58,18 @@ export function useSubmissionsApi() {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
-  const fetchSubmissions = async (params: {
-    month?: string;
-    taxPeriod?: string;
-    customerTypeId?: number | string;
-    referenceId?: number | string;
-    managerId?: number | string;
-    submittedById?: number | string;
-    status?: string;
-    search?: string;
-  } = {}) => {
+  const fetchSubmissions = async (
+    params: {
+      month?: string;
+      taxPeriod?: string;
+      customerTypeId?: number | string;
+      referenceId?: number | string;
+      managerId?: number | string;
+      submittedById?: number | string;
+      status?: string;
+      search?: string;
+    } = {}
+  ) => {
     if (!hasLoadedSubmissionsOnce.value || submissions.value.length === 0) {
       loading.value = true;
     }

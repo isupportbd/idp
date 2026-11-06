@@ -68,9 +68,8 @@ export function notFound(c: Context) {
 export function onError(error: unknown, c: Context) {
   const err = error instanceof Error ? error : undefined;
   const statusCandidate = Number((error as { status?: unknown } | null)?.status);
-  const errorMessage = typeof (error as { message?: unknown } | null)?.message === "string"
-    ? ((error as { message: string }).message)
-    : undefined;
+  const errorMessage =
+    typeof (error as { message?: unknown } | null)?.message === "string" ? (error as { message: string }).message : undefined;
 
   logger.error("Unhandled Application Error", {
     requestId: c.get("requestId") || null,

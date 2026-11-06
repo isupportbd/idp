@@ -1,7 +1,7 @@
 import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
-import { denyRole } from "@/middlewares/role-middleware.js";
 import { requirePermission } from "@/middlewares/permission-middleware.js";
+import { denyRole } from "@/middlewares/role-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
   createPayout,
@@ -24,8 +24,7 @@ import {
   UserIdParamSchema
 } from "../controllers/payouts.schema.js";
 
-const okEnvelope = (description: string) =>
-  jsonContent(z.object({ message: z.string(), data: z.unknown() }), description);
+const okEnvelope = (description: string) => jsonContent(z.object({ message: z.string(), data: z.unknown() }), description);
 
 // ── META ─────────────────────────────────────────────────────────────
 const metaRoute = createRoute({

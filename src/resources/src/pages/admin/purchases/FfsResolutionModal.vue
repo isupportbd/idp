@@ -5,8 +5,8 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  "savePendingFfs": [takeRebate: boolean];
-  "cancel": [];
+  savePendingFfs: [takeRebate: boolean];
+  cancel: [];
 }>();
 </script>
 

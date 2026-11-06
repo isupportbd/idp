@@ -8,9 +8,7 @@ defineProps<{
   canDelete: boolean;
 }>();
 
-const emit = defineEmits<{
-  (e: "cancelReceipt", col: Collection): void;
-}>();
+const emit = defineEmits<(e: "cancelReceipt", col: Collection) => void>();
 </script>
 
 <template>

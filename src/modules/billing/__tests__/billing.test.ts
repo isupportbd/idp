@@ -1,15 +1,15 @@
-import { describe, expect, it, beforeAll, afterAll } from "bun:test";
 import { and, asc, desc, eq, like, sql } from "drizzle-orm";
 import { initDatabase } from "@/framework/database/connection.js";
 import { db } from "@/framework/facade.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
-import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { serviceItems } from "@/modules/services/database/models/service_items.js";
 import { serviceRates } from "@/modules/services/database/models/service_rates.js";
-import { bills } from "../database/models/bills.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 import { billItems } from "../database/models/bill_items.js";
+import { bills } from "../database/models/bills.js";
 import { collections } from "../database/models/collections.js";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 
 describe("Billing & Collections Module Real Database Tests (PostgreSQL)", () => {
   let testClientId: number;
@@ -21,9 +21,7 @@ describe("Billing & Collections Module Real Database Tests (PostgreSQL)", () => 
     await initDatabase();
 
     // 1. Create or ensure test Customer Type
-    const existingType = (
-      await db.select().from(customerTypes).where(eq(customerTypes.typeName, "Test Billing Importer")).limit(1)
-    )[0];
+    const existingType = (await db.select().from(customerTypes).where(eq(customerTypes.typeName, "Test Billing Importer")).limit(1))[0];
     if (existingType) {
       testCustomerTypeId = existingType.id;
     } else {
@@ -41,33 +39,22 @@ describe("Billing & Collections Module Real Database Tests (PostgreSQL)", () => 
     }
 
     // 2. Ensure Service Items & Rates
-    const existingReturn = (
-      await db.select().from(serviceItems).where(eq(serviceItems.itemName, "VAT Return Submission")).limit(1)
-    )[0];
+    const existingReturn = (await db.select().from(serviceItems).where(eq(serviceItems.itemName, "VAT Return Submission")).limit(1))[0];
     if (existingReturn) {
       returnItemId = existingReturn.id;
     } else {
-      const item = (
-        await db.insert(serviceItems).values({ itemName: "VAT Return Submission", isActive: true }).returning()
-      )[0];
+      const item = (await db.insert(serviceItems).values({ itemName: "VAT Return Submission", isActive: true }).returning())[0];
       returnItemId = item.id;
     }
 
     const existingBooks = (
-      await db
-        .select()
-        .from(serviceItems)
-        .where(eq(serviceItems.itemName, "Books of Accounts (Mushak 6.2.1) Maintenance"))
-        .limit(1)
+      await db.select().from(serviceItems).where(eq(serviceItems.itemName, "Books of Accounts (Mushak 6.2.1) Maintenance")).limit(1)
     )[0];
     if (existingBooks) {
       booksItemId = existingBooks.id;
     } else {
       const item = (
-        await db
-          .insert(serviceItems)
-          .values({ itemName: "Books of Accounts (Mushak 6.2.1) Maintenance", isActive: true })
-          .returning()
+        await db.insert(serviceItems).values({ itemName: "Books of Accounts (Mushak 6.2.1) Maintenance", isActive: true }).returning()
       )[0];
       booksItemId = item.id;
     }
@@ -191,9 +178,7 @@ describe("Billing & Collections Module Real Database Tests (PostgreSQL)", () => 
   });
 
   it("should record line items with Mushak 6.2.1 calculation (Qty 1500 MT x 2.5 = 3750 Tk)", async () => {
-    const existingBill = (
-      await db.select().from(bills).where(eq(bills.clientId, testClientId)).limit(1)
-    )[0];
+    const existingBill = (await db.select().from(bills).where(eq(bills.clientId, testClientId)).limit(1))[0];
     expect(existingBill).toBeDefined();
 
     // Line Item 1: VAT Return
@@ -242,9 +227,7 @@ describe("Billing & Collections Module Real Database Tests (PostgreSQL)", () => 
   });
 
   it("should record collection receipt MR-YYYY-000001 and update invoice paid & due balance", async () => {
-    const bill = (
-      await db.select().from(bills).where(eq(bills.clientId, testClientId)).limit(1)
-    )[0];
+    const bill = (await db.select().from(bills).where(eq(bills.clientId, testClientId)).limit(1))[0];
     expect(bill).toBeDefined();
 
     const year = 2026;

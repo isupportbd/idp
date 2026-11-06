@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import SearchInput from "@/components/common/SearchInput.vue";
 import type { AssignableUser } from "@/composables/useClientsApi";
 
@@ -16,9 +16,7 @@ const props = withDefaults(
   }
 );
 
-const emit = defineEmits<{
-  (e: "update:selected", value: number[]): void;
-}>();
+const emit = defineEmits<(e: "update:selected", value: number[]) => void>();
 
 const isOpen = ref(false);
 const searchQuery = ref("");
@@ -27,11 +25,7 @@ const dropdownRef = ref<HTMLElement | null>(null);
 const filteredManagers = computed(() => {
   if (!searchQuery.value.trim()) return props.managers;
   const q = searchQuery.value.toLowerCase().trim();
-  return props.managers.filter(
-    (m) =>
-      m.name.toLowerCase().includes(q) ||
-      (m.email && m.email.toLowerCase().includes(q))
-  );
+  return props.managers.filter((m) => m.name.toLowerCase().includes(q) || (m.email && m.email.toLowerCase().includes(q)));
 });
 
 const selectedUsers = computed(() => {

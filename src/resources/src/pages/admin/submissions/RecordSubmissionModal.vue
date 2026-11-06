@@ -15,9 +15,9 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  "close": [];
-  "save": [];
-  "changeClient": [];
+  close: [];
+  save: [];
+  changeClient: [];
   "update:submissionId": [val: string];
 }>();
 

@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { initDatabase, db } from "../src/framework/database/connection.js";
 import { sql } from "drizzle-orm";
+import { db, initDatabase } from "../src/framework/database/connection.js";
 
 async function main() {
   await initDatabase();
@@ -25,9 +25,7 @@ async function main() {
     FROM pg_tables 
     WHERE schemaname = 'public'
   `);
-  const tables = (Array.isArray(tablesRes) ? tablesRes : (tablesRes as any).rows || [])
-    .map((r: any) => r.tablename)
-    .filter(Boolean);
+  const tables = (Array.isArray(tablesRes) ? tablesRes : (tablesRes as any).rows || []).map((r: any) => r.tablename).filter(Boolean);
 
   console.log(`Truncating ${tables.length} tables for clean restoration...`);
   for (const t of tables) {
@@ -91,13 +89,15 @@ async function main() {
 
     for (const r of seqRows) {
       try {
-        await db.execute(sql.raw(`
+        await db.execute(
+          sql.raw(`
           SELECT setval(
             pg_get_serial_sequence('"${r.table_name}"', '${r.column_name}'),
             COALESCE((SELECT MAX("${r.column_name}") FROM "${r.table_name}"), 1),
             true
           );
-        `));
+        `)
+        );
       } catch (e: any) {
         // Ignore sequence errors
       }

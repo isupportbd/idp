@@ -85,11 +85,7 @@ function entitledRooms(auth: RealtimeAuthContext): Set<string> {
   if (auth.userId) rooms.add(`user:${auth.userId}`);
   for (const role of auth.roles) rooms.add(`role:${role}`);
 
-  const firmTenantId = auth.payload?.adminId
-    ? Number(auth.payload.adminId)
-    : auth.userId
-      ? Number(auth.userId)
-      : null;
+  const firmTenantId = auth.payload?.adminId ? Number(auth.payload.adminId) : auth.userId ? Number(auth.userId) : null;
   if (firmTenantId) rooms.add(`tenant:${firmTenantId}`);
 
   return rooms;

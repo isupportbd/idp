@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted } from "vue";
-import { useAuthStore } from "@/stores/auth";
-import { hasRole, isTenantAdmin, canAccessModule, can } from "@/composables/useAuth";
+import { can, canAccessModule, hasRole, isTenantAdmin } from "@/composables/useAuth";
 import { useClientsApi } from "@/composables/useClientsApi";
 import { useServicesApi } from "@/composables/useServicesApi";
 import { useSubmissionsApi } from "@/composables/useSubmissionsApi";
+import { useAuthStore } from "@/stores/auth";
 
 const authStore = useAuthStore();
 const { fetchClients, fetchAssignableUsers } = useClientsApi();
@@ -56,7 +56,7 @@ const hasAccountsAccess = computed(() => {
 });
 
 const hasAnyAdminTools = computed(() => {
-  return isTenantAdmin() || canAccessModule('settings') || canAccessModule('billing') || canAccessModule('statements');
+  return isTenantAdmin() || canAccessModule("settings") || canAccessModule("billing") || canAccessModule("statements");
 });
 </script>
 

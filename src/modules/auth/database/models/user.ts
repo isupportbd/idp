@@ -71,4 +71,3 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   refreshTokens: many(refreshTokens)
 }));
-

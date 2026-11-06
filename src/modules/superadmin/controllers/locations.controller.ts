@@ -1,7 +1,7 @@
+import { and, asc, desc, eq, ne, or, sql } from "drizzle-orm";
 import type { AppContext } from "@/framework/facade.js";
-import { db, cache } from "@/framework/facade.js";
-import { locations, commercialAreas } from "@/modules/superadmin/database/models/locations.js";
-import { eq, desc, asc, and, or, ne, sql } from "drizzle-orm";
+import { cache, db } from "@/framework/facade.js";
+import { commercialAreas, locations } from "@/modules/superadmin/database/models/locations.js";
 import { notifySettingsUpdated } from "./platform.controller.js";
 
 export async function getLocations(c: AppContext) {
@@ -154,11 +154,14 @@ export async function createCommercialArea(c: AppContext) {
     const [loc] = await db.select().from(locations).where(eq(locations.id, created.locationId));
 
     notifySettingsUpdated("commercial-areas");
-    return c.json({
-      success: true,
-      data: { ...created, locationName: loc?.name || "—" },
-      message: "Commercial area created successfully"
-    }, 201);
+    return c.json(
+      {
+        success: true,
+        data: { ...created, locationName: loc?.name || "—" },
+        message: "Commercial area created successfully"
+      },
+      201
+    );
   } catch (error: unknown) {
     console.error("Error creating commercial area:", error);
     return c.json({ success: false, error: "Failed to create area" }, 500);

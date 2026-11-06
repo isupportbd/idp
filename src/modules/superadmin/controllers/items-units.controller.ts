@@ -1,9 +1,9 @@
+import { and, asc, desc, eq, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import type { AppContext } from "@/framework/facade.js";
-import { db, cache } from "@/framework/facade.js";
+import { cache, db } from "@/framework/facade.js";
+import { serviceUnits } from "@/modules/services/database/models/service_units.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
 import { measurementUnits } from "@/modules/superadmin/database/models/measurement_units.js";
-import { serviceUnits } from "@/modules/services/database/models/service_units.js";
-import { eq, desc, asc, and, or, ne, isNotNull, isNull, sql } from "drizzle-orm";
 import { notifySettingsUpdated } from "./platform.controller.js";
 
 export async function getGlobalItems(c: AppContext) {
@@ -30,16 +30,16 @@ export async function createGlobalItem(c: AppContext) {
     const trimmedHsCode = hsCode.trim();
 
     // Check duplicate HS Code
-    const [existing] = await db
-      .select()
-      .from(globalItems)
-      .where(sql`LOWER(TRIM(${globalItems.hsCode})) = LOWER(${trimmedHsCode})`);
+    const [existing] = await db.select().from(globalItems).where(sql`LOWER(TRIM(${globalItems.hsCode})) = LOWER(${trimmedHsCode})`);
 
     if (existing) {
-      return c.json({
-        success: false,
-        error: `HS Code "${trimmedHsCode}" already exists in the catalog. Duplicate HS Codes are not allowed.`
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: `HS Code "${trimmedHsCode}" already exists in the catalog. Duplicate HS Codes are not allowed.`
+        },
+        400
+      );
     }
 
     const calculatedAw = awHsCode ? awHsCode.trim() : trimmedHsCode.replace(/\./g, "").trim();
@@ -82,22 +82,20 @@ export async function updateGlobalItem(c: AppContext) {
       const [existing] = await db
         .select()
         .from(globalItems)
-        .where(
-          and(
-            sql`LOWER(TRIM(${globalItems.hsCode})) = LOWER(${trimmedHsCode})`,
-            ne(globalItems.id, id)
-          )
-        );
+        .where(and(sql`LOWER(TRIM(${globalItems.hsCode})) = LOWER(${trimmedHsCode})`, ne(globalItems.id, id)));
 
       if (existing) {
-        return c.json({
-          success: false,
-          error: `HS Code "${trimmedHsCode}" is already in use by another item.`
-        }, 400);
+        return c.json(
+          {
+            success: false,
+            error: `HS Code "${trimmedHsCode}" is already in use by another item.`
+          },
+          400
+        );
       }
     }
 
-    const calculatedAw = awHsCode !== undefined ? (awHsCode?.trim() || "") : hsCode ? hsCode.replace(/\./g, "").trim() : found.awHsCode;
+    const calculatedAw = awHsCode !== undefined ? awHsCode?.trim() || "" : hsCode ? hsCode.replace(/\./g, "").trim() : found.awHsCode;
 
     const [updated] = await db
       .update(globalItems)
@@ -180,16 +178,16 @@ export async function createMeasurementUnit(c: AppContext) {
     const trimmedCode = code.trim().toUpperCase();
 
     // Check duplicate code
-    const [existing] = await db
-      .select()
-      .from(measurementUnits)
-      .where(sql`UPPER(TRIM(${measurementUnits.code})) = ${trimmedCode}`);
+    const [existing] = await db.select().from(measurementUnits).where(sql`UPPER(TRIM(${measurementUnits.code})) = ${trimmedCode}`);
 
     if (existing) {
-      return c.json({
-        success: false,
-        error: `Unit Code "${trimmedCode}" already exists in the database.`
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: `Unit Code "${trimmedCode}" already exists in the database.`
+        },
+        400
+      );
     }
 
     const [inserted] = await db
@@ -229,18 +227,16 @@ export async function updateMeasurementUnit(c: AppContext) {
       const [existing] = await db
         .select()
         .from(measurementUnits)
-        .where(
-          and(
-            sql`UPPER(TRIM(${measurementUnits.code})) = ${trimmedCode}`,
-            ne(measurementUnits.id, id)
-          )
-        );
+        .where(and(sql`UPPER(TRIM(${measurementUnits.code})) = ${trimmedCode}`, ne(measurementUnits.id, id)));
 
       if (existing) {
-        return c.json({
-          success: false,
-          error: `Unit Code "${trimmedCode}" is already in use by another unit.`
-        }, 400);
+        return c.json(
+          {
+            success: false,
+            error: `Unit Code "${trimmedCode}" is already in use by another unit.`
+          },
+          400
+        );
       }
     }
 
@@ -305,10 +301,7 @@ export async function deleteMeasurementUnit(c: AppContext) {
 export async function getServiceUnits(c: AppContext) {
   try {
     const list = await cache.remember("master:service-units", 3600, async () => {
-      return await db
-        .select()
-        .from(serviceUnits)
-        .orderBy(desc(serviceUnits.id));
+      return await db.select().from(serviceUnits).orderBy(desc(serviceUnits.id));
     });
 
     return c.json({ success: true, data: list });
@@ -331,10 +324,7 @@ export async function createServiceUnit(c: AppContext) {
     }
 
     const trimmedCode = code.trim();
-    const [existing] = await db
-      .select()
-      .from(serviceUnits)
-      .where(sql`LOWER(TRIM(${serviceUnits.code})) = ${trimmedCode.toLowerCase()}`);
+    const [existing] = await db.select().from(serviceUnits).where(sql`LOWER(TRIM(${serviceUnits.code})) = ${trimmedCode.toLowerCase()}`);
 
     if (existing) {
       return c.json({ success: false, error: `Unit code "${trimmedCode}" already exists.` }, 400);
@@ -377,12 +367,7 @@ export async function updateServiceUnit(c: AppContext) {
       const [existing] = await db
         .select()
         .from(serviceUnits)
-        .where(
-          and(
-            sql`LOWER(TRIM(${serviceUnits.code})) = ${trimmedCode.toLowerCase()}`,
-            ne(serviceUnits.id, id)
-          )
-        );
+        .where(and(sql`LOWER(TRIM(${serviceUnits.code})) = ${trimmedCode.toLowerCase()}`, ne(serviceUnits.id, id)));
 
       if (existing) {
         return c.json({ success: false, error: `Unit code "${trimmedCode}" is already in use.` }, 400);

@@ -1,16 +1,15 @@
+import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import type { AppContext } from "@/framework/facade.js";
 import { db } from "@/framework/facade.js";
-import { users } from "@/modules/auth/database/models/user.js";
 import { roles } from "@/modules/auth/database/models/role.js";
-import { plans } from "@/modules/superadmin/database/models/plans.js";
-import { paymentSettings } from "@/modules/superadmin/database/models/payment_settings.js";
+import { users } from "@/modules/auth/database/models/user.js";
+import { bills } from "@/modules/billing/database/models/bills.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
-import { bills } from "@/modules/billing/database/models/bills.js";
+import { paymentSettings } from "@/modules/superadmin/database/models/payment_settings.js";
+import { plans } from "@/modules/superadmin/database/models/plans.js";
 import { subscriptionTransactions } from "@/modules/superadmin/database/models/subscription_transactions.js";
-import { eq, desc, asc, and, or, ne, isNotNull, isNull, sql, inArray } from "drizzle-orm";
-
 
 // 1. Get All Active Tenants (Firm Admins)
 export async function getTenants(c: AppContext) {
@@ -46,18 +45,14 @@ export async function getTenants(c: AppContext) {
       .where(
         and(
           ne(users.status, "pending"),
-          or(
-            eq(users.roleId, adminRoleId),
-            eq(users.adminId, users.id),
-            and(isNull(users.adminId), ne(users.roleId, superadminRoleId))
-          )
+          or(eq(users.roleId, adminRoleId), eq(users.adminId, users.id), and(isNull(users.adminId), ne(users.roleId, superadminRoleId)))
         )
       )
       .orderBy(desc(users.createdAt));
 
     // Batch fetch plans and client counts in single aggregated queries to prevent N+1 overhead
     const allPlans = await db.select().from(plans);
-    const plansMap = new Map<number, typeof allPlans[number]>();
+    const plansMap = new Map<number, (typeof allPlans)[number]>();
     for (const p of allPlans) {
       plansMap.set(p.id, p);
     }
@@ -123,7 +118,7 @@ export async function getPendingSignups(c: AppContext) {
     const chargePercent = paymentConfig?.bkashCharge ?? 1.8;
 
     const allPlans = await db.select().from(plans);
-    const plansMap = new Map<number, typeof allPlans[number]>();
+    const plansMap = new Map<number, (typeof allPlans)[number]>();
     for (const p of allPlans) {
       plansMap.set(p.id, p);
     }
@@ -131,16 +126,16 @@ export async function getPendingSignups(c: AppContext) {
     const enriched = pendingUsers.map((u) => {
       const plan = u.planId ? plansMap.get(u.planId) : null;
 
-      const isYearly = u.billingCycle === "yearly" || (u.trxId
-        ? (u.trxId.toLowerCase().includes("yearly") || u.trxId.toLowerCase().includes("(y)"))
-        : false);
-      const planPrice = isYearly ? (plan?.rateYearly || 15000) : (plan?.rateMonthly || 1500);
+      const isYearly =
+        u.billingCycle === "yearly" ||
+        (u.trxId ? u.trxId.toLowerCase().includes("yearly") || u.trxId.toLowerCase().includes("(y)") : false);
+      const planPrice = isYearly ? plan?.rateYearly || 15000 : plan?.rateMonthly || 1500;
       const grossAmount = u.paidAmount || planPrice;
       const gatewayCharge = Math.round((grossAmount * chargePercent) / 100);
       const netAmount = grossAmount - gatewayCharge;
       const willActivate = netAmount >= planPrice;
-      const shortage = willActivate ? 0 : (planPrice - netAmount);
-      const excessCredit = willActivate ? (netAmount - planPrice) : 0;
+      const shortage = willActivate ? 0 : planPrice - netAmount;
+      const excessCredit = willActivate ? netAmount - planPrice : 0;
 
       return {
         ...u,
@@ -174,7 +169,8 @@ export async function approveSignup(c: AppContext) {
     const rawDays = body?.days ? Number(body.days) : undefined;
     const days = rawDays && !isNaN(rawDays) && rawDays > 0 ? rawDays : undefined;
 
-    if (!userId || isNaN(userId)) return c.json({ success: false, message: "Valid User ID is required", error: "Valid User ID is required" }, 400);
+    if (!userId || isNaN(userId))
+      return c.json({ success: false, message: "Valid User ID is required", error: "Valid User ID is required" }, 400);
 
     const [targetUser] = await db.select().from(users).where(eq(users.id, userId));
     if (!targetUser) return c.json({ success: false, message: "Tenant not found", error: "Tenant not found" }, 404);
@@ -187,10 +183,10 @@ export async function approveSignup(c: AppContext) {
 
     const [paymentConfig] = await db.select().from(paymentSettings).limit(1);
     const chargePercent = paymentConfig?.bkashCharge ?? 1.8;
-    const isYearly = targetUser.billingCycle === "yearly" || (targetUser.trxId
-      ? (targetUser.trxId.toLowerCase().includes("yearly") || targetUser.trxId.toLowerCase().includes("(y)"))
-      : false);
-    const planPrice = isYearly ? (plan?.rateYearly || 15000) : (plan?.rateMonthly || 1500);
+    const isYearly =
+      targetUser.billingCycle === "yearly" ||
+      (targetUser.trxId ? targetUser.trxId.toLowerCase().includes("yearly") || targetUser.trxId.toLowerCase().includes("(y)") : false);
+    const planPrice = isYearly ? plan?.rateYearly || 15000 : plan?.rateMonthly || 1500;
 
     const grossPaid = targetUser.paidAmount || 0;
     const gatewayCharge = Math.round((grossPaid * chargePercent) / 100);
@@ -233,9 +229,7 @@ export async function approveSignup(c: AppContext) {
       })
       .where(eq(users.id, userId));
 
-    const cleanTrxId = targetUser.trxId
-      ? targetUser.trxId.replace(/\s*\((monthly|yearly|m|y)\)/gi, "").trim()
-      : null;
+    const cleanTrxId = targetUser.trxId ? targetUser.trxId.replace(/\s*\((monthly|yearly|m|y)\)/gi, "").trim() : null;
 
     // 1. Update/Complete Deposit Transaction
     try {
@@ -262,7 +256,7 @@ export async function approveSignup(c: AppContext) {
     // 2. If plan was activated, insert plan fee deduction transaction
     if (isPlanActivated) {
       try {
-        const addedDays = days && days > 0 ? Number(days) : (isYearly ? 365 : 30);
+        const addedDays = days && days > 0 ? Number(days) : isYearly ? 365 : 30;
         await db.insert(subscriptionTransactions).values({
           userId,
           planId: targetUser.planId || null,
@@ -332,10 +326,7 @@ export async function extendTenant(c: AppContext) {
 
     currentExp.setDate(currentExp.getDate() + Number(days));
 
-    await db
-      .update(users)
-      .set({ expDate: currentExp, status: "active", updatedAt: new Date() })
-      .where(eq(users.id, id));
+    await db.update(users).set({ expDate: currentExp, status: "active", updatedAt: new Date() }).where(eq(users.id, id));
 
     // Record manual subscription extension in history ledger
     try {
@@ -498,6 +489,9 @@ export async function deleteTenant(c: AppContext) {
     return c.json({ success: true, message: `Tenant "${targetUser.name}" deleted permanently` });
   } catch (error: unknown) {
     console.error("Error deleting tenant:", error);
-    return c.json({ success: false, error: "Failed to delete tenant. Please ensure associated client records are unassigned or handled first." }, 500);
+    return c.json(
+      { success: false, error: "Failed to delete tenant. Please ensure associated client records are unassigned or handled first." },
+      500
+    );
   }
 }

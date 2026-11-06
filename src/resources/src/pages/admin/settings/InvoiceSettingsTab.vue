@@ -9,9 +9,7 @@ const props = defineProps<{
   canEdit: boolean;
 }>();
 
-const emit = defineEmits<{
-  (e: "saved"): void;
-}>();
+const emit = defineEmits<(e: "saved") => void>();
 
 const toast = useToast();
 const { company, updateCompanySettings } = useFirmApi();
@@ -19,10 +17,23 @@ const { company, updateCompanySettings } = useFirmApi();
 const isEditingBranding = ref(false);
 
 const termPresets = [
-  { label: "Standard (Due in 15 days)", value: "1. Payment is due within 15 days of invoice date.\n2. Please mention the invoice number as reference in payment.\n3. Checks/Transfers are subject to realization." },
-  { label: "Due on Receipt", value: "1. Payment is due immediately upon receipt of this bill.\n2. Please settle via bank transfer or bKash merchant account." },
-  { label: "Net 30 Days", value: "1. Payment term is Net 30 days from billing date.\n2. Overdue bills may accrue statutory late processing fees." },
-  { label: "Advance Payment Condition", value: "1. 50% advance required before submission filing.\n2. Balance payable upon receipt of Mushak submission acknowledgment." }
+  {
+    label: "Standard (Due in 15 days)",
+    value:
+      "1. Payment is due within 15 days of invoice date.\n2. Please mention the invoice number as reference in payment.\n3. Checks/Transfers are subject to realization."
+  },
+  {
+    label: "Due on Receipt",
+    value: "1. Payment is due immediately upon receipt of this bill.\n2. Please settle via bank transfer or bKash merchant account."
+  },
+  {
+    label: "Net 30 Days",
+    value: "1. Payment term is Net 30 days from billing date.\n2. Overdue bills may accrue statutory late processing fees."
+  },
+  {
+    label: "Advance Payment Condition",
+    value: "1. 50% advance required before submission filing.\n2. Balance payable upon receipt of Mushak submission acknowledgment."
+  }
 ];
 
 const applyTermPreset = (e: Event) => {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
 import axios from "axios";
+import { onMounted, ref } from "vue";
 
 const summary = ref({
   totalTenants: 0,

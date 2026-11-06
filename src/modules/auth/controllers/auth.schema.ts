@@ -45,10 +45,7 @@ export const RegisterSchema = z
     name: z.string().min(2, "Name must be at least 2 characters").max(100),
     email: z.email("Invalid email address"),
     mobile: z.string().optional().nullable(),
-    password: z
-      .string()
-      .min(6, "Password must be at least 6 characters")
-      .max(100),
+    password: z.string().min(6, "Password must be at least 6 characters").max(100),
     password_confirmation: z.string().optional().nullable(),
     planId: z.number().optional().nullable(),
     billingCycle: z.string().optional().nullable(),
@@ -80,16 +77,8 @@ export const ResetPasswordSchema = z
     email: z.email("Invalid email address"),
     token: z.string().optional(),
     otp: z.string().optional(),
-    password: z
-      .string()
-      .min(6, "Password must be at least 6 characters")
-      .max(100)
-      .optional(),
-    newPassword: z
-      .string()
-      .min(6, "Password must be at least 6 characters")
-      .max(100)
-      .optional(),
+    password: z.string().min(6, "Password must be at least 6 characters").max(100).optional(),
+    newPassword: z.string().min(6, "Password must be at least 6 characters").max(100).optional(),
     password_confirmation: z.string().optional()
   })
   .superRefine((data, ctx) => {

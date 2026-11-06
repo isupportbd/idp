@@ -1,16 +1,16 @@
-import { ref, onMounted, onUnmounted, computed } from "vue";
 import axios from "axios";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { pulse } from "@/plugins/pulse";
 import {
-  useMasterDataStore,
-  type CustomerType,
   type ClientReference,
+  type CustomerType,
   type ServiceItem,
+  type ServiceRate,
   type ServiceUnit,
-  type ServiceRate
+  useMasterDataStore
 } from "@/stores/masterData";
 
-export type { CustomerType, ClientReference, ServiceItem, ServiceUnit, ServiceRate };
+export type { ClientReference, CustomerType, ServiceItem, ServiceRate, ServiceUnit };
 
 export function useServicesApi() {
   const masterStore = useMasterDataStore();
@@ -47,7 +47,9 @@ export function useServicesApi() {
     onUnmounted(() => {
       pulse.channel("auth").stopListening("global:settings-updated", onSettingsUpdated);
     });
-  } catch (uiErr) { console.warn("[Services API Warning]:", uiErr); }
+  } catch (uiErr) {
+    console.warn("[Services API Warning]:", uiErr);
+  }
 
   // ── CUSTOMER TYPES ──────────────────────
   const fetchCustomerTypes = async (force = false) => {

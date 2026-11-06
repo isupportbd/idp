@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useBillingApi } from "@/composables/useBillingApi";
 import { useToast } from "@/composables/useToast";
@@ -31,7 +31,7 @@ onMounted(async () => {
     const data = await fetchCollectionDetails(collectionId);
     collection.value = data;
     if (data?.receiptNo) {
-      document.title = `Receipt ${data.receiptNo} — ${data.clientName || 'IDP'}`;
+      document.title = `Receipt ${data.receiptNo} — ${data.clientName || "IDP"}`;
     }
   } catch (err) {
     // Handled in composable
@@ -135,9 +135,7 @@ const handleWhatsAppShare = async () => {
     const companyName = collection.value.companySettings?.companyName || "VAT & Tax Consultancy";
     const clientName = collection.value.clientName || "Valued Client";
     const receiptNo = collection.value.receiptNo || "";
-    const paymentDate = collection.value.collectionDate
-      ? new Date(collection.value.collectionDate).toLocaleDateString()
-      : "";
+    const paymentDate = collection.value.collectionDate ? new Date(collection.value.collectionDate).toLocaleDateString() : "";
     const amount = Number(collection.value.amount || 0).toFixed(2);
     const paymentMethod = (collection.value.paymentMethod || "CASH").toUpperCase();
     const referenceNo = collection.value.referenceNo;
@@ -178,9 +176,7 @@ Thank you for your business!
 *${companyName}*`;
 
     const encodedText = encodeURIComponent(text);
-    const waAppUrl = targetNumber
-      ? `whatsapp://send?phone=${targetNumber}&text=${encodedText}`
-      : `whatsapp://send?text=${encodedText}`;
+    const waAppUrl = targetNumber ? `whatsapp://send?phone=${targetNumber}&text=${encodedText}` : `whatsapp://send?text=${encodedText}`;
 
     // Capture receipt image
     const captured = await captureReceiptBlob();
@@ -262,7 +258,7 @@ const handlePrint = () => {
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>${document.title || 'Money Receipt'}</title>
+  <title>${document.title || "Money Receipt"}</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
   <style>
     @page {

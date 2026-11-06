@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import bcrypt from "bcryptjs";
-import { sql, eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/framework/facade.js";
-import { users } from "@/modules/auth/database/models/user.js";
 import { roles } from "@/modules/auth/database/models/role.js";
+import { users } from "@/modules/auth/database/models/user.js";
 
 async function executeSingleSql(rawSql: string) {
   const clean = rawSql.trim();
@@ -131,7 +131,10 @@ export async function syncDatabaseSchemaAndSuperAdmin() {
   try {
     const migrationsDir = path.resolve(process.cwd(), "src/database/migrations/postgresql");
     if (fs.existsSync(migrationsDir)) {
-      const files = fs.readdirSync(migrationsDir).filter((f) => f.endsWith(".sql")).sort();
+      const files = fs
+        .readdirSync(migrationsDir)
+        .filter((f) => f.endsWith(".sql"))
+        .sort();
       console.log(`[DB Sync] Checking and applying ${files.length} migration file(s)...`);
       for (const file of files) {
         const filePath = path.join(migrationsDir, file);
@@ -150,17 +153,19 @@ export async function syncDatabaseSchemaAndSuperAdmin() {
   // 2. Canonical Seed Guards (System Roles & Column Mappings)
   try {
     // Ensure System Roles exist
-    await executeSingleSql(
-      `INSERT INTO roles (name) VALUES ('superadmin'), ('admin'), ('user') ON CONFLICT (name) DO NOTHING`
-    );
+    await executeSingleSql(`INSERT INTO roles (name) VALUES ('superadmin'), ('admin'), ('user') ON CONFLICT (name) DO NOTHING`);
 
     // Schema parity guard: ensure company_settings has sender_id column for legacy backup compatibility
     await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS sender_id VARCHAR(50) DEFAULT ''`);
 
     // High-performance search indexes: enable pg_trgm for lightning-fast leading-wildcard text search
     await executeSingleSql(`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
-    await executeSingleSql(`CREATE INDEX IF NOT EXISTS clients_trgm_search_idx ON clients USING gin (company_name gin_trgm_ops, bin_number gin_trgm_ops)`);
-    await executeSingleSql(`CREATE INDEX IF NOT EXISTS purchases_trgm_search_idx ON purchases USING gin (be_no gin_trgm_ops, lc_number gin_trgm_ops)`);
+    await executeSingleSql(
+      `CREATE INDEX IF NOT EXISTS clients_trgm_search_idx ON clients USING gin (company_name gin_trgm_ops, bin_number gin_trgm_ops)`
+    );
+    await executeSingleSql(
+      `CREATE INDEX IF NOT EXISTS purchases_trgm_search_idx ON purchases USING gin (be_no gin_trgm_ops, lc_number gin_trgm_ops)`
+    );
 
     // Clean stale legacy column mapping entries if present
     await executeSingleSql(`DELETE FROM column_mappings WHERE db_column IN ('client_name', 'clientName') OR label = 'client_name'`);
@@ -196,15 +201,18 @@ export async function syncDatabaseSchemaAndSuperAdmin() {
 
       if (existingAdmin.length > 0) {
         console.log(`[SuperAdmin Sync] Updating credentials for ${superadminEmail} from .env...`);
-        await db.update(users).set({
-          name: superadminName,
-          email: superadminEmail,
-          password: hashedPassword,
-          roleId: superadminRole?.id || existingAdmin[0].roleId,
-          status: "active",
-          emailVerifiedAt: new Date(),
-          updatedAt: new Date()
-        }).where(eq(users.id, existingAdmin[0].id));
+        await db
+          .update(users)
+          .set({
+            name: superadminName,
+            email: superadminEmail,
+            password: hashedPassword,
+            roleId: superadminRole?.id || existingAdmin[0].roleId,
+            status: "active",
+            emailVerifiedAt: new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(users.id, existingAdmin[0].id));
       } else {
         console.log(`[SuperAdmin Sync] Creating SuperAdmin account for ${superadminEmail} from .env...`);
         await db.insert(users).values({

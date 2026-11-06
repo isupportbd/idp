@@ -12,9 +12,9 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  "cancel": [];
-  "skip": [];
-  "save": [];
+  cancel: [];
+  skip: [];
+  save: [];
 }>();
 
 const formatBin = (raw?: string): string => {

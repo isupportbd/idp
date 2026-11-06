@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useBillingApi } from "@/composables/useBillingApi";
 import { useToast } from "@/composables/useToast";
@@ -31,7 +31,9 @@ const paymentDueDate = computed(() => {
 // Warm the (heavy) capture engine while the browser is idle so Share/Download
 // feel instant on first use instead of paying a cold chunk fetch.
 const prefetchCaptureEngine = () => {
-  const run = () => { import("html2canvas-pro").catch(() => {}); };
+  const run = () => {
+    import("html2canvas-pro").catch(() => {});
+  };
   if (typeof window !== "undefined" && "requestIdleCallback" in window) {
     (window as any).requestIdleCallback(run, { timeout: 2500 });
   } else {
@@ -49,7 +51,7 @@ onMounted(async () => {
     const data = await fetchBillDetails(billId);
     bill.value = data;
     if (data?.billNo) {
-      document.title = `Invoice ${data.billNo} — ${data.clientName || 'IDP'}`;
+      document.title = `Invoice ${data.billNo} — ${data.clientName || "IDP"}`;
     }
   } catch (err) {
     // Handled in composable
@@ -113,7 +115,11 @@ const renderInvoiceCanvas = async (): Promise<HTMLCanvasElement | null> => {
     // Make sure webfonts / icon fonts are laid out before rasterizing.
     const fonts = (document as any).fonts;
     if (fonts?.ready) {
-      try { await fonts.ready; } catch { /* fonts API unavailable */ }
+      try {
+        await fonts.ready;
+      } catch {
+        /* fonts API unavailable */
+      }
     }
     const html2canvas = (await import("html2canvas-pro")).default;
     return await html2canvas(el, {
@@ -201,9 +207,7 @@ const handleWhatsAppShare = async () => {
         `• Bank: ${pay.bankName || "Bank"} | A/C: ${pay.accountNumber}${pay.accountName ? ` (${pay.accountName})` : ""}${pay.branchName ? `, ${pay.branchName}` : ""}`
       );
     }
-    const paymentBlock = paymentLines.length
-      ? `💳 *Payment Options:*\n${paymentLines.join("\n")}\n`
-      : "";
+    const paymentBlock = paymentLines.length ? `💳 *Payment Options:*\n${paymentLines.join("\n")}\n` : "";
 
     const text = `*INVOICE / BILL NOTICE*
 ━━━━━━━━━━━━━━━━━━━━
@@ -224,9 +228,7 @@ ${paymentBlock}Thank you for your business!
 *${companyName}*`;
 
     const encodedText = encodeURIComponent(text);
-    const waAppUrl = targetNumber
-      ? `whatsapp://send?phone=${targetNumber}&text=${encodedText}`
-      : `whatsapp://send?text=${encodedText}`;
+    const waAppUrl = targetNumber ? `whatsapp://send?phone=${targetNumber}&text=${encodedText}` : `whatsapp://send?text=${encodedText}`;
 
     // Capture once; derive both the share JPG and the clipboard PNG from it.
     const canvas = await renderInvoiceCanvas();
@@ -310,7 +312,7 @@ const handlePrint = () => {
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>${document.title || 'Invoice'}</title>
+  <title>${document.title || "Invoice"}</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
   <style>
     @page {

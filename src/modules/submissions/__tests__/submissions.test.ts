@@ -1,14 +1,14 @@
-import { describe, expect, it, beforeAll, afterAll } from "bun:test";
+import { and, eq, sql } from "drizzle-orm";
 import { initDatabase } from "@/framework/database/connection.js";
 import { db } from "@/framework/facade.js";
-import { clients } from "@/modules/clients/database/models/clients.js";
-import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
-import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
-import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { users } from "@/modules/auth/database/models/user.js";
-import { deriveSubmitters, recordSubmission, listSubmissions } from "../controllers/submissions.controller.js";
+import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
+import { clients } from "@/modules/clients/database/models/clients.js";
 import { companySettings } from "@/modules/firm/database/models/company_settings.js";
-import { and, eq, sql } from "drizzle-orm";
+import { customerTypes } from "@/modules/services/database/models/customer_types.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
+import { deriveSubmitters, listSubmissions, recordSubmission } from "../controllers/submissions.controller.js";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 
 describe("deriveSubmitters (Submitted By filter options)", () => {
   it("groups rows by submitter, counts them, and excludes pending (no submitter)", () => {
@@ -154,12 +154,7 @@ describe("Submissions Module Real Database Tests (PostgreSQL)", () => {
       await db
         .select()
         .from(vatSubmissions)
-        .where(
-          and(
-            eq(vatSubmissions.clientId, activeClientId),
-            eq(vatSubmissions.taxPeriod, testMonth)
-          )
-        )
+        .where(and(eq(vatSubmissions.clientId, activeClientId), eq(vatSubmissions.taxPeriod, testMonth)))
         .limit(1)
     )[0];
 
@@ -192,25 +187,13 @@ describe("Submissions Module Real Database Tests (PostgreSQL)", () => {
   });
 
   it("should delete submission record and return client status to pending", async () => {
-    await db
-      .delete(vatSubmissions)
-      .where(
-        and(
-          eq(vatSubmissions.clientId, activeClientId),
-          eq(vatSubmissions.taxPeriod, testMonth)
-        )
-      );
+    await db.delete(vatSubmissions).where(and(eq(vatSubmissions.clientId, activeClientId), eq(vatSubmissions.taxPeriod, testMonth)));
 
     const remaining = (
       await db
         .select()
         .from(vatSubmissions)
-        .where(
-          and(
-            eq(vatSubmissions.clientId, activeClientId),
-            eq(vatSubmissions.taxPeriod, testMonth)
-          )
-        )
+        .where(and(eq(vatSubmissions.clientId, activeClientId), eq(vatSubmissions.taxPeriod, testMonth)))
         .limit(1)
     )[0];
 

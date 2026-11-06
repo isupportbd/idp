@@ -6,8 +6,8 @@ import { DialogPlugin } from "@/plugins/dialog";
 import { GumPlugin } from "@/plugins/gum";
 import { PulsePlugin } from "@/plugins/pulse";
 import App from "./App.vue";
-import router from "./router";
 import { prefetch } from "./directives/prefetch";
+import router from "./router";
 
 import "bootstrap-icons/font/bootstrap-icons.css";
 // NOTE: Bootstrap's CSS is compiled by custom.scss (`@use "bootstrap/scss/bootstrap"`),
@@ -42,7 +42,6 @@ const blockNumberWheel = (event: Event) => {
 
 // Global non-passive wheel listener on window/document handles number inputs directly
 document.addEventListener("wheel", blockNumberWheel, { passive: false, capture: true });
-
 
 app.use(PulsePlugin);
 

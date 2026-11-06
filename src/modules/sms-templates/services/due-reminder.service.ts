@@ -1,12 +1,12 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/framework/facade.js";
-import { clients } from "@/modules/clients/database/models/clients.js";
-import { companySettings } from "@/modules/firm/database/models/company_settings.js";
 import { bills } from "@/modules/billing/database/models/bills.js";
 import { collections } from "@/modules/billing/database/models/collections.js";
+import { clients } from "@/modules/clients/database/models/clients.js";
+import { companySettings } from "@/modules/firm/database/models/company_settings.js";
 import { smsLogs } from "../database/models/sms_logs.js";
-import { enqueueTransactionalSms } from "./sms-queue.service.js";
 import { normalizeBdMobile } from "./sms.service.js";
+import { enqueueTransactionalSms } from "./sms-queue.service.js";
 
 export type DueReminderScanResult = {
   firmsScanned: number;

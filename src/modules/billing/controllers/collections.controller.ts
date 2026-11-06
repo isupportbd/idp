@@ -1,23 +1,16 @@
+import { and, asc, desc, eq, ilike, inArray, like, ne, or, type SQL, sql } from "drizzle-orm";
 import type { AppContext } from "@/framework/facade.js";
-import { and, asc, desc, eq, ilike, inArray, like, ne, or, sql, type SQL } from "drizzle-orm";
-import {
-  billingScope,
-  broadcast,
-  collectionReceivedPayload,
-  db,
-  HttpStatusCodes,
-  resolveTenantContext
-} from "@/framework/facade.js";
-import { enqueueTransactionalSms } from "@/modules/sms-templates/services/sms-queue.service.js";
+import { billingScope, broadcast, collectionReceivedPayload, db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
+import { users } from "@/modules/auth/database/models/user.js";
+import { clients } from "@/modules/clients/database/models/clients.js";
+import { bankAccounts } from "@/modules/firm/database/models/bank_accounts.js";
+import { companySettings } from "@/modules/firm/database/models/company_settings.js";
 import { isTenantSmsEventEnabled, normalizeBdMobile } from "@/modules/sms-templates/services/sms.service.js";
-import { generateNextReceiptNo } from "../services/billing-numbering.service.js";
-import { getClientRunningDue } from "../services/billing-balance.service.js";
+import { enqueueTransactionalSms } from "@/modules/sms-templates/services/sms-queue.service.js";
 import { bills } from "../database/models/bills.js";
 import { collections } from "../database/models/collections.js";
-import { clients } from "@/modules/clients/database/models/clients.js";
-import { users } from "@/modules/auth/database/models/user.js";
-import { companySettings } from "@/modules/firm/database/models/company_settings.js";
-import { bankAccounts } from "@/modules/firm/database/models/bank_accounts.js";
+import { getClientRunningDue } from "../services/billing-balance.service.js";
+import { generateNextReceiptNo } from "../services/billing-numbering.service.js";
 import { clientBelongsToTenant, loadScopedBill, loadScopedCollection, r2 } from "./billing.helpers.js";
 
 // ── 10. COLLECTIONS & MONEY RECEIPTS ─────────────────────────────────
@@ -26,7 +19,7 @@ export const listCollections = async (c: AppContext) => {
   try {
     const query = c.req.valid("query");
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
-    let conditions: SQL[] = [];
+    const conditions: SQL[] = [];
 
     if (!isSuperAdmin && tenantAdminId) {
       conditions.push(eq(clients.createdBy, tenantAdminId));
@@ -68,7 +61,7 @@ export const listCollections = async (c: AppContext) => {
       .leftJoin(bills, eq(collections.billId, bills.id))
       .where(whereClause);
 
-    let collQuery = db
+    const collQuery = db
       .select({
         id: collections.id,
         receiptNo: collections.receiptNo,
@@ -96,9 +89,7 @@ export const listCollections = async (c: AppContext) => {
       .where(whereClause)
       .orderBy(desc(collections.id));
 
-    const rows = limit
-      ? await collQuery.limit(limit).offset(offset || 0)
-      : await collQuery;
+    const rows = limit ? await collQuery.limit(limit).offset(offset || 0) : await collQuery;
 
     const totalCount = statsResult?.totalCount || 0;
 
@@ -120,10 +111,7 @@ export const listCollections = async (c: AppContext) => {
       HttpStatusCodes.OK
     );
   } catch (err: unknown) {
-    return c.json(
-      { message: "Failed to fetch collections" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ message: "Failed to fetch collections" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -230,9 +218,7 @@ export const createCollection = async (c: AppContext) => {
       // Remaining balance: the just-updated bill when linked, else client-wide due.
       let remainingDue = 0;
       if (billId) {
-        const updatedBill = (
-          await db.select({ dueAmount: bills.dueAmount }).from(bills).where(eq(bills.id, billId)).limit(1)
-        )[0];
+        const updatedBill = (await db.select({ dueAmount: bills.dueAmount }).from(bills).where(eq(bills.id, billId)).limit(1))[0];
         remainingDue = Number(updatedBill?.dueAmount ?? 0);
       } else {
         remainingDue = Number(await getClientRunningDue(clientId));
@@ -266,10 +252,7 @@ export const createCollection = async (c: AppContext) => {
       HttpStatusCodes.CREATED
     );
   } catch (err: unknown) {
-    return c.json(
-      { message: "Failed to record collection" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ message: "Failed to record collection" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -288,10 +271,7 @@ export const cancelCollection = async (c: AppContext) => {
 
     // Cancel the receipt and revert the invoice balance atomically.
     await db.transaction(async (tx) => {
-      await tx
-        .update(collections)
-        .set({ status: "cancelled", updatedAt: new Date() })
-        .where(eq(collections.id, id));
+      await tx.update(collections).set({ status: "cancelled", updatedAt: new Date() }).where(eq(collections.id, id));
 
       if (col.billId) {
         await tx
@@ -306,15 +286,9 @@ export const cancelCollection = async (c: AppContext) => {
       }
     });
 
-    return c.json(
-      { message: `Receipt ${col.receiptNo} cancelled successfully` },
-      HttpStatusCodes.OK
-    );
+    return c.json({ message: `Receipt ${col.receiptNo} cancelled successfully` }, HttpStatusCodes.OK);
   } catch (err: unknown) {
-    return c.json(
-      { message: "Failed to cancel collection" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ message: "Failed to cancel collection" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -393,7 +367,7 @@ export const getCollectionDetails = async (c: AppContext) => {
 
     // Tenant-scoped company branding — resolved from the client owner's Firm
     // Settings only, with no cross-tenant fallback.
-    let firmSetting: (typeof companySettings.$inferSelect) | null = null;
+    let firmSetting: typeof companySettings.$inferSelect | null = null;
     try {
       if (col.createdBy) {
         firmSetting =
@@ -401,7 +375,9 @@ export const getCollectionDetails = async (c: AppContext) => {
             where: eq(companySettings.adminId, col.createdBy)
           })) ?? null;
       }
-    } catch (billErr: unknown) { console.warn("[Billing Warning]:", billErr instanceof Error ? billErr.message : billErr); }
+    } catch (billErr: unknown) {
+      console.warn("[Billing Warning]:", billErr instanceof Error ? billErr.message : billErr);
+    }
 
     return c.json(
       {
@@ -409,26 +385,24 @@ export const getCollectionDetails = async (c: AppContext) => {
         data: {
           ...col,
           clientOutstandingDue: currentOutstandingDue,
-          companySettings: firmSetting ? {
-            companyName: firmSetting.companyName,
-            proprietorName: firmSetting.proprietorName,
-            phone: firmSetting.phone,
-            email: firmSetting.email,
-            website: firmSetting.website,
-            address: firmSetting.address,
-            binNumber: firmSetting.binNumber,
-            tinNumber: firmSetting.tinNumber,
-            tradeLicenseNo: firmSetting.tradeLicenseNo
-          } : null
+          companySettings: firmSetting
+            ? {
+                companyName: firmSetting.companyName,
+                proprietorName: firmSetting.proprietorName,
+                phone: firmSetting.phone,
+                email: firmSetting.email,
+                website: firmSetting.website,
+                address: firmSetting.address,
+                binNumber: firmSetting.binNumber,
+                tinNumber: firmSetting.tinNumber,
+                tradeLicenseNo: firmSetting.tradeLicenseNo
+              }
+            : null
         }
       },
       HttpStatusCodes.OK
     );
   } catch (err: unknown) {
-    return c.json(
-      { message: "Failed to fetch receipt details" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ message: "Failed to fetch receipt details" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
-

@@ -1,5 +1,5 @@
-import { ref } from "vue";
 import axios from "axios";
+import { ref } from "vue";
 
 export interface ClientItem {
   id: number;
@@ -82,15 +82,17 @@ export function useClientsApi() {
     return fallback;
   };
 
-  const fetchClients = async (params: {
-    search?: string;
-    customerTypeId?: number;
-    referenceId?: number;
-    vatServiceType?: "FULL" | "ONLY_RETURN" | "all";
-    isActive?: string;
-    page?: number;
-    limit?: number;
-  } = {}) => {
+  const fetchClients = async (
+    params: {
+      search?: string;
+      customerTypeId?: number;
+      referenceId?: number;
+      vatServiceType?: "FULL" | "ONLY_RETURN" | "all";
+      isActive?: string;
+      page?: number;
+      limit?: number;
+    } = {}
+  ) => {
     // Only display blocking loader if we don't have any cached clients yet
     if (!hasLoadedClientsOnce.value || clients.value.length === 0) {
       loading.value = true;

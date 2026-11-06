@@ -39,11 +39,7 @@ export const userServiceRates = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
   },
   (table) => [
-    uniqueIndex("user_service_rates_user_item_effective_idx").on(
-      table.userId,
-      table.serviceItemId,
-      table.effectiveFrom
-    ),
+    uniqueIndex("user_service_rates_user_item_effective_idx").on(table.userId, table.serviceItemId, table.effectiveFrom),
     index("user_service_rates_admin_user_idx").on(table.adminId, table.userId)
   ]
 );

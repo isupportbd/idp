@@ -1,16 +1,16 @@
+import { and, asc, desc, eq, ilike, inArray, like, ne, or, type SQL, sql } from "drizzle-orm";
 import type { AppContext } from "@/framework/facade.js";
-import { and, asc, desc, eq, ilike, inArray, like, ne, or, sql, type SQL } from "drizzle-orm";
 import { db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
-import { bills } from "../database/models/bills.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
-import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
-import { serviceItems } from "@/modules/services/database/models/service_items.js";
-import { serviceRates } from "@/modules/services/database/models/service_rates.js";
+import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
-import { purchases } from "@/modules/purchases/database/models/purchases.js";
+import { serviceItems } from "@/modules/services/database/models/service_items.js";
+import { serviceRates } from "@/modules/services/database/models/service_rates.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
+import { bills } from "../database/models/bills.js";
 import { getBatchClientsRunningDue } from "../services/billing-balance.service.js";
-import { r2, type MissingBillingClient } from "./billing.helpers.js";
+import { type MissingBillingClient, r2 } from "./billing.helpers.js";
 
 // ── 8. GET MISSING BILLS LIST ────────────────────────────────────────
 
@@ -60,12 +60,7 @@ export const getMissingBills = async (c: AppContext) => {
     const existingBills = await db
       .select({ clientId: bills.clientId })
       .from(bills)
-      .where(
-        and(
-          eq(bills.taxPeriod, month),
-          sql`${bills.status} != 'cancelled'`
-        )
-      );
+      .where(and(eq(bills.taxPeriod, month), sql`${bills.status} != 'cancelled'`));
     const billedSet = new Set(existingBills.map((b) => b.clientId));
 
     // Fetch finalized submissions for this month
@@ -77,10 +72,7 @@ export const getMissingBills = async (c: AppContext) => {
       })
       .from(vatSubmissions)
       .where(
-        and(
-          eq(vatSubmissions.taxPeriod, month),
-          sql`${vatSubmissions.submissionId} IS NOT NULL AND ${vatSubmissions.submissionId} != ''`
-        )
+        and(eq(vatSubmissions.taxPeriod, month), sql`${vatSubmissions.submissionId} IS NOT NULL AND ${vatSubmissions.submissionId} != ''`)
       );
 
     const subMap = new Map<number, (typeof submissions)[number]>(submissions.map((s) => [s.clientId, s]));
@@ -117,13 +109,9 @@ export const getMissingBills = async (c: AppContext) => {
 
       let returnItem = null;
       if (hasPurchases) {
-        returnItem = allServices.find(
-          (s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("regular")
-        );
+        returnItem = allServices.find((s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("regular"));
       } else {
-        returnItem = allServices.find(
-          (s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("zero")
-        );
+        returnItem = allServices.find((s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("zero"));
       }
       if (!returnItem) {
         returnItem = allServices.find((s) => s.itemName.toLowerCase().includes("return"));
@@ -134,9 +122,7 @@ export const getMissingBills = async (c: AppContext) => {
 
       let monthlyServiceFee = returnRate;
       if (cl.vatServiceType === "FULL" && hasPurchases) {
-        const booksItem = allServices.find(
-          (s) => s.itemName.toLowerCase().includes("books") || s.itemName.toLowerCase().includes("6.2.1")
-        );
+        const booksItem = allServices.find((s) => s.itemName.toLowerCase().includes("books") || s.itemName.toLowerCase().includes("6.2.1"));
         const booksRateObj = clientRates.find((r) => booksItem && r.serviceItemId === booksItem.id);
         const booksRate = booksRateObj ? booksRateObj.regularRate : 0;
         const booksMin = booksRateObj ? booksRateObj.minimumCharge : 0;
@@ -205,10 +191,7 @@ export const getMissingBills = async (c: AppContext) => {
       HttpStatusCodes.OK
     );
   } catch (err: unknown) {
-    return c.json(
-      { message: "Failed to fetch missing bills" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ message: "Failed to fetch missing bills" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 

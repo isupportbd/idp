@@ -1,21 +1,20 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useAuthStore } from "@/stores/auth";
-import { useFirmApi, type CompanySettings } from "@/composables/useFirmApi";
+import { can } from "@/composables/useAuth";
+import { type CompanySettings, useFirmApi } from "@/composables/useFirmApi";
 import { useServicesApi } from "@/composables/useServicesApi";
 import { useToast } from "@/composables/useToast";
-import { can } from "@/composables/useAuth";
-
+import { useAuthStore } from "@/stores/auth";
+import BankAccountsTab from "./settings/BankAccountsTab.vue";
+import ClientReferencesTab from "./settings/ClientReferencesTab.vue";
+import ExpenseHeadsTab from "./settings/ExpenseHeadsTab.vue";
 // Sub-components for tabs
 import FirmProfileTab from "./settings/FirmProfileTab.vue";
 import InvoiceSettingsTab from "./settings/InvoiceSettingsTab.vue";
-import BankAccountsTab from "./settings/BankAccountsTab.vue";
+import RulesSmsTab from "./settings/RulesSmsTab.vue";
 import ServiceItemsTab from "./settings/ServiceItemsTab.vue";
 import ServiceRatesTab from "./settings/ServiceRatesTab.vue";
-import ExpenseHeadsTab from "./settings/ExpenseHeadsTab.vue";
-import ClientReferencesTab from "./settings/ClientReferencesTab.vue";
-import RulesSmsTab from "./settings/RulesSmsTab.vue";
 
 // Sub-users without settings.edit see every tab in read-only mode
 const canEditSettings = computed(() => can("settings.edit"));
@@ -25,15 +24,8 @@ const router = useRouter();
 const toast = useToast();
 const authStore = useAuthStore();
 
-const {
-  company,
-  bankAccounts,
-  expenseHeads,
-  fetchCompanySettings,
-  updateCompanySettings,
-  fetchBankAccounts,
-  fetchExpenseHeads
-} = useFirmApi();
+const { company, bankAccounts, expenseHeads, fetchCompanySettings, updateCompanySettings, fetchBankAccounts, fetchExpenseHeads } =
+  useFirmApi();
 
 const {
   customerTypes,
@@ -52,7 +44,7 @@ const {
 const form = ref<CompanySettings>({ ...company.value });
 
 const validTabs = ["profile", "invoice", "bank", "items", "rates", "expenses", "references", "rules"] as const;
-type TabType = typeof validTabs[number];
+type TabType = (typeof validTabs)[number];
 
 const getInitialTab = (): TabType => {
   const queryTab = route.query.tab as string;
@@ -116,7 +108,8 @@ const handleResetToDefault = async () => {
       currentReceiptSequence: 5001,
       currency: "BDT (৳)",
       decimalPlaces: 2,
-      invoiceTerms: "1. Payment is due within 15 days of invoice date.\n2. Please mention the invoice number as reference in payment.\n3. Checks/Transfers are subject to realization.",
+      invoiceTerms:
+        "1. Payment is due within 15 days of invoice date.\n2. Please mention the invoice number as reference in payment.\n3. Checks/Transfers are subject to realization.",
       invoiceFooterText: "",
       receiptFooterText: "This is a computer-generated money receipt and does not require a physical signature.",
       autoDueCarryForward: true,

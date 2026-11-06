@@ -1,18 +1,17 @@
-import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
-import { loginLimiter } from "@/framework/facade.js";
+import { createRoute, createRouter, HttpStatusCodes, jsonContent, loginLimiter, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
 import { requireTenantAdmin } from "@/middlewares/permission-middleware.js";
 import {
+  buyStorage,
   forgotPassword,
   getUserStats,
   login,
   logout,
   logoutAllDevices,
   me,
+  rechargeWallet,
   refreshToken,
   register,
-  rechargeWallet,
-  buyStorage,
   resetPassword,
   sendTestSms,
   syncSmsBalance,
@@ -174,7 +173,10 @@ const rechargeWalletRoute = createRoute({
     body: jsonContent(RechargeWalletSchema, "Recharge payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), message: z.string(), data: z.unknown().optional() }), "Recharge request submitted")
+    [HttpStatusCodes.OK]: jsonContent(
+      z.object({ success: z.boolean(), message: z.string(), data: z.unknown().optional() }),
+      "Recharge request submitted"
+    )
   }
 });
 
@@ -269,7 +271,4 @@ const tenantOwnerRoute = createRouter()
   .api(sendTestSmsRoute, sendTestSms)
   .api(syncSmsBalanceRoute, syncSmsBalance);
 
-export default createRouter()
-  .route("/", publicRoute)
-  .route("/", protectedRoute)
-  .route("/", tenantOwnerRoute);
+export default createRouter().route("/", publicRoute).route("/", protectedRoute).route("/", tenantOwnerRoute);

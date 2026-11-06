@@ -1,29 +1,29 @@
+import { and, asc, desc, eq, ilike, inArray, like, ne, or, type SQL, sql } from "drizzle-orm";
 import type { AppContext } from "@/framework/facade.js";
-import { and, asc, desc, eq, ilike, inArray, like, ne, or, sql, type SQL } from "drizzle-orm";
 import {
   billingScope,
   broadcast,
   db,
+  HttpStatusCodes,
   handleAsyncEndpoint,
   handleControllerError,
-  HttpStatusCodes,
   invoiceCreatedPayload,
   isAsyncFlagEnabled,
   resolveTenantContext
 } from "@/framework/facade.js";
-import { enqueueTransactionalSms } from "@/modules/sms-templates/services/sms-queue.service.js";
-import { formatPeriodLabel, isTenantSmsEventEnabled, normalizeBdMobile } from "@/modules/sms-templates/services/sms.service.js";
-import { generateNextBillNo } from "../services/billing-numbering.service.js";
-import { getBatchClientsRunningDue } from "../services/billing-balance.service.js";
-import { bills } from "../database/models/bills.js";
-import { billItems } from "../database/models/bill_items.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
-import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
+import { companySettings } from "@/modules/firm/database/models/company_settings.js";
+import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { serviceItems } from "@/modules/services/database/models/service_items.js";
 import { serviceRates } from "@/modules/services/database/models/service_rates.js";
-import { purchases } from "@/modules/purchases/database/models/purchases.js";
-import { companySettings } from "@/modules/firm/database/models/company_settings.js";
-import { r2, resolveBatchActor, type CreatedBillSummary, type SuggestedBillItem } from "./billing.helpers.js";
+import { formatPeriodLabel, isTenantSmsEventEnabled, normalizeBdMobile } from "@/modules/sms-templates/services/sms.service.js";
+import { enqueueTransactionalSms } from "@/modules/sms-templates/services/sms-queue.service.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
+import { billItems } from "../database/models/bill_items.js";
+import { bills } from "../database/models/bills.js";
+import { getBatchClientsRunningDue } from "../services/billing-balance.service.js";
+import { generateNextBillNo } from "../services/billing-numbering.service.js";
+import { type CreatedBillSummary, r2, resolveBatchActor, type SuggestedBillItem } from "./billing.helpers.js";
 
 export type BatchGenerationParams = {
   taxPeriod: string;
@@ -57,7 +57,7 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
     clientConditions.push(eq(clients.createdBy, creatorId));
   }
 
-  let clientQuery = db
+  const clientQuery = db
     .select({
       id: clients.id,
       companyName: clients.companyName,
@@ -87,12 +87,7 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
   const existingBills = await db
     .select({ clientId: bills.clientId })
     .from(bills)
-    .where(
-      and(
-        eq(bills.taxPeriod, taxPeriod),
-        sql`${bills.status} != 'cancelled'`
-      )
-    );
+    .where(and(eq(bills.taxPeriod, taxPeriod), sql`${bills.status} != 'cancelled'`));
   const billedClientIds = new Set(existingBills.map((b) => b.clientId));
 
   // 3. Fetch all finalized submissions for this taxPeriod
@@ -100,10 +95,7 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
     .select({ clientId: vatSubmissions.clientId, submissionId: vatSubmissions.submissionId })
     .from(vatSubmissions)
     .where(
-      and(
-        eq(vatSubmissions.taxPeriod, taxPeriod),
-        sql`${vatSubmissions.submissionId} IS NOT NULL AND ${vatSubmissions.submissionId} != ''`
-      )
+      and(eq(vatSubmissions.taxPeriod, taxPeriod), sql`${vatSubmissions.submissionId} IS NOT NULL AND ${vatSubmissions.submissionId} != ''`)
     );
   const finalizedClientIds = new Set(submissions.map((s) => s.clientId));
 
@@ -120,9 +112,7 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
     onProgress?.({ total: totalCount, processed: processedCount, created: createdBillsList.length, skipped: skippedCount });
   };
 
-  const eligibleClients = targetClients.filter(
-    (c) => !billedClientIds.has(c.id) && finalizedClientIds.has(c.id)
-  );
+  const eligibleClients = targetClients.filter((c) => !billedClientIds.has(c.id) && finalizedClientIds.has(c.id));
   const batchDueMap = await getBatchClientsRunningDue(eligibleClients.map((c) => c.id));
 
   // Batch query purchases for taxPeriod
@@ -174,13 +164,9 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
     // 1. VAT Return Fee (Dynamic Regular vs Zero)
     let returnItem: (typeof allServices)[number] | null | undefined = null;
     if (hasPurchases) {
-      returnItem = allServices.find(
-        (s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("regular")
-      );
+      returnItem = allServices.find((s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("regular"));
     } else {
-      returnItem = allServices.find(
-        (s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("zero")
-      );
+      returnItem = allServices.find((s) => s.itemName.toLowerCase().includes("return") && s.itemName.toLowerCase().includes("zero"));
     }
     if (!returnItem) {
       returnItem = allServices.find((s) => s.itemName.toLowerCase().includes("return"));
@@ -202,14 +188,12 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
       minimumChargeUsed: returnRateObj ? returnRateObj.minimumCharge : 0,
       calculatedAmount: returnRate,
       finalAmount: returnRate,
-      notes: `${hasPurchases ? 'Regular' : 'Zero'} monthly VAT return filing for ${taxPeriod}`
+      notes: `${hasPurchases ? "Regular" : "Zero"} monthly VAT return filing for ${taxPeriod}`
     });
 
     // 2. Books of Accounts Fee (if FULL Service AND has purchases/imports)
     if (client.vatServiceType === "FULL" && hasPurchases) {
-      const booksItem = allServices.find(
-        (s) => s.itemName.toLowerCase().includes("books") || s.itemName.toLowerCase().includes("6.2.1")
-      );
+      const booksItem = allServices.find((s) => s.itemName.toLowerCase().includes("books") || s.itemName.toLowerCase().includes("6.2.1"));
       const booksRateObj = clientRates.find((r) => booksItem && r.serviceItemId === booksItem.id);
       const booksRate = booksRateObj ? booksRateObj.regularRate : 0;
       const booksMin = booksRateObj ? booksRateObj.minimumCharge : 0;
@@ -239,7 +223,7 @@ export async function runBatchGeneration(params: BatchGenerationParams): Promise
         minimumChargeUsed: booksMin,
         calculatedAmount: calculatedAmt,
         finalAmount: finalBooksAmt,
-        notes: `Purchase & Sales accounts maintenance for ${taxPeriod}${qty > 0 && (unitUpper === 'MT' || unitUpper === 'KG') ? ` (${qty} ${booksUnit})` : ''}`
+        notes: `Purchase & Sales accounts maintenance for ${taxPeriod}${qty > 0 && (unitUpper === "MT" || unitUpper === "KG") ? ` (${qty} ${booksUnit})` : ""}`
       });
     }
 

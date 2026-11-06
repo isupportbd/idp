@@ -1,17 +1,17 @@
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { initDatabase } from "@/framework/database/connection.js";
 import { db } from "@/framework/facade.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
-import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 import { purchases } from "@/modules/purchases/database/models/purchases.js";
-import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { serviceItems } from "@/modules/services/database/models/service_items.js";
 import { serviceRates } from "@/modules/services/database/models/service_rates.js";
-import { bills } from "../database/models/bills.js";
-import { billItems } from "../database/models/bill_items.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
+import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
 import { runBatchGeneration } from "../controllers/billing.controller.js";
+import { billItems } from "../database/models/bill_items.js";
+import { bills } from "../database/models/bills.js";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 
 /**
  * Batch invoice generation is financial, previously untested code. These tests

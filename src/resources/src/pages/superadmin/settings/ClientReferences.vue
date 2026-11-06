@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import { onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
-import { pulse } from "@/plugins/pulse";
-import { useToast } from "@/composables/useToast";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { onBeforeRouteLeave } from "vue-router";
 import SearchInput from "@/components/common/SearchInput.vue";
+import { useToast } from "@/composables/useToast";
+import { pulse } from "@/plugins/pulse";
 
 const toast = useToast();
 
@@ -75,9 +75,7 @@ const filteredReferences = computed(() => {
   const q = searchQuery.value.toLowerCase().trim();
   return references.value.filter(
     (r) =>
-      r.name.toLowerCase().includes(q) ||
-      (r.phone && r.phone.toLowerCase().includes(q)) ||
-      (r.email && r.email.toLowerCase().includes(q))
+      r.name.toLowerCase().includes(q) || (r.phone && r.phone.toLowerCase().includes(q)) || (r.email && r.email.toLowerCase().includes(q))
   );
 });
 

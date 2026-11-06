@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
-import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
+import { can } from "@/composables/useAuth";
+import { type Bill, type Collection, useBillingApi } from "@/composables/useBillingApi";
+import { useClientsApi } from "@/composables/useClientsApi";
+import { useExcelExport } from "@/composables/useExcelExport";
+import { usePagination } from "@/composables/usePagination";
+import { useServicesApi } from "@/composables/useServicesApi";
+import { useToast } from "@/composables/useToast";
 import BillingStatsCards from "./billing/BillingStatsCards.vue";
 import BillingToolbar from "./billing/BillingToolbar.vue";
-import InvoicesTable from "./billing/InvoicesTable.vue";
 import CollectionsTable from "./billing/CollectionsTable.vue";
+import InvoicesTable from "./billing/InvoicesTable.vue";
 import MissingBillsTable from "./billing/MissingBillsTable.vue";
-import { useBillingApi, type Bill, type Collection } from "@/composables/useBillingApi";
-import { useServicesApi } from "@/composables/useServicesApi";
-import { useClientsApi } from "@/composables/useClientsApi";
-import { useToast } from "@/composables/useToast";
-import { usePagination } from "@/composables/usePagination";
-import { can } from "@/composables/useAuth";
-import { useExcelExport } from "@/composables/useExcelExport";
 
 const router = useRouter();
 const { exportSingleSheet } = useExcelExport();
@@ -49,7 +49,9 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(BILLING_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: Billing.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: Billing.vue]", uiErr?.message || uiErr);
+  }
   return {};
 };
 
@@ -57,7 +59,7 @@ const savedFilters = getSavedFilters();
 
 // Active View Tab
 const validTabs = ["invoices", "collections", "dues", "missing"] as const;
-type TabType = typeof validTabs[number];
+type TabType = (typeof validTabs)[number];
 
 const initialTab = (route.query.tab as TabType) || savedFilters.activeTab || "invoices";
 const activeTab = ref<TabType>(validTabs.includes(initialTab) ? initialTab : "invoices");
@@ -96,7 +98,9 @@ const saveFilters = () => {
         })
       );
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: Billing.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: Billing.vue]", uiErr?.message || uiErr);
+  }
 };
 
 // Update URL parameters when tab, month, or search changes without refreshing
@@ -146,7 +150,9 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(BILLING_FILTER_KEY);
       }
-    } catch (uiErr: any) { console.warn("[UI Component Warning: Billing.vue]", uiErr?.message || uiErr); }
+    } catch (uiErr: any) {
+      console.warn("[UI Component Warning: Billing.vue]", uiErr?.message || uiErr);
+    }
   }
 });
 
@@ -196,7 +202,9 @@ const loadData = async () => {
 const loadLookups = async () => {
   try {
     await Promise.all([fetchCustomerTypes(), fetchReferences(), fetchAssignableUsers()]);
-  } catch (uiErr: any) { console.warn("[UI Component Warning: Billing.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: Billing.vue]", uiErr?.message || uiErr);
+  }
 };
 
 onMounted(async () => {
@@ -262,9 +270,9 @@ const filteredMissingBills = computed(() => {
 
 // Pagination State (10 items per page with reload persistence)
 const currentTabList = computed<any[]>(() => {
-  if (activeTab.value === 'dues') return dueClientsList.value;
-  if (activeTab.value === 'collections') return collections.value;
-  if (activeTab.value === 'missing') return filteredMissingBills.value;
+  if (activeTab.value === "dues") return dueClientsList.value;
+  if (activeTab.value === "collections") return collections.value;
+  if (activeTab.value === "missing") return filteredMissingBills.value;
   return bills.value;
 });
 
@@ -304,11 +312,7 @@ const handleBatchGenerate = async () => {
     return;
   }
 
-  if (
-    !confirm(
-      `Generate monthly bills for ${eligibleCount} eligible clients for ${selectedMonth.value}?`
-    )
-  ) {
+  if (!confirm(`Generate monthly bills for ${eligibleCount} eligible clients for ${selectedMonth.value}?`)) {
     return;
   }
 
@@ -362,7 +366,7 @@ const exportToExcel = async () => {
       "Client Organization": b.clientName,
       "BIN Number": b.clientBin || "N/A",
       "Customer Type": b.customerTypeName || "Standard",
-      "Reference": b.referenceName || "N/A",
+      Reference: b.referenceName || "N/A",
       "Tax Period": b.taxPeriod,
       "Bill Date": new Date(b.billDate).toLocaleDateString(),
       "Subtotal (Tk)": b.subtotal,
@@ -371,7 +375,7 @@ const exportToExcel = async () => {
       "Grand Total (Tk)": b.grandTotal,
       "Paid Amount (Tk)": b.paidAmount,
       "Due Amount (Tk)": b.dueAmount,
-      "Status": b.status.toUpperCase()
+      Status: b.status.toUpperCase()
     }));
   } else if (activeTab.value === "collections") {
     exportRows = collections.value.map((c) => ({
@@ -381,8 +385,8 @@ const exportToExcel = async () => {
       "Payment Method": c.paymentMethod.toUpperCase(),
       "Collected Amount (Tk)": c.amount,
       "Reference No": c.referenceNo || "N/A",
-      "Notes": c.notes || "",
-      "Status": c.status.toUpperCase()
+      Notes: c.notes || "",
+      Status: c.status.toUpperCase()
     }));
   } else if (activeTab.value === "missing") {
     exportRows = filteredMissingBills.value.map((m) => ({
@@ -391,7 +395,7 @@ const exportToExcel = async () => {
       "Service Scope": m.vatServiceType,
       "Target Month": m.targetMonth,
       "Submission ID": m.submissionId || "Pending",
-      "Status": m.isSubmitted ? "Ready to Bill" : "Pending Submission",
+      Status: m.isSubmitted ? "Ready to Bill" : "Pending Submission",
       "Previous Due (Tk)": m.previousDue,
       "Service Fee (Tk)": m.monthlyServiceFee
     }));

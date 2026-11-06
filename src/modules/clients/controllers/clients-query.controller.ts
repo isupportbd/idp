@@ -1,12 +1,12 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from "drizzle-orm";
+import type { AppContext } from "@/framework/facade.js";
 import { db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
-import { clients } from "../database/models/clients.js";
-import { clientManagers } from "../database/models/client_managers.js";
+import { hasPermission } from "@/middlewares/permission-middleware.js";
+import { users } from "@/modules/auth/database/models/user.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
-import { users } from "@/modules/auth/database/models/user.js";
-import { hasPermission } from "@/middlewares/permission-middleware.js";
+import { clientManagers } from "../database/models/client_managers.js";
+import { clients } from "../database/models/clients.js";
 
 // ── 1. LIST CLIENTS WITH FILTERS & PAGINATION ────────────────────────
 
@@ -26,9 +26,7 @@ export const listClients = async (c: AppContext) => {
     }
 
     if (!isSuperAdmin && !isTenantAdmin) {
-      conditions.push(
-        sql`${clients.id} IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`
-      );
+      conditions.push(sql`${clients.id} IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`);
     }
 
     if (query.search && query.search.trim()) {
@@ -61,10 +59,7 @@ export const listClients = async (c: AppContext) => {
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Total Count
-    const totalResult = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(clients)
-      .where(whereClause);
+    const totalResult = await db.select({ count: sql<number>`count(*)::int` }).from(clients).where(whereClause);
     const total = totalResult[0]?.count || 0;
 
     // Fetch Paginated Rows
@@ -103,7 +98,7 @@ export const listClients = async (c: AppContext) => {
 
     // Attach Assigned Managers
     const clientIds = rows.map((r) => r.id);
-    let managerMap: Record<number, any[]> = {};
+    const managerMap: Record<number, any[]> = {};
 
     if (clientIds.length > 0) {
       const allManagers = await db
@@ -132,7 +127,7 @@ export const listClients = async (c: AppContext) => {
     const canSeeVat = await hasPermission(c, "clients.vat_password");
     const data = rows.map((r) => ({
       ...r,
-      vatPassword: canSeeVat ? (r.vatPassword || null) : null,
+      vatPassword: canSeeVat ? r.vatPassword || null : null,
       managers: managerMap[r.id] || []
     }));
 
@@ -166,9 +161,7 @@ export const getClientById = async (c: AppContext) => {
       whereConditions.push(eq(clients.createdBy, tenantAdminId));
     }
     if (!isSuperAdmin && !isTenantAdmin) {
-      whereConditions.push(
-        sql`${clients.id} IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`
-      );
+      whereConditions.push(sql`${clients.id} IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`);
     }
 
     const row = (
@@ -224,7 +217,7 @@ export const getClientById = async (c: AppContext) => {
         message: "Client retrieved successfully",
         data: {
           ...row,
-          vatPassword: canSeeVat ? (row.vatPassword || null) : null,
+          vatPassword: canSeeVat ? row.vatPassword || null : null,
           managers: assignedManagers
         }
       },

@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
-import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import { debounce } from "lodash-es";
-import MonthNavigator from "@/components/MonthNavigator.vue";
-import SearchInput from "@/components/common/SearchInput.vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
 import IdpSelect from "@/components/common/IdpSelect.vue";
-import { useActivityFilterApi, type ActivityClient } from "@/composables/useActivityFilterApi";
-import { usePagination } from "@/composables/usePagination";
+import SearchInput from "@/components/common/SearchInput.vue";
+import MonthNavigator from "@/components/MonthNavigator.vue";
+import { type ActivityClient, useActivityFilterApi } from "@/composables/useActivityFilterApi";
 import { can } from "@/composables/useAuth";
-import { usePulseListener } from "@/composables/usePulseListener";
 import { useExcelExport } from "@/composables/useExcelExport";
+import { usePagination } from "@/composables/usePagination";
+import { usePulseListener } from "@/composables/usePulseListener";
 import { pulse } from "@/plugins/pulse";
 
 const router = useRouter();
@@ -35,7 +35,9 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(ACTIVITY_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: ActivityFilter.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: ActivityFilter.vue]", uiErr?.message || uiErr);
+  }
   return {};
 };
 
@@ -71,7 +73,9 @@ const saveFilters = () => {
         })
       );
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: ActivityFilter.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: ActivityFilter.vue]", uiErr?.message || uiErr);
+  }
 };
 
 const debouncedSaveFilters = debounce(saveFilters, 250);
@@ -84,7 +88,9 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(ACTIVITY_FILTER_KEY);
       }
-    } catch (uiErr: any) { console.warn("[UI Component Warning: ActivityFilter.vue]", uiErr?.message || uiErr); }
+    } catch (uiErr: any) {
+      console.warn("[UI Component Warning: ActivityFilter.vue]", uiErr?.message || uiErr);
+    }
   }
 });
 
@@ -117,7 +123,9 @@ const clearAllFilters = () => {
     if (typeof window !== "undefined" && window.sessionStorage) {
       sessionStorage.removeItem(ACTIVITY_FILTER_KEY);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: ActivityFilter.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: ActivityFilter.vue]", uiErr?.message || uiErr);
+  }
 };
 
 // Clipboard copy state
@@ -173,15 +181,11 @@ const activeClientsCount = computed(() => {
 });
 
 const activeFiledClientsCount = computed(() => {
-  return clientsMatchingDropdowns.value.filter(
-    (c) => (c.purchaseAmount || 0) > 0 && c.isSubmitted
-  ).length;
+  return clientsMatchingDropdowns.value.filter((c) => (c.purchaseAmount || 0) > 0 && c.isSubmitted).length;
 });
 
 const activeUnfiledClientsCount = computed(() => {
-  return clientsMatchingDropdowns.value.filter(
-    (c) => (c.purchaseAmount || 0) > 0 && !c.isSubmitted
-  ).length;
+  return clientsMatchingDropdowns.value.filter((c) => (c.purchaseAmount || 0) > 0 && !c.isSubmitted).length;
 });
 
 const inactiveClientsCount = computed(() => {
@@ -189,15 +193,11 @@ const inactiveClientsCount = computed(() => {
 });
 
 const inactiveFiledClientsCount = computed(() => {
-  return clientsMatchingDropdowns.value.filter(
-    (c) => (c.purchaseAmount || 0) === 0 && c.isSubmitted
-  ).length;
+  return clientsMatchingDropdowns.value.filter((c) => (c.purchaseAmount || 0) === 0 && c.isSubmitted).length;
 });
 
 const inactiveUnfiledClientsCount = computed(() => {
-  return clientsMatchingDropdowns.value.filter(
-    (c) => (c.purchaseAmount || 0) === 0 && !c.isSubmitted
-  ).length;
+  return clientsMatchingDropdowns.value.filter((c) => (c.purchaseAmount || 0) === 0 && !c.isSubmitted).length;
 });
 
 const totalFiledClientsCount = computed(() => {
@@ -288,10 +288,10 @@ const exportToExcel = async () => {
   const exportRows = filteredClients.value.map((c, idx) => ({
     "Sl No": idx + 1,
     "Company Name": c.name,
-    "BIN": c.bin || "N/A",
+    BIN: c.bin || "N/A",
     "VAT Username": c.username || "—",
     "Customer Type": c.clientType,
-    "Reference": c.reference,
+    Reference: c.reference,
     "Tax Period": selectedMonth.value,
     "Total BE": c.beCount || 0,
     "Purchase Amount (Tk)": c.purchaseAmount || 0,

@@ -1,11 +1,11 @@
-import { beforeAll, describe, expect, it } from "bun:test";
 import { and, eq, sql } from "drizzle-orm";
 import { initDatabase } from "@/framework/database/connection.js";
 import { db } from "@/framework/facade.js";
 import { redisClientIfReady } from "@/framework/redis/client.js";
 import { smsLogs } from "../database/models/sms_logs.js";
-import { enqueueTransactionalSms } from "../services/sms-queue.service.js";
 import { buildVatSubmissionSmsPayload, formatPeriodLabel, sendTransactionalSms } from "../services/sms.service.js";
+import { enqueueTransactionalSms } from "../services/sms-queue.service.js";
+import { beforeAll, describe, expect, it } from "bun:test";
 
 /**
  * Transactional SMS queue core — drives the REAL `sendTransactionalSms` (the

@@ -1,12 +1,12 @@
-import { describe, expect, it } from "vitest";
 import { Hono } from "hono";
+import { describe, expect, it } from "vitest";
+import { requirePermission, requireTenantAdmin } from "@/middlewares/permission-middleware.js";
 import {
   ALL_PERMISSION_KEYS,
   DEFAULT_SUB_USER_PERMISSIONS,
-  PERMISSION_MODULES,
-  normalizePermissions
+  normalizePermissions,
+  PERMISSION_MODULES
 } from "@/modules/users/controllers/permissions.js";
-import { requirePermission, requireTenantAdmin } from "@/middlewares/permission-middleware.js";
 
 /**
  * Builds a tiny app where the resolved permissions are injected on the context,
@@ -50,13 +50,7 @@ describe("users.permissions", () => {
     it("expands a legacy module id into all of its actions", () => {
       const result = normalizePermissions(["clients"]);
       expect(result).toEqual(
-        expect.arrayContaining([
-          "clients.view",
-          "clients.create",
-          "clients.edit",
-          "clients.delete",
-          "clients.vat_password"
-        ])
+        expect.arrayContaining(["clients.view", "clients.create", "clients.edit", "clients.delete", "clients.vat_password"])
       );
     });
 

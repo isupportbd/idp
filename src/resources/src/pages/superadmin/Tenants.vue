@@ -1,18 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
 import { debounce } from "lodash-es";
-import { pulse } from "@/plugins/pulse";
-import PendingRechargesCard from "./tenants/PendingRechargesCard.vue";
-import PendingSignupsCard from "./tenants/PendingSignupsCard.vue";
-import ExtendSubscriptionModal from "./tenants/ExtendSubscriptionModal.vue";
-import {
-  useSuperAdminApi,
-  type Tenant,
-  type PendingSignup
-} from "@/composables/useSuperAdminApi";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
 import SearchInput from "@/components/common/SearchInput.vue";
 import { usePagination } from "@/composables/usePagination";
+import { type PendingSignup, type Tenant, useSuperAdminApi } from "@/composables/useSuperAdminApi";
+import { pulse } from "@/plugins/pulse";
+import ExtendSubscriptionModal from "./tenants/ExtendSubscriptionModal.vue";
+import PendingRechargesCard from "./tenants/PendingRechargesCard.vue";
+import PendingSignupsCard from "./tenants/PendingSignupsCard.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -43,7 +39,9 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(TENANTS_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: Tenants.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: Tenants.vue]", uiErr?.message || uiErr);
+  }
   return {};
 };
 
@@ -68,7 +66,9 @@ const saveFilters = () => {
         })
       );
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: Tenants.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: Tenants.vue]", uiErr?.message || uiErr);
+  }
 };
 
 const debouncedSaveFilters = debounce(saveFilters, 250);
@@ -81,7 +81,9 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(TENANTS_FILTER_KEY);
       }
-    } catch (uiErr: any) { console.warn("[UI Component Warning: Tenants.vue]", uiErr?.message || uiErr); }
+    } catch (uiErr: any) {
+      console.warn("[UI Component Warning: Tenants.vue]", uiErr?.message || uiErr);
+    }
   }
 });
 
@@ -97,18 +99,20 @@ const clearAllFilters = () => {
     if (typeof window !== "undefined" && window.sessionStorage) {
       sessionStorage.removeItem(TENANTS_FILTER_KEY);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: Tenants.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: Tenants.vue]", uiErr?.message || uiErr);
+  }
 };
 
 const filteredTenants = computed(() => {
-  let list = tenants.value.filter(t => t.roleName !== "superadmin" && (t as any).role !== "superadmin");
+  let list = tenants.value.filter((t) => t.roleName !== "superadmin" && (t as any).role !== "superadmin");
   if (statusFilter.value !== "all") {
-    list = list.filter(t => t.status === statusFilter.value);
+    list = list.filter((t) => t.status === statusFilter.value);
   }
   if (!searchTerm.value.trim()) return list;
   const q = searchTerm.value.toLowerCase();
   return list.filter(
-    t =>
+    (t) =>
       t.name.toLowerCase().includes(q) ||
       t.email.toLowerCase().includes(q) ||
       (t.mobile && t.mobile.includes(q)) ||
@@ -119,14 +123,19 @@ const filteredTenants = computed(() => {
 // Reusable Persistent Pagination for 1,000+ Tenants
 const perPageOptions = [10, 15, 25, 50, 100];
 const filteredTenantsCount = computed(() => filteredTenants.value.length);
-const { currentPage, itemsPerPage: perPage, totalPages, paginateList } = usePagination("tenants", {
+const {
+  currentPage,
+  itemsPerPage: perPage,
+  totalPages,
+  paginateList
+} = usePagination("tenants", {
   defaultPerPage: 15,
   totalItems: filteredTenantsCount,
   syncUrl: false
 });
 
-const activeCount = computed(() => tenants.value.filter(t => t.status === "active").length);
-const suspendedCount = computed(() => tenants.value.filter(t => t.status === "suspended").length);
+const activeCount = computed(() => tenants.value.filter((t) => t.status === "active").length);
+const suspendedCount = computed(() => tenants.value.filter((t) => t.status === "suspended").length);
 
 const startIndex = computed(() => (currentPage.value - 1) * perPage.value);
 const endIndex = computed(() => Math.min(startIndex.value + perPage.value, filteredTenants.value.length));
@@ -153,7 +162,7 @@ const handleApprove = async (p: PendingSignup) => {
     delete approveDays.value[p.id];
   } catch (e: any) {
     const err = e?.response?.data?.error;
-    const msg = typeof err === "string" ? err : (e?.response?.data?.message || e?.message || "Approval failed");
+    const msg = typeof err === "string" ? err : e?.response?.data?.message || e?.message || "Approval failed";
     alert(msg);
   } finally {
     isSubmittingAction.value = false;
@@ -167,7 +176,7 @@ const handleReject = async (p: PendingSignup) => {
     await rejectSignup(p.id);
   } catch (e: any) {
     const err = e?.response?.data?.error;
-    const msg = typeof err === "string" ? err : (e?.response?.data?.message || e?.message || "Rejection failed");
+    const msg = typeof err === "string" ? err : e?.response?.data?.message || e?.message || "Rejection failed";
     alert(msg);
   } finally {
     isSubmittingAction.value = false;
@@ -258,9 +267,7 @@ const getDaysRemaining = (expDate?: string) => {
 
 const extractRawTrxId = (trx?: string) => {
   if (!trx) return "N/A";
-  return trx
-    .replace(/\s*\((monthly|yearly|m|y)\)/gi, "")
-    .trim();
+  return trx.replace(/\s*\((monthly|yearly|m|y)\)/gi, "").trim();
 };
 
 const getBillingCycleText = (trx?: string, cycle?: string) => {

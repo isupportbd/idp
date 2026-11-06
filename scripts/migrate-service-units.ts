@@ -1,7 +1,8 @@
 // @ts-nocheck
+
+import { sql } from "drizzle-orm";
 import { initDatabase } from "../src/framework/database/connection.js";
 import { db } from "../src/framework/facade.js";
-import { sql } from "drizzle-orm";
 import { serviceUnits } from "../src/modules/services/database/models/service_units.js";
 
 async function main() {

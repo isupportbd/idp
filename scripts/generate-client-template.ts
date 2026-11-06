@@ -27,18 +27,18 @@ const sampleData = [
     "Company Name": "Example Trading Ltd",
     "Proprietor Name": "Md. Rafiqul Islam",
     "BIN Number": "001234567-0101",
-    "Mobile": "01711002233",
+    Mobile: "01711002233",
     "Alternative Mobile": "01812345678",
-    "Email": "info@exampletrading.com",
+    Email: "info@exampletrading.com",
     "TIN Number": "123456789012",
     "Trade License No": "TRAD/DSCC/012345/2026",
-    "Address": "House 12, Road 5, Motijheel C/A, Dhaka-1000",
+    Address: "House 12, Road 5, Motijheel C/A, Dhaka-1000",
     "Customer Type": "Trader",
-    "Reference": "Direct",
+    Reference: "Direct",
     "VAT User ID": "example_vat",
     "VAT Password": "Password@123",
     "VAT Service Type": "FULL",
-    "Notes": "Priority client"
+    Notes: "Priority client"
   }
 ];
 
@@ -63,7 +63,7 @@ blankWs["!cols"] = [
   { wch: 18 }, // VAT User ID
   { wch: 18 }, // VAT Password
   { wch: 18 }, // VAT Service Type
-  { wch: 25 }  // Notes
+  { wch: 25 } // Notes
 ];
 XLSX.utils.book_append_sheet(wb, blankWs, "Client Import");
 
@@ -73,10 +73,7 @@ sampleWs["!cols"] = blankWs["!cols"];
 XLSX.utils.book_append_sheet(wb, sampleWs, "Sample Example");
 
 const rootDir = process.cwd();
-const outDirs = [
-  path.resolve(rootDir, "public/templates"),
-  path.resolve(rootDir, "src/resources/public/templates")
-];
+const outDirs = [path.resolve(rootDir, "public/templates"), path.resolve(rootDir, "src/resources/public/templates")];
 
 for (const dir of outDirs) {
   if (!fs.existsSync(dir)) {
@@ -91,7 +88,8 @@ XLSX.writeFile(wb, xlsxPath);
 XLSX.writeFile(wb, srcPublicXlsxPath);
 
 // Also generate CSV format
-const csvContent = `${headers.join(",")}\n` +
+const csvContent =
+  `${headers.join(",")}\n` +
   `"Example Trading Ltd","Md. Rafiqul Islam","001234567-0101","01711002233","01812345678","info@exampletrading.com","123456789012","TRAD/DSCC/012345/2026","House 12, Road 5, Motijheel C/A, Dhaka-1000","Trader","Direct","example_vat","Password@123","FULL","Priority client"\n`;
 
 const blankCsv = `${headers.join(",")}\n`;

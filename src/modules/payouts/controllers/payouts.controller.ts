@@ -1,9 +1,9 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, asc, desc, eq, ilike, ne, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
+import type { AppContext } from "@/framework/facade.js";
 import { broadcast, db, HttpStatusCodes, resolveTenantContext, round2 } from "@/framework/facade.js";
-import { users } from "@/modules/auth/database/models/user.js";
 import { roles } from "@/modules/auth/database/models/role.js";
+import { users } from "@/modules/auth/database/models/user.js";
 import { bankAccounts } from "@/modules/firm/database/models/bank_accounts.js";
 import { expenseHeads } from "@/modules/firm/database/models/expense_heads.js";
 import { serviceItems } from "@/modules/services/database/models/service_items.js";
@@ -27,9 +27,7 @@ async function dispatchPayoutSms(payoutId: number): Promise<"SENT" | "FAILED" | 
   try {
     const result = await Promise.race([
       sendPayoutSms(payoutId),
-      new Promise<{ status: "SKIPPED" }>((resolve) =>
-        setTimeout(() => resolve({ status: "SKIPPED" }), 10000)
-      )
+      new Promise<{ status: "SKIPPED" }>((resolve) => setTimeout(() => resolve({ status: "SKIPPED" }), 10000))
     ]);
     return result.status;
   } catch {
@@ -54,13 +52,7 @@ async function tenantStaff(tenantAdminId: number) {
     })
     .from(users)
     .leftJoin(roles, eq(users.roleId, roles.id))
-    .where(
-      and(
-        eq(users.adminId, tenantAdminId),
-        ne(users.id, tenantAdminId),
-        eq(users.status, "active")
-      )
-    )
+    .where(and(eq(users.adminId, tenantAdminId), ne(users.id, tenantAdminId), eq(users.status, "active")))
     .orderBy(asc(users.name));
 }
 
@@ -597,11 +589,7 @@ export const createPayout = async (c: AppContext) => {
       },
       { tenant }
     );
-    broadcast(
-      "payout:created",
-      { id: created.id, payoutType: "staff", userId: staffId, amount, periodMonth: month, paidAt },
-      { tenant }
-    );
+    broadcast("payout:created", { id: created.id, payoutType: "staff", userId: staffId, amount, periodMonth: month, paidAt }, { tenant });
 
     const smsStatus = await dispatchPayoutSms(created.id);
 
@@ -685,10 +673,7 @@ export const getUserRates = async (c: AppContext) => {
       }
     }
 
-    return c.json(
-      { message: "User rates fetched successfully", data, retired, catalog: items, userId },
-      HttpStatusCodes.OK
-    );
+    return c.json({ message: "User rates fetched successfully", data, retired, catalog: items, userId }, HttpStatusCodes.OK);
   } catch (err: unknown) {
     return c.json({ message: "Failed to fetch user rates" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
@@ -737,9 +722,7 @@ export const saveUserRates = async (c: AppContext) => {
             isActive: userServiceRates.isActive
           })
           .from(userServiceRates)
-          .where(
-            and(eq(userServiceRates.adminId, tenant), eq(userServiceRates.userId, userId))
-          )) as Array<{
+          .where(and(eq(userServiceRates.adminId, tenant), eq(userServiceRates.userId, userId)))) as Array<{
           id: number;
           serviceItemId: number;
           effectiveFrom: Date;
@@ -773,10 +756,7 @@ export const saveUserRates = async (c: AppContext) => {
 
           // Rule 3: edit the current version in place while its date is unchanged.
           if (active && new Date(active.effectiveFrom).getTime() === vFrom) {
-            await tx
-              .update(userServiceRates)
-              .set({ rate: v.rate, updatedAt: now })
-              .where(eq(userServiceRates.id, active.id));
+            await tx.update(userServiceRates).set({ rate: v.rate, updatedAt: now }).where(eq(userServiceRates.id, active.id));
             continue;
           }
 
@@ -856,13 +836,7 @@ export const getMyEarnings = async (c: AppContext) => {
         notes: payouts.notes
       })
       .from(payouts)
-      .where(
-        and(
-          eq(payouts.adminId, tenantAdminId),
-          eq(payouts.payoutType, "staff"),
-          eq(payouts.userId, userId)
-        )
-      )
+      .where(and(eq(payouts.adminId, tenantAdminId), eq(payouts.payoutType, "staff"), eq(payouts.userId, userId)))
       .orderBy(desc(payouts.paidAt))
       .limit(100);
 

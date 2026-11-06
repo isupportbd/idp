@@ -1,11 +1,6 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, eq, sql } from "drizzle-orm";
-import {
-  broadcast,
-  db,
-  HttpStatusCodes,
-  redisClientIfReady
-} from "@/framework/facade.js";
+import type { AppContext } from "@/framework/facade.js";
+import { broadcast, db, HttpStatusCodes, redisClientIfReady } from "@/framework/facade.js";
 import { users } from "@/modules/auth/database/models/user.js";
 import { paymentSettings } from "@/modules/superadmin/database/models/payment_settings.js";
 import { subscriptionTransactions } from "@/modules/superadmin/database/models/subscription_transactions.js";
@@ -34,7 +29,10 @@ export const rechargeWallet = async (c: AppContext) => {
       return c.json({ success: false, message: "bKash TrxID is required" }, HttpStatusCodes.UNPROCESSABLE_ENTITY);
     }
 
-    const [user] = await db.select().from(users).where(eq(users.id, Number(auth.id)));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, Number(auth.id)));
     if (!user) {
       return c.json({ success: false, message: "User not found" }, HttpStatusCodes.NOT_FOUND);
     }
@@ -94,7 +92,6 @@ export const rechargeWallet = async (c: AppContext) => {
   }
 };
 
-
 /**
  * Why: Allows a Tenant to purchase extra permanent storage add-on (1 GB = ৳1,000).
  * When: Storage reaches 90%+ or tenant wants to expand database quota.
@@ -108,7 +105,10 @@ export const buyStorage = async (c: AppContext) => {
       return c.json({ success: false, message: "Unauthorized" }, HttpStatusCodes.UNAUTHORIZED);
     }
 
-    const [user] = await db.select().from(users).where(eq(users.id, Number(auth.id)));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, Number(auth.id)));
     if (!user) {
       return c.json({ success: false, message: "User not found" }, HttpStatusCodes.NOT_FOUND);
     }
@@ -126,7 +126,8 @@ export const buyStorage = async (c: AppContext) => {
         {
           success: false,
           isSubscriptionInactive: true,
-          message: "Subscription plan is currently expired or inactive. Extra storage can only be purchased while subscription is active. Please renew your plan first."
+          message:
+            "Subscription plan is currently expired or inactive. Extra storage can only be purchased while subscription is active. Please renew your plan first."
         },
         HttpStatusCodes.FORBIDDEN
       );
@@ -251,4 +252,3 @@ export const buyStorage = async (c: AppContext) => {
     return c.json({ success: false, message: "Failed to process storage purchase" }, 500);
   }
 };
-

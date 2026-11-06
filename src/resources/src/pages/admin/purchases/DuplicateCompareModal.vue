@@ -7,11 +7,11 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  "ignoreDuplicate": [index: number];
-  "replaceDuplicate": [item: any, index: number];
-  "replaceAll": [];
-  "ignoreAll": [];
-  "close": [];
+  ignoreDuplicate: [index: number];
+  replaceDuplicate: [item: any, index: number];
+  replaceAll: [];
+  ignoreAll: [];
+  close: [];
 }>();
 
 const formatDate = (dateStr: string) => {

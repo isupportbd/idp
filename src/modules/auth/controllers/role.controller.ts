@@ -1,6 +1,6 @@
-import type { AppContext } from "@/framework/facade.js";
 import { eq } from "drizzle-orm";
 import type { Handler } from "hono";
+import type { AppContext } from "@/framework/facade.js";
 import { db, HttpStatusCodes } from "@/framework/facade.js";
 import { roles } from "@/modules/auth/database/models/role.js";
 

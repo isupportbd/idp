@@ -1,5 +1,5 @@
-import { retry } from "@/framework/utils/retry.js";
 import axios from "axios";
+import { retry } from "@/framework/utils/retry.js";
 
 export interface SmsSendOptions {
   apiKey?: string;
@@ -38,7 +38,9 @@ export async function fetchProviderBalance(apiKey?: string | null): Promise<numb
       });
       const gwNum = parseFloat(String(gwRes.data));
       if (!isNaN(gwNum)) return parseFloat(gwNum.toFixed(2));
-    } catch (smsErr: any) { console.warn("[SMS Framework Warning]: Failed dispatch", smsErr?.message || smsErr); }
+    } catch (smsErr: any) {
+      console.warn("[SMS Framework Warning]: Failed dispatch", smsErr?.message || smsErr);
+    }
   }
 
   return null;
@@ -88,7 +90,7 @@ export async function dispatchProviderSms(options: SmsSendOptions): Promise<{ su
 
     return {
       success: true,
-      message: (sendRes.data?.success_message || "SMS sent successfully via Provider Gateway"),
+      message: sendRes.data?.success_message || "SMS sent successfully via Provider Gateway",
       liveBalance: liveBalance !== null ? liveBalance : undefined
     };
   } catch (err: any) {

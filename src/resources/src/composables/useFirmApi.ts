@@ -1,5 +1,5 @@
-import { ref } from "vue";
 import axios from "axios";
+import { ref } from "vue";
 
 export interface CompanySettings {
   id?: number;
@@ -91,7 +91,8 @@ export function useFirmApi() {
     currentReceiptSequence: 5001,
     currency: "BDT (৳)",
     decimalPlaces: 2,
-    invoiceTerms: "1. Payment is due within 15 days of invoice date.\n2. Please mention the invoice number as reference in payment.\n3. Checks/Transfers are subject to realization.",
+    invoiceTerms:
+      "1. Payment is due within 15 days of invoice date.\n2. Please mention the invoice number as reference in payment.\n3. Checks/Transfers are subject to realization.",
     invoiceFooterText: "",
     receiptFooterText: "This is a computer-generated money receipt and does not require a physical signature.",
     autoDueCarryForward: true,

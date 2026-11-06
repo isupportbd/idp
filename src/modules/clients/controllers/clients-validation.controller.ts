@@ -1,8 +1,8 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, eq, ilike, ne, or } from "drizzle-orm";
+import type { AppContext } from "@/framework/facade.js";
 import { db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
-import { clients } from "../database/models/clients.js";
 import { users } from "@/modules/auth/database/models/user.js";
+import { clients } from "../database/models/clients.js";
 
 // ── 7. VALIDATION: GLOBAL BIN UNIQUENESS & BIND STATUS CHECK ─────────
 

@@ -1,8 +1,8 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, asc, eq, inArray, ne, or, sql } from "drizzle-orm";
+import type { AppContext } from "@/framework/facade.js";
 import { db, HttpStatusCodes } from "@/framework/facade.js";
-import { users } from "@/modules/auth/database/models/user.js";
 import { roles } from "@/modules/auth/database/models/role.js";
+import { users } from "@/modules/auth/database/models/user.js";
 
 // ── 11. LIST ASSIGNABLE USERS ────────────────────────────────────────
 
@@ -30,9 +30,7 @@ export const listAssignableUsers = async (c: AppContext) => {
 
     const excludeRoleIds = adminRoles.map((r) => r.id);
 
-    const conditions: import("drizzle-orm").SQL[] = [
-      eq(users.status, "active")
-    ];
+    const conditions: import("drizzle-orm").SQL[] = [eq(users.status, "active")];
 
     if (excludeRoleIds.length > 0) {
       conditions.push(sql`${users.roleId} NOT IN (${sql.join(excludeRoleIds, sql`, `)})`);

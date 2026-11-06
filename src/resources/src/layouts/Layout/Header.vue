@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from "vue";
-import { useRouter } from "vue-router";
-import { useAuthStore } from "@/stores/auth";
 import axios from "axios";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { useRouter } from "vue-router";
 import SearchInput from "@/components/common/SearchInput.vue";
-
 import { pulse } from "@/plugins/pulse";
+import { useAuthStore } from "@/stores/auth";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -116,7 +115,9 @@ const fetchStats = async (force = false) => {
       if (fallbackRes.data?.success && fallbackRes.data?.stats) {
         userStats.value = fallbackRes.data.stats;
       }
-    } catch (uiErr: any) { console.warn("[UI Component Warning: Header.vue]", uiErr?.message || uiErr); }
+    } catch (uiErr: any) {
+      console.warn("[UI Component Warning: Header.vue]", uiErr?.message || uiErr);
+    }
   }
 };
 
@@ -133,7 +134,9 @@ const fetchNotifications = async () => {
       if (fallbackRes.data?.success && Array.isArray(fallbackRes.data?.data)) {
         notifications.value = fallbackRes.data.data;
       }
-    } catch (uiErr: any) { console.warn("[UI Component Warning: Header.vue]", uiErr?.message || uiErr); }
+    } catch (uiErr: any) {
+      console.warn("[UI Component Warning: Header.vue]", uiErr?.message || uiErr);
+    }
   }
 };
 
@@ -169,7 +172,7 @@ const rejectSignup = async (notifId: any) => {
 };
 
 const approveRecharge = async (notifOrId: any) => {
-  let txId = typeof notifOrId === "object" ? (notifOrId?.transactionId || notifOrId?.id) : notifOrId;
+  let txId = typeof notifOrId === "object" ? notifOrId?.transactionId || notifOrId?.id : notifOrId;
   const cleanId = typeof txId === "number" ? txId : Number(String(txId || "").replace(/\D/g, ""));
   if (!cleanId || isNaN(cleanId)) {
     alert("Invalid transaction ID");
@@ -189,7 +192,7 @@ const approveRecharge = async (notifOrId: any) => {
 };
 
 const rejectRecharge = async (notifOrId: any) => {
-  let txId = typeof notifOrId === "object" ? (notifOrId?.transactionId || notifOrId?.id) : notifOrId;
+  let txId = typeof notifOrId === "object" ? notifOrId?.transactionId || notifOrId?.id : notifOrId;
   const cleanId = typeof txId === "number" ? txId : Number(String(txId || "").replace(/\D/g, ""));
   if (!cleanId || isNaN(cleanId)) {
     alert("Invalid transaction ID");
@@ -247,10 +250,7 @@ const filteredUsers = computed(() => {
   let list = userStats.value.users || [];
   if (activitySearch.value.trim()) {
     const query = activitySearch.value.toLowerCase().trim();
-    list = list.filter((u: any) =>
-      (u.name && u.name.toLowerCase().includes(query)) ||
-      (u.email && u.email.toLowerCase().includes(query))
-    );
+    list = list.filter((u: any) => (u.name && u.name.toLowerCase().includes(query)) || (u.email && u.email.toLowerCase().includes(query)));
   }
   if (activityFilter.value === "active") {
     list = list.filter((u: any) => u.isActive);

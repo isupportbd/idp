@@ -1,10 +1,10 @@
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { AppContext } from "@/framework/facade.js";
-import { db, broadcast } from "@/framework/facade.js";
+import { broadcast, db } from "@/framework/facade.js";
 import { users } from "@/modules/auth/database/models/user.js";
-import { plans } from "@/modules/superadmin/database/models/plans.js";
 import { paymentSettings } from "@/modules/superadmin/database/models/payment_settings.js";
+import { plans } from "@/modules/superadmin/database/models/plans.js";
 import { subscriptionTransactions } from "@/modules/superadmin/database/models/subscription_transactions.js";
-import { eq, desc, and, sql, inArray } from "drizzle-orm";
 
 // 18. Get Pending Wallet Recharge Requests
 export async function getPendingRecharges(c: AppContext) {
@@ -30,12 +30,7 @@ export async function getPendingRecharges(c: AppContext) {
       })
       .from(subscriptionTransactions)
       .leftJoin(users, eq(subscriptionTransactions.userId, users.id))
-      .where(
-        and(
-          inArray(subscriptionTransactions.type, ["deposit", "storage_addon"]),
-          eq(subscriptionTransactions.status, "pending")
-        )
-      )
+      .where(and(inArray(subscriptionTransactions.type, ["deposit", "storage_addon"]), eq(subscriptionTransactions.status, "pending")))
       .orderBy(desc(subscriptionTransactions.createdAt));
 
     return c.json({ success: true, data: list });
@@ -49,13 +44,7 @@ export async function getPendingRecharges(c: AppContext) {
 export async function approveRecharge(c: AppContext) {
   try {
     const body = c.req.valid("json");
-    let rawId =
-      body?.transactionId ??
-      body?.id ??
-      body?.userId ??
-      c.req.param("id") ??
-      c.req.query("transactionId") ??
-      c.req.query("id");
+    let rawId = body?.transactionId ?? body?.id ?? body?.userId ?? c.req.param("id") ?? c.req.query("transactionId") ?? c.req.query("id");
 
     if (typeof rawId === "string") {
       rawId = rawId.replace(/\D/g, "");
@@ -65,10 +54,7 @@ export async function approveRecharge(c: AppContext) {
       return c.json({ success: false, message: "Valid transaction ID is required" }, 400);
     }
 
-    const [tx] = await db
-      .select()
-      .from(subscriptionTransactions)
-      .where(eq(subscriptionTransactions.id, transactionId));
+    const [tx] = await db.select().from(subscriptionTransactions).where(eq(subscriptionTransactions.id, transactionId));
 
     if (!tx) {
       return c.json({ success: false, message: "Transaction not found" }, 404);
@@ -92,10 +78,8 @@ export async function approveRecharge(c: AppContext) {
 
     const grossAmount = tx.grossAmount || tx.paidAmount || 0;
     const gatewayCharge =
-      tx.gatewayCharge !== null && tx.gatewayCharge !== undefined
-        ? tx.gatewayCharge
-        : Math.round((grossAmount * chargePercent) / 100);
-    const netDeposit = tx.netAmount || (grossAmount - gatewayCharge);
+      tx.gatewayCharge !== null && tx.gatewayCharge !== undefined ? tx.gatewayCharge : Math.round((grossAmount * chargePercent) / 100);
+    const netDeposit = tx.netAmount || grossAmount - gatewayCharge;
 
     const currentAdvance = targetUser.advanceBalance || 0;
     const totalWallet = currentAdvance + netDeposit;
@@ -108,9 +92,7 @@ export async function approveRecharge(c: AppContext) {
 
     const isYearly =
       targetUser.billingCycle === "yearly" ||
-      (targetUser.trxId
-        ? targetUser.trxId.toLowerCase().includes("yearly") || targetUser.trxId.toLowerCase().includes("(y)")
-        : false);
+      (targetUser.trxId ? targetUser.trxId.toLowerCase().includes("yearly") || targetUser.trxId.toLowerCase().includes("(y)") : false);
     const planPrice = isYearly ? plan?.rateYearly || 15000 : plan?.rateMonthly || 1500;
 
     const isExpiredOrInactive = !targetUser.expDate || new Date(targetUser.expDate) < new Date();
@@ -124,7 +106,7 @@ export async function approveRecharge(c: AppContext) {
       // Storage addon payment is dedicated for storage, not added into spendable advance wallet balance
       finalAdvanceBalance = currentAdvance;
       const gb = Math.max(1, Math.round(grossAmount / 1000));
-      newExtraStorageMB += (gb * 1024);
+      newExtraStorageMB += gb * 1024;
     } else {
       // If subscription is expired/inactive and total wallet balance now covers plan fee, auto-activate!
       if (isExpiredOrInactive && totalWallet >= planPrice) {
@@ -160,9 +142,10 @@ export async function approveRecharge(c: AppContext) {
         gatewayCharge,
         netAmount: netDeposit,
         excessCredit: netDeposit,
-        note: tx.type === "storage_addon" 
-          ? `Storage add-on (+${Math.max(1, Math.round(grossAmount / 1000))} GB) approved by SuperAdmin.`
-          : `Recharge approved by SuperAdmin. ${planActivated ? `Plan ${plan?.name || ''} auto-activated.` : ''}`,
+        note:
+          tx.type === "storage_addon"
+            ? `Storage add-on (+${Math.max(1, Math.round(grossAmount / 1000))} GB) approved by SuperAdmin.`
+            : `Recharge approved by SuperAdmin. ${planActivated ? `Plan ${plan?.name || ""} auto-activated.` : ""}`,
         updatedAt: new Date()
       })
       .where(eq(subscriptionTransactions.id, tx.id));
@@ -204,18 +187,14 @@ export async function approveRecharge(c: AppContext) {
         },
         { users: [targetUser.id] }
       );
-      broadcast(
-        "user:updated",
-        { userId: targetUser.id },
-        { users: [targetUser.id] }
-      );
+      broadcast("user:updated", { userId: targetUser.id }, { users: [targetUser.id] });
     } catch (bErr) {
       console.error("Broadcast error:", bErr);
     }
 
     return c.json({
       success: true,
-      message: `Recharge of ৳${grossAmount} (Net: ৳${netDeposit}) approved successfully.${planActivated ? ' Plan activated!' : ''}`,
+      message: `Recharge of ৳${grossAmount} (Net: ৳${netDeposit}) approved successfully.${planActivated ? " Plan activated!" : ""}`,
       data: {
         transactionId: tx.id,
         netDeposit,
@@ -234,13 +213,7 @@ export async function approveRecharge(c: AppContext) {
 export async function rejectRecharge(c: AppContext) {
   try {
     const body = c.req.valid("json");
-    let rawId =
-      body?.transactionId ??
-      body?.id ??
-      body?.userId ??
-      c.req.param("id") ??
-      c.req.query("transactionId") ??
-      c.req.query("id");
+    let rawId = body?.transactionId ?? body?.id ?? body?.userId ?? c.req.param("id") ?? c.req.query("transactionId") ?? c.req.query("id");
 
     if (typeof rawId === "string") {
       rawId = rawId.replace(/\D/g, "");
@@ -252,10 +225,7 @@ export async function rejectRecharge(c: AppContext) {
       return c.json({ success: false, message: "Valid transaction ID is required" }, 400);
     }
 
-    const [tx] = await db
-      .select()
-      .from(subscriptionTransactions)
-      .where(eq(subscriptionTransactions.id, transactionId));
+    const [tx] = await db.select().from(subscriptionTransactions).where(eq(subscriptionTransactions.id, transactionId));
 
     if (!tx) {
       return c.json({ success: false, message: "Transaction not found" }, 404);

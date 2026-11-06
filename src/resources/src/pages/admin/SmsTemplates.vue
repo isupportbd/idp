@@ -1,13 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
 import { useHead } from "@vueuse/head";
+import { computed, onMounted, ref } from "vue";
+import { type SmsLog, type SmsTemplate, type SmsTemplateVariable, useSmsTemplatesApi } from "@/composables/useSmsTemplatesApi";
 import { useToast } from "@/composables/useToast";
-import {
-  useSmsTemplatesApi,
-  type SmsTemplate,
-  type SmsLog,
-  type SmsTemplateVariable
-} from "@/composables/useSmsTemplatesApi";
 
 useHead({ title: "SMS Templates" });
 
@@ -96,7 +91,9 @@ const loadGatewaySettings = async () => {
         endpoint: data.endpoint || ""
       };
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: SmsTemplates.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: SmsTemplates.vue]", uiErr?.message || uiErr);
+  }
 };
 
 const cancelGatewayEdit = async () => {
@@ -195,7 +192,12 @@ const cleanTemplateName = (name: string) => {
   if (match && match[1] && /[a-zA-Z]/.test(match[1])) {
     return match[1].trim();
   }
-  return name.replace(/[\u0980-\u09FF]/g, "").replace(/[()]/g, "").trim() || name;
+  return (
+    name
+      .replace(/[\u0980-\u09FF]/g, "")
+      .replace(/[()]/g, "")
+      .trim() || name
+  );
 };
 
 // Render preview with sample variables

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import { onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
-import { pulse } from "@/plugins/pulse";
-import { useToast } from "@/composables/useToast";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { onBeforeRouteLeave } from "vue-router";
 import SearchInput from "@/components/common/SearchInput.vue";
+import { useToast } from "@/composables/useToast";
+import { pulse } from "@/plugins/pulse";
 
 const toast = useToast();
 
@@ -112,9 +112,7 @@ const modalError = ref("");
 const filteredLocations = computed(() => {
   if (!searchQuery.value.trim()) return locations.value;
   const q = searchQuery.value.toLowerCase().trim();
-  return locations.value.filter(
-    (l) => l.name.toLowerCase().includes(q) || (l.code && l.code.toLowerCase().includes(q))
-  );
+  return locations.value.filter((l) => l.name.toLowerCase().includes(q) || (l.code && l.code.toLowerCase().includes(q)));
 });
 
 const filteredAreas = computed(() => {
@@ -125,10 +123,7 @@ const filteredAreas = computed(() => {
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.toLowerCase().trim();
     list = list.filter(
-      (a) =>
-        a.name.toLowerCase().includes(q) ||
-        a.locationName.toLowerCase().includes(q) ||
-        (a.postalCode && a.postalCode.includes(q))
+      (a) => a.name.toLowerCase().includes(q) || a.locationName.toLowerCase().includes(q) || (a.postalCode && a.postalCode.includes(q))
     );
   }
   return list;
@@ -238,7 +233,7 @@ const openAddArea = () => {
     return;
   }
   isEditingArea.value = false;
-  const defaultLocId = selectedLocationFilter.value !== "all" ? Number(selectedLocationFilter.value) : (locations.value[0]?.id || 0);
+  const defaultLocId = selectedLocationFilter.value !== "all" ? Number(selectedLocationFilter.value) : locations.value[0]?.id || 0;
   areaForm.value = { id: 0, locationId: defaultLocId, name: "", postalCode: "", isActive: true };
   modalError.value = "";
   showAreaModal.value = true;

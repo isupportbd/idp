@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import { onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
-import { pulse } from "@/plugins/pulse";
-import { useToast } from "@/composables/useToast";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { onBeforeRouteLeave } from "vue-router";
 import SearchInput from "@/components/common/SearchInput.vue";
+import { useToast } from "@/composables/useToast";
+import { pulse } from "@/plugins/pulse";
 
 const toast = useToast();
 
@@ -68,9 +68,7 @@ onUnmounted(() => {
 const filteredTypes = computed(() => {
   if (!searchQuery.value.trim()) return clientTypes.value;
   const q = searchQuery.value.toLowerCase().trim();
-  return clientTypes.value.filter(
-    (t) => t.name.toLowerCase().includes(q) || (t.description && t.description.toLowerCase().includes(q))
-  );
+  return clientTypes.value.filter((t) => t.name.toLowerCase().includes(q) || (t.description && t.description.toLowerCase().includes(q)));
 });
 
 const openAddModal = () => {

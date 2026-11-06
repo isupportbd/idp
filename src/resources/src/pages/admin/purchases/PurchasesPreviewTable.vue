@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { computed, ref } from "vue";
 
 const props = defineProps<{
   tempData: any[];
@@ -8,8 +8,8 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  "cancel": [];
-  "save": [];
+  cancel: [];
+  save: [];
 }>();
 
 const currentPage = ref(1);

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import MonthMatrix from "@/components/MonthMatrix.vue";
+import { computed, ref } from "vue";
 import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
+import MonthMatrix from "@/components/MonthMatrix.vue";
 import { can } from "@/composables/useAuth";
 
 interface Client {

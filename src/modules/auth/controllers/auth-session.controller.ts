@@ -1,20 +1,11 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, eq, sql } from "drizzle-orm";
 import { authConfig } from "@/config/index.js";
-import {
-  cookie,
-  db,
-  HttpStatusCodes,
-  password
-} from "@/framework/facade.js";
+import type { AppContext } from "@/framework/facade.js";
+import { cookie, db, HttpStatusCodes, password } from "@/framework/facade.js";
 import { roles } from "@/modules/auth/database/models/role.js";
 import { refreshTokens, users } from "@/modules/auth/database/models/user.js";
 import { plans } from "@/modules/superadmin/database/models/plans.js";
-import {
-  issueTokens,
-  revokeCurrentRefreshToken,
-  sanitizeUser
-} from "./auth.helpers.js";
+import { issueTokens, revokeCurrentRefreshToken, sanitizeUser } from "./auth.helpers.js";
 
 /**
  * Why: Authenticates user credentials and rotates active login cookies/tokens.
@@ -24,7 +15,9 @@ import {
 export const login = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
-    const email = String(body.email || "").trim().toLowerCase();
+    const email = String(body.email || "")
+      .trim()
+      .toLowerCase();
     const user = await db.query.users.findFirst({
       where: sql`lower(${users.email}) = ${email}`,
       with: { role: true }
@@ -51,14 +44,16 @@ export const login = async (c: AppContext) => {
         where: eq(users.id, user.adminId)
       });
       if (tenantAdmin && (tenantAdmin.status === "suspended" || tenantAdmin.status === "inactive" || tenantAdmin.status === "pending")) {
-        return c.json({ message: "Your firm account is inactive or suspended. Please contact firm administrator." }, HttpStatusCodes.FORBIDDEN);
+        return c.json(
+          { message: "Your firm account is inactive or suspended. Please contact firm administrator." },
+          HttpStatusCodes.FORBIDDEN
+        );
       }
     }
 
     if (authConfig.requireEmailVerification && !user.emailVerifiedAt) {
       return c.json({ message: "Please verify your email before logging in" }, HttpStatusCodes.FORBIDDEN);
     }
-
 
     await revokeCurrentRefreshToken(c);
     const tokens = await issueTokens(c, user, { remember: !!body.remember });
@@ -145,7 +140,6 @@ export const logout = async (c: AppContext) => {
     return c.json({ message: "Failed to logout" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
-
 
 /**
  * Why: Revokes all refresh tokens for account-wide logout.

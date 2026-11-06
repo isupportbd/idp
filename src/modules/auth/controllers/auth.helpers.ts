@@ -1,19 +1,16 @@
-import type { AppContext } from "@/framework/facade.js";
 import { createHash, randomBytes, randomInt } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { jwtConfig } from "@/config/index.js";
-import { cookie, db, jwt } from "@/framework/facade.js";
-import { refreshTokens } from "@/modules/auth/database/models/user.js";
-
-import { users } from "@/modules/auth/database/models/user.js";
-import { plans } from "@/modules/superadmin/database/models/plans.js";
+import type { AppContext } from "@/framework/facade.js";
+import { cookie, db, fetchProviderBalance, jwt } from "@/framework/facade.js";
+import { refreshTokens, users } from "@/modules/auth/database/models/user.js";
+import { bills } from "@/modules/billing/database/models/bills.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
+import { companySettings } from "@/modules/firm/database/models/company_settings.js";
 import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
-import { bills } from "@/modules/billing/database/models/bills.js";
+import { plans } from "@/modules/superadmin/database/models/plans.js";
 import { subscriptionTransactions } from "@/modules/superadmin/database/models/subscription_transactions.js";
-import { companySettings } from "@/modules/firm/database/models/company_settings.js";
-import { fetchProviderBalance } from "@/framework/facade.js";
 import { normalizePermissions } from "@/modules/users/controllers/permissions.js";
 
 const storageCache = new Map<number, { records: number; expiresAt: number }>();
@@ -59,7 +56,9 @@ async function getTenantStorageRecords(tenantAdminId: number): Promise<number> {
  * When: Used in auth responses like register/login/me.
  * Where: Called by auth.controller handlers.
  */
-export async function sanitizeUser(user: typeof users.$inferSelect & { role?: { id: number; name: string } | null; plan?: unknown; billingCycle?: string | null }) {
+export async function sanitizeUser(
+  user: typeof users.$inferSelect & { role?: { id: number; name: string } | null; plan?: unknown; billingCycle?: string | null }
+) {
   let plan = null;
   let requiredPlanPrice = 0;
   const isYearly = user.billingCycle === "yearly";
@@ -81,7 +80,9 @@ export async function sanitizeUser(user: typeof users.$inferSelect & { role?: { 
         extraStorageMB = adminUser.extraStorageMB ?? 0;
         effectiveExpDate = adminUser.expDate;
       }
-    } catch (authHelperErr: unknown) { console.warn("[Auth Helper Warning]:", (authHelperErr as Error)?.message || authHelperErr); }
+    } catch (authHelperErr: unknown) {
+      console.warn("[Auth Helper Warning]:", (authHelperErr as Error)?.message || authHelperErr);
+    }
   }
 
   // Real-time Gateway Balance Sync: If firm has SMS Gateway API Key configured, ensure latest stock
@@ -103,17 +104,27 @@ export async function sanitizeUser(user: typeof users.$inferSelect & { role?: { 
         if (liveBal !== null) {
           effectiveSmsBalance = liveBal;
           if (user.smsBalance !== liveBal) {
-            await db.update(users).set({ smsBalance: liveBal, updatedAt: new Date() }).where(eq(users.id, tenantAdminId)).catch((updateErr) => {
-              console.warn(`[Auth Helper Warning]: Failed to update cached sms balance for admin #${tenantAdminId}:`, updateErr?.message || updateErr);
-            });
+            await db
+              .update(users)
+              .set({ smsBalance: liveBal, updatedAt: new Date() })
+              .where(eq(users.id, tenantAdminId))
+              .catch((updateErr) => {
+                console.warn(
+                  `[Auth Helper Warning]: Failed to update cached sms balance for admin #${tenantAdminId}:`,
+                  updateErr?.message || updateErr
+                );
+              });
           }
         }
       }
-    } catch (authHelperErr: unknown) { console.warn("[Auth Helper Warning]:", (authHelperErr as Error)?.message || authHelperErr); }
+    } catch (authHelperErr: unknown) {
+      console.warn("[Auth Helper Warning]:", (authHelperErr as Error)?.message || authHelperErr);
+    }
   }
 
   try {
-    const effectivePlanId = user.planId || (user.adminId ? (await db.query.users.findFirst({ where: eq(users.id, user.adminId) }))?.planId : null);
+    const effectivePlanId =
+      user.planId || (user.adminId ? (await db.query.users.findFirst({ where: eq(users.id, user.adminId) }))?.planId : null);
     if (effectivePlanId) {
       const [foundPlan] = await db.select().from(plans).where(eq(plans.id, effectivePlanId));
       if (foundPlan) {
@@ -208,8 +219,8 @@ export async function sanitizeUser(user: typeof users.$inferSelect & { role?: { 
   const estimatedKB = Math.round(totalRecords * 3.2);
   const usedStorageMB = Number((estimatedKB / 1024).toFixed(2));
   const storageUsagePercent = totalStorageMB > 0 ? Number(((usedStorageMB / totalStorageMB) * 100).toFixed(2)) : 0;
-  const isStorageWarning = isSubscriptionActive && (storageUsagePercent >= 90);
-  const isStorageExhausted = isSubscriptionActive && (storageUsagePercent >= 100);
+  const isStorageWarning = isSubscriptionActive && storageUsagePercent >= 90;
+  const isStorageExhausted = isSubscriptionActive && storageUsagePercent >= 100;
 
   return {
     id: user.id,

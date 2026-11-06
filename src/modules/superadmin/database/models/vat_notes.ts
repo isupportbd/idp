@@ -9,4 +9,3 @@ export const vatNotes = pgTable("vat_notes_mapping", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
 });
-

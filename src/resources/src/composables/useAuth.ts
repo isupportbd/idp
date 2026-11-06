@@ -35,12 +35,14 @@ export function useAuth() {
   };
 }
 
-export type RoleItem = {
-  id?: string | number;
-  name?: string;
-  title?: string;
-  slug?: string;
-} | string;
+export type RoleItem =
+  | {
+      id?: string | number;
+      name?: string;
+      title?: string;
+      slug?: string;
+    }
+  | string;
 
 export function hasRole(...wanted: string[]): boolean {
   const subject = userRef.value as (AuthUser & { adminId?: number | null }) | null;

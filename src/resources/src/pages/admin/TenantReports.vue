@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
-import { onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
-import MonthMatrix from "@/components/MonthMatrix.vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { onBeforeRouteLeave } from "vue-router";
 import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
+import MonthMatrix from "@/components/MonthMatrix.vue";
 import { can, canAccessModule } from "@/composables/useAuth";
-import { usePulseListener } from "@/composables/usePulseListener";
 import { useExcelExport } from "@/composables/useExcelExport";
+import { usePulseListener } from "@/composables/usePulseListener";
 import { pulse } from "@/plugins/pulse";
-import ReportHeaderFilter from "./reports/ReportHeaderFilter.vue";
-import PurchaseSummarySection from "./reports/PurchaseSummarySection.vue";
-import SalesSummarySection from "./reports/SalesSummarySection.vue";
-import MushakReturnSection from "./reports/MushakReturnSection.vue";
 import BalanceStatementSection from "./reports/BalanceStatementSection.vue";
+import MushakReturnSection from "./reports/MushakReturnSection.vue";
+import PurchaseSummarySection from "./reports/PurchaseSummarySection.vue";
+import ReportHeaderFilter from "./reports/ReportHeaderFilter.vue";
+import SalesSummarySection from "./reports/SalesSummarySection.vue";
 
 const { exportSingleSheet, exportMultipleSheets } = useExcelExport();
 
@@ -92,7 +92,9 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(REPORTS_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: TenantReports.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: TenantReports.vue]", uiErr?.message || uiErr);
+  }
   return {};
 };
 
@@ -143,7 +145,9 @@ const saveFilters = () => {
         })
       );
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: TenantReports.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: TenantReports.vue]", uiErr?.message || uiErr);
+  }
 };
 
 watch([selectedClientId, selectedMonthYear, currentTab], saveFilters);
@@ -154,7 +158,9 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(REPORTS_FILTER_KEY);
       }
-    } catch (uiErr: any) { console.warn("[UI Component Warning: TenantReports.vue]", uiErr?.message || uiErr); }
+    } catch (uiErr: any) {
+      console.warn("[UI Component Warning: TenantReports.vue]", uiErr?.message || uiErr);
+    }
   }
 });
 
@@ -302,9 +308,7 @@ const handleCopyCredential = (text: string, field: "username" | "password") => {
 const filteredClients = computed(() => {
   if (!clientSearchText.value.trim() || selectedClientId.value) return [];
   const q = clientSearchText.value.toLowerCase().trim();
-  return clients.value.filter(
-    (c) => (c.name || "").toLowerCase().includes(q) || (c.bin && c.bin.toLowerCase().includes(q))
-  );
+  return clients.value.filter((c) => (c.name || "").toLowerCase().includes(q) || (c.bin && c.bin.toLowerCase().includes(q)));
 });
 
 // Filtered Items for Autocomplete (typing-only)
@@ -406,7 +410,7 @@ const getPurchaseSummary = (list: Purchase[]) => {
         purchaseRate: 0,
         maxSalesRate: 0,
         additionPercent: applicableRate && applicableRate.additionPercent !== undefined ? Number(applicableRate.additionPercent) : 36,
-        vatRate: applicableRate && applicableRate.vatRate !== undefined ? Number(applicableRate.vatRate) : (Number(p.vat) > 0 ? 15 : 0),
+        vatRate: applicableRate && applicableRate.vatRate !== undefined ? Number(applicableRate.vatRate) : Number(p.vat) > 0 ? 15 : 0,
         totalMaxSalesValue: 0
       };
     }
@@ -414,7 +418,7 @@ const getPurchaseSummary = (list: Purchase[]) => {
     const pQty = Number(p.totalQty) || 0;
     const pBaseValueOfVat = Number(p.baseValueOfVat) || 0;
     const additionPercent = applicableRate && applicableRate.additionPercent !== undefined ? Number(applicableRate.additionPercent) : 36;
-    const vatRate = applicableRate && applicableRate.vatRate !== undefined ? Number(applicableRate.vatRate) : (Number(p.vat) > 0 ? 15 : 0);
+    const vatRate = applicableRate && applicableRate.vatRate !== undefined ? Number(applicableRate.vatRate) : Number(p.vat) > 0 ? 15 : 0;
 
     let pPurchaseRate = 0;
     let pAddedBase = 0;

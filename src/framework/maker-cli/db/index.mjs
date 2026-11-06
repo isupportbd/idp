@@ -1,7 +1,7 @@
+import { generateSchema } from "../module/core.mjs";
 import { showHelp } from "../utils/help.mjs";
 import { assertName as assertNameLeaf } from "../utils/naming.mjs";
 import { packageScript, runCommand, runNodeScript } from "../utils/process.mjs";
-import { generateSchema } from "../module/core.mjs";
 import {
   drizzleGenerateArgs,
   ensureDatabaseDirectory,

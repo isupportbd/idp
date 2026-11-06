@@ -1,11 +1,11 @@
-import { db } from "@/framework/facade.js";
-import { sql } from "drizzle-orm";
 import { createRoute, z } from "@hono/zod-openapi";
+import { sql } from "drizzle-orm";
 import type { Context } from "hono";
 import { compress } from "hono/compress";
 import { secureHeaders } from "hono/secure-headers";
 import { serveEmojiFavicon } from "stoker/middlewares";
 import { appConfig } from "@/config/index.js";
+import { db } from "@/framework/facade.js";
 import { corsMiddleware } from "@/framework/http/cors.js";
 import { loggerMiddleware, notFound, onError } from "@/framework/http/logger.js";
 import { configureOpenApi } from "@/framework/http/openapi.js";
@@ -72,7 +72,7 @@ export function createHttpApp() {
 
   // ── Health & Liveness / Readiness Endpoints ──
   app.get("/health", (c: Context) => c.json({ status: "ok", message: "Application is healthy", timestamp: Date.now() }));
-  
+
   // Fast Liveness Probe (for container orchestration / process managers)
   app.get("/health/live", (c: Context) => c.json({ status: "ok", timestamp: Date.now() }));
 
@@ -80,18 +80,24 @@ export function createHttpApp() {
   app.get("/health/ready", async (c: Context) => {
     try {
       await db.execute(sql`SELECT 1`);
-      return c.json({
-        status: "ready",
-        db: "connected",
-        timestamp: Date.now()
-      }, 200);
+      return c.json(
+        {
+          status: "ready",
+          db: "connected",
+          timestamp: Date.now()
+        },
+        200
+      );
     } catch (err) {
-      return c.json({
-        status: "not_ready",
-        db: "disconnected",
-        error: err instanceof Error ? err.message : "Database unreachable",
-        timestamp: Date.now()
-      }, 503);
+      return c.json(
+        {
+          status: "not_ready",
+          db: "disconnected",
+          error: err instanceof Error ? err.message : "Database unreachable",
+          timestamp: Date.now()
+        },
+        503
+      );
     }
   });
 

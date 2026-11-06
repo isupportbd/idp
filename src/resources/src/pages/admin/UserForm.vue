@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
-import { useAuthStore } from "@/stores/auth";
-import { useToast } from "@/composables/useToast";
+import { computed, onMounted, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import IdpSelect from "@/components/common/IdpSelect.vue";
+import { useToast } from "@/composables/useToast";
+import { useAuthStore } from "@/stores/auth";
 import UserPermissionsCard, { type PermissionModule } from "./users/UserPermissionsCard.vue";
 import UserServiceRatesCard, { type AssignedRate, type ServiceItem } from "./users/UserServiceRatesCard.vue";
 
@@ -29,9 +29,7 @@ const hasAccountsAccess = computed(() => {
 const catalog = ref<PermissionModule[]>([]);
 const defaultPermissions = ref<string[]>([]);
 
-const availableModules = computed(() =>
-  catalog.value.filter((m) => !m.requiresAccounts || hasAccountsAccess.value)
-);
+const availableModules = computed(() => catalog.value.filter((m) => !m.requiresAccounts || hasAccountsAccess.value));
 
 const availableKeys = computed(() => availableModules.value.flatMap((m) => m.actions.map((a) => a.key)));
 
@@ -209,16 +207,14 @@ const handleSubmit = async () => {
       if (window.opener) {
         try {
           window.opener.location.reload();
-        } catch (uiErr: any) { console.warn("[UI Component Warning: UserForm.vue]", uiErr?.message || uiErr); }
+        } catch (uiErr: any) {
+          console.warn("[UI Component Warning: UserForm.vue]", uiErr?.message || uiErr);
+        }
       }
       router.push("/admin/users");
     }, 1000);
   } catch (err: any) {
-    const errorMsg =
-      rateSaveError ||
-      err.response?.data?.message ||
-      err.response?.data?.error ||
-      "Failed to save user. Please try again.";
+    const errorMsg = rateSaveError || err.response?.data?.message || err.response?.data?.error || "Failed to save user. Please try again.";
     toast.error(errorMsg);
   } finally {
     isSubmitting.value = false;

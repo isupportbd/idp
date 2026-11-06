@@ -1,11 +1,11 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import type { AppContext } from "@/framework/facade.js";
 import { db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
-import { clients } from "../database/models/clients.js";
-import { clientManagers } from "../database/models/client_managers.js";
 import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { salesRates } from "@/modules/sales-rates/database/models/sales_rates.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
+import { clientManagers } from "../database/models/client_managers.js";
+import { clients } from "../database/models/clients.js";
 
 // ── GET CLIENT PURCHASED ITEMS ───────────────────────────────────────
 export const getClientPurchasedItems = async (c: AppContext) => {
@@ -16,7 +16,9 @@ export const getClientPurchasedItems = async (c: AppContext) => {
     }
 
     const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
-    const existingClient = (await db.select({ id: clients.id, createdBy: clients.createdBy }).from(clients).where(eq(clients.id, clientId)).limit(1))[0];
+    const existingClient = (
+      await db.select({ id: clients.id, createdBy: clients.createdBy }).from(clients).where(eq(clients.id, clientId)).limit(1)
+    )[0];
     if (!existingClient) {
       return c.json({ message: "Client not found", data: [] }, HttpStatusCodes.NOT_FOUND);
     }
@@ -24,7 +26,13 @@ export const getClientPurchasedItems = async (c: AppContext) => {
       return c.json({ message: "Unauthorized access to client", data: [] }, HttpStatusCodes.FORBIDDEN);
     }
     if (!isSuperAdmin && !isTenantAdmin) {
-      const isAssigned = (await db.select({ id: clientManagers.id }).from(clientManagers).where(and(eq(clientManagers.clientId, clientId), eq(clientManagers.managerId, userId))).limit(1))[0];
+      const isAssigned = (
+        await db
+          .select({ id: clientManagers.id })
+          .from(clientManagers)
+          .where(and(eq(clientManagers.clientId, clientId), eq(clientManagers.managerId, userId)))
+          .limit(1)
+      )[0];
       if (!isAssigned) {
         return c.json({ message: "Unauthorized: You are not assigned to this client", data: [] }, HttpStatusCodes.FORBIDDEN);
       }
@@ -56,4 +64,3 @@ export const getClientPurchasedItems = async (c: AppContext) => {
     return c.json({ message: "Failed to fetch client purchased items", data: [] }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
-

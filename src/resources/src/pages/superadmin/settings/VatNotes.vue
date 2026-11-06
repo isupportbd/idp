@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import { onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
-import { pulse } from "@/plugins/pulse";
-import { useToast } from "@/composables/useToast";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { onBeforeRouteLeave } from "vue-router";
 import SearchInput from "@/components/common/SearchInput.vue";
+import { useToast } from "@/composables/useToast";
+import { pulse } from "@/plugins/pulse";
 
 const toast = useToast();
 
@@ -74,11 +74,7 @@ onUnmounted(() => {
 const filteredNotes = computed(() => {
   if (!searchQuery.value.trim()) return notes.value;
   const q = searchQuery.value.toLowerCase().trim();
-  return notes.value.filter(
-    (n) =>
-      n.noteName.toLowerCase().includes(q) ||
-      n.vatRate.toString().includes(q)
-  );
+  return notes.value.filter((n) => n.noteName.toLowerCase().includes(q) || n.vatRate.toString().includes(q));
 });
 
 const openAddModal = () => {
@@ -119,9 +115,7 @@ const handleSave = async () => {
     return;
   }
 
-  const duplicate = notes.value.find(
-    (n) => n.vatRate === numericRate && (!isEditing.value || n.id !== form.value.id)
-  );
+  const duplicate = notes.value.find((n) => n.vatRate === numericRate && (!isEditing.value || n.id !== form.value.id));
   if (duplicate) {
     formError.value = `A mapping for VAT Rate "${numericRate}%" already exists (${duplicate.noteName})! Duplicate VAT rates are not allowed.`;
     toast.error(formError.value);
@@ -169,8 +163,7 @@ const handleSave = async () => {
       }
     }
   } catch (err: any) {
-    formError.value =
-      err?.response?.data?.error || err?.response?.data?.message || err?.message || "Server error";
+    formError.value = err?.response?.data?.error || err?.response?.data?.message || err?.message || "Server error";
     toast.error(formError.value);
   } finally {
     isSaving.value = false;

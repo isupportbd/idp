@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from "vue";
-import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
-import { debounce } from "lodash-es";
 import axios from "axios";
+import { debounce } from "lodash-es";
+import { computed, onMounted, ref, watch } from "vue";
+import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
 import ConfirmModal from "@/components/common/ConfirmModal.vue";
-import { useClientsApi, type ClientItem, type AssignableUser } from "@/composables/useClientsApi";
-import { useServicesApi, type CustomerType, type ClientReference } from "@/composables/useServicesApi";
-import { useToast } from "@/composables/useToast";
-import { useSubscriptionGuard } from "@/composables/useSubscriptionGuard";
-import SearchInput from "@/components/common/SearchInput.vue";
 import IdpSelect from "@/components/common/IdpSelect.vue";
-import { usePagination } from "@/composables/usePagination";
+import SearchInput from "@/components/common/SearchInput.vue";
 import { can, isTenantAdmin } from "@/composables/useAuth";
+import { type AssignableUser, type ClientItem, useClientsApi } from "@/composables/useClientsApi";
+import { usePagination } from "@/composables/usePagination";
+import { type ClientReference, type CustomerType, useServicesApi } from "@/composables/useServicesApi";
+import { useSubscriptionGuard } from "@/composables/useSubscriptionGuard";
+import { useToast } from "@/composables/useToast";
 
 const router = useRouter();
 const route = useRoute();
@@ -39,12 +39,7 @@ const {
   fetchAssignableUsers
 } = useClientsApi();
 
-const {
-  customerTypes,
-  references,
-  fetchCustomerTypes,
-  fetchReferences
-} = useServicesApi();
+const { customerTypes, references, fetchCustomerTypes, fetchReferences } = useServicesApi();
 
 const customerTypeOptions = computed(() => [
   { value: "all", label: `All Customer Types (${customerTypes.value.length})` },
@@ -76,7 +71,9 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(CLIENTS_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: Clients.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: Clients.vue]", uiErr?.message || uiErr);
+  }
   return {};
 };
 
@@ -101,7 +98,9 @@ const saveFilters = () => {
         })
       );
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: Clients.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: Clients.vue]", uiErr?.message || uiErr);
+  }
 };
 
 const hasActiveFilters = computed(() => {
@@ -125,7 +124,9 @@ const clearAllFilters = () => {
     if (typeof window !== "undefined" && window.sessionStorage) {
       sessionStorage.removeItem(CLIENTS_FILTER_KEY);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: Clients.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: Clients.vue]", uiErr?.message || uiErr);
+  }
 };
 
 onBeforeRouteLeave((to) => {
@@ -135,7 +136,9 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(CLIENTS_FILTER_KEY);
       }
-    } catch (uiErr: any) { console.warn("[UI Component Warning: Clients.vue]", uiErr?.message || uiErr); }
+    } catch (uiErr: any) {
+      console.warn("[UI Component Warning: Clients.vue]", uiErr?.message || uiErr);
+    }
   }
 });
 
@@ -171,12 +174,7 @@ let isInitialized = false;
 
 const loadData = async () => {
   try {
-    await Promise.all([
-      fetchClientsList(),
-      fetchCustomerTypes(),
-      fetchReferences(),
-      fetchAssignableUsers()
-    ]);
+    await Promise.all([fetchClientsList(), fetchCustomerTypes(), fetchReferences(), fetchAssignableUsers()]);
   } catch (err: any) {
     toast.error("Failed to load initial client data");
   } finally {
@@ -224,7 +222,9 @@ const handleToggleActive = async (client: ClientItem) => {
   const nextState = !client.isActive;
   try {
     await toggleClient(client.id, nextState);
-    toast.success(nextState ? `Client "${client.companyName}" restored & active.` : `Client "${client.companyName}" released successfully.`);
+    toast.success(
+      nextState ? `Client "${client.companyName}" restored & active.` : `Client "${client.companyName}" released successfully.`
+    );
   } catch (err: any) {
     toast.error(err.response?.data?.message || "Failed to update status");
   }

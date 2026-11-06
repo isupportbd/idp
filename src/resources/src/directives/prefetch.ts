@@ -56,17 +56,18 @@ export const prefetch: Directive<HTMLElement, string | undefined> = {
     const anchors = targetAnchors(el);
     if (anchors.length === 0) return;
 
-    const observer = typeof IntersectionObserver !== "undefined"
-      ? new IntersectionObserver(
-          (entries) => {
-            if (entries.some((entry) => entry.isIntersecting)) {
-              onIdle(() => anchors.forEach((a) => prefetchAnchor(a, binding.value)));
-              observer?.disconnect();
-            }
-          },
-          { rootMargin: "250px" }
-        )
-      : null;
+    const observer =
+      typeof IntersectionObserver !== "undefined"
+        ? new IntersectionObserver(
+            (entries) => {
+              if (entries.some((entry) => entry.isIntersecting)) {
+                onIdle(() => anchors.forEach((a) => prefetchAnchor(a, binding.value)));
+                observer?.disconnect();
+              }
+            },
+            { rootMargin: "250px" }
+          )
+        : null;
 
     const handlers = new Map<HTMLAnchorElement, () => void>();
 

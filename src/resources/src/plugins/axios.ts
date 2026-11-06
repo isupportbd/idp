@@ -1,4 +1,4 @@
-import axios, { type AxiosResponse, type AxiosError } from "axios";
+import axios, { type AxiosError, type AxiosResponse } from "axios";
 
 if (import.meta.env.VITE_API_URL) {
   axios.defaults.baseURL = import.meta.env.VITE_API_URL;
@@ -30,7 +30,9 @@ function clearStoredAuth() {
   // stale identity is never hydrated after the session ends.
   try {
     localStorage.removeItem(AUTH_USER_KEY);
-  } catch (storageErr) { console.warn("[Axios Plugin Warning]: Failed to access storage", storageErr); }
+  } catch (storageErr) {
+    console.warn("[Axios Plugin Warning]: Failed to access storage", storageErr);
+  }
 }
 
 let isRedirecting = false;

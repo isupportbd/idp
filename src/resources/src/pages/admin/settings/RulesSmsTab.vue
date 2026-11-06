@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from "vue";
 import axios from "axios";
+import { ref } from "vue";
 import type { CompanySettings } from "@/composables/useFirmApi";
 import { useFirmApi } from "@/composables/useFirmApi";
 import { useToast } from "@/composables/useToast";
@@ -11,9 +11,7 @@ const props = defineProps<{
   canEdit: boolean;
 }>();
 
-const emit = defineEmits<{
-  (e: "saved"): void;
-}>();
+const emit = defineEmits<(e: "saved") => void>();
 
 const toast = useToast();
 const authStore = useAuthStore();

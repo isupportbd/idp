@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { useAuthStore } from "@/stores/auth";
-import { useToast } from "@/composables/useToast";
 import axios from "axios";
+import { computed, ref } from "vue";
+import { useToast } from "@/composables/useToast";
+import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps<{
   modelValue: boolean;
@@ -66,7 +66,7 @@ const currentStorageMB = computed(() => {
 });
 
 const newProjectedStorageMB = computed(() => {
-  return currentStorageMB.value + (selectedGb.value * 1024);
+  return currentStorageMB.value + selectedGb.value * 1024;
 });
 
 const copyBkashNumber = async () => {
@@ -77,7 +77,9 @@ const copyBkashNumber = async () => {
     setTimeout(() => {
       isCopied.value = false;
     }, 2000);
-  } catch (uiErr: any) { console.warn("[UI Component Warning: BuyStorageModal.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: BuyStorageModal.vue]", uiErr?.message || uiErr);
+  }
 };
 
 const handleBuyStorage = async () => {

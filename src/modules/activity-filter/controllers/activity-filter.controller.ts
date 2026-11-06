@@ -1,14 +1,14 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
+import type { AppContext } from "@/framework/facade.js";
 import { db, getDefaultTaxPeriod, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
+import { hasPermission } from "@/middlewares/permission-middleware.js";
+import { users } from "@/modules/auth/database/models/user.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { purchases } from "@/modules/purchases/database/models/purchases.js";
-import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
-import { users } from "@/modules/auth/database/models/user.js";
-import { hasPermission } from "@/middlewares/permission-middleware.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 
 /**
  * Get Activity Matrix & Client Data for the Activity Filter Module
@@ -24,9 +24,7 @@ export const getActivityMatrix = async (c: AppContext) => {
       clientConditions.push(eq(clients.createdBy, tenantAdminId));
     }
     if (!isSuperAdmin && !isTenantAdmin) {
-      clientConditions.push(
-        sql`${clients.id} IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`
-      );
+      clientConditions.push(sql`${clients.id} IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`);
     }
 
     const auth = c.get("auth") || c.get("user");
@@ -63,7 +61,7 @@ export const getActivityMatrix = async (c: AppContext) => {
     const activeClientIds = activeClients.map((cl) => cl.id);
 
     // 2. Fetch submissions for this month
-    let submissionsMap: Record<number, any> = {};
+    const submissionsMap: Record<number, any> = {};
     if (activeClientIds.length > 0) {
       const existingSubmissions = await db
         .select({
@@ -78,12 +76,7 @@ export const getActivityMatrix = async (c: AppContext) => {
         })
         .from(vatSubmissions)
         .leftJoin(users, eq(vatSubmissions.submittedBy, users.id))
-        .where(
-          and(
-            inArray(vatSubmissions.clientId, activeClientIds),
-            eq(vatSubmissions.taxPeriod, taxPeriod)
-          )
-        );
+        .where(and(inArray(vatSubmissions.clientId, activeClientIds), eq(vatSubmissions.taxPeriod, taxPeriod)));
 
       existingSubmissions.forEach((sub) => {
         submissionsMap[sub.clientId] = sub;
@@ -91,7 +84,7 @@ export const getActivityMatrix = async (c: AppContext) => {
     }
 
     // 3. Fetch purchase totals per client for this month
-    let purchasesMap: Record<number, { totalBaseValue: number; beCount: number }> = {};
+    const purchasesMap: Record<number, { totalBaseValue: number; beCount: number }> = {};
     if (activeClientIds.length > 0) {
       const clientPurchases = await db
         .select({
@@ -161,7 +154,7 @@ export const getActivityMatrix = async (c: AppContext) => {
     const activeCount = matrixClients.filter((c) => c.purchaseAmount > 0).length;
     const activeFiledCount = matrixClients.filter((c) => c.purchaseAmount > 0 && c.isSubmitted).length;
     const activeUnfiledCount = matrixClients.filter((c) => c.purchaseAmount > 0 && !c.isSubmitted).length;
-    
+
     const inactiveCount = matrixClients.filter((c) => c.purchaseAmount === 0).length;
     const inactiveFiledCount = matrixClients.filter((c) => c.purchaseAmount === 0 && c.isSubmitted).length;
     const inactiveUnfiledCount = matrixClients.filter((c) => c.purchaseAmount === 0 && !c.isSubmitted).length;

@@ -1,26 +1,19 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { computed, ref } from "vue";
+import SearchInput from "@/components/common/SearchInput.vue";
 import type { ExpenseHead } from "@/composables/useFirmApi";
 import { useFirmApi } from "@/composables/useFirmApi";
 import { useToast } from "@/composables/useToast";
-import SearchInput from "@/components/common/SearchInput.vue";
 
 const props = defineProps<{
   expenseHeads: ExpenseHead[];
   canEdit: boolean;
 }>();
 
-const emit = defineEmits<{
-  (e: "refresh"): void;
-}>();
+const emit = defineEmits<(e: "refresh") => void>();
 
 const toast = useToast();
-const {
-  createExpenseHead,
-  updateExpenseHead,
-  toggleExpenseHead,
-  deleteExpenseHead
-} = useFirmApi();
+const { createExpenseHead, updateExpenseHead, toggleExpenseHead, deleteExpenseHead } = useFirmApi();
 
 const showExpenseModal = ref(false);
 const isEditingExpense = ref(false);

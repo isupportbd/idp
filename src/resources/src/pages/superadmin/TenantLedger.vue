@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
-import { useRoute, useRouter, onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
-import { type Tenant, type SubscriptionTransaction } from "@/composables/useSuperAdminApi";
+import { computed, onMounted, ref, watch } from "vue";
+import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
 import SearchInput from "@/components/common/SearchInput.vue";
+import type { SubscriptionTransaction, Tenant } from "@/composables/useSuperAdminApi";
 
 const route = useRoute();
 const router = useRouter();
@@ -21,7 +21,9 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(LEDGER_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: TenantLedger.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: TenantLedger.vue]", uiErr?.message || uiErr);
+  }
   return {};
 };
 
@@ -40,7 +42,9 @@ const saveFilters = () => {
         })
       );
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: TenantLedger.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: TenantLedger.vue]", uiErr?.message || uiErr);
+  }
 };
 
 watch(searchTerm, saveFilters);
@@ -51,7 +55,9 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(LEDGER_FILTER_KEY);
       }
-    } catch (uiErr: any) { console.warn("[UI Component Warning: TenantLedger.vue]", uiErr?.message || uiErr); }
+    } catch (uiErr: any) {
+      console.warn("[UI Component Warning: TenantLedger.vue]", uiErr?.message || uiErr);
+    }
   }
 });
 
@@ -65,7 +71,9 @@ const clearAllFilters = () => {
     if (typeof window !== "undefined" && window.sessionStorage) {
       sessionStorage.removeItem(LEDGER_FILTER_KEY);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: TenantLedger.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: TenantLedger.vue]", uiErr?.message || uiErr);
+  }
 };
 
 // Extend Subscription state
@@ -96,7 +104,7 @@ const filteredTransactions = computed(() => {
   if (!searchTerm.value.trim()) return transactions.value;
   const q = searchTerm.value.toLowerCase();
   return transactions.value.filter(
-    tx =>
+    (tx) =>
       (tx.trxId && tx.trxId.toLowerCase().includes(q)) ||
       (tx.planName && tx.planName.toLowerCase().includes(q)) ||
       (tx.billingCycle && tx.billingCycle.toLowerCase().includes(q)) ||
@@ -109,13 +117,13 @@ const isProcessingTx = ref<{ [key: number]: boolean }>({});
 
 const totalPaidAmount = computed(() => {
   return transactions.value
-    .filter(tx => (tx.status === "completed" || tx.status === "approved") && tx.type !== "plan_fee")
+    .filter((tx) => (tx.status === "completed" || tx.status === "approved") && tx.type !== "plan_fee")
     .reduce((sum, tx) => sum + (Number(tx.paidAmount) || 0), 0);
 });
 
 const totalExcessCreditAdded = computed(() => {
   return transactions.value
-    .filter(tx => (tx.status === "completed" || tx.status === "approved") && tx.type !== "plan_fee")
+    .filter((tx) => (tx.status === "completed" || tx.status === "approved") && tx.type !== "plan_fee")
     .reduce((sum, tx) => sum + (Number(tx.excessCredit) || 0), 0);
 });
 

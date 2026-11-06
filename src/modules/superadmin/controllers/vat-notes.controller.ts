@@ -1,7 +1,7 @@
+import { and, asc, desc, eq, ne, or, sql } from "drizzle-orm";
 import type { AppContext } from "@/framework/facade.js";
-import { db, cache } from "@/framework/facade.js";
+import { cache, db } from "@/framework/facade.js";
 import { vatNotes } from "@/modules/superadmin/database/models/vat_notes.js";
-import { eq, desc, asc, and, or, ne, sql } from "drizzle-orm";
 import { notifySettingsUpdated } from "./platform.controller.js";
 
 export async function getVatNotes(c: AppContext) {
@@ -33,16 +33,16 @@ export async function createVatNote(c: AppContext) {
     const trimmedNote = noteName.trim();
 
     // Check duplicate vatRate
-    const [existing] = await db
-      .select()
-      .from(vatNotes)
-      .where(eq(vatNotes.vatRate, numericRate));
+    const [existing] = await db.select().from(vatNotes).where(eq(vatNotes.vatRate, numericRate));
 
     if (existing) {
-      return c.json({
-        success: false,
-        error: `A mapping for VAT Rate "${numericRate}%" already exists (${existing.noteName}). Duplicate VAT rates are not allowed.`
-      }, 400);
+      return c.json(
+        {
+          success: false,
+          error: `A mapping for VAT Rate "${numericRate}%" already exists (${existing.noteName}). Duplicate VAT rates are not allowed.`
+        },
+        400
+      );
     }
 
     const [inserted] = await db
@@ -90,10 +90,13 @@ export async function updateVatNote(c: AppContext) {
         .where(and(eq(vatNotes.vatRate, numericRate), ne(vatNotes.id, id)));
 
       if (existing) {
-        return c.json({
-          success: false,
-          error: `A mapping for VAT Rate "${numericRate}%" is already configured (${existing.noteName}).`
-        }, 400);
+        return c.json(
+          {
+            success: false,
+            error: `A mapping for VAT Rate "${numericRate}%" is already configured (${existing.noteName}).`
+          },
+          400
+        );
       }
     }
 

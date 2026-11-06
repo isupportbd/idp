@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useClientsApi, type ClientItem, type AssignableUser } from "@/composables/useClientsApi";
+import IdpSelect from "@/components/common/IdpSelect.vue";
+import { can } from "@/composables/useAuth";
+import { type AssignableUser, type ClientItem, useClientsApi } from "@/composables/useClientsApi";
 import { useServicesApi } from "@/composables/useServicesApi";
 import { useToast } from "@/composables/useToast";
-import { can } from "@/composables/useAuth";
-import IdpSelect from "@/components/common/IdpSelect.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -14,22 +14,10 @@ const toast = useToast();
 const isEditMode = computed(() => !!route.params.id && route.params.id !== "create");
 const clientId = computed(() => Number(route.params.id) || 0);
 
-const {
-  fetchClient,
-  createClient,
-  updateClient,
-  checkBinUnique,
-  checkMobileExists,
-  assignableUsers,
-  fetchAssignableUsers
-} = useClientsApi();
+const { fetchClient, createClient, updateClient, checkBinUnique, checkMobileExists, assignableUsers, fetchAssignableUsers } =
+  useClientsApi();
 
-const {
-  customerTypes,
-  references,
-  fetchCustomerTypes,
-  fetchReferences
-} = useServicesApi();
+const { customerTypes, references, fetchCustomerTypes, fetchReferences } = useServicesApi();
 
 const customerTypeOptions = computed(() => [
   { value: null, label: "-- Select Customer Type --" },
@@ -100,17 +88,13 @@ const form = ref<{
 });
 
 // Opening Balance
-const balanceType = ref<'none' | 'due' | 'advance'>('none');
+const balanceType = ref<"none" | "due" | "advance">("none");
 const balanceAmount = ref<number | null>(null);
 
 onMounted(async () => {
   isLoading.value = true;
   try {
-    await Promise.all([
-      fetchCustomerTypes(),
-      fetchReferences(),
-      fetchAssignableUsers()
-    ]);
+    await Promise.all([fetchCustomerTypes(), fetchReferences(), fetchAssignableUsers()]);
 
     if (isEditMode.value) {
       const clientData = await fetchClient(clientId.value);
@@ -138,13 +122,13 @@ onMounted(async () => {
         };
 
         if (clientData.openingBalance > 0) {
-          balanceType.value = 'due';
+          balanceType.value = "due";
           balanceAmount.value = clientData.openingBalance;
         } else if (clientData.openingBalance < 0) {
-          balanceType.value = 'advance';
+          balanceType.value = "advance";
           balanceAmount.value = Math.abs(clientData.openingBalance);
         } else {
-          balanceType.value = 'none';
+          balanceType.value = "none";
           balanceAmount.value = null;
         }
       }
@@ -179,7 +163,7 @@ const handleBinInput = (e: Event) => {
     const res: any = await checkBinUnique(trimmed, isEditMode.value ? clientId.value : undefined);
     if (res.status === "RELEASED_AVAILABLE_TO_BIND") {
       binStatus.value = "released";
-      binMessage.value = `Client "${res.existingClient?.companyName || 'Organization'}" is released by previous firm. All profile data has been automatically loaded!`;
+      binMessage.value = `Client "${res.existingClient?.companyName || "Organization"}" is released by previous firm. All profile data has been automatically loaded!`;
       if (res.existingClient && !isEditMode.value) {
         form.value.companyName = res.existingClient.companyName || "";
         form.value.proprietorName = res.existingClient.proprietorName || "";
@@ -271,9 +255,9 @@ const handleSubmit = async () => {
   isSubmitting.value = true;
   try {
     let finalOpeningBalance = 0;
-    if (balanceType.value === 'due' && balanceAmount.value && balanceAmount.value > 0) {
+    if (balanceType.value === "due" && balanceAmount.value && balanceAmount.value > 0) {
       finalOpeningBalance = Number(balanceAmount.value);
-    } else if (balanceType.value === 'advance' && balanceAmount.value && balanceAmount.value > 0) {
+    } else if (balanceType.value === "advance" && balanceAmount.value && balanceAmount.value > 0) {
       finalOpeningBalance = -Number(balanceAmount.value);
     }
 

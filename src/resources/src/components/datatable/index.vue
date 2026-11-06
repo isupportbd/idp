@@ -118,7 +118,7 @@ const slots = useSlots();
 const emit = defineEmits<(event: "remove", value: Array<string | number>) => void>();
 
 // checkbox select
-let checked = reactive<{ check: boolean; checkcolumn: Array<string | number>; }>({
+let checked = reactive<{ check: boolean; checkcolumn: Array<string | number> }>({
   check: false,
   checkcolumn: []
 });

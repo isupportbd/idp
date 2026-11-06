@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeAll } from "bun:test";
+import { and, eq } from "drizzle-orm";
 import { initDatabase } from "@/framework/database/connection.js";
 import { db } from "@/framework/facade.js";
-import { eq, and } from "drizzle-orm";
-import { smsTemplates } from "../database/models/sms_templates.js";
 import { smsLogs } from "../database/models/sms_logs.js";
-import { renderTemplate, normalizeBdMobile, DEFAULT_TEMPLATES } from "../services/sms.service.js";
+import { smsTemplates } from "../database/models/sms_templates.js";
+import { DEFAULT_TEMPLATES, normalizeBdMobile, renderTemplate } from "../services/sms.service.js";
+import { beforeAll, describe, expect, it } from "bun:test";
 
 beforeAll(async () => {
   await initDatabase();
@@ -32,13 +32,16 @@ describe("SMS Templates Module Integration Tests", () => {
 
   it("should insert and query sms_templates in PostgreSQL", async () => {
     const testKey = `test_vat_${Date.now()}`;
-    const [inserted] = await db.insert(smsTemplates).values({
-      key: testKey,
-      name: "টেস্ট ভ্যাট টেম্পলেট",
-      body: "টেস্ট সাবমিশন {{submission_id}}",
-      variables: [{ name: "submission_id", label: "আইডি", sample: "123" }],
-      isActive: true
-    }).returning();
+    const [inserted] = await db
+      .insert(smsTemplates)
+      .values({
+        key: testKey,
+        name: "টেস্ট ভ্যাট টেম্পলেট",
+        body: "টেস্ট সাবমিশন {{submission_id}}",
+        variables: [{ name: "submission_id", label: "আইডি", sample: "123" }],
+        isActive: true
+      })
+      .returning();
 
     expect(inserted.id).toBeDefined();
     expect(inserted.key).toBe(testKey);
@@ -54,14 +57,17 @@ describe("SMS Templates Module Integration Tests", () => {
   });
 
   it("should insert delivery log in sms_logs", async () => {
-    const [log] = await db.insert(smsLogs).values({
-      recipientMobile: "8801711967548",
-      message: "আপনার জুলাই ২০২৬ ভ্যাট রিটার্ন দাখিল হয়েছে।",
-      templateKey: "vat_submission",
-      submissionId: "VAT-TEST-001",
-      status: "SENT",
-      providerResponse: "202 Accepted"
-    }).returning();
+    const [log] = await db
+      .insert(smsLogs)
+      .values({
+        recipientMobile: "8801711967548",
+        message: "আপনার জুলাই ২০২৬ ভ্যাট রিটার্ন দাখিল হয়েছে।",
+        templateKey: "vat_submission",
+        submissionId: "VAT-TEST-001",
+        status: "SENT",
+        providerResponse: "202 Accepted"
+      })
+      .returning();
 
     expect(log.id).toBeDefined();
     expect(log.status).toBe("SENT");

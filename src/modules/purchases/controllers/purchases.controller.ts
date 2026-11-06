@@ -1,13 +1,13 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
+import type { AppContext } from "@/framework/facade.js";
 import { db, HttpStatusCodes, resolveTenantContext, validate } from "@/framework/facade.js";
-import { batchDeletePurchasesSchema } from "./purchases.schema.js";
-import { purchases } from "@/modules/purchases/database/models/purchases.js";
-import { clients } from "@/modules/clients/database/models/clients.js";
-import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
-import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 import { users } from "@/modules/auth/database/models/user.js";
+import { clients } from "@/modules/clients/database/models/clients.js";
+import { purchases } from "@/modules/purchases/database/models/purchases.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
+import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
+import { batchDeletePurchasesSchema } from "./purchases.schema.js";
 
 // ── GET PURCHASES LIST ───────────────────────────────────────────────
 
@@ -63,9 +63,7 @@ export const listPurchases = async (c: AppContext) => {
 
     const totalCount = Number(countResult?.count || 0);
 
-    const orderClause = sortDir === "asc"
-      ? [asc(purchases.beDate), asc(purchases.id)]
-      : [desc(purchases.beDate), desc(purchases.id)];
+    const orderClause = sortDir === "asc" ? [asc(purchases.beDate), asc(purchases.id)] : [desc(purchases.beDate), desc(purchases.id)];
 
     // Fetch records
     const records = await db
@@ -117,10 +115,7 @@ export const listPurchases = async (c: AppContext) => {
     });
   } catch (error: unknown) {
     console.error("Error fetching purchases:", error);
-    return c.json(
-      { success: false, message: "Failed to fetch purchases" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ success: false, message: "Failed to fetch purchases" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -135,18 +130,13 @@ export const deletePurchase = async (c: AppContext) => {
 
     const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
 
-    const whereCondition = isSuperAdmin
-      ? eq(purchases.id, id)
-      : and(eq(purchases.id, id), eq(purchases.adminId, tenantAdminId ?? -1));
+    const whereCondition = isSuperAdmin ? eq(purchases.id, id) : and(eq(purchases.id, id), eq(purchases.adminId, tenantAdminId ?? -1));
 
     await db.delete(purchases).where(whereCondition);
 
     return c.json({ success: true, message: "Purchase record deleted successfully" });
   } catch (error: unknown) {
-    return c.json(
-      { success: false, message: "Failed to delete purchase" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ success: false, message: "Failed to delete purchase" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -181,10 +171,7 @@ export const batchDeletePurchases = async (c: AppContext) => {
 
     return c.json({ success: true, message: "Purchase records deleted successfully" });
   } catch (error: unknown) {
-    return c.json(
-      { success: false, message: "Failed to batch delete purchases" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ success: false, message: "Failed to batch delete purchases" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -208,10 +195,7 @@ export const deletePurchasesByMonth = async (c: AppContext) => {
 
     return c.json({ success: true, message: `All purchases for ${month} deleted successfully` });
   } catch (error: unknown) {
-    return c.json(
-      { success: false, message: "Failed to delete purchases by month" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ success: false, message: "Failed to delete purchases by month" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -238,9 +222,7 @@ export const getPurchasesMonths = async (c: AppContext) => {
       .groupBy(purchases.month)
       .orderBy(desc(purchases.month));
 
-    const purchaseMonths = purchaseMonthsResult
-      .map((r) => r.month)
-      .filter(Boolean) as string[];
+    const purchaseMonths = purchaseMonthsResult.map((r) => r.month).filter(Boolean) as string[];
 
     // 2. Fetch submissions for the client
     const submissionMonths: string[] = [];
@@ -284,11 +266,6 @@ export const getPurchasesMonths = async (c: AppContext) => {
       }
     });
   } catch (error: unknown) {
-    return c.json(
-      { success: false, message: "Failed to fetch purchases months" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ success: false, message: "Failed to fetch purchases months" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
-
-

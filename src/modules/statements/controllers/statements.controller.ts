@@ -1,12 +1,12 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { Handler } from "hono";
+import type { AppContext } from "@/framework/facade.js";
 import { db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { purchases } from "@/modules/purchases/database/models/purchases.js";
-import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 
 /**
  * Generates an array of "YYYY-MM" strings between fromMonth and toMonth (inclusive)
@@ -49,10 +49,7 @@ export const getStatementReport = async (c: AppContext) => {
     }
 
     if (fromMonth > toMonth) {
-      return c.json(
-        { success: false, message: "Start month cannot be later than end month" },
-        HttpStatusCodes.BAD_REQUEST
-      );
+      return c.json({ success: false, message: "Start month cannot be later than end month" }, HttpStatusCodes.BAD_REQUEST);
     }
 
     // 1. Build Client filter conditions
@@ -63,9 +60,7 @@ export const getStatementReport = async (c: AppContext) => {
     }
 
     if (!isSuperAdmin && !isTenantAdmin) {
-      clientConditions.push(
-        sql`${clients.id} IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`
-      );
+      clientConditions.push(sql`${clients.id} IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`);
     }
 
     if (clientIdParam) {
@@ -120,13 +115,7 @@ export const getStatementReport = async (c: AppContext) => {
         beCount: sql<number>`COUNT(DISTINCT ${purchases.beNo})`
       })
       .from(purchases)
-      .where(
-        and(
-          inArray(purchases.clientId, clientIds),
-          gte(purchases.month, fromMonth),
-          lte(purchases.month, toMonth)
-        )
-      )
+      .where(and(inArray(purchases.clientId, clientIds), gte(purchases.month, fromMonth), lte(purchases.month, toMonth)))
       .groupBy(purchases.clientId, purchases.month);
 
     // 4. Fetch VAT Submissions for these clients and months
@@ -139,11 +128,7 @@ export const getStatementReport = async (c: AppContext) => {
       })
       .from(vatSubmissions)
       .where(
-        and(
-          inArray(vatSubmissions.clientId, clientIds),
-          gte(vatSubmissions.taxPeriod, fromMonth),
-          lte(vatSubmissions.taxPeriod, toMonth)
-        )
+        and(inArray(vatSubmissions.clientId, clientIds), gte(vatSubmissions.taxPeriod, fromMonth), lte(vatSubmissions.taxPeriod, toMonth))
       );
 
     // 5. Build lookup maps
@@ -229,9 +214,6 @@ export const getStatementReport = async (c: AppContext) => {
     });
   } catch (error: unknown) {
     console.error("Error generating statements:", error);
-    return c.json(
-      { success: false, message: "Failed to generate statement" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ success: false, message: "Failed to generate statement" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };

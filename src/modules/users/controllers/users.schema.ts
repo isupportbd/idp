@@ -67,4 +67,3 @@ export const PermissionCatalogResponseSchema = z.object({
   data: z.record(z.string(), z.any()),
   defaults: z.array(z.string())
 });
-

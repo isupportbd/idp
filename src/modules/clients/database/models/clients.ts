@@ -1,8 +1,8 @@
 import { relations } from "drizzle-orm";
 import { boolean, index, integer, numeric, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { users } from "@/modules/auth/database/models/user.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
-import { users } from "@/modules/auth/database/models/user.js";
 import { clientManagers } from "./client_managers.js";
 
 export const clients = pgTable(

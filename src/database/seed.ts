@@ -1,13 +1,13 @@
 import { initDatabase } from "../framework/database/connection.js";
 import { db } from "../framework/facade.js";
+import { users } from "../modules/auth/database/models/user.js";
+import { clientManagers } from "../modules/clients/database/models/client_managers.js";
+import { clients } from "../modules/clients/database/models/clients.js";
+import { bankAccounts } from "../modules/firm/database/models/bank_accounts.js";
+import { companySettings } from "../modules/firm/database/models/company_settings.js";
+import { expenseHeads } from "../modules/firm/database/models/expense_heads.js";
 import { customerTypes } from "../modules/services/database/models/customer_types.js";
 import { clientReferences } from "../modules/services/database/models/references.js";
-import { companySettings } from "../modules/firm/database/models/company_settings.js";
-import { bankAccounts } from "../modules/firm/database/models/bank_accounts.js";
-import { expenseHeads } from "../modules/firm/database/models/expense_heads.js";
-import { clients } from "../modules/clients/database/models/clients.js";
-import { clientManagers } from "../modules/clients/database/models/client_managers.js";
-import { users } from "../modules/auth/database/models/user.js";
 
 async function runSeed() {
   await initDatabase();
@@ -24,29 +24,40 @@ async function runSeed() {
   ];
 
   for (const item of defaultTypes) {
-    await db.insert(customerTypes).values({
-      typeName: item.typeName,
-      description: item.description,
-      isActive: true
-    }).onConflictDoNothing({ target: customerTypes.typeName });
+    await db
+      .insert(customerTypes)
+      .values({
+        typeName: item.typeName,
+        description: item.description,
+        isActive: true
+      })
+      .onConflictDoNothing({ target: customerTypes.typeName });
   }
 
   // 2. Client References
   const defaultRefs = [
-    { name: "Md. Aminul Islam (Tax Consultant)", phone: "01711998877", email: "aminul.tax@gmail.com", notes: "Senior VAT & Income Tax Consultant" },
+    {
+      name: "Md. Aminul Islam (Tax Consultant)",
+      phone: "01711998877",
+      email: "aminul.tax@gmail.com",
+      notes: "Senior VAT & Income Tax Consultant"
+    },
     { name: "Rahman & Associates", phone: "01819887766", email: "info@rahmanassociates.bd", notes: "Chartered Accountants & Auditors" },
     { name: "Kazi Faruk (C&F Agent)", phone: "01911776655", email: "kazi.faruk@cnfbd.com", notes: "Chittagong Port Customs C&F Agent" },
     { name: "Direct Client Acquisition", phone: "01819234567", email: "billing@associatesvat.com", notes: "Direct firm walk-in client" }
   ];
 
   for (const refItem of defaultRefs) {
-    await db.insert(clientReferences).values({
-      name: refItem.name,
-      phone: refItem.phone,
-      email: refItem.email,
-      notes: refItem.notes,
-      isActive: true
-    }).onConflictDoNothing({ target: clientReferences.name });
+    await db
+      .insert(clientReferences)
+      .values({
+        name: refItem.name,
+        phone: refItem.phone,
+        email: refItem.email,
+        notes: refItem.notes,
+        isActive: true
+      })
+      .onConflictDoNothing({ target: clientReferences.name });
   }
 
   // 3. Company Settings
@@ -63,7 +74,8 @@ async function runSeed() {
       tinNumber: "782910384721",
       tradeLicenseNo: "TRAD/DSCC/038291",
       invoicePrefix: "INV",
-      invoiceTerms: "1. Payment is due within 15 days of invoice date.\n2. Please mention the invoice number as reference in payment.\n3. Checks/Transfers are subject to realization.",
+      invoiceTerms:
+        "1. Payment is due within 15 days of invoice date.\n2. Please mention the invoice number as reference in payment.\n3. Checks/Transfers are subject to realization.",
       receiptPrefix: "MR",
       autoDueCarryForward: true,
       binUniqueEnforcement: true,
@@ -89,23 +101,61 @@ async function runSeed() {
 
   // 5. Expense Heads
   const defaultExpenses = [
-    { name: "Office Rent & Service Charges", code: "EXP-01", category: "Operational", description: "Monthly office space rental and building service charge" },
-    { name: "Staff Salaries & Allowances", code: "EXP-02", category: "Administrative", description: "Monthly payroll and consultant retainers" },
-    { name: "Utilities (Electricity, Water, Gas)", code: "EXP-03", category: "Operational", description: "Office utility and electricity bills" },
-    { name: "Internet & IT Infrastructure", code: "EXP-04", category: "Operational", description: "Broadband fiber internet, cloud hosting, and domain fees" },
-    { name: "Stationary, Printing & Postage", code: "EXP-05", category: "Administrative", description: "Tax filing binders, paper, cartridge, courier expenses" },
-    { name: "Statutory Fees & NBR Challans", code: "EXP-06", category: "Statutory & Fees", description: "Government revenue stamps, tribunal fees, registration charges" },
-    { name: "Client Refreshment & Entertainment", code: "EXP-07", category: "Miscellaneous", description: "Official guest entertainment and meeting refreshments" }
+    {
+      name: "Office Rent & Service Charges",
+      code: "EXP-01",
+      category: "Operational",
+      description: "Monthly office space rental and building service charge"
+    },
+    {
+      name: "Staff Salaries & Allowances",
+      code: "EXP-02",
+      category: "Administrative",
+      description: "Monthly payroll and consultant retainers"
+    },
+    {
+      name: "Utilities (Electricity, Water, Gas)",
+      code: "EXP-03",
+      category: "Operational",
+      description: "Office utility and electricity bills"
+    },
+    {
+      name: "Internet & IT Infrastructure",
+      code: "EXP-04",
+      category: "Operational",
+      description: "Broadband fiber internet, cloud hosting, and domain fees"
+    },
+    {
+      name: "Stationary, Printing & Postage",
+      code: "EXP-05",
+      category: "Administrative",
+      description: "Tax filing binders, paper, cartridge, courier expenses"
+    },
+    {
+      name: "Statutory Fees & NBR Challans",
+      code: "EXP-06",
+      category: "Statutory & Fees",
+      description: "Government revenue stamps, tribunal fees, registration charges"
+    },
+    {
+      name: "Client Refreshment & Entertainment",
+      code: "EXP-07",
+      category: "Miscellaneous",
+      description: "Official guest entertainment and meeting refreshments"
+    }
   ];
 
   for (const exp of defaultExpenses as any[]) {
-    await db.insert(expenseHeads).values({
-      name: exp.name,
-      code: exp.code,
-      category: exp.category,
-      description: exp.description,
-      isActive: true
-    }).onConflictDoNothing({ target: expenseHeads.name });
+    await db
+      .insert(expenseHeads)
+      .values({
+        name: exp.name,
+        code: exp.code,
+        category: exp.category,
+        description: exp.description,
+        isActive: true
+      })
+      .onConflictDoNothing({ target: expenseHeads.name });
   }
 
   // 6. Seed Initial Clients
@@ -114,9 +164,9 @@ async function runSeed() {
     const types: (typeof customerTypes.$inferSelect)[] = await db.select().from(customerTypes);
     const refs: (typeof clientReferences.$inferSelect)[] = await db.select().from(clientReferences);
 
-    const importerType = types.find(t => t.typeName === "Importer") || types[0];
-    const commType = types.find(t => t.typeName === "Commercial Importer") || types[0];
-    const mfgType = types.find(t => t.typeName === "Manufacturer") || types[0];
+    const importerType = types.find((t) => t.typeName === "Importer") || types[0];
+    const commType = types.find((t) => t.typeName === "Commercial Importer") || types[0];
+    const mfgType = types.find((t) => t.typeName === "Manufacturer") || types[0];
 
     const ref1 = refs[0];
     const ref2 = refs[1] || refs[0];
@@ -179,7 +229,10 @@ async function runSeed() {
       }
     ];
 
-    const insertedClients = await db.insert(clients).values(sampleClients as any[]).returning();
+    const insertedClients = await db
+      .insert(clients)
+      .values(sampleClients as any[])
+      .returning();
 
     // Assign to first user if available
     const firstUser = (await db.select().from(users).limit(1))[0];

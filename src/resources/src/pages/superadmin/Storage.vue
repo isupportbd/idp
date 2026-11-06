@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
 import axios from "axios";
+import { computed, onMounted, ref } from "vue";
 import SearchInput from "@/components/common/SearchInput.vue";
 
 interface TenantStorageItem {
@@ -161,12 +161,7 @@ const filteredBreakdown = computed(() => {
   const list = stats.value.tenantBreakdown || [];
   if (!searchTerm.value.trim()) return list;
   const q = searchTerm.value.toLowerCase();
-  return list.filter(
-    (t) =>
-      t.name.toLowerCase().includes(q) ||
-      t.email.toLowerCase().includes(q) ||
-      (t.mobile && t.mobile.includes(q))
-  );
+  return list.filter((t) => t.name.toLowerCase().includes(q) || t.email.toLowerCase().includes(q) || (t.mobile && t.mobile.includes(q)));
 });
 
 const getRankBadge = (rank: number) => {

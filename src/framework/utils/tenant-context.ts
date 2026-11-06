@@ -1,9 +1,9 @@
-import type { Context } from "hono";
 import { and, eq } from "drizzle-orm";
+import type { Context } from "hono";
 import { db } from "@/framework/facade.js";
 import { users } from "@/modules/auth/database/models/user.js";
-import { clients } from "@/modules/clients/database/models/clients.js";
 import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
+import { clients } from "@/modules/clients/database/models/clients.js";
 
 export class UnauthenticatedTenantError extends Error {
   status = 401;
@@ -33,10 +33,7 @@ export interface HttpError extends Error {
  * Asserts that the client belongs to the tenant and that the user is authorized to view/manage it.
  * Throws 403 HttpError if unauthorized.
  */
-export async function assertClientAccess(
-  ctx: TenantContext,
-  clientId: number
-): Promise<void> {
+export async function assertClientAccess(ctx: TenantContext, clientId: number): Promise<void> {
   const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = ctx;
 
   if (!isSuperAdmin && tenantAdminId) {
@@ -44,12 +41,7 @@ export async function assertClientAccess(
       await db
         .select({ id: clients.id })
         .from(clients)
-        .where(
-          and(
-            eq(clients.id, clientId),
-            eq(clients.createdBy, tenantAdminId)
-          )
-        )
+        .where(and(eq(clients.id, clientId), eq(clients.createdBy, tenantAdminId)))
         .limit(1)
     )[0];
 
@@ -77,7 +69,6 @@ export async function assertClientAccess(
   }
 }
 
-
 /**
  * Resolves the authenticated user and tenant context from Hono Context.
  * Fails closed (throws UnauthenticatedTenantError) when auth is missing or invalid.
@@ -100,7 +91,7 @@ export async function resolveTenantContext(c: Context): Promise<TenantContext> {
 
   const isSuperAdmin = currentUser.role?.name?.toLowerCase() === "superadmin" || auth.role === "superadmin";
   const isTenantAdmin = currentUser.role?.name?.toLowerCase() === "admin" || !currentUser.adminId;
-  const tenantAdminId = isSuperAdmin ? null : (currentUser.adminId ? Number(currentUser.adminId) : currentUser.id);
+  const tenantAdminId = isSuperAdmin ? null : currentUser.adminId ? Number(currentUser.adminId) : currentUser.id;
 
   return {
     currentUser,

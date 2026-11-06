@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import { onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
-import { pulse } from "@/plugins/pulse";
-import { useToast } from "@/composables/useToast";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { onBeforeRouteLeave } from "vue-router";
 import SearchInput from "@/components/common/SearchInput.vue";
+import { useToast } from "@/composables/useToast";
+import { pulse } from "@/plugins/pulse";
 
 const toast = useToast();
 
@@ -78,9 +78,7 @@ const filteredUnits = computed(() => {
   const q = searchQuery.value.toLowerCase().trim();
   return units.value.filter(
     (u) =>
-      u.code.toLowerCase().includes(q) ||
-      u.name.toLowerCase().includes(q) ||
-      (u.description && u.description.toLowerCase().includes(q))
+      u.code.toLowerCase().includes(q) || u.name.toLowerCase().includes(q) || (u.description && u.description.toLowerCase().includes(q))
   );
 });
 
@@ -121,9 +119,7 @@ const handleSave = async () => {
   }
 
   const enteredCode = form.value.code.trim().toLowerCase();
-  const duplicate = units.value.find(
-    (u) => u.code.trim().toLowerCase() === enteredCode && (!isEditing.value || u.id !== form.value.id)
-  );
+  const duplicate = units.value.find((u) => u.code.trim().toLowerCase() === enteredCode && (!isEditing.value || u.id !== form.value.id));
   if (duplicate) {
     formError.value = `Unit Code "${form.value.code.trim()}" already exists in the catalog!`;
     toast.error(formError.value);

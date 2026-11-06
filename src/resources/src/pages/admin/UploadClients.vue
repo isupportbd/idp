@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { useRouter } from "vue-router";
 import axios from "axios";
-import { useToast } from "@/composables/useToast";
+import { computed, ref } from "vue";
+import { useRouter } from "vue-router";
 import SearchInput from "@/components/common/SearchInput.vue";
 import { useExcelExport } from "@/composables/useExcelExport";
+import { useToast } from "@/composables/useToast";
 
 const router = useRouter();
 const { exportSingleSheet } = useExcelExport();
@@ -43,17 +43,17 @@ const downloadSampleTemplate = async () => {
       "TIN Number": "782910384721",
       "Trade License No": "TRAD/DSCC/019283",
       "Full Office Address": "House #12, Road #4, Motijheel C/A, Dhaka-1000",
-      "Mobile": "01711234567",
+      Mobile: "01711234567",
       "Alternative Mobile": "01819234567",
-      "Email": "info@abctraders.com",
+      Email: "info@abctraders.com",
       "Customer Type": "Commercial Importer",
-      "Reference": "Direct Client",
+      Reference: "Direct Client",
       "VAT Portal User ID": "abc_vat2026",
       "VAT Portal Password": "User@1234",
       "VAT Service Type": "FULL",
       "Opening Balance (- for Due, + for Advance)": -5000,
-      "Status": "Active",
-      "Notes": "Imports wholesale goods via Chittagong Port"
+      Status: "Active",
+      Notes: "Imports wholesale goods via Chittagong Port"
     },
     {
       "Company Name": "XYZ Enterprise",
@@ -62,17 +62,17 @@ const downloadSampleTemplate = async () => {
       "TIN Number": "981273645123",
       "Trade License No": "TRAD/DNCC/082736",
       "Full Office Address": "Plot #5, Kawran Bazar, Dhaka-1215",
-      "Mobile": "01912345678",
+      Mobile: "01912345678",
       "Alternative Mobile": "",
-      "Email": "contact@xyz-bd.com",
+      Email: "contact@xyz-bd.com",
       "Customer Type": "Trader",
-      "Reference": "Advocate Md. Ruhul Amin",
+      Reference: "Advocate Md. Ruhul Amin",
       "VAT Portal User ID": "xyz_tax",
       "VAT Portal Password": "Vat#5678",
       "VAT Service Type": "ONLY_RETURN",
       "Opening Balance (- for Due, + for Advance)": 2000,
-      "Status": "Active",
-      "Notes": "Monthly 9.1 submission client"
+      Status: "Active",
+      Notes: "Monthly 9.1 submission client"
     }
   ];
 
@@ -130,90 +130,87 @@ const parseFile = (file: File) => {
         return;
       }
 
-      const normalizedList = rawRows.map((row) => {
-        const rowKeys = Object.keys(row);
-        const getVal = (...matchKeys: string[]) => {
-          for (const mk of matchKeys) {
-            const found = rowKeys.find((k) =>
-              k.toLowerCase().replace(/[^a-z0-9]/g, "").includes(mk.toLowerCase().replace(/[^a-z0-9]/g, ""))
-            );
-            if (found && row[found] !== undefined && String(row[found]).trim() !== "") {
-              return String(row[found]).trim();
+      const normalizedList = rawRows
+        .map((row) => {
+          const rowKeys = Object.keys(row);
+          const getVal = (...matchKeys: string[]) => {
+            for (const mk of matchKeys) {
+              const found = rowKeys.find((k) =>
+                k
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]/g, "")
+                  .includes(mk.toLowerCase().replace(/[^a-z0-9]/g, ""))
+              );
+              if (found && row[found] !== undefined && String(row[found]).trim() !== "") {
+                return String(row[found]).trim();
+              }
+            }
+            return "";
+          };
+
+          const rawDue = getVal("openingbalance", "openingbal", "previousdue", "balance", "due", "advance", "opening");
+          let openingBal = 0;
+          if (rawDue !== "") {
+            const str = String(rawDue).trim().toLowerCase();
+            const cleanNum = parseFloat(str.replace(/[^0-9.-]/g, ""));
+            if (!isNaN(cleanNum) && cleanNum !== 0) {
+              // If user supplied minus sign (e.g. -5000) or words 'due'/'বকেয়া' -> Due (client owes)
+              if (str.includes("-") || str.includes("due") || str.includes("বকেয়া") || str.includes("বকেয়া") || str.includes("payable")) {
+                openingBal = Math.abs(cleanNum); // Positive in ledger = Due
+              } else {
+                // Positive number or 'advance'/'অগ্রিম' -> Advance (credit)
+                openingBal = -Math.abs(cleanNum); // Negative in ledger = Advance
+              }
             }
           }
-          return "";
-        };
 
-        const rawDue = getVal(
-          "openingbalance",
-          "openingbal",
-          "previousdue",
-          "balance",
-          "due",
-          "advance",
-          "opening"
-        );
-        let openingBal = 0;
-        if (rawDue !== "") {
-          const str = String(rawDue).trim().toLowerCase();
-          const cleanNum = parseFloat(str.replace(/[^0-9.-]/g, ""));
-          if (!isNaN(cleanNum) && cleanNum !== 0) {
-            // If user supplied minus sign (e.g. -5000) or words 'due'/'বকেয়া' -> Due (client owes)
-            if (str.includes("-") || str.includes("due") || str.includes("বকেয়া") || str.includes("বকেয়া") || str.includes("payable")) {
-              openingBal = Math.abs(cleanNum); // Positive in ledger = Due
-            } else {
-              // Positive number or 'advance'/'অগ্রিম' -> Advance (credit)
-              openingBal = -Math.abs(cleanNum); // Negative in ledger = Advance
-            }
-          }
-        }
-
-        return {
-          companyName: getVal("company", "organization", "clientname", "name"),
-          proprietorName: getVal("proprietor", "owner", "director", "contactperson"),
-          binNumber: formatBinNumber(getVal("binnumber", "bin", "vatreg")),
-          tinNumber: getVal("tinnumber", "tin"),
-          tradeLicenseNo: getVal("tradelicense", "trade", "licenseno", "license"),
-          address: getVal("fullofficeaddress", "officeaddress", "address", "location"),
-          mobile: getVal("officialmobile", "mobile", "phone", "cell", "contact"),
-          alternativeMobile: getVal("alternativemobile", "altmobile", "alt", "secondary", "otherphone"),
-          email: getVal("officialemail", "email", "mail"),
-          customerType: getVal("customertype", "businesstype", "type", "clienttype"),
-          reference: getVal("reference", "introducer", "ref"),
-          vatUserId: getVal(
-            "vatportaluserid",
-            "vatuserid",
-            "portaluserid",
-            "portaluser",
-            "nbruser",
-            "nbruserid",
-            "vatuser",
-            "userid",
-            "username",
-            "user",
-            "portalid",
-            "loginid",
-            "loginuser"
-          ),
-          vatPassword: getVal(
-            "vatportalpassword",
-            "vatpassword",
-            "portalpassword",
-            "nbrpassword",
-            "userpassword",
-            "loginpassword",
-            "password",
-            "portalpass",
-            "vatpass",
-            "secret",
-            "pass"
-          ),
-          vatServiceType: getVal("vatservicetype", "vatservice", "service", "scope") || "FULL",
-          openingBalance: openingBal,
-          isActive: getVal("status", "isactive", "active") || "Active",
-          notes: getVal("specialnotes", "notes", "remark", "remarks")
-        };
-      }).filter(c => c.companyName || c.binNumber || c.mobile);
+          return {
+            companyName: getVal("company", "organization", "clientname", "name"),
+            proprietorName: getVal("proprietor", "owner", "director", "contactperson"),
+            binNumber: formatBinNumber(getVal("binnumber", "bin", "vatreg")),
+            tinNumber: getVal("tinnumber", "tin"),
+            tradeLicenseNo: getVal("tradelicense", "trade", "licenseno", "license"),
+            address: getVal("fullofficeaddress", "officeaddress", "address", "location"),
+            mobile: getVal("officialmobile", "mobile", "phone", "cell", "contact"),
+            alternativeMobile: getVal("alternativemobile", "altmobile", "alt", "secondary", "otherphone"),
+            email: getVal("officialemail", "email", "mail"),
+            customerType: getVal("customertype", "businesstype", "type", "clienttype"),
+            reference: getVal("reference", "introducer", "ref"),
+            vatUserId: getVal(
+              "vatportaluserid",
+              "vatuserid",
+              "portaluserid",
+              "portaluser",
+              "nbruser",
+              "nbruserid",
+              "vatuser",
+              "userid",
+              "username",
+              "user",
+              "portalid",
+              "loginid",
+              "loginuser"
+            ),
+            vatPassword: getVal(
+              "vatportalpassword",
+              "vatpassword",
+              "portalpassword",
+              "nbrpassword",
+              "userpassword",
+              "loginpassword",
+              "password",
+              "portalpass",
+              "vatpass",
+              "secret",
+              "pass"
+            ),
+            vatServiceType: getVal("vatservicetype", "vatservice", "service", "scope") || "FULL",
+            openingBalance: openingBal,
+            isActive: getVal("status", "isactive", "active") || "Active",
+            notes: getVal("specialnotes", "notes", "remark", "remarks")
+          };
+        })
+        .filter((c) => c.companyName || c.binNumber || c.mobile);
 
       if (normalizedList.length === 0) {
         toast.error("No valid client rows detected. Ensure at least Company Name, BIN, or Mobile column is present.");
@@ -243,17 +240,18 @@ const parseFile = (file: File) => {
 const filteredClients = computed(() => {
   if (!searchQuery.value) return parsedClients.value;
   const q = searchQuery.value.toLowerCase().trim();
-  return parsedClients.value.filter((c) =>
-    (c.companyName && c.companyName.toLowerCase().includes(q)) ||
-    (c.binNumber && c.binNumber.toLowerCase().includes(q)) ||
-    (c.mobile && c.mobile.toLowerCase().includes(q)) ||
-    (c.proprietorName && c.proprietorName.toLowerCase().includes(q)) ||
-    (c.vatUserId && c.vatUserId.toLowerCase().includes(q)) ||
-    (c.vatPassword && c.vatPassword.toLowerCase().includes(q)) ||
-    (c.customerType && c.customerType.toLowerCase().includes(q)) ||
-    (c.reference && c.reference.toLowerCase().includes(q)) ||
-    (c.email && c.email.toLowerCase().includes(q)) ||
-    (c.tinNumber && c.tinNumber.toLowerCase().includes(q))
+  return parsedClients.value.filter(
+    (c) =>
+      (c.companyName && c.companyName.toLowerCase().includes(q)) ||
+      (c.binNumber && c.binNumber.toLowerCase().includes(q)) ||
+      (c.mobile && c.mobile.toLowerCase().includes(q)) ||
+      (c.proprietorName && c.proprietorName.toLowerCase().includes(q)) ||
+      (c.vatUserId && c.vatUserId.toLowerCase().includes(q)) ||
+      (c.vatPassword && c.vatPassword.toLowerCase().includes(q)) ||
+      (c.customerType && c.customerType.toLowerCase().includes(q)) ||
+      (c.reference && c.reference.toLowerCase().includes(q)) ||
+      (c.email && c.email.toLowerCase().includes(q)) ||
+      (c.tinNumber && c.tinNumber.toLowerCase().includes(q))
   );
 });
 

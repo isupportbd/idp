@@ -1,9 +1,9 @@
-import type { AppContext } from "@/framework/facade.js";
 import { asc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
+import type { AppContext } from "@/framework/facade.js";
 import { db, HttpStatusCodes, validate } from "@/framework/facade.js";
-import { bulkCreateItemsSchema } from "./items.schema.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
+import { bulkCreateItemsSchema } from "./items.schema.js";
 
 export function formatStandardHsCode(code: string | null | undefined): string {
   if (!code) return "";
@@ -46,13 +46,7 @@ export const bulkCreateItems = async (c: AppContext) => {
         const existing = await db
           .select()
           .from(globalItems)
-          .where(
-            or(
-              eq(globalItems.awHsCode, rawAw),
-              eq(globalItems.hsCode, standardHs),
-              eq(globalItems.hsCode, rawAw)
-            )
-          )
+          .where(or(eq(globalItems.awHsCode, rawAw), eq(globalItems.hsCode, standardHs), eq(globalItems.hsCode, rawAw)))
           .limit(1);
 
         if (existing.length > 0) {

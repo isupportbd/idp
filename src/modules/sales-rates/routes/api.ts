@@ -1,20 +1,20 @@
 import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
-import { denyRole } from "@/middlewares/role-middleware.js";
 import { requirePermission } from "@/middlewares/permission-middleware.js";
+import { denyRole } from "@/middlewares/role-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
 import {
-  listSalesRates,
   createSalesRate,
-  updateSalesRate,
   deleteSalesRate,
-  getRateHistory
+  getRateHistory,
+  listSalesRates,
+  updateSalesRate
 } from "../controllers/sales-rates.controller.js";
 import {
   CreateSalesRateSchema,
-  UpdateSalesRateSchema,
+  IdParamSchema,
   ListSalesRatesQuerySchema,
-  IdParamSchema
+  UpdateSalesRateSchema
 } from "../controllers/sales-rates.schema.js";
 
 // ── GET / (List Sales Rates) ──────────────────────────────────────────

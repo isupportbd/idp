@@ -47,4 +47,3 @@ export const purchasesListResponseSchema = z.object({
     totalPages: z.number().int()
   })
 });
-

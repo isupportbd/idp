@@ -565,7 +565,9 @@ export async function runRemoteServer(flags = []) {
 
   console.log("Ensuring remote Docker networks...");
   if (dryRun) {
-    console.log(`[dry-run] ssh ${[...sshArgs, remoteHost, `docker network inspect nginx-proxy >/dev/null 2>&1 || docker network create nginx-proxy`].join(" ")}`);
+    console.log(
+      `[dry-run] ssh ${[...sshArgs, remoteHost, `docker network inspect nginx-proxy >/dev/null 2>&1 || docker network create nginx-proxy`].join(" ")}`
+    );
   } else {
     await runCommand("ssh", [
       ...sshArgs,
@@ -574,14 +576,18 @@ export async function runRemoteServer(flags = []) {
     ]);
   }
   if (dryRun) {
-    console.log(`[dry-run] ssh ${[...sshArgs, remoteHost, `docker network inspect infra >/dev/null 2>&1 || docker network create infra`].join(" ")}`);
+    console.log(
+      `[dry-run] ssh ${[...sshArgs, remoteHost, `docker network inspect infra >/dev/null 2>&1 || docker network create infra`].join(" ")}`
+    );
   } else {
     await runCommand("ssh", [...sshArgs, remoteHost, `docker network inspect infra >/dev/null 2>&1 || docker network create infra`]);
   }
 
   console.log("Starting server infra containers...");
   if (dryRun) {
-    console.log(`[dry-run] ssh ${[...sshArgs, remoteHost, `${cd} && docker compose --env-file deploy/server/.env -f deploy/server/docker-compose.yml up -d`].join(" ")}`);
+    console.log(
+      `[dry-run] ssh ${[...sshArgs, remoteHost, `${cd} && docker compose --env-file deploy/server/.env -f deploy/server/docker-compose.yml up -d`].join(" ")}`
+    );
   } else {
     await runCommand("ssh", [
       ...sshArgs,
@@ -594,7 +600,9 @@ export async function runRemoteServer(flags = []) {
   if (localEmail) {
     console.log("Syncing pgAdmin servers...");
     if (dryRun) {
-      console.log(`[dry-run] ssh ${[...sshArgs, remoteHost, `${cd} && docker exec pgadmin /venv/bin/python /pgadmin4/setup.py load-servers /pgadmin4/servers.json --user "${localEmail}" --replace 2>/dev/null || true`].join(" ")}`);
+      console.log(
+        `[dry-run] ssh ${[...sshArgs, remoteHost, `${cd} && docker exec pgadmin /venv/bin/python /pgadmin4/setup.py load-servers /pgadmin4/servers.json --user "${localEmail}" --replace 2>/dev/null || true`].join(" ")}`
+      );
     } else {
       await runCommand("ssh", [
         ...sshArgs,
@@ -625,7 +633,9 @@ export async function runRemoteApp(flags = []) {
 
   console.log("Building and starting app containers...");
   if (dryRun) {
-    console.log(`[dry-run] ssh ${[...sshArgs, remoteHost, `${cd} && docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build --force-recreate`].join(" ")}`);
+    console.log(
+      `[dry-run] ssh ${[...sshArgs, remoteHost, `${cd} && docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build --force-recreate`].join(" ")}`
+    );
   } else {
     await runCommand("ssh", [
       ...sshArgs,
@@ -1034,4 +1044,3 @@ export async function runPromoteWorkflow(flags = []) {
   await runLocalWorkflow(localFlags);
   await runRemoteWorkflow(remoteFlags);
 }
-

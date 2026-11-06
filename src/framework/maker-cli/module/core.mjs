@@ -1,12 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { glob } from "glob";
+import { drizzleGenerateArgs, ensureDatabaseDirectory, ensureMigrationMeta, syncMigrationDialect } from "../db/core.mjs";
 import { detectDialect, openApiEnabled } from "../utils/env-db.mjs";
 import { writeFiles } from "../utils/file-ops.mjs";
 import { hasFlag } from "../utils/flags.mjs";
 import { assertName, pascal } from "../utils/naming.mjs";
 import { packageScript, runNodeScript } from "../utils/process.mjs";
-import { drizzleGenerateArgs, ensureDatabaseDirectory, ensureMigrationMeta, syncMigrationDialect } from "../db/core.mjs";
 
 const stubsRoot = path.resolve(import.meta.dirname, "../stubs");
 
@@ -682,4 +682,3 @@ export async function makeTest(rawModule, rawNameOrFlag, extraFlags = []) {
   await writeFileSafe(testPath, await stub(STUBS.test.unit, { module: moduleName, name }), flags, "Test file");
   console.log(`Test ready: ${path.relative(process.cwd(), testPath)}`);
 }
-

@@ -1,7 +1,7 @@
 import { relations } from "drizzle-orm";
 import { index, integer, pgTable, serial, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/pg-core";
-import { clients } from "@/modules/clients/database/models/clients.js";
 import { users } from "@/modules/auth/database/models/user.js";
+import { clients } from "@/modules/clients/database/models/clients.js";
 
 export const vatSubmissions = pgTable(
   "vat_submissions",

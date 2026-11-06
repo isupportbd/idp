@@ -1,21 +1,12 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, eq, or, sql } from "drizzle-orm";
 import { authConfig } from "@/config/index.js";
-import {
-  broadcast,
-  cookie,
-  db,
-  dispatchEvent,
-  HttpStatusCodes,
-  mail,
-  password,
-  urls
-} from "@/framework/facade.js";
+import type { AppContext } from "@/framework/facade.js";
+import { broadcast, cookie, db, dispatchEvent, HttpStatusCodes, mail, password, urls } from "@/framework/facade.js";
 import { roles } from "@/modules/auth/database/models/role.js";
 import { emailVerificationTokens, users } from "@/modules/auth/database/models/user.js";
-import { plans } from "@/modules/superadmin/database/models/plans.js";
-import { paymentSettings } from "@/modules/superadmin/database/models/payment_settings.js";
 import { companySettings } from "@/modules/firm/database/models/company_settings.js";
+import { paymentSettings } from "@/modules/superadmin/database/models/payment_settings.js";
+import { plans } from "@/modules/superadmin/database/models/plans.js";
 import { subscriptionTransactions } from "@/modules/superadmin/database/models/subscription_transactions.js";
 import {
   hashEmailVerificationToken,
@@ -33,13 +24,17 @@ import {
 export const register = async (c: AppContext) => {
   try {
     const body = c.req.valid("json");
-    const email = String(body.email || "").trim().toLowerCase();
+    const email = String(body.email || "")
+      .trim()
+      .toLowerCase();
 
-    const defaultRole = (await db.query.roles.findFirst({
-      where: eq(roles.name, "admin")
-    })) || (await db.query.roles.findFirst({
-      where: eq(roles.name, "user")
-    }));
+    const defaultRole =
+      (await db.query.roles.findFirst({
+        where: eq(roles.name, "admin")
+      })) ||
+      (await db.query.roles.findFirst({
+        where: eq(roles.name, "user")
+      }));
 
     const existingUser = await db.query.users.findFirst({
       where: sql`lower(${users.email}) = ${email}`
@@ -64,7 +59,10 @@ export const register = async (c: AppContext) => {
       return c.json({ success: false, message: "Please select a plan to sign up." }, HttpStatusCodes.UNPROCESSABLE_ENTITY);
     }
 
-    const [selectedPlan] = await db.select().from(plans).where(eq(plans.id, Number(body.planId)));
+    const [selectedPlan] = await db
+      .select()
+      .from(plans)
+      .where(eq(plans.id, Number(body.planId)));
     if (!selectedPlan) {
       return c.json({ success: false, message: "Selected plan does not exist." }, HttpStatusCodes.UNPROCESSABLE_ENTITY);
     }
@@ -88,10 +86,7 @@ export const register = async (c: AppContext) => {
     }
 
     if (!body.trxId || !body.trxId.trim()) {
-      return c.json(
-        { success: false, message: "bKash TrxID is required to complete registration." },
-        HttpStatusCodes.UNPROCESSABLE_ENTITY
-      );
+      return c.json({ success: false, message: "bKash TrxID is required to complete registration." }, HttpStatusCodes.UNPROCESSABLE_ENTITY);
     }
 
     tenantPaidAmount = rawPaidAmount;

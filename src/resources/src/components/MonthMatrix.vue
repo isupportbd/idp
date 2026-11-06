@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 const props = withDefaults(
   defineProps<{
@@ -92,10 +92,7 @@ const getMonthKey = (year: number, monthNum: number) => {
 // Check if month has submission ID
 const hasSubmission = (year: number, monthNum: number) => {
   const key = getMonthKey(year, monthNum);
-  return (
-    (props.submissionMonths && props.submissionMonths.includes(key)) ||
-    Boolean(props.submissionsMap && props.submissionsMap[key])
-  );
+  return (props.submissionMonths && props.submissionMonths.includes(key)) || Boolean(props.submissionsMap && props.submissionsMap[key]);
 };
 
 // Check if month has purchase records
@@ -109,7 +106,6 @@ const isSelected = (year: number, monthNum: number) => {
   const key = getMonthKey(year, monthNum);
   return props.modelValue === key;
 };
-
 
 // Month Names
 const MONTH_NAMES = [

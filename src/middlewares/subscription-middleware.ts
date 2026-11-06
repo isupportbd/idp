@@ -1,12 +1,12 @@
-import type { Context, Next } from "hono";
 import { eq, sql } from "drizzle-orm";
+import type { Context, Next } from "hono";
 import { db } from "@/framework/facade.js";
 import { users } from "@/modules/auth/database/models/user.js";
-import { plans } from "@/modules/superadmin/database/models/plans.js";
+import { bills } from "@/modules/billing/database/models/bills.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
-import { bills } from "@/modules/billing/database/models/bills.js";
+import { plans } from "@/modules/superadmin/database/models/plans.js";
 
 export async function subscriptionMiddleware(c: Context, next: Next) {
   const auth = c.get("auth") as any;
@@ -50,17 +50,13 @@ export async function subscriptionMiddleware(c: Context, next: Next) {
     }
 
     const tenantAdminId = currentUser.adminId || currentUser.id;
-    const tenantAdmin = currentUser.adminId
-      ? await db.query.users.findFirst({ where: eq(users.id, tenantAdminId) })
-      : currentUser;
+    const tenantAdmin = currentUser.adminId ? await db.query.users.findFirst({ where: eq(users.id, tenantAdminId) }) : currentUser;
 
     if (!tenantAdmin || !tenantAdmin.planId) {
       return await next();
     }
 
-    const isSubscriptionActive = !!(
-      tenantAdmin.expDate && new Date(tenantAdmin.expDate) > new Date()
-    );
+    const isSubscriptionActive = !!(tenantAdmin.expDate && new Date(tenantAdmin.expDate) > new Date());
 
     let plan = null;
     if (tenantAdmin.planId) {
@@ -71,7 +67,7 @@ export async function subscriptionMiddleware(c: Context, next: Next) {
     // 1. Subscription Inactive Check
     if (!isSubscriptionActive) {
       const isYearly = tenantAdmin.billingCycle === "yearly";
-      const planPrice = isYearly ? (plan?.rateYearly || 15000) : (plan?.rateMonthly || 1500);
+      const planPrice = isYearly ? plan?.rateYearly || 15000 : plan?.rateMonthly || 1500;
       const shortage = Math.max(0, planPrice - (tenantAdmin.advanceBalance || 0));
 
       return c.json(
@@ -122,7 +118,9 @@ export async function subscriptionMiddleware(c: Context, next: Next) {
           .innerJoin(clients, eq(bills.clientId, clients.id))
           .where(eq(clients.createdBy, tenantAdminId));
         totalRecords = Number(pCount?.count || 0) + Number(cCount?.count || 0) + Number(sCount?.count || 0) + Number(bCount?.count || 0);
-      } catch (subErr: any) { console.warn("[Subscription Middleware Warning]:", subErr?.message || subErr); }
+      } catch (subErr: any) {
+        console.warn("[Subscription Middleware Warning]:", subErr?.message || subErr);
+      }
 
       const estimatedKB = Math.round(totalRecords * 3.2);
       const usedStorageMB = Number((estimatedKB / 1024).toFixed(2));
@@ -146,9 +144,6 @@ export async function subscriptionMiddleware(c: Context, next: Next) {
     // Fail closed: if entitlement cannot be verified we must not let a write
     // through (previously this swallowed the error and called next()).
     console.error("Subscription middleware check error:", err);
-    return c.json(
-      { success: false, message: "Unable to verify subscription status. Please try again shortly." },
-      503
-    );
+    return c.json({ success: false, message: "Unable to verify subscription status. Please try again shortly." }, 503);
   }
 }

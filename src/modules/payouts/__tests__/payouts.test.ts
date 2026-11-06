@@ -1,21 +1,28 @@
-import { describe, expect, it, beforeAll, afterAll } from "bun:test";
 import { and, eq, inArray } from "drizzle-orm";
 import { initDatabase } from "@/framework/database/connection.js";
 import { db } from "@/framework/facade.js";
 import { users } from "@/modules/auth/database/models/user.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
-import { purchases } from "@/modules/purchases/database/models/purchases.js";
-import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
-import { serviceItems } from "@/modules/services/database/models/service_items.js";
-import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
-import { expenseHeads } from "@/modules/firm/database/models/expense_heads.js";
 import { companySettings } from "@/modules/firm/database/models/company_settings.js";
+import { expenseHeads } from "@/modules/firm/database/models/expense_heads.js";
+import { purchases } from "@/modules/purchases/database/models/purchases.js";
+import { serviceItems } from "@/modules/services/database/models/service_items.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
+import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
+import {
+  createPayout,
+  getMyEarnings,
+  getPayoutsDashboard,
+  getStaffLedger,
+  getUserRates,
+  saveUserRates
+} from "../controllers/payouts.controller.js";
+import { ensurePayoutTables } from "../database/ensure-tables.js";
 import { payouts } from "../database/models/payouts.js";
 import { userMonthlyLedgers } from "../database/models/user_monthly_ledgers.js";
 import { userServiceRates } from "../database/models/user_service_rates.js";
-import { ensurePayoutTables } from "../database/ensure-tables.js";
 import { calculateStaffEarnings, resolveStaffLedger, resolveStaffLifetimeLedger } from "../services/payouts.service.js";
-import { createPayout, getMyEarnings, getPayoutsDashboard, getStaffLedger, getUserRates, saveUserRates } from "../controllers/payouts.controller.js";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 
 // Minimal Hono context double matching the submissions test harness.
 const makeCtx = (opts: { auth?: any; json?: any; query?: any; params?: any }): any => ({
@@ -90,14 +97,9 @@ describe("Payouts: staff earnings, ledger carry and payout recording", () => {
 
     // Service items must exist for Zero/Regular rate lookup (global master data).
     const ensureItem = async (name: string) => {
-      const existing = (
-        await db.select({ id: serviceItems.id }).from(serviceItems).where(eq(serviceItems.itemName, name)).limit(1)
-      )[0];
+      const existing = (await db.select({ id: serviceItems.id }).from(serviceItems).where(eq(serviceItems.itemName, name)).limit(1))[0];
       if (existing) return existing.id;
-      const [row] = await db
-        .insert(serviceItems)
-        .values({ itemName: name, isActive: true })
-        .returning();
+      const [row] = await db.insert(serviceItems).values({ itemName: name, isActive: true }).returning();
       return row.id;
     };
     regularItemId = await ensureItem("VAT Return Submission (Regular)");
@@ -223,12 +225,9 @@ describe("Payouts: staff earnings, ledger carry and payout recording", () => {
     // No gateway configured in Firm Settings -> fails fast, offline.
     expect(["SENT", "FAILED", "SKIPPED"]).toContain(created.smsStatus);
 
-    const ledgerRow = (
-      await db
-        .select()
-        .from(userMonthlyLedgers)
-        .where(eq(userMonthlyLedgers.userId, staffId))
-    ).find((r) => r.periodMonth === M1);
+    const ledgerRow = (await db.select().from(userMonthlyLedgers).where(eq(userMonthlyLedgers.userId, staffId))).find(
+      (r) => r.periodMonth === M1
+    );
     expect(ledgerRow).toBeDefined();
     expect(Number(ledgerRow!.paidAmount)).toBe(400);
     expect(Number(ledgerRow!.closingDue)).toBe(REGULAR_RATE - 400);
@@ -274,10 +273,7 @@ describe("Payouts: staff earnings, ledger carry and payout recording", () => {
   });
 
   it("exposes a ledger preview endpoint consistent with the service", async () => {
-    const res: any = await invoke(
-      getStaffLedger,
-      makeCtx({ auth: { id: ownerId }, query: { userId: String(staffId), month: M2 } })
-    );
+    const res: any = await invoke(getStaffLedger, makeCtx({ auth: { id: ownerId }, query: { userId: String(staffId), month: M2 } }));
     expect(res.status).toBe(200);
     expect(res.body.data.month).toBe(M2);
     expect(res.body.data.totalPayable).toBe(REGULAR_RATE - 400 + ZERO_RATE);

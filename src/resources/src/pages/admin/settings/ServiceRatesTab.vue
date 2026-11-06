@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import type { ServiceItem, ServiceRate, CustomerType, ServiceUnit } from "@/composables/useServicesApi";
+import { computed, ref } from "vue";
+import SearchInput from "@/components/common/SearchInput.vue";
+import type { CustomerType, ServiceItem, ServiceRate, ServiceUnit } from "@/composables/useServicesApi";
 import { useServicesApi } from "@/composables/useServicesApi";
 import { useToast } from "@/composables/useToast";
-import SearchInput from "@/components/common/SearchInput.vue";
 
 const props = defineProps<{
   serviceRates: ServiceRate[];
@@ -13,16 +13,10 @@ const props = defineProps<{
   canEdit: boolean;
 }>();
 
-const emit = defineEmits<{
-  (e: "refresh"): void;
-}>();
+const emit = defineEmits<(e: "refresh") => void>();
 
 const toast = useToast();
-const {
-  createServiceRate,
-  updateServiceRate,
-  deleteServiceRate
-} = useServicesApi();
+const { createServiceRate, updateServiceRate, deleteServiceRate } = useServicesApi();
 
 const showRateModal = ref(false);
 const isEditingRate = ref(false);

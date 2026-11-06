@@ -1,9 +1,9 @@
 import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
-import { denyRole } from "@/middlewares/role-middleware.js";
 import { requirePermission } from "@/middlewares/permission-middleware.js";
+import { denyRole } from "@/middlewares/role-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
-import { getItems, bulkCreateItems } from "../controllers/items.controller.js";
+import { bulkCreateItems, getItems } from "../controllers/items.controller.js";
 import { bulkCreateItemsSchema } from "../controllers/items.schema.js";
 
 const itemsRouter = createRouter();
@@ -29,7 +29,10 @@ const bulkCreateItemsRoute = createRoute({
     body: jsonContent(bulkCreateItemsSchema, "Bulk items payload")
   },
   responses: {
-    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), message: z.string(), inserted: z.array(z.unknown()).optional() }), "Bulk creation result")
+    [HttpStatusCodes.OK]: jsonContent(
+      z.object({ success: z.boolean(), message: z.string(), inserted: z.array(z.unknown()).optional() }),
+      "Bulk creation result"
+    )
   }
 });
 

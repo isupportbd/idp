@@ -1,21 +1,17 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, asc, eq, gt, ne, or, sql } from "drizzle-orm";
 import type { Context, Handler } from "hono";
-import { HttpStatusCodes, password, resolveTenantContext, validate } from "@/framework/facade.js";
-import { db } from "@/framework/facade.js";
-import { refreshTokens, users } from "@/modules/auth/database/models/user.js";
+import type { AppContext } from "@/framework/facade.js";
+import { db, HttpStatusCodes, password, resolveTenantContext, validate } from "@/framework/facade.js";
 import { roles } from "@/modules/auth/database/models/role.js";
-import { plans } from "@/modules/superadmin/database/models/plans.js";
+import { refreshTokens, users } from "@/modules/auth/database/models/user.js";
 import { payouts } from "@/modules/payouts/database/models/payouts.js";
-import { DEFAULT_SUB_USER_PERMISSIONS, PERMISSION_MODULES, normalizePermissions } from "./permissions.js";
-import { CreateUserSchema, UpdateUserSchema, ResetPasswordSchema, UpdateStatusSchema } from "./users.schema.js";
+import { plans } from "@/modules/superadmin/database/models/plans.js";
+import { DEFAULT_SUB_USER_PERMISSIONS, normalizePermissions, PERMISSION_MODULES } from "./permissions.js";
+import { CreateUserSchema, ResetPasswordSchema, UpdateStatusSchema, UpdateUserSchema } from "./users.schema.js";
 
 // 0. Permission catalog (modules and their actions) for the sub-user form
 export const getPermissionCatalog = async (c: AppContext) => {
-  return c.json(
-    { success: true, data: PERMISSION_MODULES, defaults: DEFAULT_SUB_USER_PERMISSIONS },
-    HttpStatusCodes.OK
-  );
+  return c.json({ success: true, data: PERMISSION_MODULES, defaults: DEFAULT_SUB_USER_PERMISSIONS }, HttpStatusCodes.OK);
 };
 
 // Helper: Resolve tenant admin ID via canonical tenant-context
@@ -57,19 +53,12 @@ export const listUsers = async (c: AppContext) => {
         adminId: users.adminId
       })
       .from(users)
-      .where(
-        isSuperAdmin
-          ? undefined
-          : or(eq(users.id, tenantAdminId), eq(users.adminId, tenantAdminId))
-      )
+      .where(isSuperAdmin ? undefined : or(eq(users.id, tenantAdminId), eq(users.adminId, tenantAdminId)))
       .orderBy(asc(users.id));
 
     // Fetch active session tokens
     const activeTokens = await db.query.refreshTokens.findMany({
-      where: and(
-        eq(refreshTokens.revoked, false),
-        gt(refreshTokens.expiresAt, new Date())
-      )
+      where: and(eq(refreshTokens.revoked, false), gt(refreshTokens.expiresAt, new Date()))
     });
     const loggedInUserIds = new Set(activeTokens.map((t) => Number(t.userId)));
     const currentUserId = Number(currentUser.id);
@@ -132,21 +121,22 @@ export const createUser = async (c: AppContext) => {
     const { currentUser, isSuperAdmin, tenantAdminId } = tenantInfo;
     const body = c.req.valid("json");
 
-    const email = String(body.email || "").trim().toLowerCase();
+    const email = String(body.email || "")
+      .trim()
+      .toLowerCase();
     const name = String(body.name || "").trim();
     const mobile = String(body.mobile || "").trim();
     const rawPassword = String(body.password || "");
     // Team members are always staff sub-users; admin rights cannot be granted through this API
     const requestedRole = "user";
     const status = body.status === "inactive" ? "inactive" : "active";
-    const permissionsList = Array.isArray(body.permissions)
-      ? normalizePermissions(body.permissions)
-      : [...DEFAULT_SUB_USER_PERMISSIONS];
+    const permissionsList = Array.isArray(body.permissions) ? normalizePermissions(body.permissions) : [...DEFAULT_SUB_USER_PERMISSIONS];
 
     if (!name) return c.json({ message: "Full name is required." }, HttpStatusCodes.BAD_REQUEST);
     if (!email || !email.includes("@")) return c.json({ message: "Valid email is required." }, HttpStatusCodes.BAD_REQUEST);
     if (!mobile) return c.json({ message: "Mobile number is required." }, HttpStatusCodes.BAD_REQUEST);
-    if (!rawPassword || rawPassword.length < 6) return c.json({ message: "Password must be at least 6 characters." }, HttpStatusCodes.BAD_REQUEST);
+    if (!rawPassword || rawPassword.length < 6)
+      return c.json({ message: "Password must be at least 6 characters." }, HttpStatusCodes.BAD_REQUEST);
 
     // Check duplicate email
     const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
@@ -165,13 +155,7 @@ export const createUser = async (c: AppContext) => {
           const countResult = await db
             .select({ count: sql<number>`count(*)::int` })
             .from(users)
-            .where(
-              and(
-                eq(users.adminId, tenantAdminId),
-                ne(users.id, tenantAdminId),
-                eq(users.status, "active")
-              )
-            );
+            .where(and(eq(users.adminId, tenantAdminId), ne(users.id, tenantAdminId), eq(users.status, "active")));
           const currentUsersCount = countResult[0]?.count || 0;
           if (currentUsersCount >= plan.maxUsers) {
             return c.json(
@@ -273,7 +257,11 @@ export const updateUser = async (c: AppContext) => {
     if (body.email) {
       const email = String(body.email).trim().toLowerCase();
       if (email !== targetUser.email) {
-        const [existing] = await db.select({ id: users.id }).from(users).where(and(eq(users.email, email), ne(users.id, userId))).limit(1);
+        const [existing] = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(and(eq(users.email, email), ne(users.id, userId)))
+          .limit(1);
         if (existing) {
           return c.json({ message: "Email is already taken by another user." }, HttpStatusCodes.CONFLICT);
         }
@@ -357,7 +345,7 @@ export const updateUserStatus = async (c: AppContext) => {
       return c.json({ message: "Forbidden" }, HttpStatusCodes.FORBIDDEN);
     }
 
-    const newStatus = body.status ? body.status : (targetUser.status === "active" ? "inactive" : "active");
+    const newStatus = body.status ? body.status : targetUser.status === "active" ? "inactive" : "active";
 
     // If activating a previously inactive user, verify plan active user limit
     if (newStatus === "active" && targetUser.status !== "active" && !isSuperAdmin) {
@@ -370,13 +358,7 @@ export const updateUserStatus = async (c: AppContext) => {
           const countResult = await db
             .select({ count: sql<number>`count(*)::int` })
             .from(users)
-            .where(
-              and(
-                eq(users.adminId, tenantAdminId),
-                ne(users.id, tenantAdminId),
-                eq(users.status, "active")
-              )
-            );
+            .where(and(eq(users.adminId, tenantAdminId), ne(users.id, tenantAdminId), eq(users.status, "active")));
           const currentActiveCount = countResult[0]?.count || 0;
           if (currentActiveCount >= plan.maxUsers) {
             return c.json(
@@ -423,17 +405,14 @@ export const deleteUser = async (c: AppContext) => {
     }
 
     // Protect financial and audit history: Check if user has associated payout records
-    const [associatedPayout] = await db
-      .select({ id: payouts.id })
-      .from(payouts)
-      .where(eq(payouts.userId, userId))
-      .limit(1);
+    const [associatedPayout] = await db.select({ id: payouts.id }).from(payouts).where(eq(payouts.userId, userId)).limit(1);
 
     if (associatedPayout) {
       return c.json(
         {
           success: false,
-          message: "Cannot delete this user because financial payout disbursement records are attached. Deactivate the user instead to preserve audit integrity."
+          message:
+            "Cannot delete this user because financial payout disbursement records are attached. Deactivate the user instead to preserve audit integrity."
         },
         HttpStatusCodes.BAD_REQUEST
       );

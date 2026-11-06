@@ -16,9 +16,9 @@ const emit = defineEmits<{
   "update:selectedMonth": [val: string];
   "update:isRebate": [val: boolean];
   "update:isFfs": [val: boolean];
-  "fileSelected": [file: File];
-  "fileCleared": [];
-  "process": [];
+  fileSelected: [file: File];
+  fileCleared: [];
+  process: [];
 }>();
 
 const fileInputRef = ref<HTMLInputElement | null>(null);

@@ -18,8 +18,7 @@ export const salesRates = pgTable(
     itemId: integer("item_id")
       .references(() => globalItems.id)
       .notNull(),
-    unitId: integer("unit_id")
-      .references(() => unitConversions.id),
+    unitId: integer("unit_id").references(() => unitConversions.id),
     salesRate: numeric("sales_rate", { precision: 14, scale: 2, mode: "number" }).notNull(),
     vatRate: doublePrecision("vat_rate").notNull(),
     vatableValue: numeric("vatable_value", { precision: 14, scale: 2, mode: "number" }).notNull(),

@@ -60,14 +60,7 @@ const { isFirefox } = browserDetect;
 
 const $attrs = useAttrs();
 const inputRef = ref<HTMLInputElement | null>(null);
-type InputPasswordCategory =
-  | "number"
-  | "decimal"
-  | "mobile"
-  | "tax-period"
-  | "bin"
-  | "challan-number"
-  | string;
+type InputPasswordCategory = "number" | "decimal" | "mobile" | "tax-period" | "bin" | "challan-number" | string;
 
 interface InputPasswordProps {
   focus?: boolean;
@@ -95,9 +88,7 @@ const max = computed<number | null>(() => {
 });
 const maxLengthAttr = computed<number | undefined>(() => max.value ?? undefined);
 
-const hoodHtml = computed(() =>
-  props.hood === false || props.hood == null ? "" : String(props.hood)
-);
+const hoodHtml = computed(() => (props.hood === false || props.hood == null ? "" : String(props.hood)));
 
 const maxCounter = computed(() => {
   if (max.value == null) {

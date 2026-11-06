@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { useAuthStore } from "@/stores/auth";
-import { useToast } from "@/composables/useToast";
 import axios from "axios";
+import { computed, ref } from "vue";
+import { useToast } from "@/composables/useToast";
+import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps<{
   modelValue: boolean;
@@ -58,7 +58,9 @@ const copyBkashNumber = async () => {
     setTimeout(() => {
       isCopied.value = false;
     }, 2000);
-  } catch (uiErr: any) { console.warn("[UI Component Warning: WalletRechargeModal.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: WalletRechargeModal.vue]", uiErr?.message || uiErr);
+  }
 };
 
 const handleRecharge = async () => {

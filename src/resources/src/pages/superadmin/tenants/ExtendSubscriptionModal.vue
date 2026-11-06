@@ -9,15 +9,18 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  "close": [];
-  "confirm": [days: number];
+  close: [];
+  confirm: [days: number];
 }>();
 
 const extendDaysCount = ref(30);
 
-watch(() => props.show, (newVal) => {
-  if (newVal) extendDaysCount.value = 30;
-});
+watch(
+  () => props.show,
+  (newVal) => {
+    if (newVal) extendDaysCount.value = 30;
+  }
+);
 </script>
 
 <template>

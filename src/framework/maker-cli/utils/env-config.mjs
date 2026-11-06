@@ -14,9 +14,7 @@ export function readCliConfig() {
     "  redisEnabled: redisConfig.enabled",
     "}));"
   ].join("");
-  const args = process.versions?.bun
-    ? ["--eval", script]
-    : ["--import", "tsx", "--input-type=module", "--eval", script];
+  const args = process.versions?.bun ? ["--eval", script] : ["--import", "tsx", "--input-type=module", "--eval", script];
   const result = spawnSync(process.execPath, args, {
     cwd: process.cwd(),
     encoding: "utf8",

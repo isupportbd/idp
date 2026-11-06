@@ -1,28 +1,27 @@
-import type { AppContext } from "@/framework/facade.js";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import type { CreateBillInput, UpdateBillInput } from "./billing.schema.js";
+import type { AppContext } from "@/framework/facade.js";
 import {
   billingScope,
   broadcast,
   db,
-  handleControllerError,
   HttpStatusCodes,
+  handleControllerError,
   invoiceCreatedPayload,
   resolveTenantContext
 } from "@/framework/facade.js";
-import { enqueueTransactionalSms } from "@/modules/sms-templates/services/sms-queue.service.js";
-import { formatPeriodLabel, isTenantSmsEventEnabled, normalizeBdMobile } from "@/modules/sms-templates/services/sms.service.js";
-import { generateNextBillNo } from "../services/billing-numbering.service.js";
-import { getClientRunningDue } from "../services/billing-balance.service.js";
-import { bills } from "../database/models/bills.js";
-import { billItems } from "../database/models/bill_items.js";
-import { collections } from "../database/models/collections.js";
-import { clients } from "@/modules/clients/database/models/clients.js";
-import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 import { users } from "@/modules/auth/database/models/user.js";
+import { clients } from "@/modules/clients/database/models/clients.js";
 import { companySettings } from "@/modules/firm/database/models/company_settings.js";
+import { formatPeriodLabel, isTenantSmsEventEnabled, normalizeBdMobile } from "@/modules/sms-templates/services/sms.service.js";
+import { enqueueTransactionalSms } from "@/modules/sms-templates/services/sms-queue.service.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
+import { billItems } from "../database/models/bill_items.js";
+import { bills } from "../database/models/bills.js";
+import { collections } from "../database/models/collections.js";
+import { getClientRunningDue } from "../services/billing-balance.service.js";
+import { generateNextBillNo } from "../services/billing-numbering.service.js";
 import { clientBelongsToTenant, loadScopedBill, r2 } from "./billing.helpers.js";
-
+import type { CreateBillInput, UpdateBillInput } from "./billing.schema.js";
 
 export const createBill = async (c: AppContext) => {
   try {
@@ -63,12 +62,7 @@ export const createBill = async (c: AppContext) => {
       await db
         .select({ id: vatSubmissions.id, submissionId: vatSubmissions.submissionId })
         .from(vatSubmissions)
-        .where(
-          and(
-            eq(vatSubmissions.clientId, clientId),
-            eq(vatSubmissions.taxPeriod, taxPeriod)
-          )
-        )
+        .where(and(eq(vatSubmissions.clientId, clientId), eq(vatSubmissions.taxPeriod, taxPeriod)))
         .limit(1)
     )[0];
 
@@ -86,21 +80,12 @@ export const createBill = async (c: AppContext) => {
       await db
         .select({ id: bills.id, billNo: bills.billNo })
         .from(bills)
-        .where(
-          and(
-            eq(bills.clientId, clientId),
-            eq(bills.taxPeriod, taxPeriod),
-            sql`${bills.status} != 'cancelled'`
-          )
-        )
+        .where(and(eq(bills.clientId, clientId), eq(bills.taxPeriod, taxPeriod), sql`${bills.status} != 'cancelled'`))
         .limit(1)
     )[0];
 
     if (duplicate) {
-      return c.json(
-        { message: `Invoice ${duplicate.billNo} already exists for ${taxPeriod}` },
-        HttpStatusCodes.CONFLICT
-      );
+      return c.json({ message: `Invoice ${duplicate.billNo} already exists for ${taxPeriod}` }, HttpStatusCodes.CONFLICT);
     }
 
     // 4. Calculate amounts
@@ -142,7 +127,7 @@ export const createBill = async (c: AppContext) => {
                 grandTotal,
                 paidAmount: 0,
                 dueAmount,
-                status: status === "draft" ? "draft" : (dueAmount <= 0 ? "paid" : "unpaid"),
+                status: status === "draft" ? "draft" : dueAmount <= 0 ? "paid" : "unpaid",
                 createdBy: creatorId,
                 notes: notes?.trim() || null
               })
@@ -232,10 +217,7 @@ export const createBill = async (c: AppContext) => {
       HttpStatusCodes.CREATED
     );
   } catch (err: unknown) {
-    return c.json(
-      { message: "Failed to create bill" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ message: "Failed to create bill" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -262,8 +244,6 @@ async function resolveBatchActor(c: AppContext): Promise<{ creatorId: number | n
 
   return { creatorId, isSuperAdmin };
 }
-
-
 
 export const updateBill = async (c: AppContext) => {
   try {
@@ -293,9 +273,7 @@ export const updateBill = async (c: AppContext) => {
     // recalculation lived inside `if (items.length > 0)`, so a discount-only edit
     // was accepted by the API but silently discarded.
     if (hasItems || discountTouched) {
-      const newSubtotal = hasItems
-        ? r2(items.reduce((acc: number, it) => acc + (it.finalAmount || 0), 0))
-        : r2(existing.subtotal);
+      const newSubtotal = hasItems ? r2(items.reduce((acc: number, it) => acc + (it.finalAmount || 0), 0)) : r2(existing.subtotal);
       const discount = discountTouched ? r2(payload.discountAmount ?? 0) : r2(existing.discountAmount);
       const grandTotal = r2(Math.max(0, newSubtotal - discount + existing.previousDue));
       const dueAmount = r2(Math.max(0, grandTotal - existing.paidAmount));
@@ -336,15 +314,9 @@ export const updateBill = async (c: AppContext) => {
       return (await tx.update(bills).set(updatedData).where(eq(bills.id, id)).returning())[0];
     });
 
-    return c.json(
-      { message: `Invoice ${existing.billNo} updated successfully`, data: result },
-      HttpStatusCodes.OK
-    );
+    return c.json({ message: `Invoice ${existing.billNo} updated successfully`, data: result }, HttpStatusCodes.OK);
   } catch (err: unknown) {
-    return c.json(
-      { message: "Failed to update bill" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ message: "Failed to update bill" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -380,14 +352,8 @@ export const deleteBill = async (c: AppContext) => {
       await tx.delete(bills).where(eq(bills.id, id));
     });
 
-    return c.json(
-      { message: `Invoice ${existing.billNo} deleted successfully` },
-      HttpStatusCodes.OK
-    );
+    return c.json({ message: `Invoice ${existing.billNo} deleted successfully` }, HttpStatusCodes.OK);
   } catch (err: unknown) {
-    return c.json(
-      { message: "Failed to delete bill" },
-      HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return c.json({ message: "Failed to delete bill" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };

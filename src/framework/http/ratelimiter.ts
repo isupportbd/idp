@@ -173,7 +173,10 @@ function isPrivateAddress(address: string): boolean {
 
 function lastForwardedEntry(header: string | undefined): string | null {
   if (!header) return null;
-  const entries = header.split(",").map((entry) => entry.trim()).filter(Boolean);
+  const entries = header
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
   return entries.length ? entries[entries.length - 1] : null;
 }
 

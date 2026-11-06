@@ -1,6 +1,6 @@
+import axios from "axios";
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import axios from "axios";
 
 export interface CustomerType {
   id: number;

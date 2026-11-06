@@ -1,8 +1,8 @@
 import { relations } from "drizzle-orm";
 import { index, integer, numeric, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { users } from "@/modules/auth/database/models/user.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
-import { users } from "@/modules/auth/database/models/user.js";
 import { billItems } from "./bill_items.js";
 import { collections } from "./collections.js";
 
@@ -11,7 +11,9 @@ export const bills = pgTable(
   {
     id: serial("id").primaryKey(),
     billNo: varchar("bill_no", { length: 50 }).notNull().unique(), // e.g. Inv-2026-000001
-    clientId: integer("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
+    clientId: integer("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
     referenceId: integer("reference_id").references(() => clientReferences.id, { onDelete: "set null" }),
     taxPeriod: varchar("tax_period", { length: 10 }).notNull(), // e.g. "2026-08"
     billDate: timestamp("bill_date", { withTimezone: true }).notNull(),

@@ -1,11 +1,11 @@
-import { describe, expect, it, beforeAll } from "bun:test";
+import { eq } from "drizzle-orm";
 import { initDatabase } from "@/framework/database/connection.js";
 import { db } from "@/framework/facade.js";
-import { clients } from "../database/models/clients.js";
-import { clientManagers } from "../database/models/client_managers.js";
-import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { users } from "@/modules/auth/database/models/user.js";
-import { eq } from "drizzle-orm";
+import { customerTypes } from "@/modules/services/database/models/customer_types.js";
+import { clientManagers } from "../database/models/client_managers.js";
+import { clients } from "../database/models/clients.js";
+import { beforeAll, describe, expect, it } from "bun:test";
 
 describe("Clients Module Real Database Tests (PostgreSQL)", () => {
   let testTypeId: number;
@@ -116,22 +116,14 @@ describe("Clients Module Real Database Tests (PostgreSQL)", () => {
 
   it("should toggle client active status", async () => {
     const toggled = (
-      await db
-        .update(clients)
-        .set({ isActive: false, updatedAt: new Date() })
-        .where(eq(clients.id, testClientId))
-        .returning()
+      await db.update(clients).set({ isActive: false, updatedAt: new Date() }).where(eq(clients.id, testClientId)).returning()
     )[0];
 
     expect(toggled.isActive).toBe(false);
 
     // Toggle back to active
     const reactivated = (
-      await db
-        .update(clients)
-        .set({ isActive: true, updatedAt: new Date() })
-        .where(eq(clients.id, testClientId))
-        .returning()
+      await db.update(clients).set({ isActive: true, updatedAt: new Date() }).where(eq(clients.id, testClientId)).returning()
     )[0];
 
     expect(reactivated.isActive).toBe(true);

@@ -1,13 +1,9 @@
 import { createRoute, createRouter, HttpStatusCodes, jsonContent, z } from "@/framework/facade.js";
 import { authMiddleware } from "@/middlewares/auth-middleware.js";
-import { denyRole } from "@/middlewares/role-middleware.js";
 import { requirePermission } from "@/middlewares/permission-middleware.js";
+import { denyRole } from "@/middlewares/role-middleware.js";
 import { subscriptionMiddleware } from "@/middlewares/subscription-middleware.js";
-import {
-  getMonthlySummary,
-  getSalesReport,
-  getStatementReport
-} from "../controllers/reports.controller.js";
+import { getMonthlySummary, getSalesReport, getStatementReport } from "../controllers/reports.controller.js";
 
 const reportsRouter = createRouter();
 

@@ -1,14 +1,14 @@
-import type { AppContext } from "@/framework/facade.js";
+import { and, eq, or, sql } from "drizzle-orm";
 import type { Context } from "hono";
+import type { AppContext } from "@/framework/facade.js";
 import { assertClientAccess, db, round2 as r2, resolveTenantContext } from "@/framework/facade.js";
+import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
+import { clients } from "@/modules/clients/database/models/clients.js";
 import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { salesRates } from "@/modules/sales-rates/database/models/sales_rates.js";
-import { clients } from "@/modules/clients/database/models/clients.js";
-import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
 import { unitConversions } from "@/modules/superadmin/database/models/unit_conversions.js";
 import { vatNotes } from "@/modules/superadmin/database/models/vat_notes.js";
-import { eq, and, or, sql } from "drizzle-orm";
 
 // GET /api/reports/monthly-summary
 export const getMonthlySummary = async (c: AppContext) => {
@@ -20,9 +20,7 @@ export const getMonthlySummary = async (c: AppContext) => {
 
     const { isSuperAdmin, isTenantAdmin, tenantAdminId, userId } = await resolveTenantContext(c);
 
-    let tenantFilter = !isSuperAdmin && tenantAdminId
-      ? sql`AND c.created_by = ${tenantAdminId} AND p.admin_id = ${tenantAdminId}`
-      : sql``;
+    let tenantFilter = !isSuperAdmin && tenantAdminId ? sql`AND c.created_by = ${tenantAdminId} AND p.admin_id = ${tenantAdminId}` : sql``;
 
     if (!isSuperAdmin && !isTenantAdmin) {
       tenantFilter = sql`${tenantFilter} AND c.id IN (SELECT client_id FROM client_managers WHERE manager_id = ${userId})`;
@@ -43,7 +41,10 @@ export const getMonthlySummary = async (c: AppContext) => {
     `;
 
     const result = await db.execute(rawSql);
-    const rows = (Array.isArray(result) ? result : (result as { rows?: Record<string, unknown>[] }).rows || []) as Record<string, unknown>[];
+    const rows = (Array.isArray(result) ? result : (result as { rows?: Record<string, unknown>[] }).rows || []) as Record<
+      string,
+      unknown
+    >[];
 
     const data = rows.map((row) => ({
       clientId: Number(row.clientId),
@@ -113,7 +114,10 @@ export const getSalesReport = async (c: AppContext) => {
     `;
 
     const result = await db.execute(rawSql);
-    const rows = (Array.isArray(result) ? result : (result as { rows?: Record<string, unknown>[] }).rows || []) as Record<string, unknown>[];
+    const rows = (Array.isArray(result) ? result : (result as { rows?: Record<string, unknown>[] }).rows || []) as Record<
+      string,
+      unknown
+    >[];
     const allVatNotes = await db.select().from(vatNotes);
     const vatNotesMap = new Map<number, string>();
     for (const v of allVatNotes) {
@@ -140,7 +144,8 @@ export const getSalesReport = async (c: AppContext) => {
       let vatRate = Number(row.vatRate);
       let note = "8";
 
-      const isRebate = row.isRebate === true || row.isRebate === 1 || String(row.isRebate).toLowerCase() === "true" || String(row.isRebate) === "1";
+      const isRebate =
+        row.isRebate === true || row.isRebate === 1 || String(row.isRebate).toLowerCase() === "true" || String(row.isRebate) === "1";
       const isFfs = row.isFfs === true || row.isFfs === 1 || String(row.isFfs).toLowerCase() === "true" || String(row.isFfs) === "1";
 
       if (isRebate && !isFfs) {
@@ -353,7 +358,7 @@ export const getStatementReport = async (c: AppContext) => {
 
           const itemName = itemNameMap.get(itemId);
 
-          let note = vatNotesMap.get(vatRateVal) || (vatRateVal === 0 ? "3" : "8");
+          const note = vatNotesMap.get(vatRateVal) || (vatRateVal === 0 ? "3" : "8");
 
           statementRows.push({
             itemId,

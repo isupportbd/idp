@@ -1,7 +1,7 @@
+import { sql } from "drizzle-orm";
+import { databasePool } from "@/framework/database/connection.js";
 import type { AppContext } from "@/framework/facade.js";
 import { db } from "@/framework/facade.js";
-import { databasePool } from "@/framework/database/connection.js";
-import { sql } from "drizzle-orm";
 
 // 22. Full Database SQL Backup Export
 export async function exportDatabaseBackup(c: AppContext) {
@@ -30,7 +30,7 @@ export async function exportDatabaseBackup(c: AppContext) {
         AND tc.table_schema = 'public'
         AND tc.table_name != ccu.table_name;
     `);
-    const deps = (Array.isArray(depsRes) ? depsRes : (depsRes as { rows?: Record<string, unknown>[] }).rows || []);
+    const deps = Array.isArray(depsRes) ? depsRes : (depsRes as { rows?: Record<string, unknown>[] }).rows || [];
 
     const adj = new Map<string, Set<string>>();
     const inDegree = new Map<string, number>();
@@ -90,7 +90,7 @@ export async function exportDatabaseBackup(c: AppContext) {
     for (const table of tables) {
       try {
         const rowsRes = await db.execute(sql.raw(`SELECT * FROM "${table}"`));
-        const rows = (Array.isArray(rowsRes) ? rowsRes : (rowsRes as any).rows || []);
+        const rows = Array.isArray(rowsRes) ? rowsRes : (rowsRes as any).rows || [];
 
         sqlDump += `-- --------------------------------------------------------\n`;
         sqlDump += `-- Table data for "${table}" (${rows.length} records)\n`;
@@ -131,7 +131,9 @@ export async function exportDatabaseBackup(c: AppContext) {
     const filename = `idp_backup_${dateStr}_${timeStr}.sql`;
 
     const auth = c.get("auth") || c.get("user");
-    console.info(`[AUDIT] SuperAdmin #${(auth as { id?: number })?.id || "unknown"} exported database backup: ${filename} at ${now.toISOString()}`);
+    console.info(
+      `[AUDIT] SuperAdmin #${(auth as { id?: number })?.id || "unknown"} exported database backup: ${filename} at ${now.toISOString()}`
+    );
 
     return new Response(sqlDump, {
       status: 200,
@@ -246,7 +248,9 @@ export async function restoreDatabaseBackup(c: AppContext) {
       `);
     });
 
-    console.info(`[AUDIT] SuperAdmin #${superAdminId} successfully restored database from file: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB) at ${new Date().toISOString()}`);
+    console.info(
+      `[AUDIT] SuperAdmin #${superAdminId} successfully restored database from file: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB) at ${new Date().toISOString()}`
+    );
 
     return c.json({
       success: true,
@@ -263,9 +267,3 @@ export async function restoreDatabaseBackup(c: AppContext) {
     );
   }
 }
-
-
-
-
-
-

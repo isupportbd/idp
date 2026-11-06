@@ -1,20 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
-import { onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
-import { usePagination } from "@/composables/usePagination";
+import { computed, onMounted, ref, watch } from "vue";
+import { onBeforeRouteLeave } from "vue-router";
 import { can } from "@/composables/useAuth";
+import { usePagination } from "@/composables/usePagination";
 import { usePulseListener } from "@/composables/usePulseListener";
-import SalesRatesToolbar from "./sales-rates/SalesRatesToolbar.vue";
-import SalesRatesTable from "./sales-rates/SalesRatesTable.vue";
-import type {
-  SalesRate,
-  ClientOption,
-  ItemOption,
-  UnitOption
-} from "./sales-rates/types";
-import SalesRateModal from "./sales-rates/SalesRateModal.vue";
 import RateHistoryModal from "./sales-rates/RateHistoryModal.vue";
+import SalesRateModal from "./sales-rates/SalesRateModal.vue";
+import SalesRatesTable from "./sales-rates/SalesRatesTable.vue";
+import SalesRatesToolbar from "./sales-rates/SalesRatesToolbar.vue";
+import type { ClientOption, ItemOption, SalesRate, UnitOption } from "./sales-rates/types";
 
 // Master Clients
 const clientsList = ref<ClientOption[]>([]);
@@ -39,7 +34,7 @@ const clientOptions = computed(() => [
 
 const itemOptions = computed(() => [
   { value: "", label: "All Commodity Items" },
-  ...itemsList.value.map((i: ItemOption) => ({ value: String(i.id), label: `${i.name} (${i.hsCode || '—'})` }))
+  ...itemsList.value.map((i: ItemOption) => ({ value: String(i.id), label: `${i.name} (${i.hsCode || "—"})` }))
 ]);
 
 const statusOptions = [
@@ -56,7 +51,9 @@ const getSavedFilters = () => {
       const raw = sessionStorage.getItem(SALES_RATES_FILTER_KEY);
       if (raw) return JSON.parse(raw);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: SalesRates.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: SalesRates.vue]", uiErr?.message || uiErr);
+  }
   return {};
 };
 
@@ -82,7 +79,9 @@ const saveFilters = () => {
         })
       );
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: SalesRates.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: SalesRates.vue]", uiErr?.message || uiErr);
+  }
 };
 
 watch([searchQuery, selectedClient, selectedItem, selectedStatus], saveFilters);
@@ -93,17 +92,14 @@ onBeforeRouteLeave((to) => {
       if (typeof window !== "undefined" && window.sessionStorage) {
         sessionStorage.removeItem(SALES_RATES_FILTER_KEY);
       }
-    } catch (uiErr: any) { console.warn("[UI Component Warning: SalesRates.vue]", uiErr?.message || uiErr); }
+    } catch (uiErr: any) {
+      console.warn("[UI Component Warning: SalesRates.vue]", uiErr?.message || uiErr);
+    }
   }
 });
 
 const hasActiveFilters = computed(() => {
-  return (
-    searchQuery.value.trim() !== "" ||
-    selectedClient.value !== "" ||
-    selectedItem.value !== "" ||
-    selectedStatus.value !== ""
-  );
+  return searchQuery.value.trim() !== "" || selectedClient.value !== "" || selectedItem.value !== "" || selectedStatus.value !== "";
 });
 
 const clearAllFilters = () => {
@@ -116,7 +112,9 @@ const clearAllFilters = () => {
     if (typeof window !== "undefined" && window.sessionStorage) {
       sessionStorage.removeItem(SALES_RATES_FILTER_KEY);
     }
-  } catch (uiErr: any) { console.warn("[UI Component Warning: SalesRates.vue]", uiErr?.message || uiErr); }
+  } catch (uiErr: any) {
+    console.warn("[UI Component Warning: SalesRates.vue]", uiErr?.message || uiErr);
+  }
 };
 
 // Filtered Rates for Table
@@ -186,8 +184,8 @@ const modalInitialData = ref({
   itemId: "" as string | number,
   unitId: 1,
   salesRate: "" as string | number,
-  vatRate: 15.00,
-  additionPercent: 36.00,
+  vatRate: 15.0,
+  additionPercent: 36.0,
   activationDate: getDefaultActivationDate(),
   status: "Active" as "Active" | "Frozen",
   clientName: "",
@@ -291,8 +289,8 @@ const openAddModal = () => {
     itemId: "",
     unitId: unitsList.value[0]?.id || 1,
     salesRate: "",
-    vatRate: 15.00,
-    additionPercent: 36.00,
+    vatRate: 15.0,
+    additionPercent: 36.0,
     activationDate: getDefaultActivationDate(),
     status: "Active",
     clientName: "",

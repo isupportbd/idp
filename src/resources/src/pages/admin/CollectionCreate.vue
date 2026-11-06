@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
-import { useRouter, useRoute } from "vue-router";
-import { useBillingApi, type Bill } from "@/composables/useBillingApi";
+import { computed, onMounted, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
+import { type Bill, useBillingApi } from "@/composables/useBillingApi";
 import { useClientsApi } from "@/composables/useClientsApi";
 import { useToast } from "@/composables/useToast";
-import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
 
 const router = useRouter();
 const route = useRoute();

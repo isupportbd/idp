@@ -1,36 +1,36 @@
+import { and, asc, desc, eq, ilike, inArray, like, ne, or, type SQL, sql } from "drizzle-orm";
 import type { AppContext } from "@/framework/facade.js";
-import { and, asc, desc, eq, ilike, inArray, like, ne, or, sql, type SQL } from "drizzle-orm";
-import type { CreateBillInput, UpdateBillInput } from "./billing.schema.js";
 import {
   billingScope,
   broadcast,
   collectionReceivedPayload,
   db,
+  HttpStatusCodes,
   handleAsyncEndpoint,
   handleControllerError,
-  HttpStatusCodes,
   invoiceCreatedPayload,
   isAsyncFlagEnabled,
   resolveTenantContext
 } from "@/framework/facade.js";
-import { enqueueTransactionalSms } from "@/modules/sms-templates/services/sms-queue.service.js";
-import { formatPeriodLabel, isTenantSmsEventEnabled, normalizeBdMobile } from "@/modules/sms-templates/services/sms.service.js";
-import { generateNextBillNo, generateNextReceiptNo } from "../services/billing-numbering.service.js";
-import { getBatchClientsRunningDue, getClientRunningDue } from "../services/billing-balance.service.js";
-import { bills } from "../database/models/bills.js";
-import { billItems } from "../database/models/bill_items.js";
-import { collections } from "../database/models/collections.js";
+import { users } from "@/modules/auth/database/models/user.js";
+import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
-import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
-import { serviceItems } from "@/modules/services/database/models/service_items.js";
-import { serviceRates } from "@/modules/services/database/models/service_rates.js";
+import { bankAccounts } from "@/modules/firm/database/models/bank_accounts.js";
+import { companySettings } from "@/modules/firm/database/models/company_settings.js";
+import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
-import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
-import { users } from "@/modules/auth/database/models/user.js";
-import { purchases } from "@/modules/purchases/database/models/purchases.js";
-import { companySettings } from "@/modules/firm/database/models/company_settings.js";
-import { bankAccounts } from "@/modules/firm/database/models/bank_accounts.js";
+import { serviceItems } from "@/modules/services/database/models/service_items.js";
+import { serviceRates } from "@/modules/services/database/models/service_rates.js";
+import { formatPeriodLabel, isTenantSmsEventEnabled, normalizeBdMobile } from "@/modules/sms-templates/services/sms.service.js";
+import { enqueueTransactionalSms } from "@/modules/sms-templates/services/sms-queue.service.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
+import { billItems } from "../database/models/bill_items.js";
+import { bills } from "../database/models/bills.js";
+import { collections } from "../database/models/collections.js";
+import { getBatchClientsRunningDue, getClientRunningDue } from "../services/billing-balance.service.js";
+import { generateNextBillNo, generateNextReceiptNo } from "../services/billing-numbering.service.js";
+import type { CreateBillInput, UpdateBillInput } from "./billing.schema.js";
 
 // Helper: Round to 2 decimal places
 function r2(num: number): number {
@@ -166,14 +166,19 @@ async function clientBelongsToTenant(c: AppContext, clientId: number): Promise<b
   const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
   const conditions: SQL[] = [eq(clients.id, clientId)];
   if (!isSuperAdmin) conditions.push(eq(clients.createdBy, tenantAdminId ?? -1));
-  const row = (await db.select({ id: clients.id }).from(clients).where(and(...conditions)).limit(1))[0];
+  const row = (
+    await db
+      .select({ id: clients.id })
+      .from(clients)
+      .where(and(...conditions))
+      .limit(1)
+  )[0];
   return !!row;
 }
 
-
 async function resolveBatchActor(c: any): Promise<{ creatorId: number | null; isSuperAdmin: boolean }> {
   const auth = c.get("auth") || c.get("user");
-  const creatorId = auth?.adminId ? Number(auth.adminId) : (auth?.id ? Number(auth.id) : null);
+  const creatorId = auth?.adminId ? Number(auth.adminId) : auth?.id ? Number(auth.id) : null;
   let isSuperAdmin = false;
 
   if (auth?.id) {
@@ -190,13 +195,13 @@ async function resolveBatchActor(c: any): Promise<{ creatorId: number | null; is
 }
 
 export {
-  r2,
-  SuggestedBillItem,
-  CreatedBillSummary,
-  MissingBillingClient,
-  resolvePaymentInfo,
+  type CreatedBillSummary,
+  clientBelongsToTenant,
   loadScopedBill,
   loadScopedCollection,
-  clientBelongsToTenant,
-  resolveBatchActor
+  type MissingBillingClient,
+  r2,
+  resolveBatchActor,
+  resolvePaymentInfo,
+  type SuggestedBillItem
 };

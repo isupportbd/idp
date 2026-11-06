@@ -1,17 +1,17 @@
-import { describe, expect, it, beforeAll, afterAll } from "bun:test";
-import { initDatabase } from "@/framework/database/connection.js";
-import { db, jwt } from "@/framework/facade.js";
-import { clients } from "@/modules/clients/database/models/clients.js";
-import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
-import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
-import { users } from "@/modules/auth/database/models/user.js";
-import { and, eq } from "drizzle-orm";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { zValidator } from "@hono/zod-validator";
+import { and, eq } from "drizzle-orm";
 import type { Handler } from "hono";
-import activityFilterRouter from "../routes/api.js";
+import { initDatabase } from "@/framework/database/connection.js";
+import { db, jwt } from "@/framework/facade.js";
+import { users } from "@/modules/auth/database/models/user.js";
+import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
+import { clients } from "@/modules/clients/database/models/clients.js";
+import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 import { getActivityMatrix } from "../controllers/activity-filter.controller.js";
 import { QueryActivityFilterSchema } from "../controllers/activity-filter.schema.js";
+import activityFilterRouter from "../routes/api.js";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 
 describe("Activity Filter Module Integration Tests", () => {
   let app: OpenAPIHono;

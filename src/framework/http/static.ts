@@ -18,7 +18,7 @@ export async function resolveServeStatic() {
   if (activeRuntime === "bun") {
     return (await import("hono/bun")).serveStatic;
   }
-  // @ts-ignore
+  // @ts-expect-error
   return (await import("@hono/node-server/serve-static")).serveStatic;
 }
 

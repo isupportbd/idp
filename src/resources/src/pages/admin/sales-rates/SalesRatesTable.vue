@@ -13,9 +13,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   "update:currentPage": [val: number];
-  "edit": [rate: SalesRate];
-  "history": [rate: SalesRate];
-  "delete": [rate: SalesRate];
+  edit: [rate: SalesRate];
+  history: [rate: SalesRate];
+  delete: [rate: SalesRate];
 }>();
 
 const formatNumber = (val: any) => {

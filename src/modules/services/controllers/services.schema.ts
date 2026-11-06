@@ -56,14 +56,19 @@ export const ServiceRateItemSchema = z.object({
   effectiveFrom: z.string(),
   createdAt: z.string().or(z.date()),
   updatedAt: z.string().or(z.date()),
-  serviceItem: z.object({
-    id: z.number(),
-    itemName: z.string()
-  }).optional(),
-  customerType: z.object({
-    id: z.number(),
-    typeName: z.string()
-  }).nullable().optional()
+  serviceItem: z
+    .object({
+      id: z.number(),
+      itemName: z.string()
+    })
+    .optional(),
+  customerType: z
+    .object({
+      id: z.number(),
+      typeName: z.string()
+    })
+    .nullable()
+    .optional()
 });
 
 export const CreateServiceRateSchema = z.object({
