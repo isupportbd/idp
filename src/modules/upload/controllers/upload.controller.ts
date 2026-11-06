@@ -2,7 +2,6 @@ import type { AppContext } from "@/framework/facade.js";
 import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import crypto from "node:crypto";
-import * as XLSX from "xlsx";
 import { broadcast, db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
 import { columnMappings } from "@/modules/superadmin/database/models/column_mappings.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
@@ -122,6 +121,7 @@ export const processUpload = async (c: AppContext) => {
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    const XLSX = await import("xlsx");
     const workbook = XLSX.read(buffer, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
