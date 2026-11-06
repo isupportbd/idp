@@ -58,7 +58,9 @@ export const listBillsQuerySchema = z.object({
   customerTypeId: z.string().optional(),
   referenceId: z.string().optional(),
   managerId: z.string().optional(),
-  search: z.string().optional()
+  search: z.string().optional(),
+  page: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().optional()
 });
 
 export const listCollectionsQuerySchema = z.object({
@@ -66,7 +68,9 @@ export const listCollectionsQuerySchema = z.object({
   clientId: z.string().optional(),
   paymentMethod: z.string().optional(),
   referenceId: z.string().optional(),
-  search: z.string().optional()
+  search: z.string().optional(),
+  page: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().optional()
 });
 
 export const clientBillingSummaryQuerySchema = z.object({

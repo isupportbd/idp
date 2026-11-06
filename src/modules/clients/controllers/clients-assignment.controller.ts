@@ -38,15 +38,19 @@ export const listAssignments = async (c: AppContext) => {
       .where(clientConditions.length > 0 ? and(...clientConditions) : undefined)
       .orderBy(asc(clients.companyName));
 
-    const allManagers = await db
-      .select({
-        clientId: clientManagers.clientId,
-        managerId: clientManagers.managerId,
-        managerName: users.name,
-        managerEmail: users.email
-      })
-      .from(clientManagers)
-      .innerJoin(users, eq(clientManagers.managerId, users.id));
+    const clientIds = allClients.map((c) => c.id);
+    const allManagers = clientIds.length > 0
+      ? await db
+          .select({
+            clientId: clientManagers.clientId,
+            managerId: clientManagers.managerId,
+            managerName: users.name,
+            managerEmail: users.email
+          })
+          .from(clientManagers)
+          .innerJoin(users, eq(clientManagers.managerId, users.id))
+          .where(inArray(clientManagers.clientId, clientIds))
+      : [];
 
     const managerMap: Record<number, any[]> = {};
     for (const m of allManagers) {

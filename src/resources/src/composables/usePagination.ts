@@ -19,7 +19,16 @@ export function usePagination(storageKey: string, options: PaginationOptions = {
 
   const syncUrl = options.syncUrl !== false;
   const defaultPage = options.defaultPage || 1;
-  const itemsPerPage = ref(options.defaultPerPage || 10);
+
+  const getInitialPerPage = (): number => {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      const saved = Number(sessionStorage.getItem(`idp_per_page_${storageKey}`));
+      if (!isNaN(saved) && saved > 0) return saved;
+    }
+    return options.defaultPerPage || 10;
+  };
+
+  const itemsPerPage = ref(getInitialPerPage());
 
   // Read initial page from URL query param first, then sessionStorage, then defaultPage
   const getInitialPage = (): number => {
@@ -43,6 +52,12 @@ export function usePagination(storageKey: string, options: PaginationOptions = {
     return Math.max(1, Math.ceil(total / itemsPerPage.value));
   });
 
+  const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage.value);
+  const endIndex = computed(() => {
+    const total = options.totalItems ? Number(options.totalItems.value) || 0 : currentPage.value * itemsPerPage.value;
+    return Math.min(currentPage.value * itemsPerPage.value, total);
+  });
+
   // Clamp currentPage if totalPages shrinks
   if (options.totalItems) {
     watch(totalPages, (maxPages) => {
@@ -51,6 +66,12 @@ export function usePagination(storageKey: string, options: PaginationOptions = {
       }
     });
   }
+
+  watch(itemsPerPage, (newVal) => {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.setItem(`idp_per_page_${storageKey}`, String(newVal));
+    }
+  });
 
   // Sync to sessionStorage and URL query param (debounced to avoid navigation thrash)
   // Guard with hasMounted to ignore spurious initial navigation on component mount
@@ -113,6 +134,8 @@ export function usePagination(storageKey: string, options: PaginationOptions = {
     currentPage,
     itemsPerPage,
     totalPages,
+    startIndex,
+    endIndex,
     resetPage,
     nextPage,
     prevPage,

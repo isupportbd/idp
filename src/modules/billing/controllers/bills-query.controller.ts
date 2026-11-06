@@ -35,9 +35,48 @@ export const listBills = async (c: AppContext) => {
       conditions.push(eq(bills.status, query.status));
     }
 
+    if (query.customerTypeId && query.customerTypeId !== "all") {
+      conditions.push(eq(clients.customerTypeId, Number(query.customerTypeId)));
+    }
+    if (query.referenceId && query.referenceId !== "all") {
+      conditions.push(eq(clients.referenceId, Number(query.referenceId)));
+    }
+    if (query.search && query.search.trim()) {
+      const term = `%${query.search.trim()}%`;
+      const searchCond = or(
+        ilike(bills.billNo, term),
+        ilike(clients.companyName, term),
+        ilike(clients.binNumber, term),
+        ilike(clientReferences.name, term),
+        ilike(bills.notes, term)
+      );
+      if (searchCond) conditions.push(searchCond);
+    }
+
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const rows = await db
+    const page = query.page ? Number(query.page) : undefined;
+    const limit = query.limit ? Number(query.limit) : undefined;
+    const offset = page && limit ? (page - 1) * limit : undefined;
+
+    // Fast SQL summary statistics across all matching records
+    const [statsResult] = await db
+      .select({
+        totalInvoicesCount: sql<number>`count(*)::int`,
+        totalBilledAmount: sql<number>`coalesce(sum(${bills.subtotal} - ${bills.discountAmount}), 0)::float`,
+        totalPaidAmount: sql<number>`coalesce(sum(${bills.paidAmount}), 0)::float`,
+        totalDueAmount: sql<number>`coalesce(sum(${bills.dueAmount}), 0)::float`,
+        paidCount: sql<number>`coalesce(sum(case when ${bills.status} = 'paid' then 1 else 0 end), 0)::int`,
+        unpaidCount: sql<number>`coalesce(sum(case when ${bills.status} = 'unpaid' then 1 else 0 end), 0)::int`,
+        partialCount: sql<number>`coalesce(sum(case when ${bills.status} = 'partial' then 1 else 0 end), 0)::int`
+      })
+      .from(bills)
+      .leftJoin(clients, eq(bills.clientId, clients.id))
+      .leftJoin(customerTypes, eq(clients.customerTypeId, customerTypes.id))
+      .leftJoin(clientReferences, eq(clients.referenceId, clientReferences.id))
+      .where(whereClause);
+
+    let billsQuery = db
       .select({
         id: bills.id,
         billNo: bills.billNo,
@@ -73,7 +112,11 @@ export const listBills = async (c: AppContext) => {
       .where(whereClause)
       .orderBy(desc(bills.id));
 
-    // Fetch line items for the bills
+    const rows = limit
+      ? await billsQuery.limit(limit).offset(offset || 0)
+      : await billsQuery;
+
+    // Fetch line items ONLY for the paginated bills
     const billIds = rows.map((r) => r.id);
     let itemsMap: Record<number, (typeof billItems.$inferSelect)[]> = {};
     if (billIds.length > 0) {
@@ -88,50 +131,35 @@ export const listBills = async (c: AppContext) => {
       }
     }
 
-    let list = rows.map((r) => ({
+    const list = rows.map((r) => ({
       ...r,
       items: itemsMap[r.id] || []
     }));
 
-    // Client-side search filtering if provided
-    if (query.search && query.search.trim()) {
-      const q = query.search.trim().toLowerCase();
-      list = list.filter(
-        (r) =>
-          r.billNo.toLowerCase().includes(q) ||
-          r.clientName?.toLowerCase().includes(q) ||
-          r.clientBin?.toLowerCase().includes(q) ||
-          r.referenceName?.toLowerCase().includes(q) ||
-          r.notes?.toLowerCase().includes(q)
-      );
-    }
-
-    if (query.customerTypeId && query.customerTypeId !== "all") {
-      const typeId = Number(query.customerTypeId);
-      list = list.filter((r) => r.customerTypeId === typeId);
-    }
-
-    if (query.referenceId && query.referenceId !== "all") {
-      const refId = Number(query.referenceId);
-      list = list.filter((r) => r.referenceId === refId);
-    }
-
-    // Overall summary statistics
+    const totalCount = statsResult?.totalInvoicesCount || 0;
     const stats = {
-      totalInvoicesCount: list.length,
-      totalBilledAmount: r2(list.reduce((acc, b) => acc + (b.subtotal - b.discountAmount), 0)),
-      totalPaidAmount: r2(list.reduce((acc, b) => acc + b.paidAmount, 0)),
-      totalDueAmount: r2(list.reduce((acc, b) => acc + b.dueAmount, 0)),
-      paidCount: list.filter((b) => b.status === "paid").length,
-      unpaidCount: list.filter((b) => b.status === "unpaid").length,
-      partialCount: list.filter((b) => b.status === "partial").length
+      totalInvoicesCount: totalCount,
+      totalBilledAmount: r2(statsResult?.totalBilledAmount || 0),
+      totalPaidAmount: r2(statsResult?.totalPaidAmount || 0),
+      totalDueAmount: r2(statsResult?.totalDueAmount || 0),
+      paidCount: statsResult?.paidCount || 0,
+      unpaidCount: statsResult?.unpaidCount || 0,
+      partialCount: statsResult?.partialCount || 0
     };
 
     return c.json(
       {
         message: "Bills fetched successfully",
         data: list,
-        stats
+        stats,
+        pagination: limit
+          ? {
+              total: totalCount,
+              page: page || 1,
+              limit,
+              totalPages: Math.max(1, Math.ceil(totalCount / limit))
+            }
+          : undefined
       },
       HttpStatusCodes.OK
     );

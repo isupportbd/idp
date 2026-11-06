@@ -40,10 +40,35 @@ export const listCollections = async (c: AppContext) => {
     if (query.referenceId && query.referenceId !== "all") {
       conditions.push(eq(clients.referenceId, Number(query.referenceId)));
     }
+    if (query.search && query.search.trim()) {
+      const term = `%${query.search.trim()}%`;
+      const searchCond = or(
+        ilike(collections.receiptNo, term),
+        ilike(clients.companyName, term),
+        ilike(bills.billNo, term),
+        ilike(collections.referenceNo, term)
+      );
+      if (searchCond) conditions.push(searchCond);
+    }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const rows = await db
+    const page = query.page ? Number(query.page) : undefined;
+    const limit = query.limit ? Number(query.limit) : undefined;
+    const offset = page && limit ? (page - 1) * limit : undefined;
+
+    // Fast SQL summary statistics across all matching collections
+    const [statsResult] = await db
+      .select({
+        totalCollected: sql<number>`coalesce(sum(case when ${collections.status} = 'completed' then ${collections.amount} else 0 end), 0)::float`,
+        totalCount: sql<number>`count(*)::int`
+      })
+      .from(collections)
+      .leftJoin(clients, eq(collections.clientId, clients.id))
+      .leftJoin(bills, eq(collections.billId, bills.id))
+      .where(whereClause);
+
+    let collQuery = db
       .select({
         id: collections.id,
         receiptNo: collections.receiptNo,
@@ -71,26 +96,26 @@ export const listCollections = async (c: AppContext) => {
       .where(whereClause)
       .orderBy(desc(collections.id));
 
-    let list = rows;
-    if (query.search && query.search.trim()) {
-      const q = query.search.trim().toLowerCase();
-      list = list.filter(
-        (r) =>
-          r.receiptNo.toLowerCase().includes(q) ||
-          r.clientName?.toLowerCase().includes(q) ||
-          r.billNo?.toLowerCase().includes(q) ||
-          r.referenceNo?.toLowerCase().includes(q)
-      );
-    }
+    const rows = limit
+      ? await collQuery.limit(limit).offset(offset || 0)
+      : await collQuery;
 
-    const totalCollected = r2(list.filter((r) => r.status === "completed").reduce((acc, c) => acc + c.amount, 0));
+    const totalCount = statsResult?.totalCount || 0;
 
     return c.json(
       {
         message: "Collections fetched successfully",
-        data: list,
-        totalCollected,
-        count: list.length
+        data: rows,
+        totalCollected: r2(statsResult?.totalCollected || 0),
+        count: totalCount,
+        pagination: limit
+          ? {
+              total: totalCount,
+              page: page || 1,
+              limit,
+              totalPages: Math.max(1, Math.ceil(totalCount / limit))
+            }
+          : undefined
       },
       HttpStatusCodes.OK
     );

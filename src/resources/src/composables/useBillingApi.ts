@@ -130,6 +130,8 @@ export function useBillingApi() {
     search?: string;
     customerTypeId?: number | string;
     referenceId?: number | string;
+    page?: number;
+    limit?: number;
   } = {}) => {
     if (!hasLoadedBillsOnce.value || bills.value.length === 0) {
       loading.value = true;
@@ -304,6 +306,8 @@ export function useBillingApi() {
     paymentMethod?: string;
     referenceId?: number | string;
     search?: string;
+    page?: number;
+    limit?: number;
   } = {}) => {
     if (!hasLoadedCollectionsOnce.value || collections.value.length === 0) {
       loading.value = true;
