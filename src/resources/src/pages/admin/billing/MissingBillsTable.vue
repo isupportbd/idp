@@ -124,16 +124,17 @@ const emit = defineEmits<{
           </td>
 
           <!-- Action -->
-          <td style="text-align: right;" class="d-print-none">
+          <td style="text-align: right;" class="d-print-none text-nowrap">
             <button
               v-if="canCreate"
               type="button"
-              class="btn btn-sm btn-primary px-3 fw-semibold shadow-sm d-flex align-items-center gap-1 ms-auto"
+              class="btn btn-sm btn-primary px-3 fw-semibold shadow-sm d-inline-flex align-items-center gap-1 ms-auto text-nowrap"
+              style="white-space: nowrap;"
               :disabled="!item.isSubmitted"
               @click="emit('createBill', item.id, item.targetMonth)"
             >
               <i class="bi bi-plus-lg"></i>
-              <span>Create Bill</span>
+              <span class="text-nowrap">Create Bill</span>
             </button>
           </td>
         </tr>

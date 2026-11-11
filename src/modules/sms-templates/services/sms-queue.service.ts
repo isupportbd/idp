@@ -26,22 +26,10 @@ export type EnqueueTransactionalSmsResult = {
 };
 
 export async function enqueueTransactionalSms(payload: SendTransactionalSmsPayload): Promise<EnqueueTransactionalSmsResult> {
-  try {
-    const job = await queueJob(TRANSACTIONAL_SMS_JOB, payload, {
-      queue: SMS_QUEUE,
-      attempts: 3,
-      backoff: { type: "exponential", delay: 3000 },
-      removeOnComplete: 1000,
-      removeOnFail: 5000
-    });
-    if (job) return { queued: true };
-  } catch (err: unknown) {
-    console.warn("[SMS] Enqueue failed; falling back to inline background send:", err instanceof Error ? err.message : err);
-  }
-
+  // Always trigger self-managed background dispatch (zero blocking, no external worker dependency)
   const inline = sendTransactionalSms(payload).catch((err: unknown) => {
     const message = err instanceof Error ? err.message : String(err);
-    console.warn("[SMS] Inline background send failed:", message);
+    console.warn("[SMS] Background send failed:", message);
     return {
       ok: false,
       status: "FAILED" as const,
@@ -51,5 +39,6 @@ export async function enqueueTransactionalSms(payload: SendTransactionalSmsPaylo
     } as import("./sms.service.js").TransactionalSmsResult;
   });
   void inline;
+
   return { queued: false, inline };
 }

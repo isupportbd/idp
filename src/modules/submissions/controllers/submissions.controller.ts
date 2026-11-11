@@ -10,7 +10,7 @@ import { calculateStaffEarnings, computeSubmissionEarning } from "@/modules/payo
 import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
-import { buildVatSubmissionSmsPayload, isTenantSmsEventEnabled } from "@/modules/sms-templates/services/sms.service.js";
+import { buildVatSubmissionSmsPayload, isTenantSmsEventEnabled, sendVatSubmissionSms } from "@/modules/sms-templates/services/sms.service.js";
 import { enqueueTransactionalSms } from "@/modules/sms-templates/services/sms-queue.service.js";
 import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 
@@ -468,18 +468,20 @@ export const recordSubmission = async (c: AppContext) => {
     if (adminId) {
       // Gate on the firm's per-event SMS toggle (VAT return submission).
       if (await isTenantSmsEventEnabled(adminId, "vat_submission")) {
-        void enqueueTransactionalSms(
-          buildVatSubmissionSmsPayload({
-            clientName: client.companyName,
-            clientMobile: client.mobile,
-            clientAltMobile: client.alternativeMobile,
-            clientBin: client.binNumber,
-            taxPeriod,
-            submissionId: submissionId.trim(),
-            adminId,
-            sentByUserId: currentUser?.id ?? null
-          })
-        );
+        // Send SMS asynchronously via non-blocking background promise
+        // (Guarantees immediate delivery without queue worker dependency or request blocking)
+        sendVatSubmissionSms({
+          clientName: client.companyName,
+          clientMobile: client.mobile,
+          clientAltMobile: client.alternativeMobile,
+          clientBin: client.binNumber,
+          taxPeriod,
+          submissionId: submissionId.trim(),
+          adminId,
+          sentByUserId: currentUser?.id ?? null
+        }).catch((smsErr) => {
+          console.warn("[Submission Auto-SMS Warning]:", smsErr?.message || smsErr);
+        });
       }
     }
 

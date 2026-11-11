@@ -1287,6 +1287,13 @@ usePulseListener("sales_rate:deleted", (data: any) => {
 
 onMounted(async () => {
   await fetchMasterData();
+  // Restore client selection and load reports seamlessly on full page reload
+  if (selectedClientId.value && !selectedClient.value) {
+    const found = clients.value.find((c) => c.id === selectedClientId.value);
+    if (found) {
+      await selectClient(found);
+    }
+  }
 });
 </script>
 

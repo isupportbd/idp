@@ -149,10 +149,10 @@ const handleDeleteBankAccount = async (id: number) => {
               </td>
               <td>
                 <div v-if="b.bkashNumber" class="small" style="color: #e2136e;">
-                  <strong>bKash:</strong> {{ b.bkashNumber }}
+                  <strong>bKash:</strong> {{ b.bkashNumber }} <span class="badge bg-dark border border-secondary text-secondary" style="font-size: 0.68rem;">Send Money</span>
                 </div>
                 <div v-if="b.nagadNumber" class="text-warning small">
-                  <strong>Nagad:</strong> {{ b.nagadNumber }}
+                  <strong>Nagad:</strong> {{ b.nagadNumber }} <span class="badge bg-dark border border-secondary text-secondary" style="font-size: 0.68rem;">Send Money</span>
                 </div>
                 <div v-if="!b.bkashNumber && !b.nagadNumber" class="text-muted small">—</div>
               </td>
@@ -258,22 +258,32 @@ const handleDeleteBankAccount = async (id: number) => {
 
               <div class="col-md-6">
                 <label class="form-label text-light small fw-medium mb-1">bKash Account (Optional)</label>
-                <input
-                  v-model="bankForm.bkashNumber"
-                  type="text"
-                  class="form-control idp-input font-monospace"
-                  placeholder="01819234567"
-                />
+                <div class="input-group">
+                  <input
+                    v-model="bankForm.bkashNumber"
+                    type="text"
+                    class="form-control idp-input font-monospace"
+                    placeholder="01819234567"
+                  />
+                  <span class="input-group-text bg-dark border-secondary text-secondary small py-0 px-2" style="font-size: 0.72rem;">
+                    Send Money
+                  </span>
+                </div>
               </div>
 
               <div class="col-md-6">
                 <label class="form-label text-light small fw-medium mb-1">Nagad Account (Optional)</label>
-                <input
-                  v-model="bankForm.nagadNumber"
-                  type="text"
-                  class="form-control idp-input font-monospace"
-                  placeholder="01711234567"
-                />
+                <div class="input-group">
+                  <input
+                    v-model="bankForm.nagadNumber"
+                    type="text"
+                    class="form-control idp-input font-monospace"
+                    placeholder="01711234567"
+                  />
+                  <span class="input-group-text bg-dark border-secondary text-secondary small py-0 px-2" style="font-size: 0.72rem;">
+                    Send Money
+                  </span>
+                </div>
               </div>
             </div>
 
