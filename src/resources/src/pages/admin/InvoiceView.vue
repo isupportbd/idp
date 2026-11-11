@@ -72,18 +72,12 @@ const formatWhatsAppNumber = (rawNumber?: string) => {
 
 const paymentInfo = computed(() => (bill.value?.payment as any) || null);
 
-const formatMfsTypeLabel = (name: string, type?: string | null) => {
-  const t = type || "Personal";
-  const action = t === "Merchant" ? "Payment" : t === "Agent" ? "Cash Out" : "Send Money";
-  return `${name} (${action})`;
-};
-
 const mfsChannels = computed<{ label: string; value: string }[]>(() => {
   const p = paymentInfo.value || {};
   const list: { label: string; value: string }[] = [];
-  if (p.bkashNumber) list.push({ label: formatMfsTypeLabel("bKash", p.bkashType), value: String(p.bkashNumber) });
-  if (p.nagadNumber) list.push({ label: formatMfsTypeLabel("Nagad", p.nagadType), value: String(p.nagadNumber) });
-  if (p.rocketNumber) list.push({ label: formatMfsTypeLabel("Rocket", p.rocketType), value: String(p.rocketNumber) });
+  if (p.bkashNumber) list.push({ label: "Bkash (Send Money)", value: String(p.bkashNumber) });
+  if (p.nagadNumber) list.push({ label: "Nagad (Send Money)", value: String(p.nagadNumber) });
+  if (p.rocketNumber) list.push({ label: "Rocket (Send Money)", value: String(p.rocketNumber) });
   return list;
 });
 
@@ -205,9 +199,9 @@ const handleWhatsAppShare = async () => {
     // the message never advertises a method the firm does not accept.
     const pay = paymentInfo.value || {};
     const paymentLines: string[] = [];
-    if (pay.bkashNumber) paymentLines.push(`• ${formatMfsTypeLabel("bKash", pay.bkashType)}: ${pay.bkashNumber}`);
-    if (pay.nagadNumber) paymentLines.push(`• ${formatMfsTypeLabel("Nagad", pay.nagadType)}: ${pay.nagadNumber}`);
-    if (pay.rocketNumber) paymentLines.push(`• ${formatMfsTypeLabel("Rocket", pay.rocketType)}: ${pay.rocketNumber}`);
+    if (pay.bkashNumber) paymentLines.push(`• bKash: ${pay.bkashNumber} (Send Money)`);
+    if (pay.nagadNumber) paymentLines.push(`• Nagad: ${pay.nagadNumber} (Send Money)`);
+    if (pay.rocketNumber) paymentLines.push(`• Rocket: ${pay.rocketNumber} (Send Money)`);
     if (pay.accountNumber) {
       paymentLines.push(
         `• Bank: ${pay.bankName || "Bank"} | A/C: ${pay.accountNumber}${pay.accountName ? ` (${pay.accountName})` : ""}${pay.branchName ? `, ${pay.branchName}` : ""}`

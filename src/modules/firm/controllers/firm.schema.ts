@@ -17,11 +17,8 @@ export const CompanySettingsSchema = z.object({
   tinNumber: z.string().max(50).optional().nullable(),
   tradeLicenseNo: z.string().max(100).optional().nullable(),
   bkashNumber: z.string().max(50).optional().nullable(),
-  bkashType: z.string().max(30).optional().nullable(),
   nagadNumber: z.string().max(50).optional().nullable(),
-  nagadType: z.string().max(30).optional().nullable(),
   rocketNumber: z.string().max(50).optional().nullable(),
-  rocketType: z.string().max(30).optional().nullable(),
   invoicePrefix: z.string().max(20).default("INV"),
   invoiceTerms: z.string().optional().nullable(),
   receiptPrefix: z.string().max(20).default("MR"),
@@ -49,9 +46,7 @@ export const CreateBankAccountSchema = z.object({
   branchName: z.string().max(150).optional().nullable(),
   routingNumber: z.string().max(50).optional().nullable(),
   bkashNumber: z.string().max(50).optional().nullable(),
-  bkashType: z.string().max(30).optional().nullable(),
   nagadNumber: z.string().max(50).optional().nullable(),
-  nagadType: z.string().max(30).optional().nullable(),
   isDefault: z.boolean().default(false),
   isActive: z.boolean().default(true)
 });
