@@ -26,7 +26,9 @@ const bankForm = ref({
   branchName: "",
   routingNumber: "",
   bkashNumber: "",
+  bkashType: "Personal",
   nagadNumber: "",
+  nagadType: "Personal",
   isDefault: false,
   isActive: true
 });
@@ -41,7 +43,9 @@ const openAddBankModal = () => {
     branchName: "",
     routingNumber: "",
     bkashNumber: props.defaultPhone || "",
+    bkashType: "Personal",
     nagadNumber: "",
+    nagadType: "Personal",
     isDefault: props.bankAccounts.length === 0,
     isActive: true
   };
@@ -58,7 +62,9 @@ const openEditBankModal = (b: BankAccount) => {
     branchName: b.branchName || "",
     routingNumber: b.routingNumber || "",
     bkashNumber: b.bkashNumber || "",
+    bkashType: b.bkashType || "Personal",
     nagadNumber: b.nagadNumber || "",
+    nagadType: b.nagadType || "Personal",
     isDefault: b.isDefault,
     isActive: b.isActive
   };
@@ -149,10 +155,16 @@ const handleDeleteBankAccount = async (id: number) => {
               </td>
               <td>
                 <div v-if="b.bkashNumber" class="small" style="color: #e2136e;">
-                  <strong>bKash:</strong> {{ b.bkashNumber }} <span class="badge bg-dark border border-secondary text-secondary" style="font-size: 0.68rem;">Send Money</span>
+                  <strong>bKash:</strong> {{ b.bkashNumber }}
+                  <span class="badge bg-dark border border-secondary text-secondary ms-1" style="font-size: 0.68rem;">
+                    {{ b.bkashType === 'Merchant' ? 'Payment' : b.bkashType === 'Agent' ? 'Cash Out' : 'Send Money' }}
+                  </span>
                 </div>
                 <div v-if="b.nagadNumber" class="text-warning small">
-                  <strong>Nagad:</strong> {{ b.nagadNumber }} <span class="badge bg-dark border border-secondary text-secondary" style="font-size: 0.68rem;">Send Money</span>
+                  <strong>Nagad:</strong> {{ b.nagadNumber }}
+                  <span class="badge bg-dark border border-secondary text-secondary ms-1" style="font-size: 0.68rem;">
+                    {{ b.nagadType === 'Merchant' ? 'Payment' : b.nagadType === 'Agent' ? 'Cash Out' : 'Send Money' }}
+                  </span>
                 </div>
                 <div v-if="!b.bkashNumber && !b.nagadNumber" class="text-muted small">—</div>
               </td>
@@ -265,9 +277,11 @@ const handleDeleteBankAccount = async (id: number) => {
                     class="form-control idp-input font-monospace"
                     placeholder="01819234567"
                   />
-                  <span class="input-group-text bg-dark border-secondary text-secondary small py-0 px-2" style="font-size: 0.72rem;">
-                    Send Money
-                  </span>
+                  <select v-model="bankForm.bkashType" class="form-select idp-input bg-dark text-light border-secondary" style="max-width: 145px; font-size: 0.78rem;">
+                    <option value="Personal">Send Money</option>
+                    <option value="Merchant">Payment</option>
+                    <option value="Agent">Cash Out</option>
+                  </select>
                 </div>
               </div>
 
@@ -280,9 +294,11 @@ const handleDeleteBankAccount = async (id: number) => {
                     class="form-control idp-input font-monospace"
                     placeholder="01711234567"
                   />
-                  <span class="input-group-text bg-dark border-secondary text-secondary small py-0 px-2" style="font-size: 0.72rem;">
-                    Send Money
-                  </span>
+                  <select v-model="bankForm.nagadType" class="form-select idp-input bg-dark text-light border-secondary" style="max-width: 145px; font-size: 0.78rem;">
+                    <option value="Personal">Send Money</option>
+                    <option value="Merchant">Payment</option>
+                    <option value="Agent">Cash Out</option>
+                  </select>
                 </div>
               </div>
             </div>

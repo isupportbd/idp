@@ -168,35 +168,71 @@ const cancelProfileEdit = () => {
         <div class="row g-3">
           <div class="col-md-4">
             <label class="form-label text-light small fw-medium">bKash Number</label>
-            <input
-              v-model="form.bkashNumber"
-              type="text"
-              class="form-control idp-input"
-              :disabled="!isEditingProfile || !canEdit"
-              placeholder="01XXXXXXXXX"
-            />
+            <div class="input-group">
+              <input
+                v-model="form.bkashNumber"
+                type="text"
+                class="form-control idp-input"
+                :disabled="!isEditingProfile || !canEdit"
+                placeholder="01XXXXXXXXX"
+              />
+              <select
+                v-model="form.bkashType"
+                class="form-select idp-input bg-dark text-light border-secondary"
+                :disabled="!isEditingProfile || !canEdit"
+                style="max-width: 140px; font-size: 0.78rem;"
+              >
+                <option value="Personal">Send Money</option>
+                <option value="Merchant">Payment</option>
+                <option value="Agent">Cash Out</option>
+              </select>
+            </div>
           </div>
 
           <div class="col-md-4">
             <label class="form-label text-light small fw-medium">Nagad Number</label>
-            <input
-              v-model="form.nagadNumber"
-              type="text"
-              class="form-control idp-input"
-              :disabled="!isEditingProfile || !canEdit"
-              placeholder="01XXXXXXXXX"
-            />
+            <div class="input-group">
+              <input
+                v-model="form.nagadNumber"
+                type="text"
+                class="form-control idp-input"
+                :disabled="!isEditingProfile || !canEdit"
+                placeholder="01XXXXXXXXX"
+              />
+              <select
+                v-model="form.nagadType"
+                class="form-select idp-input bg-dark text-light border-secondary"
+                :disabled="!isEditingProfile || !canEdit"
+                style="max-width: 140px; font-size: 0.78rem;"
+              >
+                <option value="Personal">Send Money</option>
+                <option value="Merchant">Payment</option>
+                <option value="Agent">Cash Out</option>
+              </select>
+            </div>
           </div>
 
           <div class="col-md-4">
             <label class="form-label text-light small fw-medium">Rocket Number</label>
-            <input
-              v-model="form.rocketNumber"
-              type="text"
-              class="form-control idp-input"
-              :disabled="!isEditingProfile || !canEdit"
-              placeholder="01XXXXXXXXX"
-            />
+            <div class="input-group">
+              <input
+                v-model="form.rocketNumber"
+                type="text"
+                class="form-control idp-input"
+                :disabled="!isEditingProfile || !canEdit"
+                placeholder="01XXXXXXXXX"
+              />
+              <select
+                v-model="form.rocketType"
+                class="form-select idp-input bg-dark text-light border-secondary"
+                :disabled="!isEditingProfile || !canEdit"
+                style="max-width: 140px; font-size: 0.78rem;"
+              >
+                <option value="Personal">Send Money</option>
+                <option value="Merchant">Payment</option>
+                <option value="Agent">Cash Out</option>
+              </select>
+            </div>
           </div>
         </div>
 

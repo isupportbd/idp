@@ -99,7 +99,9 @@ async function resolvePaymentInfo(tenantAdminId: number | null) {
         branchName: bankAccounts.branchName,
         routingNumber: bankAccounts.routingNumber,
         bkashNumber: bankAccounts.bkashNumber,
+        bkashType: bankAccounts.bkashType,
         nagadNumber: bankAccounts.nagadNumber,
+        nagadType: bankAccounts.nagadType,
         isDefault: bankAccounts.isDefault
       })
       .from(bankAccounts)
@@ -111,7 +113,9 @@ async function resolvePaymentInfo(tenantAdminId: number | null) {
     if (!row) return null;
     return {
       bkashNumber: row.bkashNumber || null,
+      bkashType: row.bkashType || "Personal",
       nagadNumber: row.nagadNumber || null,
+      nagadType: row.nagadType || "Personal",
       bankName: row.bankName || null,
       accountName: row.accountName || null,
       accountNumber: row.accountNumber || null,

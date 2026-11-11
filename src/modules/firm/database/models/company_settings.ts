@@ -16,8 +16,11 @@ export const companySettings = pgTable(
     tinNumber: varchar("tin_number", { length: 50 }).default(""),
     tradeLicenseNo: varchar("trade_license_no", { length: 100 }).default(""),
     bkashNumber: varchar("bkash_number", { length: 50 }).default(""),
+    bkashType: varchar("bkash_type", { length: 30 }).default("Personal"),
     nagadNumber: varchar("nagad_number", { length: 50 }).default(""),
+    nagadType: varchar("nagad_type", { length: 30 }).default("Personal"),
     rocketNumber: varchar("rocket_number", { length: 50 }).default(""),
+    rocketType: varchar("rocket_type", { length: 30 }).default("Personal"),
     invoicePrefix: varchar("invoice_prefix", { length: 20 }).default("INV"),
     invoiceTerms: text("invoice_terms").default(
       "1. Payment is due within 15 days of invoice date.\n2. Please mention the invoice number as reference in payment.\n3. Checks/Transfers are subject to realization."

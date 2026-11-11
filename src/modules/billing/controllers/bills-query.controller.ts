@@ -255,8 +255,11 @@ export const getBillDetails = async (c: AppContext) => {
     const bankInfo = await resolvePaymentInfo(tenantAdminId);
     const paymentInfo = {
       bkashNumber: firmSetting?.bkashNumber?.trim() || bankInfo?.bkashNumber || null,
+      bkashType: firmSetting?.bkashType || bankInfo?.bkashType || "Personal",
       nagadNumber: firmSetting?.nagadNumber?.trim() || bankInfo?.nagadNumber || null,
+      nagadType: firmSetting?.nagadType || bankInfo?.nagadType || "Personal",
       rocketNumber: firmSetting?.rocketNumber?.trim() || null,
+      rocketType: firmSetting?.rocketType || "Personal",
       bankName: bankInfo?.bankName || null,
       accountName: bankInfo?.accountName || null,
       accountNumber: bankInfo?.accountNumber || null,
