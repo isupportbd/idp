@@ -343,22 +343,9 @@ const handleConfirmDelete = async () => {
         </button>
       </div>
 
-      <!-- Counter & Rows Selector -->
-      <div class="d-flex align-items-center gap-2">
-        <label class="text-muted small mb-0">Rows:</label>
-        <select
-          v-model="itemsPerPage"
-          class="form-select form-select-sm idp-input"
-          style="width: 75px; height: 38px;"
-        >
-          <option :value="10">10</option>
-          <option :value="25">25</option>
-          <option :value="50">50</option>
-          <option :value="100">100</option>
-        </select>
-        <div class="text-muted small ps-2">
-          Total: <strong class="text-white">{{ totalCount }}</strong> Clients
-        </div>
+      <!-- Counter -->
+      <div class="text-muted small ps-2">
+        Total: <strong class="text-white">{{ totalCount }}</strong> Clients
       </div>
     </div>
 
