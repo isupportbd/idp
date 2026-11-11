@@ -635,10 +635,17 @@ const printReport = () => {
 
             <!-- 1. Client Organization & Address (Stacked) -->
             <td>
-              <div class="fw-semibold text-white mb-1 text-truncate" style="max-width: 280px; font-size: 0.92rem;" :title="item.companyName">
-                {{ item.companyName }}
+              <div class="d-flex align-items-center gap-2 mb-1" style="max-width: 280px;">
+                <span
+                  class="status-indicator-dot"
+                  :class="item.hasActivity ? 'dot-active' : 'dot-inactive'"
+                  :title="item.hasActivity ? 'Active Purchase' : 'No Purchase'"
+                ></span>
+                <div class="fw-semibold text-white text-truncate" style="font-size: 0.92rem;" :title="item.companyName">
+                  {{ item.companyName }}
+                </div>
               </div>
-              <div class="text-muted text-truncate" style="font-size: 0.78rem; max-width: 280px;" :title="item.address || '—'">
+              <div class="text-muted text-truncate" style="font-size: 0.78rem; max-width: 280px; margin-left: 16px;" :title="item.address || '—'">
                 <i class="bi bi-geo-alt me-1 text-secondary"></i>{{ item.address || '—' }}
               </div>
             </td>
@@ -1006,6 +1013,23 @@ const printReport = () => {
   height: 5px;
   border-radius: 50%;
   background: currentColor;
+}
+
+/* Status Indicator Dot (Purchase Activity) */
+.status-indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.dot-active {
+  background: #20c997;
+  box-shadow: 0 0 6px rgba(32, 201, 151, 0.6);
+}
+.dot-inactive {
+  background: #dc3545;
+  box-shadow: 0 0 6px rgba(220, 53, 69, 0.6);
 }
 
 /* Modal Styling */

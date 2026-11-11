@@ -7,6 +7,7 @@ import { users } from "@/modules/auth/database/models/user.js";
 import { clientManagers } from "@/modules/clients/database/models/client_managers.js";
 import { clients } from "@/modules/clients/database/models/clients.js";
 import { calculateStaffEarnings, computeSubmissionEarning } from "@/modules/payouts/services/payouts.service.js";
+import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { customerTypes } from "@/modules/services/database/models/customer_types.js";
 import { clientReferences } from "@/modules/services/database/models/references.js";
 import { buildVatSubmissionSmsPayload, isTenantSmsEventEnabled } from "@/modules/sms-templates/services/sms.service.js";
@@ -141,10 +142,39 @@ export const listSubmissions = async (c: AppContext) => {
       managersMap[m.clientId].push({ id: m.managerId, name: m.managerName });
     }
 
+    // 3b. Fetch purchase activity per client for this tax period (month)
+    const clientPurchases = await db
+      .select({
+        clientId: purchases.clientId,
+        totalBaseValue: sql<number>`COALESCE(SUM(${purchases.baseValueOfVat}), 0)`,
+        beCount: sql<number>`COUNT(DISTINCT COALESCE(NULLIF(${purchases.beNo}, ''), ${purchases.id}::text))`
+      })
+      .from(purchases)
+      .where(
+        and(
+          inArray(purchases.clientId, activeClientIds),
+          eq(purchases.month, taxPeriod),
+          isSuperAdmin ? undefined : eq(purchases.adminId, tenantAdminId ?? -1)
+        )
+      )
+      .groupBy(purchases.clientId);
+
+    const purchasesMap: Record<number, { totalBaseValue: number; beCount: number }> = {};
+    for (const p of clientPurchases) {
+      purchasesMap[p.clientId] = {
+        totalBaseValue: Number(p.totalBaseValue) || 0,
+        beCount: Number(p.beCount) || 0
+      };
+    }
+
     // 4. Build combined list with computed status
     let list = activeClients.map((client) => {
       const sub = submissionMap[client.id];
       const assignedManagers = managersMap[client.id] || [];
+      const clientPurchase = purchasesMap[client.id];
+      const purchaseAmount = clientPurchase ? clientPurchase.totalBaseValue : 0;
+      const beCount = clientPurchase ? clientPurchase.beCount : 0;
+      const hasActivity = purchaseAmount > 0;
 
       let status: "submitted" | "pending" | "late_submitted" = "pending";
       let submissionRecordId: number | null = null;
@@ -195,7 +225,10 @@ export const listSubmissions = async (c: AppContext) => {
         isEdited: updatedById != null,
         submittedAt,
         remarks,
-        managers: assignedManagers
+        managers: assignedManagers,
+        hasActivity,
+        purchaseAmount,
+        beCount
       };
     });
 

@@ -23,6 +23,9 @@ export interface SubmissionItem {
   submittedAt?: string | null;
   remarks?: string | null;
   managers: Array<{ id: number; name: string }>;
+  hasActivity?: boolean;
+  purchaseAmount?: number;
+  beCount?: number;
 }
 
 export interface SubmissionsStats {
