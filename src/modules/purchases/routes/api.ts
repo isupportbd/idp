@@ -8,15 +8,21 @@ import {
   deletePurchase,
   deletePurchasesByMonth,
   getPurchasesMonths,
-  listPurchases
+  listPurchases,
+  updatePurchaseMonth
 } from "../controllers/purchases.controller.js";
-import { batchDeletePurchasesSchema, purchasesListResponseSchema } from "../controllers/purchases.schema.js";
+import {
+  batchDeletePurchasesSchema,
+  purchasesListResponseSchema,
+  updatePurchaseMonthSchema
+} from "../controllers/purchases.schema.js";
 
 const purchasesRouter = createRouter();
 
 purchasesRouter.use("*", authMiddleware, denyRole("superadmin"), subscriptionMiddleware);
 
 const canRead = requirePermission("purchases.view", "reports.view");
+const canEdit = requirePermission("purchases.edit");
 const canDelete = requirePermission("purchases.delete");
 
 const getPurchasesMonthsRoute = createRoute({
@@ -72,10 +78,26 @@ const batchDeletePurchasesRoute = createRoute({
   }
 });
 
+const updatePurchaseMonthRoute = createRoute({
+  path: "/{id}/month",
+  method: "put",
+  tags: ["Purchases"],
+  description: "Shift purchase tax period to current or subsequent month",
+  request: {
+    body: jsonContent(updatePurchaseMonthSchema, "Target tax period (YYYY-MM)")
+  },
+  responses: {
+    [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), message: z.string() }), "Month updated successfully"),
+    [HttpStatusCodes.BAD_REQUEST]: jsonContent(z.object({ success: z.boolean(), message: z.string() }), "Invalid target month or backward shift"),
+    [HttpStatusCodes.NOT_FOUND]: jsonContent(z.object({ success: z.boolean(), message: z.string() }), "Purchase not found")
+  }
+});
+
 purchasesRouter.api(getPurchasesMonthsRoute, [canRead], getPurchasesMonths);
 purchasesRouter.api(listPurchasesRoute, [canRead], listPurchases);
 purchasesRouter.api(deleteByMonthRoute, [canDelete], deletePurchasesByMonth);
 purchasesRouter.api(deletePurchaseRoute, [canDelete], deletePurchase);
 purchasesRouter.api(batchDeletePurchasesRoute, [canDelete], batchDeletePurchases);
+purchasesRouter.api(updatePurchaseMonthRoute, [canEdit], updatePurchaseMonth);
 
 export default purchasesRouter;

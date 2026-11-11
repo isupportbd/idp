@@ -7,7 +7,7 @@ import { clients } from "@/modules/clients/database/models/clients.js";
 import { purchases } from "@/modules/purchases/database/models/purchases.js";
 import { vatSubmissions } from "@/modules/submissions/database/models/vat_submissions.js";
 import { globalItems } from "@/modules/superadmin/database/models/global_items.js";
-import { batchDeletePurchasesSchema } from "./purchases.schema.js";
+import { batchDeletePurchasesSchema, updatePurchaseMonthSchema } from "./purchases.schema.js";
 
 // ── GET PURCHASES LIST ───────────────────────────────────────────────
 
@@ -267,5 +267,63 @@ export const getPurchasesMonths = async (c: AppContext) => {
     });
   } catch (error: unknown) {
     return c.json({ success: false, message: "Failed to fetch purchases months" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
+  }
+};
+
+// ── UPDATE PURCHASE MONTH ─────────────────────────────────────────────
+
+export const updatePurchaseMonth = async (c: AppContext) => {
+  try {
+    const id = parseInt(c.req.param("id") ?? "", 10);
+    if (!id || isNaN(id)) {
+      return c.json({ success: false, message: "Invalid purchase ID" }, HttpStatusCodes.BAD_REQUEST);
+    }
+
+    const rawBody = c.req.valid("json");
+    const { newMonth } = await validate(updatePurchaseMonthSchema, rawBody);
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+
+    const whereCondition = isSuperAdmin
+      ? eq(purchases.id, id)
+      : and(eq(purchases.id, id), eq(purchases.adminId, tenantAdminId ?? -1));
+
+    const [existing] = await db
+      .select({
+        id: purchases.id,
+        month: purchases.month,
+        beNo: purchases.beNo
+      })
+      .from(purchases)
+      .where(whereCondition)
+      .limit(1);
+
+    if (!existing) {
+      return c.json({ success: false, message: "Purchase record not found" }, HttpStatusCodes.NOT_FOUND);
+    }
+
+    if (existing.month && newMonth < existing.month) {
+      return c.json(
+        {
+          success: false,
+          message: "You cannot move a purchase to a previous month. Only subsequent tax periods are allowed."
+        },
+        HttpStatusCodes.BAD_REQUEST
+      );
+    }
+
+    await db
+      .update(purchases)
+      .set({
+        month: newMonth,
+        updatedAt: new Date()
+      })
+      .where(whereCondition);
+
+    return c.json({
+      success: true,
+      message: `Purchase BE ${existing.beNo || existing.id} moved to ${newMonth} successfully`
+    });
+  } catch (error: unknown) {
+    return c.json({ success: false, message: "Failed to update purchase month" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };

@@ -47,3 +47,10 @@ export const purchasesListResponseSchema = z.object({
     totalPages: z.number().int()
   })
 });
+
+export const updatePurchaseMonthSchema = z.object({
+  newMonth: z.string().regex(/^\d{4}-\d{2}$/, "Invalid month format. Expected YYYY-MM")
+});
+
+export type UpdatePurchaseMonthInput = z.infer<typeof updatePurchaseMonthSchema>;
+
