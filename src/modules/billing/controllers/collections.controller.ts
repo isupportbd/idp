@@ -179,6 +179,34 @@ export const createCollection = async (c: AppContext) => {
             updatedAt: new Date()
           })
           .where(eq(bills.id, billId));
+      } else {
+        // General Account Payment (not tied to a specific bill):
+        // Automatically allocate payment to the client's latest active bill
+        // because in the cumulative billing model, the latest bill's grandTotal incorporates previous dues.
+        const latestActiveBill = (
+          await tx
+            .select({ id: bills.id, grandTotal: bills.grandTotal, paidAmount: bills.paidAmount })
+            .from(bills)
+            .where(and(eq(bills.clientId, clientId), ne(bills.status, "cancelled")))
+            .orderBy(desc(bills.billDate), desc(bills.id))
+            .limit(1)
+        )[0];
+
+        if (latestActiveBill) {
+          await tx
+            .update(bills)
+            .set({
+              paidAmount: sql`${bills.paidAmount} + ${normalizedAmount}`,
+              dueAmount: sql`GREATEST(0, ${bills.grandTotal} - (${bills.paidAmount} + ${normalizedAmount}))`,
+              status: sql`CASE WHEN GREATEST(0, ${bills.grandTotal} - (${bills.paidAmount} + ${normalizedAmount})) <= 0 THEN 'paid' ELSE 'partial' END`,
+              updatedAt: new Date()
+            })
+            .where(eq(bills.id, latestActiveBill.id));
+
+          // Also link this collection to the latest bill so future cancellation can accurately revert it
+          await tx.update(collections).set({ billId: latestActiveBill.id }).where(eq(collections.id, created.id));
+          created.billId = latestActiveBill.id;
+        }
       }
 
       return created;
