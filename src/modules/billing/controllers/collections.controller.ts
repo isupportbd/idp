@@ -346,24 +346,25 @@ export const getCollectionDetails = async (c: AppContext) => {
       return c.json({ message: "Payment receipt not found" }, HttpStatusCodes.NOT_FOUND);
     }
 
-    // Fetch overall client outstanding balance using numeric aggregation
-    const clientBilledSum = await db
-      .select({
-        totalBilled: sql<number>`COALESCE(SUM(${bills.grandTotal}), 0)`
-      })
-      .from(bills)
-      .where(and(eq(bills.clientId, col.clientId), ne(bills.status, "cancelled")));
+    // Fetch overall client outstanding balance:
+    // In our cumulative billing model, each successive bill rolls up previousDue into grandTotal.
+    // Therefore, summing all bills' grandTotal results in double-counting previous dues.
+    // The true outstanding balance of a client is the remaining dueAmount of their latest active invoice.
+    let currentOutstandingDue = 0;
+    const latestBill = (
+      await db
+        .select({ dueAmount: bills.dueAmount })
+        .from(bills)
+        .where(and(eq(bills.clientId, col.clientId), ne(bills.status, "cancelled")))
+        .orderBy(desc(bills.billDate), desc(bills.id))
+        .limit(1)
+    )[0];
 
-    const clientCollectedSum = await db
-      .select({
-        totalCollected: sql<number>`COALESCE(SUM(${collections.amount}), 0)`
-      })
-      .from(collections)
-      .where(and(eq(collections.clientId, col.clientId), eq(collections.status, "completed")));
-
-    const totalBilled = r2(Number(clientBilledSum[0]?.totalBilled) || 0);
-    const totalCollected = r2(Number(clientCollectedSum[0]?.totalCollected) || 0);
-    const currentOutstandingDue = r2(Math.max(0, totalBilled - totalCollected));
+    if (latestBill) {
+      currentOutstandingDue = r2(Number(latestBill.dueAmount || 0));
+    } else {
+      currentOutstandingDue = r2(await getClientRunningDue(col.clientId));
+    }
 
     // Tenant-scoped company branding — resolved from the client owner's Firm
     // Settings only, with no cross-tenant fallback.
