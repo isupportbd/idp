@@ -327,7 +327,7 @@ const totalAtSum = computed(() =>
 
 <style scoped>
 .summary-total-row td {
-  background-color: #0f1216 !important;
+  background-color: #1a1d21 !important;
   border-top: 2px solid #3b8eed;
   padding: 0.85rem 0.75rem;
 }
