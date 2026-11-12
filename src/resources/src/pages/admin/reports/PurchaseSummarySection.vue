@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from "vue";
+
 interface Purchase {
   id: number;
   clientId: number;
@@ -52,6 +54,32 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<(e: "openChangeMonthModal", p: Purchase) => void>();
+
+const purchaseSummaryRows = computed(() => props.getPurchaseSummary(props.purchases));
+
+const totalQtySum = computed(() =>
+  purchaseSummaryRows.value.reduce((sum, s) => sum + (Number(s.netQty) || 0) * props.currentConvFactor, 0)
+);
+
+const totalAssValueSum = computed(() =>
+  purchaseSummaryRows.value.reduce((sum, s) => sum + (Number(s.assValue) || 0), 0)
+);
+
+const totalBaseValueSum = computed(() =>
+  purchaseSummaryRows.value.reduce((sum, s) => sum + (Number(s.baseValueOfVat) || 0), 0)
+);
+
+const totalSdSum = computed(() =>
+  purchaseSummaryRows.value.reduce((sum, s) => sum + (Number(s.sd) || 0), 0)
+);
+
+const totalVatSum = computed(() =>
+  purchaseSummaryRows.value.reduce((sum, s) => sum + (Number(s.vat) || 0), 0)
+);
+
+const totalAtSum = computed(() =>
+  purchaseSummaryRows.value.reduce((sum, s) => sum + (Number(s.at) || 0), 0)
+);
 </script>
 
 <template>
@@ -78,7 +106,7 @@ const emit = defineEmits<(e: "openChangeMonthModal", p: Purchase) => void>();
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(s, idx) in getPurchaseSummary(purchases)" :key="idx">
+            <tr v-for="(s, idx) in purchaseSummaryRows" :key="idx">
               <td class="text-center font-monospace" style="color: #64748b;">{{ idx + 1 }}</td>
               <td class="text-start">
                 <div class="fw-medium" style="font-size: 0.82rem; color: #cbd5e1;">{{ s.itemName }}</div>
@@ -94,6 +122,33 @@ const emit = defineEmits<(e: "openChangeMonthModal", p: Purchase) => void>();
               <td class="text-end font-monospace fw-bold" style="font-size: 1.15rem; color: #f59e0b;">{{ fmt(s.maxSalesRate / currentConvFactor) }}</td>
             </tr>
           </tbody>
+          <tfoot v-if="purchaseSummaryRows.length > 0">
+            <tr class="summary-total-row">
+              <td colspan="2" class="fw-bold text-white fs-6">
+                TOTAL
+              </td>
+              <td class="text-end font-monospace fw-bold text-white">
+                {{ fmt(totalQtySum) }}
+              </td>
+              <td class="text-end font-monospace fw-bold text-white">
+                {{ fmt(totalAssValueSum) }}
+              </td>
+              <td class="text-end font-monospace fw-bold" style="color: #38bdf8;">
+                {{ fmt(totalBaseValueSum) }}
+              </td>
+              <td class="text-end font-monospace fw-bold text-white">
+                {{ fmt(totalSdSum) }}
+              </td>
+              <td class="text-end font-monospace fw-bold text-white">
+                {{ fmt(totalVatSum) }}
+              </td>
+              <td class="text-end font-monospace fw-bold text-white">
+                {{ fmt(totalAtSum) }}
+              </td>
+              <td class="text-end text-muted">-</td>
+              <td class="text-end text-muted">-</td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
@@ -269,3 +324,11 @@ const emit = defineEmits<(e: "openChangeMonthModal", p: Purchase) => void>();
     </div>
   </div>
 </template>
+
+<style scoped>
+.summary-total-row td {
+  background-color: #0f1216 !important;
+  border-top: 2px solid #3b8eed;
+  padding: 0.85rem 0.75rem;
+}
+</style>
