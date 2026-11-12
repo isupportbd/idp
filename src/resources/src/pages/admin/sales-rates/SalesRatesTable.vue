@@ -28,9 +28,9 @@ const formatNumber = (val: any) => {
 
 <template>
   <div class="idp-table-wrapper">
-    <div class="table-responsive">
+    <div class="table-responsive sales-rates-scroll-container">
       <table class="table idp-table table-sm align-middle text-nowrap">
-        <thead>
+        <thead class="sales-rates-sticky-header">
           <tr>
             <th class="text-center" style="width: 50px;">#</th>
             <th class="text-start">Client</th>
@@ -202,3 +202,20 @@ const formatNumber = (val: any) => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.sales-rates-scroll-container {
+  max-height: calc(100vh - 280px);
+  min-height: 250px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.sales-rates-sticky-header th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #1a1d21 !important;
+  box-shadow: inset 0 -1px 0 var(--idp-border, #3b424b);
+}
+</style>
