@@ -737,10 +737,10 @@ const fetchReportsData = async () => {
         }
       }),
       canAccessModule("billing")
-        ? axios.get("/api/billing/bills", {
+        ? axios.get("/api/billing", {
             params: {
               clientId: selectedClientId.value,
-              taxPeriod: selectedMonthYear.value,
+              month: selectedMonthYear.value,
               limit: 1
             }
           })
@@ -1282,6 +1282,16 @@ usePulseListener("sales_rate:deleted", (data: any) => {
   if (!data) return;
   if (selectedClientId.value && (!data.clientId || Number(data.clientId) === Number(selectedClientId.value))) {
     fetchReportsData();
+  }
+});
+
+usePulseListener("billing.invoice.updated", (data: any) => {
+  if (!data) return;
+  if (Number(data.clientId) === Number(selectedClientId.value) && data.taxPeriod === selectedMonthYear.value) {
+    currentMonthBill.value = {
+      id: Number(data.billId),
+      billNo: data.billNo
+    };
   }
 });
 
