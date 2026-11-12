@@ -109,7 +109,7 @@ const handleClearItem = () => {
     <div class="idp-card p-3 mb-3">
       <div class="row g-2 align-items-center">
         <!-- 1. Client Autocomplete Filter -->
-        <div class="col-lg-4 col-md-6">
+        <div class="col-lg-3 col-md-6">
           <ClientSearchSelect
             :model-value="selectedClientId"
             :clients="clients"
@@ -120,7 +120,7 @@ const handleClearItem = () => {
         </div>
 
         <!-- 2. Smart Year-Tabbed Month Matrix Selector -->
-        <div class="col-lg-3 col-md-6">
+        <div class="col-lg-2 col-md-6">
           <MonthMatrix
             :model-value="selectedMonthYear"
             :available-months="availableMonths"
@@ -170,7 +170,7 @@ const handleClearItem = () => {
         </div>
 
         <!-- 4. Item Search Filter -->
-        <div class="col-lg-2 col-md-4">
+        <div class="col-lg-4 col-md-4">
           <div class="position-relative">
             <i class="bi bi-box-seam position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
             <input
