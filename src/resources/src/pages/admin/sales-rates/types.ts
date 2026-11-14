@@ -6,7 +6,7 @@ export interface SalesRate {
   itemId: number;
   itemName: string;
   itemHsCode: string;
-  unitId: number;
+  unitId: number | null;
   unitName: string;
   salesRate: number;
   vatRate: number;

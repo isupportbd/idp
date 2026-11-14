@@ -8,7 +8,7 @@ const props = defineProps<{
     id: number;
     clientId: string | number;
     itemId: string | number;
-    unitId: number;
+    unitId: number | null;
     salesRate: string | number;
     vatRate: number;
     additionPercent: number;
@@ -258,9 +258,10 @@ const onSubmit = () => {
             <!-- Row 2: Sales Unit & Sales Rate -->
             <div class="col-md-6">
               <div class="d-flex justify-content-between align-items-center mb-2" style="height: 20px;">
-                <label class="form-label text-muted small mb-0">Sales Unit <span class="text-danger">*</span></label>
+                <label class="form-label text-muted small mb-0">Sales Unit</label>
               </div>
               <select v-model="form.unitId" class="form-select idp-input">
+                <option :value="null">Same Unit / No Conversion (Factor: 1.0)</option>
                 <option v-for="u in unitsList" :key="u.id" :value="u.id">
                   {{ u.salesUnit }} (From {{ u.purchaseUnit }} x{{ u.factor }})
                 </option>

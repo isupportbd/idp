@@ -878,9 +878,9 @@ const computeSalesAndStatementReports = () => {
     const rateFactor =
       rateObj?.unitId && unitConversions.value.find((u) => u.id === rateObj.unitId)?.factor
         ? Number(unitConversions.value.find((u) => u.id === rateObj.unitId)!.factor)
-        : rateObj?.factor
+        : rateObj?.factor !== undefined && rateObj?.factor !== null
           ? Number(rateObj.factor)
-          : 0.001;
+          : 1;
 
     const rateVal = rateObj ? (Number(rateObj.salesRate) || 0) * rateFactor : 0;
     const vatRateVal = rateObj ? Number(rateObj.vatRate) || 0 : p.vat && Number(p.vat) > 0 ? 15 : 0;
@@ -941,9 +941,9 @@ const computeSalesAndStatementReports = () => {
     const rateFactor =
       rateObj?.unitId && unitConversions.value.find((u) => u.id === rateObj.unitId)?.factor
         ? Number(unitConversions.value.find((u) => u.id === rateObj.unitId)!.factor)
-        : rateObj?.factor
+        : rateObj?.factor !== undefined && rateObj?.factor !== null
           ? Number(rateObj.factor)
-          : 0.001;
+          : 1;
 
     const rateVal = rateObj ? (Number(rateObj.salesRate) || 0) * rateFactor : 0;
     const vatRateVal = rateObj ? Number(rateObj.vatRate) || 0 : 15;

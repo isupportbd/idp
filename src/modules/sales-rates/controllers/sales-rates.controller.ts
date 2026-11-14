@@ -77,6 +77,7 @@ export const listSalesRates = async (c: AppContext) => {
         itemId: salesRates.itemId,
         itemName: globalItems.name,
         itemHsCode: globalItems.hsCode,
+        itemUnit: globalItems.unit,
         unitId: salesRates.unitId,
         unitName: unitConversions.salesUnit,
         purchaseUnit: unitConversions.purchaseUnit,
@@ -103,7 +104,9 @@ export const listSalesRates = async (c: AppContext) => {
       message: "Sales rates fetched successfully",
       data: rows.map((r) => ({
         ...r,
-        unitName: r.unitName || "MT",
+        unitName: r.unitName || r.itemUnit || "Base Unit",
+        purchaseUnit: r.purchaseUnit || r.itemUnit || "Base Unit",
+        factor: r.factor !== null && r.factor !== undefined ? Number(r.factor) : 1,
         clientBin: r.clientBin || "—",
         itemHsCode: r.itemHsCode || "—"
       })),
@@ -336,6 +339,7 @@ export const getRateHistory = async (c: AppContext) => {
         clientName: clients.companyName,
         itemId: salesRates.itemId,
         itemName: globalItems.name,
+        itemUnit: globalItems.unit,
         unitId: salesRates.unitId,
         unitName: unitConversions.salesUnit,
         salesRate: salesRates.salesRate,
@@ -355,7 +359,7 @@ export const getRateHistory = async (c: AppContext) => {
 
     return c.json({
       success: true,
-      data: rows.map((r) => ({ ...r, unitName: r.unitName || "MT" }))
+      data: rows.map((r) => ({ ...r, unitName: r.unitName || r.itemUnit || "Base Unit" }))
     });
   } catch (err: unknown) {
     console.error("Error fetching rate history:", err);

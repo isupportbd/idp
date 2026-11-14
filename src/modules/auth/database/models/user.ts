@@ -71,3 +71,10 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   refreshTokens: many(refreshTokens)
 }));
+
+export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [refreshTokens.userId],
+    references: [users.id]
+  })
+}));
