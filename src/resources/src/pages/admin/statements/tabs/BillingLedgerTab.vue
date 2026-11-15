@@ -334,6 +334,7 @@ const handleExport = () => {
           :summary="summary"
           :from-month="fromMonth"
           :to-month="toMonth"
+          :selected-reference-id="selectedReferenceId"
           :selected-reference-name="activeReferenceName"
           @select-client="handleSelectClient"
         />
@@ -345,14 +346,21 @@ const handleExport = () => {
 <style scoped>
 @media print {
   .ledger-filter-bar,
+  .d-print-none,
   .btn,
   .badge {
     display: none !important;
   }
+  .billing-ledger-tab {
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
   .card {
-    border: 1px solid #000 !important;
-    background: transparent !important;
+    border: 1px solid #ddd !important;
+    background: #fff !important;
     color: #000 !important;
+    box-shadow: none !important;
   }
 }
 </style>

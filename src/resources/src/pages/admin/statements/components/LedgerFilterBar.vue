@@ -40,7 +40,7 @@ const referenceOptions = computed(() => [
 </script>
 
 <template>
-  <div class="card idp-card mb-4 border-0 shadow-sm p-3 bg-dark bg-opacity-75 ledger-filter-bar">
+  <div class="card idp-card mb-4 border-0 shadow-sm p-3 bg-dark bg-opacity-75 ledger-filter-bar d-print-none">
     <div class="row g-2 align-items-center">
       <!-- Client Autocomplete Search -->
       <div class="col-12 col-md-3">

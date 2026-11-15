@@ -36,7 +36,7 @@ const tabTitle = computed(() => {
 <template>
   <div class="statements-page py-2">
     <!-- Main Header -->
-    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2 d-print-none">
       <div>
         <div class="d-flex align-items-center gap-2 mb-1">
           <router-link to="/" class="text-muted text-decoration-none small">
@@ -56,7 +56,7 @@ const tabTitle = computed(() => {
     </div>
 
     <!-- NextGen Tab Switcher Bar -->
-    <div class="card idp-card border-0 mb-4 p-1 bg-dark bg-opacity-75 statements-tab-bar">
+    <div class="card idp-card border-0 mb-4 p-1 bg-dark bg-opacity-75 statements-tab-bar d-print-none">
       <ul class="nav nav-pills nav-fill gap-1">
         <li class="nav-item">
           <button

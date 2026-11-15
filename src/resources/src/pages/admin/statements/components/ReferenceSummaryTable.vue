@@ -8,12 +8,17 @@ const props = defineProps<{
   summary: LedgerOverallSummary;
   fromMonth: string;
   toMonth: string;
+  selectedReferenceId?: string | number;
   selectedReferenceName?: string;
 }>();
 
 const emit = defineEmits<{
   selectClient: [clientId: number];
 }>();
+
+const showReferenceColumn = computed(() => {
+  return !props.selectedReferenceId || props.selectedReferenceId === "all";
+});
 
 // Framework pagination
 const totalClientsCount = computed(() => props.clientSummaries.length);
@@ -56,17 +61,17 @@ const formatTk = (amount?: number | null): string => {
           <tr class="text-uppercase small text-muted border-bottom border-secondary border-opacity-25" style="background-color: #1a1d21;">
             <th class="ps-3" style="width: 50px;">#</th>
             <th>Client</th>
-            <th style="width: 170px;">Reference</th>
+            <th v-if="showReferenceColumn" style="width: 170px;">Reference</th>
             <th class="text-end" style="width: 140px;">Opening (Tk)</th>
             <th class="text-end" style="width: 140px;">Billed (Tk)</th>
             <th class="text-end" style="width: 140px;">Paid (Tk)</th>
             <th class="text-end" style="width: 160px;">Closing Due (Tk)</th>
-            <th class="text-center pe-3" style="width: 130px;">Action</th>
+            <th class="text-center pe-3 d-print-none" style="width: 130px;">Action</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="clientSummaries.length === 0">
-            <td colspan="8" class="text-center py-5 text-muted">
+            <td :colspan="showReferenceColumn ? 8 : 7" class="text-center py-5 text-muted">
               <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
               No clients found matching the selected filters.
             </td>
@@ -90,8 +95,8 @@ const formatTk = (amount?: number | null): string => {
               </div>
             </td>
 
-            <!-- Reference -->
-            <td>
+            <!-- Reference (Shown only if not filtered by specific reference) -->
+            <td v-if="showReferenceColumn">
               <span class="badge bg-secondary bg-opacity-25 text-warning border border-secondary border-opacity-25">
                 {{ cl.referenceName }}
               </span>
@@ -120,7 +125,7 @@ const formatTk = (amount?: number | null): string => {
             </td>
 
             <!-- Action: View Button Only -->
-            <td class="text-center pe-3">
+            <td class="text-center pe-3 d-print-none">
               <button
                 type="button"
                 class="action-btn btn-view"
@@ -136,7 +141,7 @@ const formatTk = (amount?: number | null): string => {
         <!-- Grand Total Footer Row -->
         <tfoot v-if="clientSummaries.length > 0">
           <tr class="fw-bold text-uppercase small border-top border-secondary border-opacity-25" style="background-color: #1a1d21;">
-            <td colspan="3" class="ps-3 text-light">
+            <td :colspan="showReferenceColumn ? 3 : 2" class="ps-3 text-light">
               <span>Grand Total ({{ clientSummaries.length }} Clients)</span>
             </td>
             <td class="text-end text-muted fw-bold">
@@ -151,14 +156,14 @@ const formatTk = (amount?: number | null): string => {
             <td class="text-end fw-bolder" :class="summary.closingBalance > 0 ? 'text-danger' : 'text-success'">
               ৳ {{ formatTk(summary.closingBalance) }}
             </td>
-            <td class="pe-3 text-center text-muted">—</td>
+            <td class="pe-3 text-center text-muted d-print-none">—</td>
           </tr>
         </tfoot>
       </table>
     </div>
 
     <!-- Framework Pagination Bar -->
-    <div v-if="clientSummaries.length > 0" class="d-flex flex-wrap justify-content-between align-items-center p-3 border-top border-secondary border-opacity-25">
+    <div v-if="clientSummaries.length > 0" class="d-flex flex-wrap justify-content-between align-items-center p-3 border-top border-secondary border-opacity-25 d-print-none">
       <span class="text-muted small">
         Showing <strong>{{ (currentPage - 1) * itemsPerPage + 1 }}</strong> to
         <strong>{{ Math.min(currentPage * itemsPerPage, clientSummaries.length) }}</strong> of
