@@ -341,13 +341,12 @@ const handlePrint = () => {
         <thead>
           <tr>
             <th style="width: 35px;" class="text-center">#</th>
-            <th style="width: 85px;">Date</th>
-            <th style="width: 80px;">Period</th>
+            <th style="width: 90px;">Date</th>
+            <th style="width: 85px;">Period</th>
             <th>Particulars / Description</th>
-            <th style="width: 110px;">Ref No</th>
-            <th style="width: 95px;" class="text-end">Billed (Tk)</th>
-            <th style="width: 95px;" class="text-end">Paid (Tk)</th>
-            <th style="width: 110px;" class="text-end">Balance (Tk)</th>
+            <th style="width: 105px;" class="text-end">Billed (Tk)</th>
+            <th style="width: 105px;" class="text-end">Paid (Tk)</th>
+            <th style="width: 120px;" class="text-end">Balance (Tk)</th>
           </tr>
         </thead>
         <tbody>
@@ -357,7 +356,6 @@ const handlePrint = () => {
               <td>${t.date}</td>
               <td>${t.taxPeriod || "-"}</td>
               <td>${t.description}</td>
-              <td>${t.refNo || "-"}</td>
               <td class="text-end">${t.debit > 0 ? formatTkStr(t.debit) : "-"}</td>
               <td class="text-end">${t.credit > 0 ? formatTkStr(t.credit) : "-"}</td>
               <td class="text-end fw-bold ${t.balance > 0 ? 'text-danger' : (t.balance < 0 ? 'text-primary' : 'text-success')}">${formatBalanceWithTag(t.balance)}</td>
@@ -366,7 +364,7 @@ const handlePrint = () => {
         </tbody>
         <tfoot>
           <tr class="total-row">
-            <td colspan="5" class="text-end fw-bold pe-3">Total for ${activeReferenceName.value}:</td>
+            <td colspan="4" class="text-end fw-bold pe-3">Total for ${activeReferenceName.value}:</td>
             <td class="text-end fw-bold">৳ ${formatTkStr(summary.value.totalBilled)}</td>
             <td class="text-end fw-bold">৳ ${formatTkStr(summary.value.totalPaid)}</td>
             <td class="text-end fw-bold ${summary.value.closingBalance > 0 ? 'text-danger' : (summary.value.closingBalance < 0 ? 'text-primary' : 'text-success')}">৳ ${formatBalanceWithTag(summary.value.closingBalance)}</td>

@@ -442,7 +442,7 @@ export const getClientLedgerStatement = async (c: AppContext) => {
           debit: data.totalBilled,
           credit: 0,
           refNo: "—",
-          description: `Monthly VAT Service Bills (${period})`
+          description: "Monthly VAT Service Bills"
         });
       }
 
@@ -455,7 +455,7 @@ export const getClientLedgerStatement = async (c: AppContext) => {
           debit: 0,
           credit: data.totalCollected,
           refNo: "—",
-          description: `Total Collections Received (${period})`
+          description: "Total Collections Received"
         });
       }
 
@@ -468,7 +468,7 @@ export const getClientLedgerStatement = async (c: AppContext) => {
         date: `${fromMonth}-01`,
         taxPeriod: "—",
         refNo: "—",
-        description: `Opening Balance as of ${fromMonth}`,
+        description: "Opening Balance",
         debit: 0,
         credit: 0,
         balance: Math.round(overallOpening * 100) / 100,
