@@ -85,6 +85,7 @@ export interface MissingBillItem {
 
 export interface BillingStats {
   totalInvoicesCount: number;
+  totalPreviousDueAmount?: number;
   totalBilledAmount: number;
   totalPaidAmount: number;
   totalDueAmount: number;
@@ -101,6 +102,7 @@ const cachedCollections = ref<Collection[]>([]);
 const cachedMissingBills = ref<MissingBillItem[]>([]);
 const cachedStats = ref<BillingStats>({
   totalInvoicesCount: 0,
+  totalPreviousDueAmount: 0,
   totalBilledAmount: 0,
   totalPaidAmount: 0,
   totalDueAmount: 0,

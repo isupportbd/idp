@@ -2,6 +2,7 @@
 defineProps<{
   activeTab: string;
   stats: {
+    totalPreviousDueAmount?: number;
     totalBilledAmount: number;
     totalInvoicesCount: number;
     totalDueAmount: number;
@@ -19,9 +20,23 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="row g-3 mb-3 d-print-none">
+  <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-5 g-3 mb-3 d-print-none">
+    <!-- Previous Due -->
+    <div class="col">
+      <div class="stat-pill">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="text-muted stat-label">Previous Due</span>
+          <i class="bi bi-clock-history text-info"></i>
+        </div>
+        <div class="stat-val text-white">
+          {{ (stats.totalPreviousDueAmount || 0).toLocaleString() }} <span class="fs-6 fw-normal text-muted">Tk</span>
+        </div>
+        <div class="text-secondary small mt-1 font-monospace">Pre-Period unadjusted</div>
+      </div>
+    </div>
+
     <!-- Total Invoices -->
-    <div class="col-6 col-md-3">
+    <div class="col">
       <div
         class="stat-pill cursor-pointer"
         :class="{ 'stat-pill-active': activeTab === 'invoices' }"
@@ -37,7 +52,7 @@ const emit = defineEmits<{
     </div>
 
     <!-- Total Collections -->
-    <div class="col-6 col-md-3">
+    <div class="col">
       <div
         class="stat-pill cursor-pointer"
         :class="{ 'stat-pill-active': activeTab === 'collections' }"
@@ -53,7 +68,7 @@ const emit = defineEmits<{
     </div>
 
     <!-- Total Outstanding Dues -->
-    <div class="col-6 col-md-3">
+    <div class="col">
       <div
         class="stat-pill cursor-pointer"
         :class="{ 'stat-pill-active': activeTab === 'dues' }"
@@ -69,7 +84,7 @@ const emit = defineEmits<{
     </div>
 
     <!-- Missing Bills -->
-    <div class="col-6 col-md-3">
+    <div class="col">
       <div
         class="stat-pill cursor-pointer"
         :class="{ 'stat-pill-active': activeTab === 'missing' }"

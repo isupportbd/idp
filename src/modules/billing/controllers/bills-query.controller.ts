@@ -67,6 +67,7 @@ export const listBills = async (c: AppContext) => {
     const [statsResult] = await db
       .select({
         totalInvoicesCount: sql<number>`count(*)::int`,
+        totalPreviousDueAmount: sql<number>`coalesce(sum(${bills.previousDue}), 0)::float`,
         totalBilledAmount: sql<number>`coalesce(sum(${bills.subtotal} - ${bills.discountAmount}), 0)::float`,
         totalPaidAmount: sql<number>`coalesce(sum(${bills.paidAmount}), 0)::float`,
         totalDueAmount: sql<number>`coalesce(sum(${bills.dueAmount}), 0)::float`,
@@ -138,6 +139,7 @@ export const listBills = async (c: AppContext) => {
     const totalCount = statsResult?.totalInvoicesCount || 0;
     const stats = {
       totalInvoicesCount: totalCount,
+      totalPreviousDueAmount: r2(statsResult?.totalPreviousDueAmount || 0),
       totalBilledAmount: r2(statsResult?.totalBilledAmount || 0),
       totalPaidAmount: r2(statsResult?.totalPaidAmount || 0),
       totalDueAmount: r2(statsResult?.totalDueAmount || 0),

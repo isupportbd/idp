@@ -18,9 +18,7 @@ const formatTk = (amount: number): string => {
       <div class="card idp-card h-100 border-0 p-3 shadow-sm">
         <div class="d-flex align-items-center justify-content-between mb-2">
           <span class="stat-label text-muted">Opening Balance</span>
-          <span class="badge bg-secondary bg-opacity-25 text-info border border-info border-opacity-25 px-2 py-1">
-            <i class="bi bi-clock-history me-1"></i>Pre-Period
-          </span>
+          <i class="bi bi-clock-history text-info fs-5"></i>
         </div>
         <div class="stat-val text-white">
           {{ formatTk(summary.openingBalance) }} <span class="fs-6 text-muted fw-normal">Tk</span>
@@ -34,9 +32,7 @@ const formatTk = (amount: number): string => {
       <div class="card idp-card h-100 border-0 p-3 shadow-sm">
         <div class="d-flex align-items-center justify-content-between mb-2">
           <span class="stat-label text-muted">Total Invoiced</span>
-          <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-25 px-2 py-1">
-            <i class="bi bi-receipt me-1"></i>Debit (+)
-          </span>
+          <i class="bi bi-receipt text-primary fs-5"></i>
         </div>
         <div class="stat-val text-primary">
           {{ formatTk(summary.totalBilled) }} <span class="fs-6 text-muted fw-normal">Tk</span>
@@ -50,9 +46,7 @@ const formatTk = (amount: number): string => {
       <div class="card idp-card h-100 border-0 p-3 shadow-sm">
         <div class="d-flex align-items-center justify-content-between mb-2">
           <span class="stat-label text-muted">Total Collections</span>
-          <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25 px-2 py-1">
-            <i class="bi bi-check-circle me-1"></i>Credit (-)
-          </span>
+          <i class="bi bi-check-circle-fill text-success fs-5"></i>
         </div>
         <div class="stat-val text-success">
           {{ formatTk(summary.totalPaid) }} <span class="fs-6 text-muted fw-normal">Tk</span>
@@ -66,13 +60,10 @@ const formatTk = (amount: number): string => {
       <div class="card idp-card h-100 border-0 p-3 shadow-sm">
         <div class="d-flex align-items-center justify-content-between mb-2">
           <span class="stat-label text-muted">Closing Balance</span>
-          <span
-            class="badge px-2 py-1"
-            :class="summary.closingBalance > 0 ? 'bg-danger bg-opacity-25 text-danger border border-danger border-opacity-25' : 'bg-success bg-opacity-25 text-success border border-success border-opacity-25'"
-          >
-            <i class="bi me-1" :class="summary.closingBalance > 0 ? 'bi-exclamation-circle' : 'bi-shield-check'"></i>
-            {{ summary.closingBalance > 0 ? 'Total Due' : 'Cleared' }}
-          </span>
+          <i
+            class="bi fs-5"
+            :class="summary.closingBalance > 0 ? 'bi-exclamation-octagon text-danger' : 'bi-shield-check text-success'"
+          ></i>
         </div>
         <div
           class="stat-val"
