@@ -12,6 +12,18 @@ import LedgerTransactionsTable from "../components/LedgerTransactionsTable.vue";
 import ReferenceSummaryTable from "../components/ReferenceSummaryTable.vue";
 import type { ClientLedgerSummary, CustomerTypeOption, LedgerOverallSummary, LedgerTransaction, ReferenceOption } from "../types";
 
+// Module-level persistent cache for 0ms instantaneous switching without layout reflow
+const cachedSummary = ref<LedgerOverallSummary>({
+  totalClients: 0,
+  openingBalance: 0,
+  totalBilled: 0,
+  totalPaid: 0,
+  closingBalance: 0
+});
+const cachedClientSummaries = ref<ClientLedgerSummary[]>([]);
+const cachedTransactions = ref<LedgerTransaction[]>([]);
+const hasLoadedLedgerOnce = ref(false);
+
 const route = useRoute();
 const router = useRouter();
 const masterStore = useMasterDataStore();
@@ -75,20 +87,14 @@ const syncFiltersAndUrl = () => {
   } catch {}
 };
 
-// Data State
+// Data State (linked with persistent module cache)
 const isLoading = ref(false);
 const errorMessage = ref("");
 const customerTypes = ref<CustomerTypeOption[]>([]);
 const references = ref<ReferenceOption[]>([]);
-const summary = ref<LedgerOverallSummary>({
-  totalClients: 0,
-  openingBalance: 0,
-  totalBilled: 0,
-  totalPaid: 0,
-  closingBalance: 0
-});
-const clientSummaries = ref<ClientLedgerSummary[]>([]);
-const transactions = ref<LedgerTransaction[]>([]);
+const summary = cachedSummary;
+const clientSummaries = cachedClientSummaries;
+const transactions = cachedTransactions;
 
 // Permissions
 const canExport = computed(() => can("statements.export") || can("billing.view") || true);
@@ -262,7 +268,10 @@ const handleExport = () => {
 
 <template>
   <div class="billing-ledger-tab">
-    <!-- Filter Bar -->
+    <!-- 1. Summary KPI Cards (At the Top) -->
+    <LedgerSummaryCards :summary="summary" />
+
+    <!-- 2. Search & Filter Bar (Below Cards) -->
     <LedgerFilterBar
       v-model:client-id="selectedClientId"
       v-model:customer-type-id="selectedCustomerTypeId"
@@ -283,9 +292,6 @@ const handleExport = () => {
       <i class="bi bi-exclamation-triangle-fill"></i>
       <span>{{ errorMessage }}</span>
     </div>
-
-    <!-- Summary KPI Cards -->
-    <LedgerSummaryCards :summary="summary" />
 
     <!-- Loading State -->
     <div v-if="isLoading" class="text-center py-5">
