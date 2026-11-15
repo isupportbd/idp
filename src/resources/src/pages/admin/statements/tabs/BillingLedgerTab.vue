@@ -250,7 +250,7 @@ const handleExport = () => {
     // Export multi-client overview
     const isRefFiltered = selectedReferenceId.value && selectedReferenceId.value !== "all";
 
-    const rows = clientSummaries.value.map((cl, i) => {
+    const rows: Record<string, any>[] = clientSummaries.value.map((cl, i) => {
       const row: Record<string, any> = {
         "#": i + 1,
         Client: cl.companyName,
@@ -270,8 +270,33 @@ const handleExport = () => {
       return row;
     });
 
+    // Add Total summary row at the bottom matching exact format
+    const totalRow: Record<string, any> = {
+      "#": "",
+      Client: "Total =",
+      BIN: ""
+    };
+    if (!isRefFiltered) {
+      totalRow["Reference"] = "";
+    }
+    totalRow["Opening (Tk)"] = summary.value.openingBalance;
+    totalRow["Billed (Tk)"] = summary.value.totalBilled;
+    totalRow["Paid (Tk)"] = summary.value.totalPaid;
+    totalRow["Closing Due (Tk)"] = summary.value.closingBalance;
+    rows.push(totalRow);
+
+    // Explicit widths optimized for standard A4 portrait sheet
+    const colWidths = isRefFiltered
+      ? [6, 36, 18, 14, 14, 12, 16] // #, Client, BIN, Opening, Billed, Paid, Closing Due
+      : [6, 32, 16, 20, 14, 14, 12, 16]; // #, Client, BIN, Reference, Opening, Billed, Paid, Closing Due
+
     const refTag = activeReferenceName.value ? `_${activeReferenceName.value.replace(/[^a-zA-Z0-9_-]/g, "_")}` : "";
-    exportSingleSheet(rows, "Client Ledger Summary", `Ledger_Overview${refTag}_${fromMonth.value}_to_${toMonth.value}.xlsx`);
+    exportSingleSheet(
+      rows,
+      "Client Ledger Summary",
+      `Ledger_Overview${refTag}_${fromMonth.value}_to_${toMonth.value}.xlsx`,
+      { colWidths }
+    );
   }
 };
 </script>
