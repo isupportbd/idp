@@ -248,19 +248,29 @@ const handleExport = () => {
     exportSingleSheet(rows, "Client Ledger", `Ledger_${safeName}_${fromMonth.value}_to_${toMonth.value}.xlsx`);
   } else {
     // Export multi-client overview
-    const rows = clientSummaries.value.map((cl, i) => ({
-      "#": i + 1,
-      Client: cl.companyName,
-      BIN: cl.binNumber,
-      Mobile: cl.mobile,
-      Reference: cl.referenceName,
-      "Opening (Tk)": cl.openingBalance,
-      "Billed (Tk)": cl.totalBilled,
-      "Paid (Tk)": cl.totalPaid,
-      "Closing Due (Tk)": cl.closingBalance
-    }));
+    const isRefFiltered = selectedReferenceId.value && selectedReferenceId.value !== "all";
 
-    const refTag = activeReferenceName.value ? `_${activeReferenceName.value}` : "";
+    const rows = clientSummaries.value.map((cl, i) => {
+      const row: Record<string, any> = {
+        "#": i + 1,
+        Client: cl.companyName,
+        BIN: cl.binNumber
+      };
+
+      // Only include Reference column when not filtered by a specific reference
+      if (!isRefFiltered) {
+        row["Reference"] = cl.referenceName;
+      }
+
+      row["Opening (Tk)"] = cl.openingBalance;
+      row["Billed (Tk)"] = cl.totalBilled;
+      row["Paid (Tk)"] = cl.totalPaid;
+      row["Closing Due (Tk)"] = cl.closingBalance;
+
+      return row;
+    });
+
+    const refTag = activeReferenceName.value ? `_${activeReferenceName.value.replace(/[^a-zA-Z0-9_-]/g, "_")}` : "";
     exportSingleSheet(rows, "Client Ledger Summary", `Ledger_Overview${refTag}_${fromMonth.value}_to_${toMonth.value}.xlsx`);
   }
 };
