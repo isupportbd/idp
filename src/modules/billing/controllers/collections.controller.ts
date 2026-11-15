@@ -25,7 +25,7 @@ export const listCollections = async (c: AppContext) => {
       conditions.push(eq(clients.createdBy, tenantAdminId));
     }
     if (query.month && query.month !== "all") {
-      conditions.push(sql`coalesce(${bills.taxPeriod}, to_char(${collections.collectionDate}, 'YYYY-MM')) = ${query.month}`);
+      conditions.push(sql`to_char(${collections.collectionDate}, 'YYYY-MM') = ${query.month}`);
     }
     if (query.clientId && query.clientId !== "all") {
       conditions.push(eq(collections.clientId, Number(query.clientId)));
@@ -182,6 +182,44 @@ export const createCollection = async (c: AppContext) => {
             updatedAt: new Date()
           })
           .where(eq(bills.id, billId));
+
+        // When an earlier month's bill receives a collection, cascade update any subsequent active
+        // unpaid/partial bills for this client so their previousDue, grandTotal, and dueAmount reflect the payment.
+        const currentBill = (await tx.select({ taxPeriod: bills.taxPeriod }).from(bills).where(eq(bills.id, billId)).limit(1))[0];
+        if (currentBill?.taxPeriod) {
+          const subsequentBills = await tx
+            .select({ id: bills.id, subtotal: bills.subtotal, discountAmount: bills.discountAmount, paidAmount: bills.paidAmount })
+            .from(bills)
+            .where(
+              and(
+                eq(bills.clientId, clientId),
+                sql`${bills.taxPeriod} > ${currentBill.taxPeriod}`,
+                sql`${bills.status} != 'cancelled'`
+              )
+            )
+            .orderBy(asc(bills.taxPeriod), asc(bills.id));
+
+          for (const sb of subsequentBills) {
+            const netSubtotal = Math.max(0, (Number(sb.subtotal) || 0) - (Number(sb.discountAmount) || 0));
+            // Fresh previous due before this bill is the live due of the preceding bills + opening balance
+            const clientDueBefore = await getClientRunningDue(clientId, sb.id);
+            const newGrand = r2(netSubtotal + clientDueBefore);
+            const paid = Number(sb.paidAmount) || 0;
+            const newDue = r2(Math.max(0, newGrand - paid));
+            const newStatus = newDue <= 0 ? "paid" : (paid > 0 ? "partial" : "unpaid");
+
+            await tx
+              .update(bills)
+              .set({
+                previousDue: clientDueBefore,
+                grandTotal: newGrand,
+                dueAmount: newDue,
+                status: newStatus,
+                updatedAt: new Date()
+              })
+              .where(eq(bills.id, sb.id));
+          }
+        }
       } else {
         // General Account Payment (not tied to a specific bill):
         // Automatically allocate payment to the client's latest active bill

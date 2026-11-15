@@ -79,37 +79,6 @@ export const listBills = async (c: AppContext) => {
     }
     const clientScopeWhere = clientScopeConditions.length > 0 ? and(...clientScopeConditions) : undefined;
 
-    // Compute live previous due: exact unadjusted/remaining dues from prior bills before current month
-    let livePreviousDue = 0;
-    if (month && month !== "all") {
-      const priorConditions: SQL[] = [
-        sql`${bills.taxPeriod} < ${month}`,
-        sql`${bills.status} != 'cancelled'`
-      ];
-      if (!isSuperAdmin && tenantAdminId) {
-        priorConditions.push(eq(clients.createdBy, tenantAdminId));
-      }
-      if (query.clientId && query.clientId !== "all") {
-        priorConditions.push(eq(bills.clientId, Number(query.clientId)));
-      }
-      if (query.customerTypeId && query.customerTypeId !== "all") {
-        priorConditions.push(eq(clients.customerTypeId, Number(query.customerTypeId)));
-      }
-      if (query.referenceId && query.referenceId !== "all") {
-        priorConditions.push(eq(clients.referenceId, Number(query.referenceId)));
-      }
-
-      const [priorStats] = await db
-        .select({
-          priorDue: sql<number>`coalesce(sum(${bills.dueAmount}), 0)::float`
-        })
-        .from(bills)
-        .leftJoin(clients, eq(bills.clientId, clients.id))
-        .where(and(...priorConditions));
-
-      livePreviousDue = priorStats?.priorDue || 0;
-    }
-
     // Fast SQL summary statistics across all matching records
     const [statsResult] = await db
       .select({
@@ -186,7 +155,7 @@ export const listBills = async (c: AppContext) => {
     const totalCount = statsResult?.totalInvoicesCount || 0;
     const stats = {
       totalInvoicesCount: totalCount,
-      totalPreviousDueAmount: r2(month && month !== "all" ? livePreviousDue : (statsResult?.totalPreviousDueAmount || 0)),
+      totalPreviousDueAmount: r2(statsResult?.totalPreviousDueAmount || 0),
       totalBilledAmount: r2(statsResult?.totalBilledAmount || 0),
       totalPaidAmount: r2(statsResult?.totalPaidAmount || 0),
       totalDueAmount: r2(statsResult?.totalDueAmount || 0),
