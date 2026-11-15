@@ -81,11 +81,11 @@ const formatTk = (amount?: number | null): string => {
             <th class="ps-3" style="width: 50px;">#</th>
             <th>Client</th>
             <th v-if="showReferenceColumn" style="width: 170px;">Reference</th>
-            <th class="text-end" style="width: 140px;">Opening (Tk)</th>
-            <th class="text-end" style="width: 140px;">Billed (Tk)</th>
-            <th class="text-end" style="width: 140px;">Paid (Tk)</th>
-            <th class="text-end" style="width: 160px;">Closing Balance (Tk)</th>
-            <th class="text-center pe-3 d-print-none" style="width: 130px;">Action</th>
+            <th class="text-end text-nowrap" style="width: 140px;">Opening (Tk)</th>
+            <th class="text-end text-nowrap" style="width: 130px;">Billed (Tk)</th>
+            <th class="text-end text-nowrap" style="width: 130px;">Paid (Tk)</th>
+            <th class="text-end text-nowrap" style="width: 220px;">Closing Balance (Tk)</th>
+            <th class="text-center pe-3 d-print-none" style="width: 90px;">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -137,7 +137,7 @@ const formatTk = (amount?: number | null): string => {
             </td>
 
             <!-- Closing Due Balance -->
-            <td class="text-end fw-bold" style="font-size: 0.95rem;">
+            <td class="text-end fw-bold text-nowrap" style="font-size: 0.95rem;">
               <span :class="cl.closingBalance > 0 ? 'text-danger' : (cl.closingBalance < 0 ? 'text-info' : 'text-success')">
                 {{ formatTk(Math.abs(cl.closingBalance)) }}
                 <span class="small fw-semibold ms-1" style="font-size: 0.72rem;">
