@@ -89,6 +89,7 @@ export interface BillingStats {
   totalBilledAmount: number;
   totalPaidAmount: number;
   totalDueAmount: number;
+  periodicDueAmount?: number;
   paidCount: number;
   unpaidCount: number;
   partialCount: number;
@@ -106,6 +107,7 @@ const cachedStats = ref<BillingStats>({
   totalBilledAmount: 0,
   totalPaidAmount: 0,
   totalDueAmount: 0,
+  periodicDueAmount: 0,
   paidCount: 0,
   unpaidCount: 0,
   partialCount: 0
