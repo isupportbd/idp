@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from "vue";
+import StatusBadge from "@/components/common/StatusBadge.vue";
 import type { Collection } from "@/composables/useBillingApi";
 
 defineProps<{
@@ -58,34 +59,40 @@ onBeforeUnmount(() => {
       <thead>
         <tr>
           <th style="width: 15%;">Receipt No</th>
-          <th style="width: 30%;">Client Organization & BIN</th>
-          <th style="width: 15%;">Date</th>
-          <th style="width: 15%;">Payment Mode</th>
-          <th style="width: 15%; text-align: right;">Amount (Tk)</th>
-          <th style="width: 10%; text-align: right;" class="d-print-none">Actions</th>
+          <th style="width: 27%;">Client Organization & BIN</th>
+          <th style="width: 13%;">Date</th>
+          <th style="width: 14%;">Payment Mode</th>
+          <th style="width: 13%; text-align: right;">Amount (Tk)</th>
+          <th style="width: 10%; text-align: center;">Status</th>
+          <th style="width: 8%; text-align: right;" class="d-print-none">Actions</th>
         </tr>
       </thead>
       <tbody>
         <tr v-if="loading && collections.length === 0">
-          <td colspan="6" class="text-center py-4 text-muted">
+          <td colspan="7" class="text-center py-4 text-muted">
             <div class="spinner-border spinner-border-sm text-primary me-2"></div>
             Loading payment receipts...
           </td>
         </tr>
 
         <tr v-else-if="collections.length === 0">
-          <td colspan="6" class="text-center py-5 text-muted">
+          <td colspan="7" class="text-center py-5 text-muted">
             <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
             No payment receipts recorded for {{ selectedMonth }}.
           </td>
         </tr>
 
-        <tr v-for="col in collections" :key="col.id">
+        <tr
+          v-for="col in collections"
+          :key="col.id"
+          :class="{ 'opacity-75 bg-danger bg-opacity-10': col.status === 'cancelled' }"
+        >
           <!-- Receipt No -->
           <td>
             <router-link
               :to="`/admin/billing/receipts/${col.id}`"
-              class="font-monospace fw-bold text-success text-decoration-none hover-underline"
+              class="font-monospace fw-bold text-decoration-none hover-underline"
+              :class="col.status === 'cancelled' ? 'text-decoration-line-through text-danger' : 'text-success'"
               style="font-size: 0.88rem;"
               title="View Money Receipt"
             >
@@ -121,7 +128,17 @@ onBeforeUnmount(() => {
 
           <!-- Amount -->
           <td style="text-align: right;">
-            <span class="font-monospace fw-bold text-success fs-6">{{ col.amount.toFixed(2) }}</span>
+            <span
+              class="font-monospace fw-bold fs-6"
+              :class="col.status === 'cancelled' ? 'text-muted text-decoration-line-through' : 'text-success'"
+            >
+              {{ col.amount.toFixed(2) }}
+            </span>
+          </td>
+
+          <!-- Status -->
+          <td style="text-align: center;">
+            <StatusBadge :status="col.status" />
           </td>
 
           <!-- Actions -->
