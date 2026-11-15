@@ -10,10 +10,12 @@ const props = defineProps<{
   toMonth: string;
   selectedReferenceId?: string | number;
   selectedReferenceName?: string;
+  viewMode?: "client" | "summary";
 }>();
 
 const emit = defineEmits<{
   selectClient: [clientId: number];
+  "update:viewMode": [mode: "client" | "summary"];
 }>();
 
 const showReferenceColumn = computed(() => {
@@ -40,7 +42,7 @@ const formatTk = (amount?: number | null): string => {
 
 <template>
   <div class="card idp-card border-0 shadow-sm overflow-hidden reference-summary-card">
-    <div class="card-header bg-dark bg-opacity-75 p-3 border-bottom border-secondary border-opacity-25 d-flex align-items-center justify-content-between">
+    <div class="card-header bg-dark bg-opacity-75 p-3 border-bottom border-secondary border-opacity-25 d-flex align-items-center justify-content-between flex-wrap gap-2">
       <div>
         <h5 class="mb-1 text-light fw-bold d-flex align-items-center gap-2">
           <i class="bi bi-people-fill text-warning"></i>
@@ -50,8 +52,25 @@ const formatTk = (amount?: number | null): string => {
           Showing balances for <strong class="text-light">{{ clientSummaries.length }}</strong> clients ({{ fromMonth }} to {{ toMonth }})
         </div>
       </div>
-      <div class="small text-muted">
-        Total Due: <strong class="text-danger fs-6 fw-bold">৳ {{ formatTk(summary.closingBalance) }}</strong>
+
+      <!-- View Switcher Segmented Control (Shown when Reference is filtered) -->
+      <div v-if="selectedReferenceId && selectedReferenceId !== 'all'" class="d-print-none d-flex align-items-center gap-1 bg-dark p-1 rounded border border-secondary border-opacity-50">
+        <button
+          type="button"
+          class="btn btn-sm px-3 py-1 fw-medium transition-all"
+          :class="viewMode === 'client' ? 'btn-primary shadow-sm text-white' : 'btn-dark text-muted border-0'"
+          @click="emit('update:viewMode', 'client')"
+        >
+          <i class="bi bi-person-lines-fill me-1"></i> Client Basis
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm px-3 py-1 fw-medium transition-all"
+          :class="viewMode === 'summary' ? 'btn-primary shadow-sm text-white' : 'btn-dark text-muted border-0'"
+          @click="emit('update:viewMode', 'summary')"
+        >
+          <i class="bi bi-journal-text me-1"></i> Summary Ledger
+        </button>
       </div>
     </div>
 

@@ -304,7 +304,7 @@ export const getClientLedgerStatement = async (c: AppContext) => {
           taxPeriod: entry.taxPeriod,
           refNo: entry.refNo,
           description: entry.description,
-          paymentMethod: entry.paymentMethod,
+          paymentMethod: entry.paymentMethod || undefined,
           debit: entry.debit,
           credit: entry.credit,
           balance: running,
@@ -345,6 +345,113 @@ export const getClientLedgerStatement = async (c: AppContext) => {
     // Sort client summaries by highest closing balance (or name)
     clientSummaries.sort((a, b) => b.closingBalance - a.closingBalance);
 
+    // If a reference was filtered (e.g. Satish Chandra Das), build combined reference transactions
+    let referenceTransactions: LedgerTransaction[] = [];
+    if (referenceIdParam && matchedClients.length > 0 && !clientIdParam) {
+      const combinedRaw: Array<{
+        type: "bill" | "collection";
+        timestamp: number;
+        dateStr: string;
+        taxPeriod: string;
+        refNo: string;
+        description: string;
+        companyName: string;
+        paymentMethod?: string | null;
+        debit: number;
+        credit: number;
+        status: string;
+        billId?: number | null;
+        receiptId?: number | null;
+      }> = [];
+
+      for (const cl of matchedClients) {
+        const inPeriodBills = allBills.filter((b) => b.clientId === cl.id && b.taxPeriod >= fromMonth && b.taxPeriod <= toMonth);
+        const inPeriodCollections = allCollections.filter(
+          (c) => c.clientId === cl.id && c.status === "completed" && new Date(c.collectionDate) >= fromDate && new Date(c.collectionDate) <= toDate
+        );
+
+        inPeriodBills.forEach((b) => {
+          const bDate = new Date(b.billDate);
+          const currentBilled = Math.max(0, (b.subtotal || 0) - (b.discountAmount || 0));
+          combinedRaw.push({
+            type: "bill",
+            timestamp: bDate.getTime(),
+            dateStr: bDate.toISOString().slice(0, 10),
+            taxPeriod: b.taxPeriod,
+            refNo: b.billNo,
+            description: `Monthly VAT Service Bill (${b.taxPeriod})`,
+            companyName: cl.companyName,
+            debit: Math.round(currentBilled * 100) / 100,
+            credit: 0,
+            status: b.status,
+            billId: b.id
+          });
+        });
+
+        inPeriodCollections.forEach((col) => {
+          const cDate = new Date(col.collectionDate);
+          const methodStr = (col.paymentMethod || "CASH").toUpperCase();
+          const refStr = col.referenceNo ? ` (${col.referenceNo})` : "";
+          combinedRaw.push({
+            type: "collection",
+            timestamp: cDate.getTime(),
+            dateStr: cDate.toISOString().slice(0, 10),
+            taxPeriod: col.billTaxPeriod || cDate.toISOString().slice(0, 7),
+            refNo: col.receiptNo,
+            description: `Payment Received via ${methodStr}${refStr}`,
+            companyName: cl.companyName,
+            paymentMethod: col.paymentMethod,
+            debit: 0,
+            credit: Math.round((Number(col.amount) || 0) * 100) / 100,
+            status: col.status,
+            billId: col.billId,
+            receiptId: col.id
+          });
+        });
+      }
+
+      // Chronological sort
+      combinedRaw.sort((a, b) => {
+        if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+        if (a.type === "bill" && b.type === "collection") return -1;
+        if (a.type === "collection" && b.type === "bill") return 1;
+        return 0;
+      });
+
+      let refRunning = overallOpening;
+      referenceTransactions.push({
+        id: `ref-open-${referenceIdParam}`,
+        type: "opening",
+        date: `${fromMonth}-01`,
+        taxPeriod: "—",
+        refNo: "—",
+        description: `Opening Balance as of ${fromMonth}`,
+        debit: 0,
+        credit: 0,
+        balance: Math.round(overallOpening * 100) / 100,
+        status: "settled"
+      });
+
+      combinedRaw.forEach((entry, idx) => {
+        refRunning = Math.round((refRunning + entry.debit - entry.credit) * 100) / 100;
+        referenceTransactions.push({
+          id: `ref-${entry.type}-${entry.billId || entry.receiptId}-${idx}`,
+          type: entry.type,
+          date: entry.dateStr,
+          taxPeriod: entry.taxPeriod,
+          refNo: entry.refNo,
+          description: `${entry.description} - ${entry.companyName}`,
+          paymentMethod: entry.paymentMethod || undefined,
+          debit: entry.debit,
+          credit: entry.credit,
+          balance: refRunning,
+          status: entry.status,
+          billId: entry.billId,
+          receiptId: entry.receiptId
+        });
+      });
+    }
+
     // If only one client was matched and not explicitly via clientId param, expose its transactions
     if (clientSummaries.length === 1 && singleClientTransactions.length === 0) {
       singleClientTransactions = clientSummaries[0].transactions || [];
@@ -362,7 +469,8 @@ export const getClientLedgerStatement = async (c: AppContext) => {
           closingBalance: Math.round(overallClosing * 100) / 100
         },
         clientSummaries,
-        transactions: singleClientTransactions
+        transactions: singleClientTransactions.length > 0 ? singleClientTransactions : referenceTransactions,
+        referenceTransactions
       }
     });
   } catch (error) {

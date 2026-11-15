@@ -6,6 +6,13 @@ defineProps<{
   client: ClientLedgerSummary | null;
   fromMonth: string;
   toMonth: string;
+  referenceName?: string;
+  isReferenceView?: boolean;
+  viewMode?: "client" | "summary";
+}>();
+
+const emit = defineEmits<{
+  "update:viewMode": [mode: "client" | "summary"];
 }>();
 
 const formatTk = (amount?: number | null): string => {
@@ -25,10 +32,10 @@ const getStatusBadge = (status: string, type: string) => {
 
 <template>
   <div class="card idp-card border-0 shadow-sm overflow-hidden ledger-transactions-card">
-    <!-- Header with Client Info -->
-    <div v-if="client" class="card-header bg-dark bg-opacity-75 p-3 border-bottom border-secondary border-opacity-25">
+    <!-- Header with Client Info or Reference Summary Info -->
+    <div v-if="client || isReferenceView" class="card-header bg-dark bg-opacity-75 p-3 border-bottom border-secondary border-opacity-25">
       <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <div>
+        <div v-if="client && !isReferenceView">
           <h5 class="mb-1 text-light fw-bold d-flex align-items-center gap-2">
             <i class="bi bi-person-badge text-primary"></i>
             <span>{{ client.companyName }}</span>
@@ -38,14 +45,34 @@ const getStatusBadge = (status: string, type: string) => {
             <span>Reference: <strong class="text-warning">{{ client.referenceName }}</strong></span>
           </div>
         </div>
-        <div class="text-end">
-          <div class="text-muted small">Net Closing Balance</div>
-          <div
-            class="h4 mb-0 fw-bold"
-            :class="client.closingBalance > 0 ? 'text-danger' : 'text-success'"
-          >
-            ৳ {{ formatTk(client.closingBalance) }}
+        <div v-else-if="isReferenceView">
+          <h5 class="mb-1 text-light fw-bold d-flex align-items-center gap-2">
+            <i class="bi bi-journal-text text-warning"></i>
+            <span>Summary Ledger ({{ referenceName || "Reference" }})</span>
+          </h5>
+          <div class="text-muted small">
+            Consolidated timeline of all invoices &amp; receipts ({{ fromMonth }} to {{ toMonth }})
           </div>
+        </div>
+
+        <!-- View Switcher Segmented Control (Shown in Reference Summary Mode) -->
+        <div v-if="isReferenceView" class="d-print-none d-flex align-items-center gap-1 bg-dark p-1 rounded border border-secondary border-opacity-50">
+          <button
+            type="button"
+            class="btn btn-sm px-3 py-1 fw-medium transition-all"
+            :class="viewMode === 'client' ? 'btn-primary shadow-sm text-white' : 'btn-dark text-muted border-0'"
+            @click="emit('update:viewMode', 'client')"
+          >
+            <i class="bi bi-person-lines-fill me-1"></i> Client Basis
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm px-3 py-1 fw-medium transition-all"
+            :class="viewMode === 'summary' ? 'btn-primary shadow-sm text-white' : 'btn-dark text-muted border-0'"
+            @click="emit('update:viewMode', 'summary')"
+          >
+            <i class="bi bi-journal-text me-1"></i> Summary Ledger
+          </button>
         </div>
       </div>
     </div>
@@ -165,22 +192,23 @@ const getStatusBadge = (status: string, type: string) => {
         </tbody>
 
         <!-- Footer Row with Summary -->
-        <tfoot v-if="client && transactions.length > 0">
+        <tfoot v-if="(client || isReferenceView) && transactions.length > 0">
           <tr class="fw-bold text-uppercase small border-top border-secondary border-opacity-25" style="background-color: #1a1d21;">
             <td colspan="4" class="ps-3 text-light">
-              <span>Total for {{ client.companyName }} ({{ fromMonth }} to {{ toMonth }})</span>
+              <span v-if="client">Total for {{ client.companyName }} ({{ fromMonth }} to {{ toMonth }})</span>
+              <span v-else>Total for {{ referenceName || "Reference" }} ({{ fromMonth }} to {{ toMonth }})</span>
             </td>
             <td class="text-end text-primary fw-bold">
-              ৳ {{ formatTk(client.totalBilled) }}
+              ৳ {{ formatTk(transactions.reduce((sum, t) => sum + (t.debit || 0), 0)) }}
             </td>
             <td class="text-end text-success fw-bold">
-              ৳ {{ formatTk(client.totalPaid) }}
+              ৳ {{ formatTk(transactions.reduce((sum, t) => sum + (t.credit || 0), 0)) }}
             </td>
-            <td class="text-end fw-bolder" :class="client.closingBalance > 0 ? 'text-danger' : 'text-success'">
-              ৳ {{ formatTk(client.closingBalance) }}
+            <td class="text-end fw-bolder" :class="(transactions[transactions.length - 1]?.balance || 0) > 0 ? 'text-danger' : 'text-success'">
+              ৳ {{ formatTk(transactions[transactions.length - 1]?.balance || 0) }}
             </td>
             <td class="pe-3 text-center text-muted">
-              {{ client.closingBalance > 0 ? 'Due' : 'Cleared' }}
+              {{ (transactions[transactions.length - 1]?.balance || 0) > 0 ? 'Due' : 'Cleared' }}
             </td>
           </tr>
         </tfoot>

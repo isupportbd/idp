@@ -95,6 +95,8 @@ const references = ref<ReferenceOption[]>([]);
 const summary = cachedSummary;
 const clientSummaries = cachedClientSummaries;
 const transactions = cachedTransactions;
+const referenceTransactions = ref<LedgerTransaction[]>([]);
+const referenceViewMode = ref<"client" | "summary">("client");
 
 // Permissions
 const canExport = computed(() => can("statements.export") || can("billing.view") || true);
@@ -175,9 +177,11 @@ const fetchLedger = async () => {
       };
       clientSummaries.value = d.clientSummaries || [];
       transactions.value = d.transactions || [];
+      referenceTransactions.value = d.referenceTransactions || [];
     } else {
       clientSummaries.value = [];
       transactions.value = [];
+      referenceTransactions.value = [];
     }
   } catch (err: any) {
     console.error("Failed to load client ledger statement:", err);
@@ -227,8 +231,12 @@ const handleBackToOverview = () => {
 // Professional Dedicated Clean Print for Statements
 const handlePrint = () => {
   const isSingleClient = !!selectedClientId.value && !!activeClientSummary.value;
+  const isRefSummaryView = !isSingleClient && selectedReferenceId.value && selectedReferenceId.value !== "all" && referenceViewMode.value === "summary";
+  
   const printTitle = isSingleClient
     ? `Ledger - ${activeClientSummary.value?.companyName || "Client"} (${fromMonth.value} to ${toMonth.value})`
+    : isRefSummaryView
+    ? `Summary Ledger - ${activeReferenceName.value || "Reference"} (${fromMonth.value} to ${toMonth.value})`
     : `Client Ledger Overview (${fromMonth.value} to ${toMonth.value})`;
 
   const iframe = document.createElement("iframe");
@@ -298,6 +306,58 @@ const handlePrint = () => {
             </tr>
           `).join("")}
         </tbody>
+      </table>
+    `;
+  } else if (isRefSummaryView) {
+    // Consolidated Reference Summary Ledger View
+    tableHtml = `
+      <div class="print-meta-box">
+        <div class="row">
+          <div class="col-8">
+            <h4 class="mb-1 text-dark fw-bold">Summary Ledger (${activeReferenceName.value})</h4>
+            <div class="text-muted small">Total Clients: <strong class="text-dark">${clientSummaries.value.length}</strong> | Statement Period: <strong>${fromMonth.value} to ${toMonth.value}</strong></div>
+          </div>
+          <div class="col-4 text-end">
+            <div class="text-muted small">Total Outstanding Balance</div>
+            <h4 class="mb-0 fw-bold ${summary.value.closingBalance > 0 ? 'text-danger' : 'text-success'}">৳ ${formatTkStr(summary.value.closingBalance)}</h4>
+          </div>
+        </div>
+      </div>
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th style="width: 35px;" class="text-center">#</th>
+            <th style="width: 85px;">Date</th>
+            <th style="width: 80px;">Period</th>
+            <th>Particulars / Description</th>
+            <th style="width: 110px;">Ref No</th>
+            <th style="width: 95px;" class="text-end">Billed (Tk)</th>
+            <th style="width: 95px;" class="text-end">Paid (Tk)</th>
+            <th style="width: 110px;" class="text-end">Balance (Tk)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${referenceTransactions.value.map((t, idx) => `
+            <tr>
+              <td class="text-center">${idx + 1}</td>
+              <td>${t.date}</td>
+              <td>${t.taxPeriod || "-"}</td>
+              <td>${t.description}</td>
+              <td>${t.refNo || "-"}</td>
+              <td class="text-end">${t.debit > 0 ? formatTkStr(t.debit) : "-"}</td>
+              <td class="text-end">${t.credit > 0 ? formatTkStr(t.credit) : "-"}</td>
+              <td class="text-end fw-bold">${formatTkStr(t.balance)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="5" class="text-end fw-bold pe-3">Total for ${activeReferenceName.value}:</td>
+            <td class="text-end fw-bold">৳ ${formatTkStr(summary.value.totalBilled)}</td>
+            <td class="text-end fw-bold">৳ ${formatTkStr(summary.value.totalPaid)}</td>
+            <td class="text-end fw-bold text-danger">৳ ${formatTkStr(summary.value.closingBalance)}</td>
+          </tr>
+        </tfoot>
       </table>
     `;
   } else {
@@ -462,6 +522,8 @@ const handlePrint = () => {
 
 // Export to Excel
 const handleExport = () => {
+  const isRefSummaryView = (!selectedClientId.value || !activeClientSummary.value) && selectedReferenceId.value && selectedReferenceId.value !== "all" && referenceViewMode.value === "summary";
+
   if (selectedClientId.value && activeClientSummary.value) {
     // Export single client transaction ledger
     const rows = transactions.value.map((t) => ({
@@ -477,6 +539,50 @@ const handleExport = () => {
 
     const safeName = activeClientSummary.value.companyName.replace(/[^a-zA-Z0-9_-]/g, "_");
     exportSingleSheet(rows, "Client Ledger", `Ledger_${safeName}_${fromMonth.value}_to_${toMonth.value}.xlsx`);
+  } else if (isRefSummaryView) {
+    // Export Reference Summary Ledger
+    const rows: Record<string, any>[] = referenceTransactions.value.map((t, i) => ({
+      "#": i + 1,
+      Date: t.date,
+      "Tax Period": t.taxPeriod || "—",
+      Particulars: t.description,
+      "Ref No": t.refNo || "—",
+      "Billed (Tk)": t.debit,
+      "Paid (Tk)": t.credit,
+      "Balance (Tk)": t.balance
+    }));
+
+    // Summary Total Row
+    rows.push({
+      "#": "",
+      Date: "",
+      "Tax Period": "",
+      Particulars: `Total for ${activeReferenceName.value} =`,
+      "Ref No": "",
+      "Billed (Tk)": summary.value.totalBilled,
+      "Paid (Tk)": summary.value.totalPaid,
+      "Balance (Tk)": summary.value.closingBalance
+    });
+
+    const colWidths = [6, 12, 12, 40, 18, 14, 14, 16];
+    const alignments: Record<string, "left" | "center" | "right"> = {
+      "#": "center",
+      Date: "center",
+      "Tax Period": "center",
+      Particulars: "left",
+      "Ref No": "center",
+      "Billed (Tk)": "right",
+      "Paid (Tk)": "right",
+      "Balance (Tk)": "right"
+    };
+
+    const refTag = activeReferenceName.value ? `_${activeReferenceName.value.replace(/[^a-zA-Z0-9_-]/g, "_")}` : "";
+    exportSingleSheet(
+      rows,
+      "Summary Ledger",
+      `Summary_Ledger${refTag}_${fromMonth.value}_to_${toMonth.value}.xlsx`,
+      { colWidths, alignments, headerAlignments: alignments }
+    );
   } else {
     // Export multi-client overview
     const isRefFiltered = selectedReferenceId.value && selectedReferenceId.value !== "all";
@@ -609,15 +715,32 @@ const handleExport = () => {
 
       <!-- View 2: Multi-Client Overview Table (All or Reference Filtered) -->
       <div v-else>
-        <ReferenceSummaryTable
-          :client-summaries="clientSummaries"
-          :summary="summary"
-          :from-month="fromMonth"
-          :to-month="toMonth"
-          :selected-reference-id="selectedReferenceId"
-          :selected-reference-name="activeReferenceName"
-          @select-client="handleSelectClient"
-        />
+        <!-- If Reference is filtered and user switched to Summary Ledger View -->
+        <div v-if="selectedReferenceId && selectedReferenceId !== 'all' && referenceViewMode === 'summary'">
+          <LedgerTransactionsTable
+            v-model:view-mode="referenceViewMode"
+            :transactions="referenceTransactions"
+            :client="null"
+            :is-reference-view="true"
+            :reference-name="activeReferenceName"
+            :from-month="fromMonth"
+            :to-month="toMonth"
+          />
+        </div>
+
+        <!-- Default: Client Basis Table -->
+        <div v-else>
+          <ReferenceSummaryTable
+            v-model:view-mode="referenceViewMode"
+            :client-summaries="clientSummaries"
+            :summary="summary"
+            :from-month="fromMonth"
+            :to-month="toMonth"
+            :selected-reference-id="selectedReferenceId"
+            :selected-reference-name="activeReferenceName"
+            @select-client="handleSelectClient"
+          />
+        </div>
       </div>
     </div>
   </div>

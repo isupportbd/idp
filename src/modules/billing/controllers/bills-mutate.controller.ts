@@ -269,15 +269,18 @@ export const updateBill = async (c: AppContext) => {
     const hasItems = Array.isArray(items) && items.length > 0;
     const discountTouched = payload.discountAmount !== undefined;
 
-    // Recompute totals when EITHER items or discount change. Previously the whole
-    // recalculation lived inside `if (items.length > 0)`, so a discount-only edit
-    // was accepted by the API but silently discarded.
+    // Recompute totals when EITHER items or discount change, or recalculate live running due
     if (hasItems || discountTouched) {
+      // Recalculate live running due excluding this specific bill, so newly recorded collections
+      // or changes in prior bills are properly and freshly reflected
+      const freshPreviousDue = await getClientRunningDue(existing.clientId, id);
+
       const newSubtotal = hasItems ? r2(items.reduce((acc: number, it) => acc + (it.finalAmount || 0), 0)) : r2(existing.subtotal);
       const discount = discountTouched ? r2(payload.discountAmount ?? 0) : r2(existing.discountAmount);
-      const grandTotal = r2(Math.max(0, newSubtotal - discount + existing.previousDue));
+      const grandTotal = r2(Math.max(0, newSubtotal - discount + freshPreviousDue));
       const dueAmount = r2(Math.max(0, grandTotal - existing.paidAmount));
 
+      updatedData.previousDue = freshPreviousDue;
       updatedData.subtotal = newSubtotal;
       updatedData.discountAmount = discount;
       updatedData.grandTotal = grandTotal;
