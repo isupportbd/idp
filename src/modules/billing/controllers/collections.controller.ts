@@ -321,7 +321,8 @@ export const createCollection = async (c: AppContext) => {
       HttpStatusCodes.CREATED
     );
   } catch (err: unknown) {
-    return c.json({ message: "Failed to record collection" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
+    console.error("[Create Collection Error]:", err);
+    return c.json({ message: "Failed to record collection", error: err instanceof Error ? err.message : String(err) }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 };
 
