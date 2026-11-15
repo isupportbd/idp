@@ -111,9 +111,6 @@ onBeforeUnmount(() => {
               <span v-if="bill.clientBin" class="badge bg-dark border border-secondary text-info font-monospace" style="font-size: 0.78rem;">
                 BIN: {{ bill.clientBin }}
               </span>
-              <span v-if="bill.referenceName" class="text-muted small" style="font-size: 0.78rem;">
-                Ref: {{ bill.referenceName }}
-              </span>
             </div>
           </td>
 
