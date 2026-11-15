@@ -599,20 +599,6 @@ const handleExport = () => {
     <div v-else>
       <!-- View 1: Single Client Transaction Ledger -->
       <div v-if="selectedClientId">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
-            @click="handleBackToOverview"
-          >
-            <i class="bi bi-arrow-left"></i>
-            <span>Back to All Clients Overview</span>
-          </button>
-          <span class="badge bg-secondary bg-opacity-25 text-info border border-secondary border-opacity-25 px-2 py-1">
-            Single Client Detailed Ledger
-          </span>
-        </div>
-
         <LedgerTransactionsTable
           :transactions="transactions"
           :client="activeClientSummary"
