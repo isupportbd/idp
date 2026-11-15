@@ -144,7 +144,7 @@ const hasAnyAdminTools = computed(() => {
       <!-- Welcome Header -->
       <div class="dashboard-header mb-4">
         <h3 class="dashboard-title">
-          IDP Platform Operations & Management
+          Dashboard
         </h3>
         <p class="dashboard-subtitle">
           Welcome back, <span class="user-highlight">{{ (authStore.user as any)?.name || 'Administrator' }}</span>. Select any module or firm management tool below to get started.

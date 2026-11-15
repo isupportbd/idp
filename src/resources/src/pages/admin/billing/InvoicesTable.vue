@@ -63,10 +63,10 @@ onBeforeUnmount(() => {
         <tr>
           <th style="width: 14%;">Invoice No</th>
           <th style="width: 28%;">Client Organization & BIN</th>
-          <th style="width: 12%;">Tax Period</th>
+          <th style="width: 14%;">Reference</th>
           <th style="width: 12%; text-align: right;">Total (Tk)</th>
           <th style="width: 12%; text-align: right;">Paid (Tk)</th>
-          <th style="width: 12%; text-align: right;">Due (Tk)</th>
+          <th style="width: 10%; text-align: right;">Due (Tk)</th>
           <th style="width: 10%;">Status</th>
           <th style="width: 10%; text-align: right;" class="d-print-none">Actions</th>
         </tr>
@@ -117,19 +117,34 @@ onBeforeUnmount(() => {
             </div>
           </td>
 
-          <!-- Tax Period -->
+          <!-- Reference -->
           <td>
-            <span class="font-monospace text-light fw-medium">{{ bill.taxPeriod }}</span>
+            <span v-if="bill.referenceName" class="text-light fw-medium small">
+              {{ bill.referenceName }}
+            </span>
+            <span v-else class="text-muted small">—</span>
           </td>
 
-          <!-- Grand Total -->
+          <!-- Grand Total / Bill Amount -->
           <td style="text-align: right;">
-            <span class="font-monospace fw-bold text-white fs-6">{{ bill.grandTotal.toFixed(2) }}</span>
+            <span class="font-monospace fw-bold text-white fs-6">
+              {{ (bill.grandTotal > 0 ? bill.grandTotal : Math.max(0, bill.subtotal - bill.discountAmount)).toFixed(2) }}
+            </span>
           </td>
 
-          <!-- Paid Amount -->
+          <!-- Paid Amount (with Adjust badge if adjusted from advance) -->
           <td style="text-align: right;">
-            <span class="font-monospace text-success fw-semibold">{{ bill.paidAmount.toFixed(2) }}</span>
+            <template v-if="bill.grandTotal <= 0 && bill.previousDue < 0 && Math.max(0, bill.subtotal - bill.discountAmount) > 0">
+              <div class="font-monospace text-success fw-semibold">
+                {{ Math.max(0, bill.subtotal - bill.discountAmount).toFixed(2) }}
+              </div>
+              <span class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-25" style="font-size: 0.68rem; padding: 1px 5px;">
+                Adjust
+              </span>
+            </template>
+            <template v-else>
+              <span class="font-monospace text-success fw-semibold">{{ bill.paidAmount.toFixed(2) }}</span>
+            </template>
           </td>
 
           <!-- Due Amount -->

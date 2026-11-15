@@ -369,15 +369,16 @@ export const getClientLedgerStatement = async (c: AppContext) => {
       }
 
       // 2. Collect in-period payments
-      const monthlyColls: Array<{
-        dateStr: string;
-        timestamp: number;
-        taxPeriod: string;
-        receiptNo: string;
-        amount: number;
-        paymentMethod?: string;
-        companyName: string;
-      }> = [];
+      // Aggregate collections by month/period as well for genuine consolidated summary
+      const monthlyCollsMap = new Map<
+        string,
+        {
+          period: string;
+          totalCollected: number;
+          latestDate: string;
+          count: number;
+        }
+      >();
 
       for (const cl of matchedClients) {
         const inPeriodCollections = allCollections.filter(
@@ -386,19 +387,28 @@ export const getClientLedgerStatement = async (c: AppContext) => {
 
         for (const col of inPeriodCollections) {
           const cDate = new Date(col.collectionDate);
-          monthlyColls.push({
-            dateStr: cDate.toISOString().slice(0, 10),
-            timestamp: cDate.getTime(),
-            taxPeriod: col.billTaxPeriod || cDate.toISOString().slice(0, 7),
-            receiptNo: col.receiptNo,
-            amount: Math.round((Number(col.amount) || 0) * 100) / 100,
-            paymentMethod: col.paymentMethod || undefined,
-            companyName: cl.companyName
-          });
+          const dateStr = cDate.toISOString().slice(0, 10);
+          const period = col.billTaxPeriod || cDate.toISOString().slice(0, 7);
+          const existing = monthlyCollsMap.get(period);
+          const amt = Math.round((Number(col.amount) || 0) * 100) / 100;
+          if (existing) {
+            existing.totalCollected = Math.round((existing.totalCollected + amt) * 100) / 100;
+            existing.count += 1;
+            if (dateStr > existing.latestDate) {
+              existing.latestDate = dateStr;
+            }
+          } else {
+            monthlyCollsMap.set(period, {
+              period,
+              totalCollected: amt,
+              latestDate: dateStr,
+              count: 1
+            });
+          }
         }
       }
 
-      // Build unified timeline entries: month bills and payments
+      // Build unified timeline entries: month bills and consolidated month collections
       type TimelineEntry =
         | {
             kind: "month_bill";
@@ -407,10 +417,11 @@ export const getClientLedgerStatement = async (c: AppContext) => {
             taxPeriod: string;
             debit: number;
             credit: 0;
+            refNo: string;
             description: string;
           }
         | {
-            kind: "payment";
+            kind: "month_payment";
             sortKey: string;
             dateStr: string;
             taxPeriod: string;
@@ -418,7 +429,6 @@ export const getClientLedgerStatement = async (c: AppContext) => {
             credit: number;
             refNo: string;
             description: string;
-            paymentMethod?: string;
           };
 
       const timeline: TimelineEntry[] = [];
@@ -431,22 +441,21 @@ export const getClientLedgerStatement = async (c: AppContext) => {
           taxPeriod: period,
           debit: data.totalBilled,
           credit: 0,
+          refNo: "—",
           description: `Monthly VAT Service Bills (${period})`
         });
       }
 
-      for (const col of monthlyColls) {
-        const methodStr = (col.paymentMethod || "CASH").toUpperCase();
+      for (const [period, data] of monthlyCollsMap.entries()) {
         timeline.push({
-          kind: "payment",
-          sortKey: `${col.dateStr}-1-coll`,
-          dateStr: col.dateStr,
-          taxPeriod: col.taxPeriod,
+          kind: "month_payment",
+          sortKey: `${data.latestDate}-1-coll`,
+          dateStr: data.latestDate,
+          taxPeriod: period,
           debit: 0,
-          credit: col.amount,
-          refNo: col.receiptNo,
-          description: `Payment Received via ${methodStr} - ${col.companyName}`,
-          paymentMethod: col.paymentMethod
+          credit: data.totalCollected,
+          refNo: "—",
+          description: `Total Collections Received (${period})`
         });
       }
 
@@ -483,13 +492,12 @@ export const getClientLedgerStatement = async (c: AppContext) => {
           });
         } else {
           referenceTransactions.push({
-            id: `ref-coll-${entry.refNo}-${idx}`,
+            id: `ref-coll-${entry.taxPeriod}-${idx}`,
             type: "collection",
             date: entry.dateStr,
             taxPeriod: entry.taxPeriod,
-            refNo: entry.refNo,
+            refNo: "—",
             description: entry.description,
-            paymentMethod: entry.paymentMethod,
             debit: 0,
             credit: entry.credit,
             balance: refRunning,
