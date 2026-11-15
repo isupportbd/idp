@@ -35,7 +35,7 @@ const customerTypeOptions = computed(() => [
 
 const referenceOptions = computed(() => [
   { value: "all", label: `All References (${props.references.length})` },
-  ...props.references.map((r) => ({ value: r.id, label: `Ref: ${r.name}` }))
+  ...props.references.map((r) => ({ value: r.id, label: r.name }))
 ]);
 </script>
 
