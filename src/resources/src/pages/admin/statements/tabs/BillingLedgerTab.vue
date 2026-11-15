@@ -224,9 +224,240 @@ const handleBackToOverview = () => {
   selectedClientId.value = null;
 };
 
-// Print
+// Professional Dedicated Clean Print for Statements
 const handlePrint = () => {
-  window.print();
+  const isSingleClient = !!selectedClientId.value && !!activeClientSummary.value;
+  const printTitle = isSingleClient
+    ? `Ledger - ${activeClientSummary.value?.companyName || "Client"} (${fromMonth.value} to ${toMonth.value})`
+    : `Client Ledger Overview (${fromMonth.value} to ${toMonth.value})`;
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.zIndex = "-9999";
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow?.document;
+  if (!doc) {
+    window.print();
+    return;
+  }
+
+  const formatTkStr = (amount?: number | null): string => {
+    if (amount === undefined || amount === null) return "0.00";
+    return amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  let tableHtml = "";
+
+  if (isSingleClient && activeClientSummary.value) {
+    // Single client transactions view
+    const cl = activeClientSummary.value;
+    tableHtml = `
+      <div class="print-meta-box">
+        <div class="row">
+          <div class="col-8">
+            <h4 class="mb-1 text-dark fw-bold">${cl.companyName}</h4>
+            <div class="text-muted small">BIN: <strong class="text-dark">${cl.binNumber}</strong> | Reference: <strong class="text-dark">${cl.referenceName}</strong></div>
+            <div class="text-muted small mt-1">Period: <strong>${fromMonth.value} to ${toMonth.value}</strong></div>
+          </div>
+          <div class="col-4 text-end">
+            <div class="text-muted small">Net Closing Balance</div>
+            <h4 class="mb-0 fw-bold ${cl.closingBalance > 0 ? 'text-danger' : 'text-success'}">৳ ${formatTkStr(cl.closingBalance)}</h4>
+          </div>
+        </div>
+      </div>
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th style="width: 40px;" class="text-center">#</th>
+            <th style="width: 85px;">Date</th>
+            <th style="width: 80px;">Period</th>
+            <th>Particulars</th>
+            <th style="width: 100px;">Ref No</th>
+            <th style="width: 95px;" class="text-end">Billed (Tk)</th>
+            <th style="width: 95px;" class="text-end">Paid (Tk)</th>
+            <th style="width: 110px;" class="text-end">Balance (Tk)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${transactions.value.map((t, idx) => `
+            <tr>
+              <td class="text-center">${idx + 1}</td>
+              <td>${t.date}</td>
+              <td>${t.taxPeriod || "-"}</td>
+              <td>${t.description}</td>
+              <td>${t.refNo || "-"}</td>
+              <td class="text-end">${t.debit > 0 ? formatTkStr(t.debit) : "-"}</td>
+              <td class="text-end">${t.credit > 0 ? formatTkStr(t.credit) : "-"}</td>
+              <td class="text-end fw-bold">${formatTkStr(t.balance)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+  } else {
+    // Multi-client overview view
+    const isRefFiltered = selectedReferenceId.value && selectedReferenceId.value !== "all";
+    tableHtml = `
+      <div class="print-meta-box">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-1 text-dark fw-bold">Client Ledger Overview ${activeReferenceName.value ? `(${activeReferenceName.value})` : ""}</h5>
+            <div class="text-muted small">Showing balances for <strong>${clientSummaries.value.length}</strong> clients | Statement Period: <strong>${fromMonth.value} to ${toMonth.value}</strong></div>
+          </div>
+          <div class="text-end">
+            <div class="text-muted small">Total Due</div>
+            <h5 class="mb-0 text-danger fw-bold">৳ ${formatTkStr(summary.value.closingBalance)}</h5>
+          </div>
+        </div>
+      </div>
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th style="width: 35px;" class="text-center">#</th>
+            <th>Client</th>
+            <th style="width: 120px;" class="text-center">BIN</th>
+            ${isRefFiltered ? "" : `<th style="width: 140px;">Reference</th>`}
+            <th style="width: 95px;" class="text-end">Opening (Tk)</th>
+            <th style="width: 95px;" class="text-end">Billed (Tk)</th>
+            <th style="width: 90px;" class="text-end">Paid (Tk)</th>
+            <th style="width: 110px;" class="text-end">Closing Due (Tk)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${clientSummaries.value.map((cl, idx) => `
+            <tr>
+              <td class="text-center">${idx + 1}</td>
+              <td class="fw-semibold">${cl.companyName}</td>
+              <td class="text-center font-monospace">${cl.binNumber}</td>
+              ${isRefFiltered ? "" : `<td>${cl.referenceName}</td>`}
+              <td class="text-end">${formatTkStr(cl.openingBalance)}</td>
+              <td class="text-end">${formatTkStr(cl.totalBilled)}</td>
+              <td class="text-end">${formatTkStr(cl.totalPaid)}</td>
+              <td class="text-end fw-bold ${cl.closingBalance > 0 ? 'text-danger' : 'text-success'}">${formatTkStr(cl.closingBalance)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="${isRefFiltered ? 3 : 4}" class="text-end fw-bold pe-3">Grand Total (${clientSummaries.value.length} Clients):</td>
+            <td class="text-end fw-bold">৳ ${formatTkStr(summary.value.openingBalance)}</td>
+            <td class="text-end fw-bold">৳ ${formatTkStr(summary.value.totalBilled)}</td>
+            <td class="text-end fw-bold">৳ ${formatTkStr(summary.value.totalPaid)}</td>
+            <td class="text-end fw-bold text-danger">৳ ${formatTkStr(summary.value.closingBalance)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    `;
+  }
+
+  doc.open();
+  doc.write(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>${printTitle}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 10mm 12mm;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    html, body {
+      background: #ffffff !important;
+      color: #111827 !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0 !important;
+      padding: 0 !important;
+      font-size: 11px;
+    }
+    .print-header {
+      border-bottom: 2px solid #1f2937;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+    .print-meta-box {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+    }
+    .report-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 15px;
+    }
+    .report-table th {
+      background-color: #f1f5f9 !important;
+      color: #1e293b !important;
+      font-weight: 700;
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      border: 1px solid #cbd5e1;
+      padding: 6px 8px;
+      vertical-align: middle;
+    }
+    .report-table td {
+      border: 1px solid #e2e8f0;
+      padding: 5px 8px;
+      font-size: 10.5px;
+      vertical-align: middle;
+    }
+    .report-table tbody tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+    .report-table tfoot td {
+      background-color: #f1f5f9 !important;
+      border-top: 2px solid #0f172a !important;
+      border-bottom: 2px solid #0f172a !important;
+      font-size: 11px;
+      padding: 7px 8px;
+    }
+    .total-row {
+      font-weight: bold;
+    }
+    .font-monospace {
+      font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid p-0">
+    <div class="print-header d-flex justify-content-between align-items-center">
+      <div>
+        <h4 class="mb-0 fw-bold text-dark">IDP - Intelligent Data Platform</h4>
+        <div class="text-muted small">Statement &amp; Client Ledger Report</div>
+      </div>
+      <div class="text-end text-muted small">
+        <div>Generated: ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
+        <div>iSupportBD</div>
+      </div>
+    </div>
+    ${tableHtml}
+  </div>
+</body>
+</html>`);
+  doc.close();
+
+  setTimeout(() => {
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+    setTimeout(() => {
+      iframe.remove();
+    }, 2000);
+  }, 400);
 };
 
 // Export to Excel
@@ -286,16 +517,44 @@ const handleExport = () => {
     rows.push(totalRow);
 
     // Explicit widths optimized for standard A4 portrait sheet
+    // # (6), Client (38), BIN (15 - exact fit for 000000000-0000), Opening (13), Billed (13), Paid (11), Closing Due (15)
     const colWidths = isRefFiltered
-      ? [6, 36, 18, 14, 14, 12, 16] // #, Client, BIN, Opening, Billed, Paid, Closing Due
-      : [6, 32, 16, 20, 14, 14, 12, 16]; // #, Client, BIN, Reference, Opening, Billed, Paid, Closing Due
+      ? [6, 38, 15, 13, 13, 11, 15]
+      : [6, 32, 15, 18, 13, 13, 11, 15];
+
+    // Alignments: 1st col (#) centered, 3rd col (BIN) centered, 4th-7th amount cols & headers right-aligned
+    const alignments: Record<string, "left" | "center" | "right"> = {
+      "#": "center",
+      Client: "left",
+      BIN: "center",
+      ...(isRefFiltered ? {} : { Reference: "left" }),
+      "Opening (Tk)": "right",
+      "Billed (Tk)": "right",
+      "Paid (Tk)": "right",
+      "Closing Due (Tk)": "right"
+    };
+
+    const headerAlignments: Record<string, "left" | "center" | "right"> = {
+      "#": "center",
+      Client: "left",
+      BIN: "center",
+      ...(isRefFiltered ? {} : { Reference: "left" }),
+      "Opening (Tk)": "right",
+      "Billed (Tk)": "right",
+      "Paid (Tk)": "right",
+      "Closing Due (Tk)": "right"
+    };
 
     const refTag = activeReferenceName.value ? `_${activeReferenceName.value.replace(/[^a-zA-Z0-9_-]/g, "_")}` : "";
     exportSingleSheet(
       rows,
       "Client Ledger Summary",
       `Ledger_Overview${refTag}_${fromMonth.value}_to_${toMonth.value}.xlsx`,
-      { colWidths }
+      {
+        colWidths,
+        alignments,
+        headerAlignments
+      }
     );
   }
 };
