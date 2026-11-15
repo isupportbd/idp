@@ -50,8 +50,15 @@ const loadClientDetails = async () => {
     clientOverview.value = overviewData;
     clientBills.value = billsData.data || [];
 
-    // If client has previous due, prefill amount with due
-    if (overviewData.previousDue > 0 && amount.value === 0) {
+    // If a specific bill was targeted, prefill amount with that bill's remaining due
+    if (selectedBillId.value) {
+      const targetBill = clientBills.value.find((b) => b.id === selectedBillId.value);
+      if (targetBill && targetBill.dueAmount > 0) {
+        amount.value = targetBill.dueAmount;
+      } else if (overviewData.previousDue > 0 && amount.value === 0) {
+        amount.value = overviewData.previousDue;
+      }
+    } else if (overviewData.previousDue > 0 && amount.value === 0) {
       amount.value = overviewData.previousDue;
     }
   } catch (err: any) {
@@ -78,7 +85,26 @@ watch(selectedClientId, () => {
   loadClientDetails();
 });
 
+watch(selectedBillId, (newBillId) => {
+  if (newBillId) {
+    const targetBill = clientBills.value.find((b) => b.id === newBillId);
+    if (targetBill && targetBill.dueAmount > 0) {
+      amount.value = targetBill.dueAmount;
+    }
+  } else if (clientOverview.value?.previousDue > 0) {
+    amount.value = clientOverview.value.previousDue;
+  }
+});
+
+const targetedBill = computed(() => {
+  if (!selectedBillId.value) return null;
+  return clientBills.value.find((b) => b.id === selectedBillId.value) || null;
+});
+
 const currentDue = computed(() => {
+  if (targetedBill.value) {
+    return targetedBill.value.dueAmount;
+  }
   return clientOverview.value?.previousDue || 0;
 });
 
@@ -200,7 +226,9 @@ const handleSaveCollection = async () => {
                 <div class="text-muted small font-monospace">BIN: {{ clientOverview.client.binNumber || 'N/A' }}</div>
               </div>
               <div class="text-end">
-                <span class="text-secondary small d-block">Current Total Due</span>
+                <span class="text-secondary small d-block">
+                  {{ targetedBill ? `Invoice ${targetedBill.billNo} Due` : 'Current Total Due' }}
+                </span>
                 <span class="fw-bold font-monospace fs-5 text-danger">{{ currentDue.toFixed(2) }} Tk</span>
               </div>
             </div>

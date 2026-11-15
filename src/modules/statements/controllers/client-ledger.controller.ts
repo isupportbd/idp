@@ -345,78 +345,112 @@ export const getClientLedgerStatement = async (c: AppContext) => {
     // Sort client summaries by highest closing balance (or name)
     clientSummaries.sort((a, b) => b.closingBalance - a.closingBalance);
 
-    // If a reference was filtered (e.g. Satish Chandra Das), build combined reference transactions
+    // If a reference was filtered (e.g. Satish Chandra Das), build clean month-wise consolidated reference transactions
     let referenceTransactions: LedgerTransaction[] = [];
     if (referenceIdParam && matchedClients.length > 0 && !clientIdParam) {
-      const combinedRaw: Array<{
-        type: "bill" | "collection";
-        timestamp: number;
-        dateStr: string;
-        taxPeriod: string;
-        refNo: string;
-        description: string;
-        companyName: string;
-        paymentMethod?: string | null;
-        debit: number;
-        credit: number;
-        status: string;
-        billId?: number | null;
-        receiptId?: number | null;
-      }> = [];
+      // 1. Group in-period bills strictly by month (taxPeriod)
+      const monthlyBillsMap = new Map<string, { totalBilled: number; earliestDate: string }>();
 
       for (const cl of matchedClients) {
         const inPeriodBills = allBills.filter((b) => b.clientId === cl.id && b.taxPeriod >= fromMonth && b.taxPeriod <= toMonth);
+        for (const b of inPeriodBills) {
+          const currentBilled = Math.max(0, (b.subtotal || 0) - (b.discountAmount || 0));
+          const existing = monthlyBillsMap.get(b.taxPeriod) || {
+            totalBilled: 0,
+            earliestDate: new Date(b.billDate).toISOString().slice(0, 10)
+          };
+          existing.totalBilled = Math.round((existing.totalBilled + currentBilled) * 100) / 100;
+          const bDateStr = new Date(b.billDate).toISOString().slice(0, 10);
+          if (bDateStr < existing.earliestDate) {
+            existing.earliestDate = bDateStr;
+          }
+          monthlyBillsMap.set(b.taxPeriod, existing);
+        }
+      }
+
+      // 2. Collect in-period payments
+      const monthlyColls: Array<{
+        dateStr: string;
+        timestamp: number;
+        taxPeriod: string;
+        receiptNo: string;
+        amount: number;
+        paymentMethod?: string;
+        companyName: string;
+      }> = [];
+
+      for (const cl of matchedClients) {
         const inPeriodCollections = allCollections.filter(
           (c) => c.clientId === cl.id && c.status === "completed" && new Date(c.collectionDate) >= fromDate && new Date(c.collectionDate) <= toDate
         );
 
-        inPeriodBills.forEach((b) => {
-          const bDate = new Date(b.billDate);
-          const currentBilled = Math.max(0, (b.subtotal || 0) - (b.discountAmount || 0));
-          combinedRaw.push({
-            type: "bill",
-            timestamp: bDate.getTime(),
-            dateStr: bDate.toISOString().slice(0, 10),
-            taxPeriod: b.taxPeriod,
-            refNo: b.billNo,
-            description: `Monthly VAT Service Bill (${b.taxPeriod})`,
-            companyName: cl.companyName,
-            debit: Math.round(currentBilled * 100) / 100,
-            credit: 0,
-            status: b.status,
-            billId: b.id
-          });
-        });
-
-        inPeriodCollections.forEach((col) => {
+        for (const col of inPeriodCollections) {
           const cDate = new Date(col.collectionDate);
-          const methodStr = (col.paymentMethod || "CASH").toUpperCase();
-          const refStr = col.referenceNo ? ` (${col.referenceNo})` : "";
-          combinedRaw.push({
-            type: "collection",
-            timestamp: cDate.getTime(),
+          monthlyColls.push({
             dateStr: cDate.toISOString().slice(0, 10),
+            timestamp: cDate.getTime(),
             taxPeriod: col.billTaxPeriod || cDate.toISOString().slice(0, 7),
-            refNo: col.receiptNo,
-            description: `Payment Received via ${methodStr}${refStr}`,
-            companyName: cl.companyName,
-            paymentMethod: col.paymentMethod,
-            debit: 0,
-            credit: Math.round((Number(col.amount) || 0) * 100) / 100,
-            status: col.status,
-            billId: col.billId,
-            receiptId: col.id
+            receiptNo: col.receiptNo,
+            amount: Math.round((Number(col.amount) || 0) * 100) / 100,
+            paymentMethod: col.paymentMethod || undefined,
+            companyName: cl.companyName
           });
+        }
+      }
+
+      // Build unified timeline entries: month bills and payments
+      type TimelineEntry =
+        | {
+            kind: "month_bill";
+            sortKey: string;
+            dateStr: string;
+            taxPeriod: string;
+            debit: number;
+            credit: 0;
+            description: string;
+          }
+        | {
+            kind: "payment";
+            sortKey: string;
+            dateStr: string;
+            taxPeriod: string;
+            debit: 0;
+            credit: number;
+            refNo: string;
+            description: string;
+            paymentMethod?: string;
+          };
+
+      const timeline: TimelineEntry[] = [];
+
+      for (const [period, data] of monthlyBillsMap.entries()) {
+        timeline.push({
+          kind: "month_bill",
+          sortKey: `${data.earliestDate}-0-bill`,
+          dateStr: data.earliestDate,
+          taxPeriod: period,
+          debit: data.totalBilled,
+          credit: 0,
+          description: `Monthly VAT Service Bills (${period})`
         });
       }
 
-      // Chronological sort
-      combinedRaw.sort((a, b) => {
-        if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
-        if (a.type === "bill" && b.type === "collection") return -1;
-        if (a.type === "collection" && b.type === "bill") return 1;
-        return 0;
-      });
+      for (const col of monthlyColls) {
+        const methodStr = (col.paymentMethod || "CASH").toUpperCase();
+        timeline.push({
+          kind: "payment",
+          sortKey: `${col.dateStr}-1-coll`,
+          dateStr: col.dateStr,
+          taxPeriod: col.taxPeriod,
+          debit: 0,
+          credit: col.amount,
+          refNo: col.receiptNo,
+          description: `Payment Received via ${methodStr} - ${col.companyName}`,
+          paymentMethod: col.paymentMethod
+        });
+      }
+
+      timeline.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
 
       let refRunning = overallOpening;
       referenceTransactions.push({
@@ -432,23 +466,36 @@ export const getClientLedgerStatement = async (c: AppContext) => {
         status: "settled"
       });
 
-      combinedRaw.forEach((entry, idx) => {
+      timeline.forEach((entry, idx) => {
         refRunning = Math.round((refRunning + entry.debit - entry.credit) * 100) / 100;
-        referenceTransactions.push({
-          id: `ref-${entry.type}-${entry.billId || entry.receiptId}-${idx}`,
-          type: entry.type,
-          date: entry.dateStr,
-          taxPeriod: entry.taxPeriod,
-          refNo: entry.refNo,
-          description: `${entry.description} - ${entry.companyName}`,
-          paymentMethod: entry.paymentMethod || undefined,
-          debit: entry.debit,
-          credit: entry.credit,
-          balance: refRunning,
-          status: entry.status,
-          billId: entry.billId,
-          receiptId: entry.receiptId
-        });
+        if (entry.kind === "month_bill") {
+          referenceTransactions.push({
+            id: `ref-bill-${entry.taxPeriod}-${idx}`,
+            type: "bill",
+            date: entry.dateStr,
+            taxPeriod: entry.taxPeriod,
+            refNo: "—",
+            description: entry.description,
+            debit: entry.debit,
+            credit: 0,
+            balance: refRunning,
+            status: refRunning <= 0 ? "paid" : "unpaid"
+          });
+        } else {
+          referenceTransactions.push({
+            id: `ref-coll-${entry.refNo}-${idx}`,
+            type: "collection",
+            date: entry.dateStr,
+            taxPeriod: entry.taxPeriod,
+            refNo: entry.refNo,
+            description: entry.description,
+            paymentMethod: entry.paymentMethod,
+            debit: 0,
+            credit: entry.credit,
+            balance: refRunning,
+            status: "completed"
+          });
+        }
       });
     }
 
