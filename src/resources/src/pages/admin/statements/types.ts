@@ -40,3 +40,8 @@ export interface ReferenceOption {
   id: number;
   name: string;
 }
+
+export interface CustomerTypeOption {
+  id: number;
+  name: string;
+}

@@ -89,6 +89,7 @@ const tabTitle = computed(() => {
 .statements-page {
   width: 100%;
   padding-bottom: 2rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 .statements-tab-bar {

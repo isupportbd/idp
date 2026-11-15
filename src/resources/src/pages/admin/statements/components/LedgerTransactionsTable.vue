@@ -33,16 +33,15 @@ const getStatusBadge = (status: string, type: string) => {
             <i class="bi bi-person-badge text-primary"></i>
             <span>{{ client.companyName }}</span>
           </h5>
-          <div class="d-flex flex-wrap gap-3 text-muted small font-monospace">
+          <div class="d-flex flex-wrap gap-3 text-muted small">
             <span>BIN: <strong class="text-info">{{ client.binNumber }}</strong></span>
-            <span>Phone: <strong class="text-light">{{ client.mobile }}</strong></span>
             <span>Reference: <strong class="text-warning">{{ client.referenceName }}</strong></span>
           </div>
         </div>
         <div class="text-end">
           <div class="text-muted small">Net Closing Balance</div>
           <div
-            class="h4 mb-0 fw-bold font-monospace"
+            class="h4 mb-0 fw-bold"
             :class="client.closingBalance > 0 ? 'text-danger' : 'text-success'"
           >
             ৳ {{ formatTk(client.closingBalance) }}
@@ -81,13 +80,13 @@ const getStatusBadge = (status: string, type: string) => {
             class="border-bottom border-secondary border-opacity-10"
           >
             <!-- Date -->
-            <td class="ps-3 font-monospace text-light">
+            <td class="ps-3 text-light">
               <span v-if="tx.type === 'opening'" class="text-info fst-italic">Period Start</span>
               <span v-else>{{ tx.date }}</span>
             </td>
 
             <!-- Tax Period -->
-            <td class="font-monospace text-muted">
+            <td class="text-muted">
               <span v-if="tx.taxPeriod && tx.taxPeriod !== '—'" class="badge bg-dark border border-secondary text-light">
                 {{ tx.taxPeriod }}
               </span>
@@ -119,7 +118,7 @@ const getStatusBadge = (status: string, type: string) => {
             </td>
 
             <!-- Ref No -->
-            <td class="font-monospace">
+            <td>
               <span
                 v-if="tx.refNo && tx.refNo !== '—'"
                 class="badge"
@@ -131,7 +130,7 @@ const getStatusBadge = (status: string, type: string) => {
             </td>
 
             <!-- Debit (Billed) -->
-            <td class="text-end font-monospace">
+            <td class="text-end">
               <span v-if="tx.debit > 0" class="text-primary fw-bold">
                 {{ formatTk(tx.debit) }}
               </span>
@@ -139,7 +138,7 @@ const getStatusBadge = (status: string, type: string) => {
             </td>
 
             <!-- Credit (Paid) -->
-            <td class="text-end font-monospace">
+            <td class="text-end">
               <span v-if="tx.credit > 0" class="text-success fw-bold">
                 {{ formatTk(tx.credit) }}
               </span>
@@ -147,7 +146,7 @@ const getStatusBadge = (status: string, type: string) => {
             </td>
 
             <!-- Running Balance -->
-            <td class="text-end font-monospace fw-bold">
+            <td class="text-end fw-bold">
               <span :class="tx.balance > 0 ? 'text-danger' : 'text-success'">
                 {{ formatTk(tx.balance) }}
               </span>
@@ -171,13 +170,13 @@ const getStatusBadge = (status: string, type: string) => {
             <td colspan="4" class="ps-3 text-light">
               <span>Total for {{ client.companyName }} ({{ fromMonth }} to {{ toMonth }})</span>
             </td>
-            <td class="text-end font-monospace text-primary">
+            <td class="text-end text-primary fw-bold">
               ৳ {{ formatTk(client.totalBilled) }}
             </td>
-            <td class="text-end font-monospace text-success">
+            <td class="text-end text-success fw-bold">
               ৳ {{ formatTk(client.totalPaid) }}
             </td>
-            <td class="text-end font-monospace" :class="client.closingBalance > 0 ? 'text-danger' : 'text-success'">
+            <td class="text-end fw-bolder" :class="client.closingBalance > 0 ? 'text-danger' : 'text-success'">
               ৳ {{ formatTk(client.closingBalance) }}
             </td>
             <td class="pe-3 text-center text-muted">
@@ -192,19 +191,26 @@ const getStatusBadge = (status: string, type: string) => {
 
 <style scoped>
 .ledger-transactions-card {
-  border-radius: 10px;
-  background-color: #14171a !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px;
+  background-color: #1e2227 !important;
+  border: 1px solid #343a40 !important;
+  font-family: inherit;
 }
 .idp-table th {
-  background-color: #1a1d21 !important;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  padding-top: 12px;
-  padding-bottom: 12px;
+  background-color: #15181b !important;
+  color: #adb5bd !important;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #343a40;
 }
 .idp-table td {
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #282d34;
+  vertical-align: middle;
+}
+.idp-table tr:hover td {
+  background: #252b32;
 }
 </style>

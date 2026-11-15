@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
 import MonthNavigator from "@/components/MonthNavigator.vue";
-import type { ReferenceOption } from "../types";
+import type { CustomerTypeOption, ReferenceOption } from "../types";
 
 defineProps<{
   clientId: number | null;
+  customerTypeId: number | string;
   referenceId: number | string;
   fromMonth: string;
   toMonth: string;
+  customerTypes: CustomerTypeOption[];
   references: ReferenceOption[];
   isLoading: boolean;
   canExport: boolean;
@@ -15,6 +17,7 @@ defineProps<{
 
 const emit = defineEmits<{
   "update:clientId": [value: number | null];
+  "update:customerTypeId": [value: number | string];
   "update:referenceId": [value: number | string];
   "update:fromMonth": [value: string];
   "update:toMonth": [value: string];
@@ -28,7 +31,7 @@ const emit = defineEmits<{
   <div class="card idp-card mb-4 border-0 shadow-sm p-3 bg-dark bg-opacity-75 ledger-filter-bar">
     <div class="row g-2 align-items-center">
       <!-- Client Autocomplete Search -->
-      <div class="col-12 col-md-4">
+      <div class="col-12 col-md-3">
         <ClientSearchSelect
           :model-value="clientId"
           placeholder="Type to search Client or BIN..."
@@ -37,8 +40,22 @@ const emit = defineEmits<{
         />
       </div>
 
+      <!-- Client Type Filter (Before Reference) -->
+      <div class="col-12 col-sm-6 col-md-2">
+        <select
+          :value="customerTypeId"
+          class="form-select idp-input"
+          @change="emit('update:customerTypeId', ($event.target as HTMLSelectElement).value)"
+        >
+          <option value="all">All Types ({{ customerTypes.length }})</option>
+          <option v-for="t in customerTypes" :key="t.id" :value="t.id">
+            {{ t.name }}
+          </option>
+        </select>
+      </div>
+
       <!-- Reference Filter -->
-      <div class="col-12 col-md-3">
+      <div class="col-12 col-sm-6 col-md-2">
         <select
           :value="referenceId"
           class="form-select idp-input"

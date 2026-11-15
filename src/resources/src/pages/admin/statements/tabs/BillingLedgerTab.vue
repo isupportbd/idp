@@ -9,32 +9,30 @@ import LedgerFilterBar from "../components/LedgerFilterBar.vue";
 import LedgerSummaryCards from "../components/LedgerSummaryCards.vue";
 import LedgerTransactionsTable from "../components/LedgerTransactionsTable.vue";
 import ReferenceSummaryTable from "../components/ReferenceSummaryTable.vue";
-import type { ClientLedgerSummary, LedgerOverallSummary, LedgerTransaction, ReferenceOption } from "../types";
+import type { ClientLedgerSummary, CustomerTypeOption, LedgerOverallSummary, LedgerTransaction, ReferenceOption } from "../types";
 
 const masterStore = useMasterDataStore();
 const { exportSingleSheet } = useExcelExport();
 
-// Date defaults
-const getCurrentMonth = () => {
+// Date defaults: By default previous month of current month
+const getLastMonth = () => {
   const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() - 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 
-const getDefaultFromMonth = () => {
-  const d = new Date();
-  d.setMonth(d.getMonth() - 5);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-};
-
-// Filter State
-const fromMonth = ref(getDefaultFromMonth());
-const toMonth = ref(getCurrentMonth());
+// Filter State: Defaults to previous month (fromMonth = lastMonth, toMonth = lastMonth)
+const fromMonth = ref(getLastMonth());
+const toMonth = ref(getLastMonth());
 const selectedClientId = ref<number | null>(null);
+const selectedCustomerTypeId = ref<string | number>("all");
 const selectedReferenceId = ref<string | number>("all");
 
 // Data State
 const isLoading = ref(false);
 const errorMessage = ref("");
+const customerTypes = ref<CustomerTypeOption[]>([]);
 const references = ref<ReferenceOption[]>([]);
 const summary = ref<LedgerOverallSummary>({
   totalClients: 0,
@@ -61,9 +59,10 @@ const activeReferenceName = computed(() => {
   return found ? found.name : "";
 });
 
-// Load References
-const loadReferences = async () => {
+// Load Master Data (Customer Types & References)
+const loadMasterData = async () => {
   try {
+    // 1. References
     if (masterStore.references && masterStore.references.length > 0) {
       references.value = masterStore.references.map((r: any) => ({ id: r.id, name: r.name }));
     } else {
@@ -71,8 +70,17 @@ const loadReferences = async () => {
       const list = res.data?.data || res.data || [];
       references.value = list.map((r: any) => ({ id: r.id, name: r.name }));
     }
+
+    // 2. Customer Types
+    if (masterStore.customerTypes && masterStore.customerTypes.length > 0) {
+      customerTypes.value = masterStore.customerTypes.map((t: any) => ({ id: t.id, name: t.typeName || t.name }));
+    } else {
+      const res = await axios.get("/api/superadmin/client-types");
+      const list = res.data?.data || res.data || [];
+      customerTypes.value = list.map((t: any) => ({ id: t.id, name: t.typeName || t.name }));
+    }
   } catch (err) {
-    console.error("Failed to load references:", err);
+    console.error("Failed to load filter metadata:", err);
   }
 };
 
@@ -95,6 +103,9 @@ const fetchLedger = async () => {
 
     if (selectedClientId.value) {
       params.clientId = selectedClientId.value;
+    }
+    if (selectedCustomerTypeId.value && selectedCustomerTypeId.value !== "all") {
+      params.customerTypeId = selectedCustomerTypeId.value;
     }
     if (selectedReferenceId.value && selectedReferenceId.value !== "all") {
       params.referenceId = selectedReferenceId.value;
@@ -127,7 +138,7 @@ const fetchLedger = async () => {
 };
 
 // Watchers
-watch([fromMonth, toMonth, selectedClientId, selectedReferenceId], () => {
+watch([fromMonth, toMonth, selectedClientId, selectedCustomerTypeId, selectedReferenceId], () => {
   fetchLedger();
 });
 
@@ -137,15 +148,16 @@ usePulseListener("collection:created", () => fetchLedger());
 usePulseListener("billing:updated", () => fetchLedger());
 
 onMounted(() => {
-  loadReferences();
+  loadMasterData();
   fetchLedger();
 });
 
 // Reset Filters
 const handleReset = () => {
-  fromMonth.value = getDefaultFromMonth();
-  toMonth.value = getCurrentMonth();
+  fromMonth.value = getLastMonth();
+  toMonth.value = getLastMonth();
   selectedClientId.value = null;
+  selectedCustomerTypeId.value = "all";
   selectedReferenceId.value = "all";
 };
 
@@ -206,9 +218,11 @@ const handleExport = () => {
     <!-- Filter Bar -->
     <LedgerFilterBar
       v-model:client-id="selectedClientId"
+      v-model:customer-type-id="selectedCustomerTypeId"
       v-model:reference-id="selectedReferenceId"
       v-model:from-month="fromMonth"
       v-model:to-month="toMonth"
+      :customer-types="customerTypes"
       :references="references"
       :is-loading="isLoading"
       :can-export="canExport"

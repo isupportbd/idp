@@ -31,8 +31,8 @@ const formatTk = (amount?: number | null): string => {
           Showing balances for <strong class="text-light">{{ clientSummaries.length }}</strong> clients ({{ fromMonth }} to {{ toMonth }})
         </div>
       </div>
-      <div class="small text-muted font-monospace">
-        Total Due: <strong class="text-danger fs-6">৳ {{ formatTk(summary.closingBalance) }}</strong>
+      <div class="small text-muted">
+        Total Due: <strong class="text-danger fs-6 fw-bold">৳ {{ formatTk(summary.closingBalance) }}</strong>
       </div>
     </div>
 
@@ -41,7 +41,7 @@ const formatTk = (amount?: number | null): string => {
         <thead>
           <tr class="text-uppercase small text-muted border-bottom border-secondary border-opacity-25" style="background-color: #1a1d21;">
             <th class="ps-3" style="width: 50px;">#</th>
-            <th>Client Organization</th>
+            <th>Client</th>
             <th style="width: 170px;">Reference</th>
             <th class="text-end" style="width: 140px;">Opening (Tk)</th>
             <th class="text-end" style="width: 140px;">Billed (Tk)</th>
@@ -64,14 +64,15 @@ const formatTk = (amount?: number | null): string => {
             class="border-bottom border-secondary border-opacity-10"
           >
             <!-- # -->
-            <td class="ps-3 text-muted small font-monospace">{{ index + 1 }}</td>
+            <td class="ps-3 text-muted small">{{ index + 1 }}</td>
 
             <!-- Client Info -->
             <td>
-              <div class="fw-semibold text-light">{{ cl.companyName }}</div>
-              <div class="text-muted small font-monospace">
-                <span>BIN: {{ cl.binNumber }}</span>
-                <span v-if="cl.mobile && cl.mobile !== '—'" class="ms-2">| Ph: {{ cl.mobile }}</span>
+              <div class="fw-bold text-white text-truncate" style="max-width: 360px; font-size: 0.92rem;">
+                {{ cl.companyName }}
+              </div>
+              <div class="text-info small mt-1" style="font-size: 0.78rem;">
+                BIN: {{ cl.binNumber }}
               </div>
             </td>
 
@@ -83,36 +84,36 @@ const formatTk = (amount?: number | null): string => {
             </td>
 
             <!-- Opening Balance -->
-            <td class="text-end font-monospace text-muted">
+            <td class="text-end text-muted fw-medium">
               {{ formatTk(cl.openingBalance) }}
             </td>
 
             <!-- Billed / Invoiced -->
-            <td class="text-end font-monospace text-primary fw-medium">
+            <td class="text-end text-primary fw-semibold">
               {{ formatTk(cl.totalBilled) }}
             </td>
 
             <!-- Paid / Collected -->
-            <td class="text-end font-monospace text-success fw-medium">
+            <td class="text-end text-success fw-semibold">
               {{ formatTk(cl.totalPaid) }}
             </td>
 
             <!-- Closing Due Balance -->
-            <td class="text-end font-monospace fw-bold">
+            <td class="text-end fw-bold" style="font-size: 0.95rem;">
               <span :class="cl.closingBalance > 0 ? 'text-danger' : 'text-success'">
                 {{ formatTk(cl.closingBalance) }}
               </span>
             </td>
 
-            <!-- Action -->
+            <!-- Action: View Button Only -->
             <td class="text-center pe-3">
               <button
                 type="button"
-                class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 py-1 px-2"
+                class="action-btn btn-view"
+                title="View Client Ledger"
                 @click="emit('selectClient', cl.clientId)"
               >
-                <i class="bi bi-journal-text"></i>
-                <span>Ledger</span>
+                <i class="bi bi-eye"></i>
               </button>
             </td>
           </tr>
@@ -124,16 +125,16 @@ const formatTk = (amount?: number | null): string => {
             <td colspan="3" class="ps-3 text-light">
               <span>Grand Total ({{ clientSummaries.length }} Clients)</span>
             </td>
-            <td class="text-end font-monospace text-muted">
+            <td class="text-end text-muted fw-bold">
               ৳ {{ formatTk(summary.openingBalance) }}
             </td>
-            <td class="text-end font-monospace text-primary">
+            <td class="text-end text-primary fw-bold">
               ৳ {{ formatTk(summary.totalBilled) }}
             </td>
-            <td class="text-end font-monospace text-success">
+            <td class="text-end text-success fw-bold">
               ৳ {{ formatTk(summary.totalPaid) }}
             </td>
-            <td class="text-end font-monospace" :class="summary.closingBalance > 0 ? 'text-danger' : 'text-success'">
+            <td class="text-end fw-bolder" :class="summary.closingBalance > 0 ? 'text-danger' : 'text-success'">
               ৳ {{ formatTk(summary.closingBalance) }}
             </td>
             <td class="pe-3 text-center text-muted">—</td>
@@ -146,19 +147,26 @@ const formatTk = (amount?: number | null): string => {
 
 <style scoped>
 .reference-summary-card {
-  border-radius: 10px;
-  background-color: #14171a !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px;
+  background-color: #1e2227 !important;
+  border: 1px solid #343a40 !important;
+  font-family: inherit;
 }
 .idp-table th {
-  background-color: #1a1d21 !important;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  padding-top: 12px;
-  padding-bottom: 12px;
+  background-color: #15181b !important;
+  color: #adb5bd !important;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #343a40;
 }
 .idp-table td {
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #282d34;
+  vertical-align: middle;
+}
+.idp-table tr:hover td {
+  background: #252b32;
 }
 </style>
