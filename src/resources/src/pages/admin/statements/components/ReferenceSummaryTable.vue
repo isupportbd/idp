@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { computed } from "vue";
+import { usePagination } from "@/composables/usePagination";
 import type { ClientLedgerSummary, LedgerOverallSummary } from "../types";
 
-defineProps<{
+const props = defineProps<{
   clientSummaries: ClientLedgerSummary[];
   summary: LedgerOverallSummary;
   fromMonth: string;
@@ -12,6 +14,15 @@ defineProps<{
 const emit = defineEmits<{
   selectClient: [clientId: number];
 }>();
+
+// Framework pagination
+const { currentPage, itemsPerPage, totalPages, paginateList } = usePagination("client_ledger_overview", {
+  defaultPerPage: 15
+});
+
+const paginatedClients = computed(() => {
+  return paginateList(props.clientSummaries);
+});
 
 const formatTk = (amount?: number | null): string => {
   if (amount === undefined || amount === null) return "0.00";
@@ -59,12 +70,12 @@ const formatTk = (amount?: number | null): string => {
           </tr>
 
           <tr
-            v-for="(cl, index) in clientSummaries"
+            v-for="(cl, index) in paginatedClients"
             :key="cl.clientId"
             class="border-bottom border-secondary border-opacity-10"
           >
             <!-- # -->
-            <td class="ps-3 text-muted small">{{ index + 1 }}</td>
+            <td class="ps-3 text-muted small">{{ (currentPage - 1) * itemsPerPage + index + 1 }}</td>
 
             <!-- Client Info -->
             <td>
@@ -142,6 +153,54 @@ const formatTk = (amount?: number | null): string => {
         </tfoot>
       </table>
     </div>
+
+    <!-- Framework Pagination Bar -->
+    <div v-if="clientSummaries.length > 0" class="d-flex flex-wrap justify-content-between align-items-center p-3 border-top border-secondary border-opacity-25">
+      <span class="text-muted small">
+        Showing <strong>{{ (currentPage - 1) * itemsPerPage + 1 }}</strong> to
+        <strong>{{ Math.min(currentPage * itemsPerPage, clientSummaries.length) }}</strong> of
+        <strong>{{ clientSummaries.length }}</strong> clients
+      </span>
+
+      <div v-if="totalPages > 1" class="d-flex align-items-center gap-1">
+        <button
+          type="button"
+          class="btn btn-dark border-secondary btn-sm"
+          :disabled="currentPage <= 1"
+          @click="currentPage--"
+        >
+          <i class="bi bi-chevron-left"></i> Prev
+        </button>
+
+        <template v-for="p in totalPages" :key="p">
+          <button
+            v-if="p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2)"
+            type="button"
+            class="btn btn-sm"
+            :class="currentPage === p ? 'btn-primary' : 'btn-dark border-secondary text-muted'"
+            style="min-width: 32px;"
+            @click="currentPage = p"
+          >
+            {{ p }}
+          </button>
+          <span
+            v-else-if="p === currentPage - 3 || p === currentPage + 3"
+            class="text-muted px-1"
+          >
+            ...
+          </span>
+        </template>
+
+        <button
+          type="button"
+          class="btn btn-dark border-secondary btn-sm"
+          :disabled="currentPage >= totalPages"
+          @click="currentPage++"
+        >
+          Next <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -168,5 +227,32 @@ const formatTk = (amount?: number | null): string => {
 }
 .idp-table tr:hover td {
   background: #252b32;
+}
+
+/* Framework Standard Action Button Styling */
+.action-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 5px;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-view {
+  background: rgba(13, 202, 240, 0.12);
+  color: #0dcaf0;
+  border: 1px solid rgba(13, 202, 240, 0.3);
+}
+
+.btn-view:hover {
+  background: rgba(13, 202, 240, 0.25);
+  color: #38d9f5;
+  border-color: rgba(13, 202, 240, 0.6);
+  box-shadow: 0 0 8px rgba(13, 202, 240, 0.3);
 }
 </style>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import axios from "axios";
 import { computed, onMounted, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { can } from "@/composables/useAuth";
 import { useExcelExport } from "@/composables/useExcelExport";
 import { usePulseListener } from "@/composables/usePulseListener";
@@ -11,8 +12,24 @@ import LedgerTransactionsTable from "../components/LedgerTransactionsTable.vue";
 import ReferenceSummaryTable from "../components/ReferenceSummaryTable.vue";
 import type { ClientLedgerSummary, CustomerTypeOption, LedgerOverallSummary, LedgerTransaction, ReferenceOption } from "../types";
 
+const route = useRoute();
+const router = useRouter();
 const masterStore = useMasterDataStore();
 const { exportSingleSheet } = useExcelExport();
+
+const STATEMENTS_FILTER_KEY = "idp_statements_ledger_filters";
+
+const getSavedFilters = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      const raw = sessionStorage.getItem(STATEMENTS_FILTER_KEY);
+      if (raw) return JSON.parse(raw);
+    }
+  } catch {}
+  return {};
+};
+
+const savedFilters = getSavedFilters();
 
 // Date defaults: By default previous month of current month
 const getLastMonth = () => {
@@ -22,12 +39,41 @@ const getLastMonth = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 
-// Filter State: Defaults to previous month (fromMonth = lastMonth, toMonth = lastMonth)
-const fromMonth = ref(getLastMonth());
-const toMonth = ref(getLastMonth());
-const selectedClientId = ref<number | null>(null);
-const selectedCustomerTypeId = ref<string | number>("all");
-const selectedReferenceId = ref<string | number>("all");
+// Filter State: Initialized from Route Query -> Session Storage -> Defaults
+const fromMonth = ref((route.query.from as string) || savedFilters.fromMonth || getLastMonth());
+const toMonth = ref((route.query.to as string) || savedFilters.toMonth || getLastMonth());
+const selectedClientId = ref<number | null>(route.query.client ? Number(route.query.client) : (savedFilters.clientId ?? null));
+const selectedCustomerTypeId = ref<string | number>((route.query.type as string) || savedFilters.customerTypeId || "all");
+const selectedReferenceId = ref<string | number>((route.query.ref as string) || savedFilters.referenceId || "all");
+
+// Persist filters to sessionStorage and update URL query
+const syncFiltersAndUrl = () => {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      sessionStorage.setItem(
+        STATEMENTS_FILTER_KEY,
+        JSON.stringify({
+          fromMonth: fromMonth.value,
+          toMonth: toMonth.value,
+          clientId: selectedClientId.value,
+          customerTypeId: selectedCustomerTypeId.value,
+          referenceId: selectedReferenceId.value
+        })
+      );
+    }
+    const q: Record<string, any> = { ...route.query, tab: "billing" };
+    if (fromMonth.value) q.from = fromMonth.value;
+    if (toMonth.value) q.to = toMonth.value;
+    if (selectedClientId.value) q.client = selectedClientId.value;
+    else delete q.client;
+    if (selectedCustomerTypeId.value && selectedCustomerTypeId.value !== "all") q.type = selectedCustomerTypeId.value;
+    else delete q.type;
+    if (selectedReferenceId.value && selectedReferenceId.value !== "all") q.ref = selectedReferenceId.value;
+    else delete q.ref;
+
+    router.replace({ query: q });
+  } catch {}
+};
 
 // Data State
 const isLoading = ref(false);
@@ -137,8 +183,9 @@ const fetchLedger = async () => {
   }
 };
 
-// Watchers
+// Watchers: Fetch ledger data & sync to session + URL
 watch([fromMonth, toMonth, selectedClientId, selectedCustomerTypeId, selectedReferenceId], () => {
+  syncFiltersAndUrl();
   fetchLedger();
 });
 

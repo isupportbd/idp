@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
+import IdpSelect from "@/components/common/IdpSelect.vue";
 import MonthNavigator from "@/components/MonthNavigator.vue";
 import type { CustomerTypeOption, ReferenceOption } from "../types";
 
-defineProps<{
+const props = defineProps<{
   clientId: number | null;
   customerTypeId: number | string;
   referenceId: number | string;
@@ -25,6 +27,16 @@ const emit = defineEmits<{
   export: [];
   print: [];
 }>();
+
+const customerTypeOptions = computed(() => [
+  { value: "all", label: `All Types (${props.customerTypes.length})` },
+  ...props.customerTypes.map((t) => ({ value: t.id, label: t.name }))
+]);
+
+const referenceOptions = computed(() => [
+  { value: "all", label: `All References (${props.references.length})` },
+  ...props.references.map((r) => ({ value: r.id, label: `Ref: ${r.name}` }))
+]);
 </script>
 
 <template>
@@ -40,32 +52,28 @@ const emit = defineEmits<{
         />
       </div>
 
-      <!-- Client Type Filter (Before Reference) -->
+      <!-- Client Type Filter (Before Reference) using IdpSelect -->
       <div class="col-12 col-sm-6 col-md-2">
-        <select
-          :value="customerTypeId"
-          class="form-select idp-input"
-          @change="emit('update:customerTypeId', ($event.target as HTMLSelectElement).value)"
-        >
-          <option value="all">All Types ({{ customerTypes.length }})</option>
-          <option v-for="t in customerTypes" :key="t.id" :value="t.id">
-            {{ t.name }}
-          </option>
-        </select>
+        <IdpSelect
+          :model-value="customerTypeId"
+          :options="customerTypeOptions"
+          width="100%"
+          min-width="100%"
+          height="38px"
+          @update:model-value="emit('update:customerTypeId', $event ?? 'all')"
+        />
       </div>
 
-      <!-- Reference Filter -->
+      <!-- Reference Filter using IdpSelect -->
       <div class="col-12 col-sm-6 col-md-2">
-        <select
-          :value="referenceId"
-          class="form-select idp-input"
-          @change="emit('update:referenceId', ($event.target as HTMLSelectElement).value)"
-        >
-          <option value="all">All References ({{ references.length }})</option>
-          <option v-for="r in references" :key="r.id" :value="r.id">
-            Ref: {{ r.name }}
-          </option>
-        </select>
+        <IdpSelect
+          :model-value="referenceId"
+          :options="referenceOptions"
+          width="100%"
+          min-width="100%"
+          height="38px"
+          @update:model-value="emit('update:referenceId', $event ?? 'all')"
+        />
       </div>
 
       <!-- Month Range (From - To) -->

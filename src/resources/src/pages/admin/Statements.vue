@@ -34,18 +34,24 @@ const tabTitle = computed(() => {
 </script>
 
 <template>
-  <div class="statements-page">
+  <div class="statements-page py-2">
     <!-- Main Header -->
     <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
       <div>
         <div class="d-flex align-items-center gap-2 mb-1">
-          <router-link to="/dashboard" class="btn btn-sm btn-link text-muted p-0 text-decoration-none">
-            <i class="bi bi-arrow-left"></i> Dashboard
+          <router-link to="/" class="text-muted text-decoration-none small">
+            <i class="bi bi-arrow-left me-1"></i> Dashboard
           </router-link>
-          <span class="text-muted">/</span>
-          <span class="text-white small fw-medium">Statements</span>
+          <span class="text-muted small">/</span>
+          <span class="text-primary small fw-semibold">Statements</span>
         </div>
-        <h4 class="text-white fw-bold mb-0">{{ tabTitle }}</h4>
+        <h4 class="text-white fw-bold mb-0 d-flex align-items-center gap-2">
+          <i :class="activeTab === 'billing' ? 'bi bi-journal-text text-primary' : 'bi bi-box-seam text-primary'"></i>
+          <span>{{ tabTitle }}</span>
+        </h4>
+        <span class="text-muted small">
+          {{ activeTab === 'billing' ? 'Track client invoices, payments, running balances and outstanding receivables' : 'Monitor customs purchases, B/E quantities and monthly return submissions' }}
+        </span>
       </div>
     </div>
 

@@ -128,6 +128,9 @@ export const getClientLedgerStatement = async (c: AppContext) => {
         billNo: bills.billNo,
         taxPeriod: bills.taxPeriod,
         billDate: bills.billDate,
+        subtotal: bills.subtotal,
+        discountAmount: bills.discountAmount,
+        previousDue: bills.previousDue,
         grandTotal: bills.grandTotal,
         paidAmount: bills.paidAmount,
         dueAmount: bills.dueAmount,
@@ -161,7 +164,7 @@ export const getClientLedgerStatement = async (c: AppContext) => {
       .where(
         and(
           inArray(collections.clientId, clientIds),
-          sql`${collections.status} != 'cancelled'`
+          sql`${collections.status} = 'completed'`
         )
       )
       .orderBy(asc(collections.collectionDate), asc(collections.id));
@@ -182,12 +185,15 @@ export const getClientLedgerStatement = async (c: AppContext) => {
       const clBills = allBills.filter((b) => b.clientId === cl.id);
       const clCollections = allCollections.filter((col) => col.clientId === cl.id);
 
-      // Prior bills (taxPeriod < fromMonth)
+      // Prior bills (taxPeriod < fromMonth): Only count actual periodic bill (subtotal - discountAmount)
       const priorBillsSum = clBills
         .filter((b) => b.taxPeriod < fromMonth)
-        .reduce((sum, b) => sum + (Number(b.grandTotal) || 0), 0);
+        .reduce((sum, b) => {
+          const currentBilled = Math.max(0, (Number(b.subtotal) || 0) - (Number(b.discountAmount) || 0));
+          return sum + currentBilled;
+        }, 0);
 
-      // Prior collections (collectionDate < fromDate)
+      // Prior collections (collectionDate < fromDate): Only completed collections
       const priorCollectionsSum = clCollections
         .filter((col) => new Date(col.collectionDate).getTime() < fromDate.getTime())
         .reduce((sum, col) => sum + (Number(col.amount) || 0), 0);
@@ -223,6 +229,7 @@ export const getClientLedgerStatement = async (c: AppContext) => {
 
       inPeriodBills.forEach((b) => {
         const bDate = new Date(b.billDate);
+        const currentBilled = Math.max(0, (Number(b.subtotal) || 0) - (Number(b.discountAmount) || 0));
         rawEntries.push({
           type: "bill",
           timestamp: bDate.getTime(),
@@ -230,7 +237,7 @@ export const getClientLedgerStatement = async (c: AppContext) => {
           taxPeriod: b.taxPeriod,
           refNo: b.billNo,
           description: `Monthly VAT Service Bill (${b.taxPeriod})`,
-          debit: Math.round((Number(b.grandTotal) || 0) * 100) / 100,
+          debit: Math.round(currentBilled * 100) / 100,
           credit: 0,
           status: b.status,
           billId: b.id
