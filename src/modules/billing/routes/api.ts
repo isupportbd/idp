@@ -16,7 +16,8 @@ import {
   getMissingBills,
   listBills,
   listCollections,
-  updateBill
+  updateBill,
+  updateCollection
 } from "../controllers/billing.controller.js";
 import {
   batchGenerateBillsSchema,
@@ -25,7 +26,8 @@ import {
   createCollectionSchema,
   listBillsQuerySchema,
   listCollectionsQuerySchema,
-  updateBillSchema
+  updateBillSchema,
+  updateCollectionSchema
 } from "../controllers/billing.schema.js";
 
 export const billingRouter = createRouter();
@@ -63,6 +65,15 @@ const createCollectionRoute = createRoute({
   description: "Record a new payment collection",
   request: { body: jsonContent(createCollectionSchema, "Collection payload") },
   responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), data: z.unknown() }), "Collection created") }
+});
+
+const updateCollectionRoute = createRoute({
+  path: "/collections/{id}",
+  method: "put",
+  tags: ["Billing - Collections"],
+  description: "Update existing payment collection receipt",
+  request: { body: jsonContent(updateCollectionSchema, "Update collection payload") },
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), message: z.string() }), "Update result") }
 });
 
 const cancelCollectionRoute = createRoute({
@@ -161,6 +172,7 @@ const deleteBillRoute = createRoute({
 billingRouter.api(listCollectionsRoute, [requirePermission("collections.view", "reports.view")], listCollections);
 billingRouter.api(getCollectionDetailsRoute, [requirePermission(...BILL_READERS)], getCollectionDetails);
 billingRouter.api(createCollectionRoute, [requirePermission("collections.create")], createCollection);
+billingRouter.api(updateCollectionRoute, [requirePermission("collections.edit", "collections.create")], updateCollection);
 billingRouter.api(cancelCollectionRoute, [requirePermission("collections.delete")], cancelCollection);
 
 billingRouter.api(overviewRoute, [requirePermission(...BILL_READERS)], getClientBillingOverview);

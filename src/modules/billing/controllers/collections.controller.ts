@@ -325,6 +325,114 @@ export const createCollection = async (c: AppContext) => {
   }
 };
 
+export const updateCollection = async (c: AppContext) => {
+  try {
+    const id = Number(c.req.param("id"));
+    if (!id || isNaN(id)) {
+      return c.json({ message: "Invalid collection ID" }, HttpStatusCodes.BAD_REQUEST);
+    }
+
+    const payload = c.req.valid("json");
+    const { collectionDate, amount, paymentMethod, referenceNo, notes } = payload;
+    const { tenantAdminId } = await resolveTenantContext(c);
+
+    const existingCol = await loadScopedCollection(c, id);
+    if (!existingCol) {
+      return c.json({ message: "Payment receipt not found" }, HttpStatusCodes.NOT_FOUND);
+    }
+
+    if (existingCol.status === "cancelled") {
+      return c.json({ message: "Cannot edit a cancelled payment receipt" }, HttpStatusCodes.CONFLICT);
+    }
+
+    let parsedDate = existingCol.collectionDate;
+    if (collectionDate) {
+      const dt = new Date(collectionDate);
+      if (Number.isNaN(dt.getTime())) {
+        return c.json({ message: "Invalid collection date" }, HttpStatusCodes.BAD_REQUEST);
+      }
+      parsedDate = dt;
+    }
+
+    const newAmount = amount !== undefined ? r2(amount) : Number(existingCol.amount);
+    const deltaAmount = r2(newAmount - Number(existingCol.amount));
+
+    await db.transaction(async (tx) => {
+      // 1. Update collection record
+      await tx
+        .update(collections)
+        .set({
+          collectionDate: parsedDate,
+          amount: newAmount,
+          ...(paymentMethod ? { paymentMethod } : {}),
+          referenceNo: referenceNo !== undefined ? (referenceNo?.trim() || null) : existingCol.referenceNo,
+          notes: notes !== undefined ? (notes?.trim() || null) : existingCol.notes,
+          updatedAt: new Date()
+        })
+        .where(eq(collections.id, id));
+
+      // 2. If amount changed and collection is tied to a bill, adjust bill and cascade
+      if (deltaAmount !== 0 && existingCol.billId) {
+        await tx
+          .update(bills)
+          .set({
+            paidAmount: sql`GREATEST(0, ${bills.paidAmount} + ${deltaAmount})`,
+            dueAmount: sql`GREATEST(0, ${bills.grandTotal} - GREATEST(0, ${bills.paidAmount} + ${deltaAmount}))`,
+            status: sql`CASE WHEN GREATEST(0, ${bills.grandTotal} - GREATEST(0, ${bills.paidAmount} + ${deltaAmount})) <= 0 THEN 'paid' ELSE 'partial' END`,
+            updatedAt: new Date()
+          })
+          .where(eq(bills.id, existingCol.billId));
+
+        const targetBill = (
+          await tx
+            .select({ taxPeriod: bills.taxPeriod, clientId: bills.clientId })
+            .from(bills)
+            .where(eq(bills.id, existingCol.billId))
+            .limit(1)
+        )[0];
+
+        if (targetBill?.taxPeriod) {
+          const subsequentBills = await tx
+            .select({ id: bills.id, subtotal: bills.subtotal, discountAmount: bills.discountAmount, paidAmount: bills.paidAmount })
+            .from(bills)
+            .where(
+              and(
+                eq(bills.clientId, targetBill.clientId),
+                sql`${bills.taxPeriod} > ${targetBill.taxPeriod}`,
+                sql`${bills.status} != 'cancelled'`
+              )
+            )
+            .orderBy(asc(bills.taxPeriod), asc(bills.id));
+
+          for (const sb of subsequentBills) {
+            const netSubtotal = Math.max(0, (Number(sb.subtotal) || 0) - (Number(sb.discountAmount) || 0));
+            const clientDueBefore = await getClientRunningDue(targetBill.clientId, sb.id);
+            const newGrand = r2(netSubtotal + clientDueBefore);
+            const paid = Number(sb.paidAmount) || 0;
+            const newDue = r2(Math.max(0, newGrand - paid));
+            const newStatus = newDue <= 0 ? "paid" : (paid > 0 ? "partial" : "unpaid");
+
+            await tx
+              .update(bills)
+              .set({
+                previousDue: clientDueBefore,
+                grandTotal: newGrand,
+                dueAmount: newDue,
+                status: newStatus,
+                updatedAt: new Date()
+              })
+              .where(eq(bills.id, sb.id));
+          }
+        }
+      }
+    });
+
+    return c.json({ message: "Payment receipt updated successfully" }, HttpStatusCodes.OK);
+  } catch (err: unknown) {
+    return c.json({ message: "Failed to update payment receipt" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
+  }
+};
+
 export const cancelCollection = async (c: AppContext) => {
   try {
     const id = Number(c.req.param("id"));

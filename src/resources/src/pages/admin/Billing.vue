@@ -445,6 +445,10 @@ const goToEditBill = (id: number) => {
   router.push(`/admin/billing/edit/${id}`);
 };
 
+const goToEditCollection = (id: number) => {
+  router.push(`/admin/billing/collections/edit/${id}`);
+};
+
 // Print Report
 const printReport = () => {
   window.print();
@@ -565,7 +569,9 @@ const printReport = () => {
       :collections="(paginatedList as Collection[])"
       :loading="loading"
       :selected-month="selectedMonth"
+      :can-edit="can('collections.create') || can('collections.edit')"
       :can-delete="can('collections.delete')"
+      @edit-receipt="goToEditCollection"
       @cancel-receipt="handleCancelReceipt"
     />
 

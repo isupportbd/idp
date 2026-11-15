@@ -367,6 +367,27 @@ export function useBillingApi() {
     }
   };
 
+  // 10.1 Update Collection
+  const updateCollection = async (
+    id: number,
+    payload: {
+      collectionDate?: string;
+      amount?: number;
+      paymentMethod?: string;
+      referenceNo?: string | null;
+      notes?: string | null;
+    }
+  ) => {
+    try {
+      const res = await axios.put(`/api/billing/collections/${id}`, payload);
+      toast.success(res.data.message || "Payment receipt updated successfully");
+      return res.data;
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to update payment receipt");
+      throw err;
+    }
+  };
+
   // 11. Cancel Collection
   const cancelCollection = async (id: number) => {
     try {
@@ -397,6 +418,7 @@ export function useBillingApi() {
     fetchCollections,
     fetchCollectionDetails,
     createCollection,
+    updateCollection,
     cancelCollection
   };
 }

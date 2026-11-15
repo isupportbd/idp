@@ -50,6 +50,14 @@ export const createCollectionSchema = z.object({
   notes: z.string().optional().nullable()
 });
 
+export const updateCollectionSchema = z.object({
+  collectionDate: z.string().optional(),
+  amount: z.number().positive("Collection amount must be greater than 0").optional(),
+  paymentMethod: z.enum(["cash", "bank", "cheque", "bkash", "nagad", "rocket", "other"]).optional(),
+  referenceNo: z.string().optional().nullable(),
+  notes: z.string().optional().nullable()
+});
+
 export const listBillsQuerySchema = z.object({
   month: z.string().optional(),
   taxPeriod: z.string().optional(),

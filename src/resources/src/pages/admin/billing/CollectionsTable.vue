@@ -1,14 +1,55 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import type { Collection } from "@/composables/useBillingApi";
 
 defineProps<{
   collections: Collection[];
   loading: boolean;
   selectedMonth: string;
+  canEdit?: boolean;
   canDelete: boolean;
 }>();
 
-const emit = defineEmits<(e: "cancelReceipt", col: Collection) => void>();
+const emit = defineEmits<{
+  (e: "editReceipt", id: number): void;
+  (e: "cancelReceipt", col: Collection): void;
+}>();
+
+// ── Collection row actions ("..." dropdown) ───────────────────────────
+const openActionsColId = ref<number | null>(null);
+const actionsMenuStyle = ref<Record<string, string>>({});
+
+const closeCollectionActions = () => {
+  openActionsColId.value = null;
+};
+
+const toggleCollectionActions = (event: MouseEvent, colId: number) => {
+  if (openActionsColId.value === colId) {
+    closeCollectionActions();
+    return;
+  }
+
+  const trigger = event.currentTarget as HTMLElement | null;
+  const rect = trigger?.getBoundingClientRect();
+  const menuWidth = 190;
+  const left = rect ? Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)) : 8;
+  const top = rect ? rect.bottom + 4 : 8;
+
+  actionsMenuStyle.value = { top: `${top}px`, left: `${left}px` };
+  openActionsColId.value = colId;
+};
+
+onMounted(() => {
+  document.addEventListener("click", closeCollectionActions);
+  window.addEventListener("scroll", closeCollectionActions, true);
+  window.addEventListener("resize", closeCollectionActions);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("click", closeCollectionActions);
+  window.removeEventListener("scroll", closeCollectionActions, true);
+  window.removeEventListener("resize", closeCollectionActions);
+});
 </script>
 
 <template>
@@ -85,28 +126,57 @@ const emit = defineEmits<(e: "cancelReceipt", col: Collection) => void>();
 
           <!-- Actions -->
           <td style="text-align: right;" class="d-print-none">
-            <div class="d-inline-flex align-items-center gap-1">
-              <!-- View / Share Receipt -->
-              <router-link
-                :to="`/admin/billing/receipts/${col.id}`"
-                class="btn btn-sm btn-outline-info p-1"
-                title="View & Share Money Receipt"
-              >
-                <i class="bi bi-eye"></i>
-              </router-link>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary p-1"
+              title="Collection Actions"
+              aria-haspopup="true"
+              :aria-expanded="openActionsColId === col.id"
+              @click.stop="toggleCollectionActions($event, col.id)"
+            >
+              <i class="bi bi-three-dots"></i>
+            </button>
 
-              <!-- Cancel Receipt -->
-              <button
-                v-if="canDelete"
-                type="button"
-                class="btn btn-sm btn-outline-danger p-1"
-                title="Cancel Receipt"
-                :disabled="col.status === 'cancelled'"
-                @click="emit('cancelReceipt', col)"
+            <Teleport to="body">
+              <div
+                v-if="openActionsColId === col.id"
+                class="dropdown-menu show collection-actions-menu"
+                :style="actionsMenuStyle"
+                @click.stop
               >
-                <i class="bi bi-x-circle"></i>
-              </button>
-            </div>
+                <!-- View Money Receipt -->
+                <router-link
+                  :to="`/admin/billing/receipts/${col.id}`"
+                  class="dropdown-item d-flex align-items-center gap-2"
+                  @click="closeCollectionActions"
+                >
+                  <i class="bi bi-eye"></i>
+                  <span>View Receipt</span>
+                </router-link>
+
+                <!-- Edit Money Receipt -->
+                <button
+                  v-if="canEdit && col.status !== 'cancelled'"
+                  type="button"
+                  class="dropdown-item d-flex align-items-center gap-2"
+                  @click="closeCollectionActions(); emit('editReceipt', col.id)"
+                >
+                  <i class="bi bi-pencil"></i>
+                  <span>Edit Receipt</span>
+                </button>
+
+                <!-- Cancel Receipt -->
+                <button
+                  v-if="canDelete && col.status !== 'cancelled'"
+                  type="button"
+                  class="dropdown-item d-flex align-items-center gap-2 text-danger"
+                  @click="closeCollectionActions(); emit('cancelReceipt', col)"
+                >
+                  <i class="bi bi-x-circle"></i>
+                  <span>Cancel Receipt</span>
+                </button>
+              </div>
+            </Teleport>
           </td>
         </tr>
       </tbody>
@@ -150,5 +220,31 @@ const emit = defineEmits<(e: "cancelReceipt", col: Collection) => void>();
 
 .hover-underline:hover {
   text-decoration: underline !important;
+}
+
+.collection-actions-menu {
+  position: fixed !important;
+  z-index: 9999;
+  background-color: #1e2227;
+  border: 1px solid #3b424b;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  min-width: 170px;
+}
+
+.collection-actions-menu .dropdown-item {
+  color: #adb5bd;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  text-decoration: none;
+}
+
+.collection-actions-menu .dropdown-item:hover {
+  background-color: #282e36;
+  color: #ffffff;
 }
 </style>

@@ -10,8 +10,15 @@ const router = useRouter();
 const route = useRoute();
 const toast = useToast();
 
-const { createCollection, fetchBills, fetchClientBillingOverview } = useBillingApi();
+const { createCollection, updateCollection, fetchCollectionDetails, fetchBills, fetchClientBillingOverview } = useBillingApi();
 const { clients, fetchClients } = useClientsApi();
+
+const collectionId = computed(() => {
+  const p = route.params.id;
+  return p ? Number(p) : null;
+});
+const isEditMode = computed(() => !!collectionId.value);
+const receiptNo = ref("");
 
 const selectedClientId = ref<number | null>(null);
 const selectedBillId = ref<number | null>(null);
@@ -68,6 +75,26 @@ const loadClientDetails = async () => {
 
 onMounted(async () => {
   await fetchClients();
+
+  if (isEditMode.value && collectionId.value) {
+    try {
+      const details = await fetchCollectionDetails(collectionId.value);
+      if (details) {
+        selectedClientId.value = details.clientId;
+        selectedBillId.value = details.billId || null;
+        receiptNo.value = details.receiptNo || "";
+        collectionDate.value = details.collectionDate ? new Date(details.collectionDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+        amount.value = Number(details.amount) || 0;
+        paymentMethod.value = details.paymentMethod || "cash";
+        referenceNo.value = details.referenceNo || "";
+        notes.value = details.notes || "";
+        await loadClientDetails();
+        return;
+      }
+    } catch (err: any) {
+      toast.error("Failed to load collection details for edit");
+    }
+  }
 
   if (route.query.clientId) {
     selectedClientId.value = Number(route.query.clientId);
@@ -136,19 +163,30 @@ const handleSaveCollection = async () => {
 
   isSaving.value = true;
   try {
-    const created = await createCollection({
-      clientId: selectedClientId.value,
-      billId: selectedBillId.value || null,
-      collectionDate: collectionDate.value,
-      amount: Number(amount.value),
-      paymentMethod: paymentMethod.value,
-      referenceNo: referenceNo.value || null,
-      notes: notes.value || null
-    });
-    if (created && created.id) {
-      router.push({ path: `/admin/billing/receipts/${created.id}` });
+    if (isEditMode.value && collectionId.value) {
+      await updateCollection(collectionId.value, {
+        collectionDate: collectionDate.value,
+        amount: Number(amount.value),
+        paymentMethod: paymentMethod.value,
+        referenceNo: referenceNo.value || null,
+        notes: notes.value || null
+      });
+      router.push({ path: `/admin/billing/receipts/${collectionId.value}` });
     } else {
-      router.push({ path: "/admin/billing", query: backQuery.value });
+      const created = await createCollection({
+        clientId: selectedClientId.value,
+        billId: selectedBillId.value || null,
+        collectionDate: collectionDate.value,
+        amount: Number(amount.value),
+        paymentMethod: paymentMethod.value,
+        referenceNo: referenceNo.value || null,
+        notes: notes.value || null
+      });
+      if (created && created.id) {
+        router.push({ path: `/admin/billing/receipts/${created.id}` });
+      } else {
+        router.push({ path: "/admin/billing", query: backQuery.value });
+      }
     }
   } catch (err: any) {
     // Toast already shown
@@ -168,11 +206,11 @@ const handleSaveCollection = async () => {
             <i class="bi bi-arrow-left me-1"></i> Back to Invoices & Collections
           </router-link>
           <span class="text-muted small">/</span>
-          <span class="text-primary small fw-semibold">Receive Payment</span>
+          <span class="text-primary small fw-semibold">{{ isEditMode ? 'Edit Payment' : 'Receive Payment' }}</span>
         </div>
         <h4 class="text-white fw-bold mb-0 d-flex align-items-center gap-2">
           <i class="bi bi-cash-coin text-success"></i>
-          <span>Record Money Receipt (Collection)</span>
+          <span>{{ isEditMode ? `Edit Payment Receipt (${receiptNo})` : 'Record Money Receipt (Collection)' }}</span>
         </h4>
       </div>
 
@@ -192,7 +230,7 @@ const handleSaveCollection = async () => {
         >
           <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span>
           <i v-else class="bi bi-check2-circle"></i>
-          <span>Save Money Receipt</span>
+          <span>{{ isEditMode ? 'Update Money Receipt' : 'Save Money Receipt' }}</span>
         </button>
       </div>
     </div>
