@@ -92,26 +92,35 @@ const tabTitle = computed(() => {
 }
 
 .statements-tab-bar {
-  border-radius: 8px;
+  border-radius: 10px;
   background-color: #14171a !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  padding: 4px;
 }
 
 .statements-tab-bar .nav-link {
   color: #94a3b8;
-  border-radius: 6px;
+  border-radius: 8px;
   transition: all 0.2s ease-in-out;
   border: 1px solid transparent;
+  background: transparent;
+  font-weight: 500;
 }
 
 .statements-tab-bar .nav-link:hover {
-  color: #fff;
-  background-color: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+  background-color: rgba(255, 255, 255, 0.04);
 }
 
 .statements-tab-bar .nav-link.active {
-  color: #fff !important;
-  background-color: #3b82f6 !important;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
+  color: #ffffff !important;
+  background: #1b2431 !important;
+  border-color: #3b8eed !important;
+  box-shadow: 0 2px 10px rgba(59, 142, 237, 0.18) !important;
+  font-weight: 600;
+}
+
+.statements-tab-bar .nav-link.active i {
+  color: #3b8eed !important;
 }
 </style>
