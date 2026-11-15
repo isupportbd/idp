@@ -11,12 +11,13 @@ defineProps<{
   totalCollectionsAmount: number;
   collectionsCount: number;
   dueClientsCount: number;
+  periodicDueCount?: number;
   missingBillsCount: number;
   missingReadyCount: number;
 }>();
 
 const emit = defineEmits<{
-  "update:activeTab": [tab: "invoices" | "collections" | "dues" | "missing"];
+  "update:activeTab": [tab: "invoices" | "collections" | "dues" | "missing" | "periodic-dues"];
 }>();
 </script>
 
@@ -53,12 +54,12 @@ const emit = defineEmits<{
       </div>
     </div>
 
-    <!-- Row 1, Col 3: Periodic Due (New 6th Card - Clickable filter) -->
+    <!-- Row 1, Col 3: Periodic Due (New 6th Card - Dedicated Tab 'periodic-dues') -->
     <div class="col">
       <div
         class="stat-pill cursor-pointer"
-        :class="{ 'stat-pill-active': activeTab === 'dues' }"
-        @click="emit('update:activeTab', 'dues')"
+        :class="{ 'stat-pill-active': activeTab === 'periodic-dues' }"
+        @click="emit('update:activeTab', 'periodic-dues')"
       >
         <div class="d-flex justify-content-between align-items-center mb-1">
           <span class="text-muted stat-label text-warning">Periodic Due</span>
@@ -68,7 +69,7 @@ const emit = defineEmits<{
           {{ (stats.periodicDueAmount !== undefined ? stats.periodicDueAmount : stats.totalDueAmount).toLocaleString() }}
           <span class="fs-6 fw-normal text-muted">Tk</span>
         </div>
-        <div class="text-secondary small mt-1 font-monospace">{{ dueClientsCount }} Unsettled Bills</div>
+        <div class="text-secondary small mt-1 font-monospace">{{ periodicDueCount !== undefined ? periodicDueCount : dueClientsCount }} Unsettled Bills</div>
       </div>
     </div>
 
@@ -88,7 +89,7 @@ const emit = defineEmits<{
       </div>
     </div>
 
-    <!-- Row 2, Col 2: Total Dues (Cumulative) -->
+    <!-- Row 2, Col 2: Total Dues (Dedicated Tab 'dues') -->
     <div class="col">
       <div
         class="stat-pill cursor-pointer"

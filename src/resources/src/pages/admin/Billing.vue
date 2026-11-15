@@ -58,7 +58,7 @@ const getSavedFilters = () => {
 const savedFilters = getSavedFilters();
 
 // Active View Tab
-const validTabs = ["invoices", "collections", "dues", "missing"] as const;
+const validTabs = ["invoices", "collections", "dues", "missing", "periodic-dues"] as const;
 type TabType = (typeof validTabs)[number];
 
 const initialTab = (route.query.tab as TabType) || savedFilters.activeTab || "invoices";
@@ -267,6 +267,15 @@ const dueClientsList = computed(() => {
   return bills.value.filter((b) => b.dueAmount > 0);
 });
 
+const periodicDueList = computed(() => {
+  return bills.value.filter((b) => {
+    const netBilled = Math.max(0, (Number(b.subtotal) || 0) - (Number(b.discountAmount) || 0));
+    const paidTowardCurrent = Math.max(0, (Number(b.paidAmount) || 0) - (Number(b.previousDue) || 0));
+    const periodicDue = Math.max(0, netBilled - paidTowardCurrent);
+    return periodicDue > 0;
+  });
+});
+
 // Filtered Missing Bills (Search + Filter Support)
 const filteredMissingBills = computed(() => {
   let list = missingBills.value;
@@ -296,6 +305,7 @@ const filteredMissingBills = computed(() => {
 
 // Pagination State (10 items per page with reload persistence)
 const currentTabList = computed<any[]>(() => {
+  if (activeTab.value === "periodic-dues") return periodicDueList.value;
   if (activeTab.value === "dues") return dueClientsList.value;
   if (activeTab.value === "collections") return collections.value;
   if (activeTab.value === "missing") return filteredMissingBills.value;
@@ -511,6 +521,7 @@ const printReport = () => {
       :total-collections-amount="totalCollectionsAmount"
       :collections-count="collections.length"
       :due-clients-count="dueClientsList.length"
+      :periodic-due-count="periodicDueList.length"
       :missing-bills-count="filteredMissingBills.length"
       :missing-ready-count="filteredMissingBills.filter(m => m.isSubmitted).length"
       @update:active-tab="activeTab = $event"
@@ -533,9 +544,9 @@ const printReport = () => {
       @update:selected-month="selectedMonth = $event"
     />
 
-    <!-- TAB 1 & 3: INVOICES TABLE (Active for 'invoices', 'dues') -->
+    <!-- TAB 1, 3 & 5: INVOICES TABLE (Active for 'invoices', 'dues', 'periodic-dues') -->
     <InvoicesTable
-      v-if="activeTab === 'invoices' || activeTab === 'dues'"
+      v-if="activeTab === 'invoices' || activeTab === 'dues' || activeTab === 'periodic-dues'"
       :bills="(paginatedList as Bill[])"
       :loading="loading"
       :selected-month="selectedMonth"
