@@ -16,8 +16,11 @@ const emit = defineEmits<{
 }>();
 
 // Framework pagination
+const totalClientsCount = computed(() => props.clientSummaries.length);
 const { currentPage, itemsPerPage, totalPages, paginateList } = usePagination("client_ledger_overview", {
-  defaultPerPage: 15
+  defaultPerPage: 15,
+  totalItems: totalClientsCount,
+  syncUrl: false
 });
 
 const paginatedClients = computed(() => {
@@ -36,7 +39,7 @@ const formatTk = (amount?: number | null): string => {
       <div>
         <h5 class="mb-1 text-light fw-bold d-flex align-items-center gap-2">
           <i class="bi bi-people-fill text-warning"></i>
-          <span>Client Ledger Overview {{ selectedReferenceName ? `(${selectedReferenceName})` : '' }}</span>
+          <span>Client Ledger Overview</span>
         </h5>
         <div class="text-muted small">
           Showing balances for <strong class="text-light">{{ clientSummaries.length }}</strong> clients ({{ fromMonth }} to {{ toMonth }})
