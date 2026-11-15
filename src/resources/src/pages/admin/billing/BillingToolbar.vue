@@ -26,7 +26,7 @@ const emit = defineEmits<{
 <template>
   <div class="filter-panel p-2 mb-3 d-print-none d-flex align-items-center justify-content-between gap-2">
     <!-- Left: Navigation Tabs with matching 38px height -->
-    <div class="d-flex align-items-center gap-1 flex-nowrap overflow-x-auto custom-scrollbar pe-1">
+    <div class="d-flex align-items-center gap-1 flex-nowrap overflow-x-auto custom-scrollbar pe-1 flex-shrink-0">
       <button
         type="button"
         class="btn tab-btn"
@@ -34,7 +34,7 @@ const emit = defineEmits<{
         @click="emit('update:activeTab', 'invoices')"
       >
         <i class="bi bi-receipt"></i>
-        <span>Invoices ({{ billsCount }})</span>
+        <span>Invoices <span class="tab-badge">({{ billsCount }})</span></span>
       </button>
 
       <button
@@ -44,7 +44,7 @@ const emit = defineEmits<{
         @click="emit('update:activeTab', 'collections')"
       >
         <i class="bi bi-wallet2"></i>
-        <span>Collections ({{ collectionsCount }})</span>
+        <span>Collections <span class="tab-badge">({{ collectionsCount }})</span></span>
       </button>
 
       <button
@@ -54,7 +54,7 @@ const emit = defineEmits<{
         @click="emit('update:activeTab', 'dues')"
       >
         <i class="bi bi-exclamation-circle"></i>
-        <span>Due ({{ duesCount }})</span>
+        <span>Due <span class="tab-badge">({{ duesCount }})</span></span>
       </button>
 
       <button
@@ -64,7 +64,7 @@ const emit = defineEmits<{
         @click="emit('update:activeTab', 'missing')"
       >
         <i class="bi bi-file-earmark-plus"></i>
-        <span>Missing ({{ missingCount }})</span>
+        <span>Missing <span class="tab-badge">({{ missingCount }})</span></span>
       </button>
     </div>
 
@@ -120,6 +120,13 @@ const emit = defineEmits<{
   white-space: nowrap;
   transition: all 0.15s ease-in-out;
   border: 1px solid transparent;
+  flex-shrink: 0;
+}
+
+.tab-badge {
+  font-variant-numeric: tabular-nums;
+  display: inline-block;
+  min-width: 24px;
 }
 
 .tab-btn-active {

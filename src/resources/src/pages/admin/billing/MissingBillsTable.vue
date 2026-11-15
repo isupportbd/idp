@@ -154,6 +154,7 @@ const emit = defineEmits<{
 .table-custom {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .table-custom th {

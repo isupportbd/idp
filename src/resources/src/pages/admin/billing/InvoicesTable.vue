@@ -61,14 +61,14 @@ onBeforeUnmount(() => {
     <table class="table-custom">
       <thead>
         <tr>
-          <th style="width: 14%;">Invoice No</th>
-          <th style="width: 28%;">Client Organization & BIN</th>
+          <th style="width: 15%;">Invoice No</th>
+          <th style="width: 25%;">Client Organization & BIN</th>
           <th style="width: 14%;">Reference</th>
-          <th style="width: 12%; text-align: right;">Total (Tk)</th>
-          <th style="width: 12%; text-align: right;">Paid (Tk)</th>
-          <th style="width: 10%; text-align: right;">Due (Tk)</th>
-          <th style="width: 10%;">Status</th>
-          <th style="width: 10%; text-align: right;" class="d-print-none">Actions</th>
+          <th style="width: 11%; text-align: right;">Total (Tk)</th>
+          <th style="width: 11%; text-align: right;">Paid (Tk)</th>
+          <th style="width: 9%; text-align: right;">Due (Tk)</th>
+          <th style="width: 8%;">Status</th>
+          <th style="width: 7%; text-align: right;" class="d-print-none">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -92,14 +92,14 @@ onBeforeUnmount(() => {
             <a
               :href="`/admin/billing/invoices/${bill.id}`"
               target="_blank"
-              class="font-monospace fw-bold text-info text-decoration-none hover-underline cursor-pointer d-inline-block"
+              class="font-monospace fw-bold text-info text-decoration-none hover-underline cursor-pointer text-nowrap d-inline-block"
               style="font-size: 0.88rem;"
               title="Click to View Invoice (Opens in New Tab)"
               @click.prevent="emit('viewInvoice', bill.id)"
             >
               {{ bill.billNo }}
             </a>
-            <div class="text-muted small" style="font-size: 0.76rem;">{{ new Date(bill.billDate).toLocaleDateString() }}</div>
+            <div class="text-muted small text-nowrap" style="font-size: 0.76rem;">{{ new Date(bill.billDate).toLocaleDateString() }}</div>
           </td>
 
           <!-- Client Name & BIN -->
@@ -238,6 +238,7 @@ onBeforeUnmount(() => {
 .table-custom {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .table-custom th {

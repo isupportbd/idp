@@ -125,6 +125,7 @@ const emit = defineEmits<(e: "cancelReceipt", col: Collection) => void>();
 .table-custom {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .table-custom th {
