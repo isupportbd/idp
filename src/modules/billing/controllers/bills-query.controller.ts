@@ -32,7 +32,11 @@ export const listBills = async (c: AppContext) => {
       conditions.push(eq(bills.clientId, Number(query.clientId)));
     }
     if (query.status && query.status !== "all") {
-      conditions.push(eq(bills.status, query.status));
+      if (query.status === "due" || query.status === "unpaid_or_partial") {
+        conditions.push(or(eq(bills.status, "unpaid"), eq(bills.status, "partial"))!);
+      } else {
+        conditions.push(eq(bills.status, query.status));
+      }
     }
 
     if (query.customerTypeId && query.customerTypeId !== "all") {

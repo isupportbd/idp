@@ -45,7 +45,7 @@ const loadClientDetails = async () => {
   try {
     const [overviewData, billsData] = await Promise.all([
       fetchClientBillingOverview(selectedClientId.value),
-      fetchBills({ clientId: selectedClientId.value, status: "unpaid" })
+      fetchBills({ clientId: selectedClientId.value, status: "due" })
     ]);
     clientOverview.value = overviewData;
     clientBills.value = billsData.data || [];
