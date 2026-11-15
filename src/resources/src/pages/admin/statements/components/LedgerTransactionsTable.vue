@@ -88,13 +88,12 @@ const getStatusBadge = (status: string, type: string) => {
             <th style="width: 160px;">Ref No</th>
             <th class="text-end" style="width: 140px;">Billed (Debit)</th>
             <th class="text-end" style="width: 140px;">Paid (Credit)</th>
-            <th class="text-end" style="width: 160px;">Balance (Tk)</th>
-            <th class="text-center pe-3" style="width: 110px;">Status</th>
+            <th class="text-end pe-3" style="width: 160px;">Balance (Tk)</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="transactions.length === 0">
-            <td colspan="8" class="text-center py-5 text-muted">
+            <td colspan="7" class="text-center py-5 text-muted">
               <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
               No billing or collection transactions found in the period {{ fromMonth }} to {{ toMonth }}.
             </td>
@@ -173,19 +172,12 @@ const getStatusBadge = (status: string, type: string) => {
             </td>
 
             <!-- Running Balance -->
-            <td class="text-end fw-bold">
-              <span :class="tx.balance > 0 ? 'text-danger' : 'text-success'">
-                {{ formatTk(tx.balance) }}
-              </span>
-            </td>
-
-            <!-- Status -->
-            <td class="text-center pe-3">
-              <span
-                class="badge border px-2 py-1"
-                :class="getStatusBadge(tx.status, tx.type).bg"
-              >
-                {{ getStatusBadge(tx.status, tx.type).label }}
+            <td class="text-end pe-3 fw-bold">
+              <span :class="tx.balance > 0 ? 'text-danger' : (tx.balance < 0 ? 'text-info' : 'text-success')">
+                {{ formatTk(Math.abs(tx.balance)) }}
+                <span class="small fw-semibold ms-1" style="font-size: 0.72rem;">
+                  {{ tx.balance > 0 ? '(Due)' : (tx.balance < 0 ? '(Adv)' : '') }}
+                </span>
               </span>
             </td>
           </tr>
@@ -204,11 +196,11 @@ const getStatusBadge = (status: string, type: string) => {
             <td class="text-end text-success fw-bold">
               ৳ {{ formatTk(transactions.reduce((sum, t) => sum + (t.credit || 0), 0)) }}
             </td>
-            <td class="text-end fw-bolder" :class="(transactions[transactions.length - 1]?.balance || 0) > 0 ? 'text-danger' : 'text-success'">
-              ৳ {{ formatTk(transactions[transactions.length - 1]?.balance || 0) }}
-            </td>
-            <td class="pe-3 text-center text-muted">
-              {{ (transactions[transactions.length - 1]?.balance || 0) > 0 ? 'Due' : 'Cleared' }}
+            <td class="text-end pe-3 fw-bolder" :class="(transactions[transactions.length - 1]?.balance || 0) > 0 ? 'text-danger' : ((transactions[transactions.length - 1]?.balance || 0) < 0 ? 'text-info' : 'text-success')">
+              ৳ {{ formatTk(Math.abs(transactions[transactions.length - 1]?.balance || 0)) }}
+              <span class="small fw-semibold ms-1" style="font-size: 0.72rem;">
+                {{ (transactions[transactions.length - 1]?.balance || 0) > 0 ? '(Due)' : ((transactions[transactions.length - 1]?.balance || 0) < 0 ? '(Adv)' : '') }}
+              </span>
             </td>
           </tr>
         </tfoot>

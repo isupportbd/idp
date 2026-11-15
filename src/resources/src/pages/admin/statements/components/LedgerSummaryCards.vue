@@ -55,27 +55,30 @@ const formatTk = (amount: number): string => {
       </div>
     </div>
 
-    <!-- Net Closing Balance (Due) -->
-    <div class="col-12 col-sm-6 col-lg-3">
-      <div class="card idp-card h-100 border-0 p-3 shadow-sm">
-        <div class="d-flex align-items-center justify-content-between mb-2">
-          <span class="stat-label text-muted">Closing Balance</span>
-          <i
-            class="bi fs-5"
-            :class="summary.closingBalance > 0 ? 'bi-exclamation-octagon text-danger' : 'bi-shield-check text-success'"
-          ></i>
+        <!-- Net Closing Balance (Due / Advance) -->
+        <div class="col-12 col-sm-6 col-lg-3">
+          <div class="card idp-card h-100 border-0 p-3 shadow-sm">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="stat-label text-muted">Closing Balance</span>
+              <i
+                class="bi fs-5"
+                :class="summary.closingBalance > 0 ? 'bi-exclamation-octagon text-danger' : (summary.closingBalance < 0 ? 'bi-arrow-down-left-circle text-info' : 'bi-shield-check text-success')"
+              ></i>
+            </div>
+            <div
+              class="stat-val"
+              :class="summary.closingBalance > 0 ? 'text-danger' : (summary.closingBalance < 0 ? 'text-info' : 'text-success')"
+            >
+              {{ formatTk(Math.abs(summary.closingBalance)) }} <span class="fs-6 text-muted fw-normal">Tk</span>
+              <span class="fs-6 fw-bold ms-1">
+                {{ summary.closingBalance > 0 ? '(Due)' : (summary.closingBalance < 0 ? '(Advance)' : '(Settled)') }}
+              </span>
+            </div>
+            <div class="text-secondary small mt-1">
+              {{ summary.closingBalance > 0 ? 'Net outstanding receivable' : (summary.closingBalance < 0 ? 'Advance received from client' : 'All accounts settled') }}
+            </div>
+          </div>
         </div>
-        <div
-          class="stat-val"
-          :class="summary.closingBalance > 0 ? 'text-danger' : 'text-success'"
-        >
-          {{ formatTk(summary.closingBalance) }} <span class="fs-6 text-muted fw-normal">Tk</span>
-        </div>
-        <div class="text-secondary small mt-1">
-          Net outstanding balance
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 

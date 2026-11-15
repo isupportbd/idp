@@ -84,7 +84,7 @@ const formatTk = (amount?: number | null): string => {
             <th class="text-end" style="width: 140px;">Opening (Tk)</th>
             <th class="text-end" style="width: 140px;">Billed (Tk)</th>
             <th class="text-end" style="width: 140px;">Paid (Tk)</th>
-            <th class="text-end" style="width: 160px;">Closing Due (Tk)</th>
+            <th class="text-end" style="width: 160px;">Closing Balance (Tk)</th>
             <th class="text-center pe-3 d-print-none" style="width: 130px;">Action</th>
           </tr>
         </thead>
@@ -138,8 +138,11 @@ const formatTk = (amount?: number | null): string => {
 
             <!-- Closing Due Balance -->
             <td class="text-end fw-bold" style="font-size: 0.95rem;">
-              <span :class="cl.closingBalance > 0 ? 'text-danger' : 'text-success'">
-                {{ formatTk(cl.closingBalance) }}
+              <span :class="cl.closingBalance > 0 ? 'text-danger' : (cl.closingBalance < 0 ? 'text-info' : 'text-success')">
+                {{ formatTk(Math.abs(cl.closingBalance)) }}
+                <span class="small fw-semibold ms-1" style="font-size: 0.72rem;">
+                  {{ cl.closingBalance > 0 ? '(Due)' : (cl.closingBalance < 0 ? '(Adv)' : '') }}
+                </span>
               </span>
             </td>
 

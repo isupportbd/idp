@@ -43,17 +43,24 @@ const getSavedFilters = () => {
 
 const savedFilters = getSavedFilters();
 
-// Date defaults: By default previous month of current month
-const getLastMonth = () => {
+// Date defaults: By default 'toMonth' is previous month of current month, and 'fromMonth' is 11 months prior (Total 12 months)
+const getDefaultToMonth = () => {
   const d = new Date();
   d.setDate(1);
   d.setMonth(d.getMonth() - 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 
+const getDefaultFromMonth = () => {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() - 12); // Previous month minus 11 months = 12 months prior
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+};
+
 // Filter State: Initialized from Route Query -> Session Storage -> Defaults
-const fromMonth = ref((route.query.from as string) || savedFilters.fromMonth || getLastMonth());
-const toMonth = ref((route.query.to as string) || savedFilters.toMonth || getLastMonth());
+const fromMonth = ref((route.query.from as string) || savedFilters.fromMonth || getDefaultFromMonth());
+const toMonth = ref((route.query.to as string) || savedFilters.toMonth || getDefaultToMonth());
 const selectedClientId = ref<number | null>(route.query.client ? Number(route.query.client) : (savedFilters.clientId ?? null));
 const selectedCustomerTypeId = ref<string | number>((route.query.type as string) || savedFilters.customerTypeId || "all");
 const selectedReferenceId = ref<string | number>((route.query.ref as string) || savedFilters.referenceId || "all");
@@ -211,8 +218,8 @@ onMounted(() => {
 
 // Reset Filters
 const handleReset = () => {
-  fromMonth.value = getLastMonth();
-  toMonth.value = getLastMonth();
+  fromMonth.value = getDefaultFromMonth();
+  toMonth.value = getDefaultToMonth();
   selectedClientId.value = null;
   selectedCustomerTypeId.value = "all";
   selectedReferenceId.value = "all";
@@ -262,6 +269,13 @@ const handlePrint = () => {
 
   let tableHtml = "";
 
+  const formatBalanceWithTag = (amount: number) => {
+    const val = formatTkStr(Math.abs(amount));
+    if (amount > 0) return `${val} (Due)`;
+    if (amount < 0) return `${val} (Adv)`;
+    return `${val} (Nil)`;
+  };
+
   if (isSingleClient && activeClientSummary.value) {
     // Single client transactions view
     const cl = activeClientSummary.value;
@@ -275,7 +289,7 @@ const handlePrint = () => {
           </div>
           <div class="col-4 text-end">
             <div class="text-muted small">Net Closing Balance</div>
-            <h4 class="mb-0 fw-bold ${cl.closingBalance > 0 ? 'text-danger' : 'text-success'}">৳ ${formatTkStr(cl.closingBalance)}</h4>
+            <h4 class="mb-0 fw-bold ${cl.closingBalance > 0 ? 'text-danger' : (cl.closingBalance < 0 ? 'text-primary' : 'text-success')}">৳ ${formatBalanceWithTag(cl.closingBalance)}</h4>
           </div>
         </div>
       </div>
@@ -302,7 +316,7 @@ const handlePrint = () => {
               <td>${t.refNo || "-"}</td>
               <td class="text-end">${t.debit > 0 ? formatTkStr(t.debit) : "-"}</td>
               <td class="text-end">${t.credit > 0 ? formatTkStr(t.credit) : "-"}</td>
-              <td class="text-end fw-bold">${formatTkStr(t.balance)}</td>
+              <td class="text-end fw-bold ${t.balance > 0 ? 'text-danger' : (t.balance < 0 ? 'text-primary' : 'text-success')}">${formatBalanceWithTag(t.balance)}</td>
             </tr>
           `).join("")}
         </tbody>
@@ -319,7 +333,7 @@ const handlePrint = () => {
           </div>
           <div class="col-4 text-end">
             <div class="text-muted small">Total Outstanding Balance</div>
-            <h4 class="mb-0 fw-bold ${summary.value.closingBalance > 0 ? 'text-danger' : 'text-success'}">৳ ${formatTkStr(summary.value.closingBalance)}</h4>
+            <h4 class="mb-0 fw-bold ${summary.value.closingBalance > 0 ? 'text-danger' : (summary.value.closingBalance < 0 ? 'text-primary' : 'text-success')}">৳ ${formatBalanceWithTag(summary.value.closingBalance)}</h4>
           </div>
         </div>
       </div>
@@ -346,7 +360,7 @@ const handlePrint = () => {
               <td>${t.refNo || "-"}</td>
               <td class="text-end">${t.debit > 0 ? formatTkStr(t.debit) : "-"}</td>
               <td class="text-end">${t.credit > 0 ? formatTkStr(t.credit) : "-"}</td>
-              <td class="text-end fw-bold">${formatTkStr(t.balance)}</td>
+              <td class="text-end fw-bold ${t.balance > 0 ? 'text-danger' : (t.balance < 0 ? 'text-primary' : 'text-success')}">${formatBalanceWithTag(t.balance)}</td>
             </tr>
           `).join("")}
         </tbody>
@@ -355,7 +369,7 @@ const handlePrint = () => {
             <td colspan="5" class="text-end fw-bold pe-3">Total for ${activeReferenceName.value}:</td>
             <td class="text-end fw-bold">৳ ${formatTkStr(summary.value.totalBilled)}</td>
             <td class="text-end fw-bold">৳ ${formatTkStr(summary.value.totalPaid)}</td>
-            <td class="text-end fw-bold text-danger">৳ ${formatTkStr(summary.value.closingBalance)}</td>
+            <td class="text-end fw-bold ${summary.value.closingBalance > 0 ? 'text-danger' : (summary.value.closingBalance < 0 ? 'text-primary' : 'text-success')}">৳ ${formatBalanceWithTag(summary.value.closingBalance)}</td>
           </tr>
         </tfoot>
       </table>
@@ -372,7 +386,7 @@ const handlePrint = () => {
           </div>
           <div class="text-end">
             <div class="text-muted small">Total Due</div>
-            <h5 class="mb-0 text-danger fw-bold">৳ ${formatTkStr(summary.value.closingBalance)}</h5>
+            <h5 class="mb-0 fw-bold ${summary.value.closingBalance > 0 ? 'text-danger' : (summary.value.closingBalance < 0 ? 'text-primary' : 'text-success')}">৳ ${formatBalanceWithTag(summary.value.closingBalance)}</h5>
           </div>
         </div>
       </div>
@@ -399,7 +413,7 @@ const handlePrint = () => {
               <td class="text-end">${formatTkStr(cl.openingBalance)}</td>
               <td class="text-end">${formatTkStr(cl.totalBilled)}</td>
               <td class="text-end">${formatTkStr(cl.totalPaid)}</td>
-              <td class="text-end fw-bold ${cl.closingBalance > 0 ? 'text-danger' : 'text-success'}">${formatTkStr(cl.closingBalance)}</td>
+              <td class="text-end fw-bold ${cl.closingBalance > 0 ? 'text-danger' : (cl.closingBalance < 0 ? 'text-primary' : 'text-success')}">${formatBalanceWithTag(cl.closingBalance)}</td>
             </tr>
           `).join("")}
         </tbody>
@@ -409,7 +423,7 @@ const handlePrint = () => {
             <td class="text-end fw-bold">৳ ${formatTkStr(summary.value.openingBalance)}</td>
             <td class="text-end fw-bold">৳ ${formatTkStr(summary.value.totalBilled)}</td>
             <td class="text-end fw-bold">৳ ${formatTkStr(summary.value.totalPaid)}</td>
-            <td class="text-end fw-bold text-danger">৳ ${formatTkStr(summary.value.closingBalance)}</td>
+            <td class="text-end fw-bold ${summary.value.closingBalance > 0 ? 'text-danger' : (summary.value.closingBalance < 0 ? 'text-primary' : 'text-success')}">৳ ${formatBalanceWithTag(summary.value.closingBalance)}</td>
           </tr>
         </tfoot>
       </table>
