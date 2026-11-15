@@ -24,6 +24,9 @@ export const listCollections = async (c: AppContext) => {
     if (!isSuperAdmin && tenantAdminId) {
       conditions.push(eq(clients.createdBy, tenantAdminId));
     }
+    if (query.month && query.month !== "all") {
+      conditions.push(sql`coalesce(${bills.taxPeriod}, to_char(${collections.collectionDate}, 'YYYY-MM')) = ${query.month}`);
+    }
     if (query.clientId && query.clientId !== "all") {
       conditions.push(eq(collections.clientId, Number(query.clientId)));
     }
