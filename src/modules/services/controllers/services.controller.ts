@@ -11,9 +11,7 @@ import { serviceRates } from "../database/models/service_rates.js";
 function notifySettingsUpdated(settingType: string) {
   try {
     cache.forget(`master:${settingType}`);
-    if (settingType === "service-items" || settingType === "client-types") {
-      cache.forget("master:service-rates");
-    }
+    cache.forget("master:service-rates");
     broadcast("global:settings-updated", { type: settingType, timestamp: Date.now() }, { auth: true });
   } catch (err) {
     console.error(`Failed to broadcast ${settingType} update:`, err);
@@ -28,7 +26,7 @@ export const listCustomerTypes = async (c: AppContext) => {
       return await db.select().from(customerTypes).orderBy(desc(customerTypes.id));
     });
     if (typeof c.header === "function") {
-      c.header("Cache-Control", "private, max-age=120, stale-while-revalidate=300");
+      c.header("Cache-Control", "no-cache, no-store, must-revalidate");
     }
     return c.json({ message: "Customer types fetched successfully", data: list }, HttpStatusCodes.OK);
   } catch (err: unknown) {
@@ -93,7 +91,7 @@ export const listReferences = async (c: AppContext) => {
       return await db.select().from(clientReferences).orderBy(asc(clientReferences.id));
     });
     if (typeof c.header === "function") {
-      c.header("Cache-Control", "private, max-age=120, stale-while-revalidate=300");
+      c.header("Cache-Control", "no-cache, no-store, must-revalidate");
     }
     return c.json({ message: "References fetched successfully", data: list }, HttpStatusCodes.OK);
   } catch (err: unknown) {
@@ -220,7 +218,7 @@ export const listServiceItems = async (c: AppContext) => {
       return await db.select().from(serviceItems).orderBy(asc(serviceItems.id));
     });
     if (typeof c.header === "function") {
-      c.header("Cache-Control", "private, max-age=120, stale-while-revalidate=300");
+      c.header("Cache-Control", "no-cache, no-store, must-revalidate");
     }
     return c.json({ message: "Service items fetched successfully", data: list }, HttpStatusCodes.OK);
   } catch (err: unknown) {
@@ -331,7 +329,7 @@ export const listServiceRates = async (c: AppContext) => {
     });
 
     if (typeof c.header === "function") {
-      c.header("Cache-Control", "private, max-age=120, stale-while-revalidate=300");
+      c.header("Cache-Control", "no-cache, no-store, must-revalidate");
     }
     return c.json({ message: "Service rates fetched successfully", data: rates }, HttpStatusCodes.OK);
   } catch (err: unknown) {

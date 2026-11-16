@@ -20,6 +20,7 @@ const { createServiceRate, updateServiceRate, deleteServiceRate } = useServicesA
 
 const showRateModal = ref(false);
 const isEditingRate = ref(false);
+const isSaving = ref(false);
 
 const rateForm = ref({
   id: 0,
@@ -84,6 +85,7 @@ const handleSaveServiceRate = async () => {
     return;
   }
 
+  isSaving.value = true;
   try {
     if (isEditingRate.value && rateForm.value.id) {
       await updateServiceRate(rateForm.value.id, {
@@ -110,6 +112,8 @@ const handleSaveServiceRate = async () => {
     emit("refresh");
   } catch (err: any) {
     toast.error(err.response?.data?.message || "Failed to save service rate");
+  } finally {
+    isSaving.value = false;
   }
 };
 
@@ -316,9 +320,10 @@ const handleDeleteRate = async (id: number) => {
             </div>
           </div>
           <div class="modal-footer border-0 pt-0 pb-4 px-4 d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-secondary btn-sm px-3 text-light" style="background-color: #1e293b; border: 1px solid #334155;" @click="showRateModal = false">Cancel</button>
-            <button type="button" class="btn btn-light btn-sm px-4 fw-semibold text-dark" @click="handleSaveServiceRate">
-              Save Rate
+            <button type="button" class="btn btn-secondary btn-sm px-3 text-light" style="background-color: #1e293b; border: 1px solid #334155;" :disabled="isSaving" @click="showRateModal = false">Cancel</button>
+            <button type="button" class="btn btn-light btn-sm px-4 fw-semibold text-dark d-flex align-items-center gap-2" :disabled="isSaving" @click="handleSaveServiceRate">
+              <span v-if="isSaving" class="spinner-border spinner-border-sm"></span>
+              <span>{{ isSaving ? 'Saving...' : 'Save Rate' }}</span>
             </button>
           </div>
         </div>
