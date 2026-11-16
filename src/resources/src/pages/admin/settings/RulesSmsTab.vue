@@ -24,9 +24,11 @@ const testSmsSuccess = ref(false);
 
 const handleSaveRules = async () => {
   try {
-    await updateCompanySettings(props.form);
+    const res = await updateCompanySettings(props.form);
+    if (res?.data) {
+      Object.assign(props.form, res.data);
+    }
     isEditingRules.value = false;
-    Object.assign(props.form, company.value);
     toast.success("Rules & SMS configuration saved and locked");
     emit("saved");
   } catch (err: any) {
