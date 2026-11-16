@@ -21,6 +21,7 @@ export const getClientBillingOverview = async (c: AppContext) => {
     const query = c.req.valid("query");
     const clientId = Number(query.clientId);
     const targetMonth = query.month || new Date().toISOString().slice(0, 7);
+    const excludeBillId = query.excludeBillId ? Number(query.excludeBillId) : undefined;
 
     if (isNaN(clientId)) {
       return c.json({ message: "Client ID is required" }, HttpStatusCodes.BAD_REQUEST);
@@ -89,7 +90,7 @@ export const getClientBillingOverview = async (c: AppContext) => {
     }));
 
     // 3. Compute running previous due
-    const previousDue = await getClientRunningDue(clientId);
+    const previousDue = await getClientRunningDue(clientId, excludeBillId);
 
     // 4. Fetch Client's Purchase Volume for targetMonth
     const purchaseVolumeRes = await db

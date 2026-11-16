@@ -83,7 +83,8 @@ export const listCollectionsQuerySchema = z.object({
 
 export const clientBillingSummaryQuerySchema = z.object({
   clientId: z.string().optional(),
-  month: z.string().optional()
+  month: z.string().optional(),
+  excludeBillId: z.string().optional()
 });
 
 export type CreateBillInput = z.infer<typeof createBillSchema>;

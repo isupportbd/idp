@@ -280,10 +280,10 @@ export function useBillingApi() {
   };
 
   // 6. Fetch Client Billing Overview
-  const fetchClientBillingOverview = async (clientId: number, month?: string) => {
+  const fetchClientBillingOverview = async (clientId: number, month?: string, excludeBillId?: number) => {
     try {
       const res = await axios.get("/api/billing/overview", {
-        params: { clientId, month }
+        params: { clientId, month, excludeBillId }
       });
       return res.data.data;
     } catch (err: any) {

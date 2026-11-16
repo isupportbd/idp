@@ -62,12 +62,12 @@ const loadClientData = async () => {
     return;
   }
 
-  const overviewKey = `${selectedClientId.value}::${billingMonth.value}`;
+  const overviewKey = `${selectedClientId.value}::${billingMonth.value}::${editBillId.value || 0}`;
   if (overviewKey === lastLoadedOverviewKey) return;
   lastLoadedOverviewKey = overviewKey;
 
   try {
-    const data = await fetchClientBillingOverview(selectedClientId.value, billingMonth.value);
+    const data = await fetchClientBillingOverview(selectedClientId.value, billingMonth.value, editBillId.value || undefined);
     clientOverview.value = data;
     allowedMonths.value = data.allowedMonths || [];
 
@@ -241,10 +241,14 @@ const subtotal = computed(() => {
 });
 
 const previousDue = computed(() => {
+  // Always use the real-time calculated running due before this bill
+  if (clientOverview.value?.previousDue !== undefined) {
+    return Number(clientOverview.value.previousDue) || 0;
+  }
   if (isEditMode.value && existingBill.value) {
     return Number(existingBill.value.previousDue) || 0;
   }
-  return Number(clientOverview.value?.previousDue) || 0;
+  return 0;
 });
 
 const netPayable = computed(() => {
