@@ -157,83 +157,85 @@ const handleSave = async () => {
     </div>
 
     <!-- Main Form Grid -->
-    <div v-else class="row g-4">
+    <div v-else class="row g-4 align-items-stretch">
       <!-- Left Column: Core Bank Information -->
-      <div class="col-lg-7">
-        <div class="idp-card p-4">
-          <h6 class="text-white fw-bold mb-3 border-bottom border-secondary border-opacity-25 pb-2 d-flex align-items-center gap-2">
-            <i class="bi bi-bank text-info"></i>
-            <span>Banking Details</span>
-          </h6>
+      <div class="col-lg-7 d-flex flex-column">
+        <div class="idp-card p-4 h-100 d-flex flex-column justify-content-between">
+          <div>
+            <h6 class="text-white fw-bold mb-3 border-bottom border-secondary border-opacity-25 pb-2 d-flex align-items-center gap-2">
+              <i class="bi bi-bank text-info"></i>
+              <span>Banking Details</span>
+            </h6>
 
-          <div class="row g-3">
-            <div class="col-12">
-              <label class="form-label text-light small fw-medium mb-1">
-                Bank Name <span class="text-danger">*</span>
-              </label>
-              <input
-                v-model="form.bankName"
-                type="text"
-                class="form-control idp-input"
-                placeholder="e.g. Dutch-Bangla Bank PLC, Pubali Bank PLC"
-                required
-              />
-            </div>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label text-light small fw-medium mb-1">
+                  Bank Name <span class="text-danger">*</span>
+                </label>
+                <input
+                  v-model="form.bankName"
+                  type="text"
+                  class="form-control idp-input"
+                  placeholder="e.g. Dutch-Bangla Bank PLC, Pubali Bank PLC"
+                  required
+                />
+              </div>
 
-            <div class="col-12">
-              <label class="form-label text-light small fw-medium mb-1">
-                Account Title / Name <span class="text-danger">*</span>
-              </label>
-              <input
-                v-model="form.accountName"
-                type="text"
-                class="form-control idp-input"
-                placeholder="e.g. Associates & Co. Consultancy"
-                required
-              />
-            </div>
+              <div class="col-12">
+                <label class="form-label text-light small fw-medium mb-1">
+                  Account Title / Name <span class="text-danger">*</span>
+                </label>
+                <input
+                  v-model="form.accountName"
+                  type="text"
+                  class="form-control idp-input"
+                  placeholder="e.g. Associates & Co. Consultancy"
+                  required
+                />
+              </div>
 
-            <div class="col-md-7">
-              <label class="form-label text-light small fw-medium mb-1">
-                Account Number <span class="text-danger">*</span>
-              </label>
-              <input
-                v-model="form.accountNumber"
-                type="text"
-                class="form-control idp-input font-monospace"
-                placeholder="3487901003900"
-                required
-              />
-            </div>
+              <div class="col-md-7">
+                <label class="form-label text-light small fw-medium mb-1">
+                  Account Number <span class="text-danger">*</span>
+                </label>
+                <input
+                  v-model="form.accountNumber"
+                  type="text"
+                  class="form-control idp-input font-monospace"
+                  placeholder="3487901003900"
+                  required
+                />
+              </div>
 
-            <div class="col-md-5">
-              <label class="form-label text-light small fw-medium mb-1">Routing Number</label>
-              <input
-                v-model="form.routingNumber"
-                type="text"
-                class="form-control idp-input font-monospace"
-                placeholder="090271829"
-              />
-            </div>
+              <div class="col-md-5">
+                <label class="form-label text-light small fw-medium mb-1">Routing Number</label>
+                <input
+                  v-model="form.routingNumber"
+                  type="text"
+                  class="form-control idp-input font-monospace"
+                  placeholder="090271829"
+                />
+              </div>
 
-            <div class="col-12">
-              <label class="form-label text-light small fw-medium mb-1">Branch Name</label>
-              <input
-                v-model="form.branchName"
-                type="text"
-                class="form-control idp-input"
-                placeholder="e.g. Dargah Gate Islamic Branch, Sylhet"
-              />
+              <div class="col-12">
+                <label class="form-label text-light small fw-medium mb-1">Branch Name</label>
+                <input
+                  v-model="form.branchName"
+                  type="text"
+                  class="form-control idp-input"
+                  placeholder="e.g. Dargah Gate Islamic Branch, Sylhet"
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Right Column: MFS & Account Status -->
-      <div class="col-lg-5">
-        <div class="d-flex flex-column gap-4">
+      <div class="col-lg-5 d-flex flex-column">
+        <div class="idp-card p-4 h-100 d-flex flex-column justify-content-between gap-3">
           <!-- Mobile Financial Services (bKash & Nagad) -->
-          <div class="idp-card p-4">
+          <div>
             <h6 class="text-white fw-bold mb-3 border-bottom border-secondary border-opacity-25 pb-2 d-flex align-items-center gap-2">
               <i class="bi bi-phone text-warning"></i>
               <span>Mobile Financial Services (MFS)</span>
@@ -293,20 +295,20 @@ const handleSave = async () => {
           </div>
 
           <!-- Preferences & Active Status -->
-          <div class="idp-card p-4">
-            <h6 class="text-white fw-bold mb-3 border-bottom border-secondary border-opacity-25 pb-2">
+          <div class="pt-3 border-top border-secondary border-opacity-25">
+            <h6 class="text-white fw-bold mb-3">
               Status & Invoice Defaults
             </h6>
 
-            <div class="d-flex flex-column gap-3">
-              <div class="form-check form-switch">
+            <div class="d-flex flex-wrap gap-4 align-items-center">
+              <div class="form-check form-switch mb-0">
                 <input v-model="form.isDefault" class="form-check-input" type="checkbox" id="defaultAccountCheck" />
                 <label class="form-check-label text-light small fw-medium" for="defaultAccountCheck">
-                  Primary / Default for Invoices
+                  Primary / Default
                 </label>
               </div>
 
-              <div class="form-check form-switch">
+              <div class="form-check form-switch mb-0">
                 <input v-model="form.isActive" class="form-check-input" type="checkbox" id="activeAccountCheck" />
                 <label class="form-check-label text-light small fw-medium" for="activeAccountCheck">
                   Active Status
