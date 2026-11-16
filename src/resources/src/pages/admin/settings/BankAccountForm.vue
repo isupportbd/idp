@@ -68,7 +68,6 @@ const loadAccountForEdit = async (id: number) => {
 };
 
 onMounted(async () => {
-  await fetchPaymentMethods();
   if (route.params.id) {
     isEditMode.value = true;
     accountId.value = Number(route.params.id);
