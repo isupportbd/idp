@@ -242,12 +242,13 @@ const subtotal = computed(() => {
 });
 
 const previousDue = computed(() => {
-  // Always use the real-time calculated running due before this bill
-  if (clientOverview.value?.previousDue !== undefined) {
-    return Number(clientOverview.value.previousDue) || 0;
-  }
+  // In edit mode of an already issued historical invoice, preserve the invoice's original previousDue
   if (isEditMode.value && existingBill.value) {
     return Number(existingBill.value.previousDue) || 0;
+  }
+  // In create mode, use the real-time calculated running due before this bill
+  if (clientOverview.value?.previousDue !== undefined) {
+    return Number(clientOverview.value.previousDue) || 0;
   }
   return 0;
 });
