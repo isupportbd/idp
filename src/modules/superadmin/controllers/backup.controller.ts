@@ -217,10 +217,35 @@ export async function restoreDatabaseBackup(c: AppContext) {
     // Execute restore using native postgres driver pool to support large multi-statement dumps without Drizzle statement-cache limitations
     const pool = databasePool();
 
-    // Auto-align schema: ensure legacy/custom columns exist so all dumps restore cleanly
+    // Auto-align schema: ensure all Drizzle columns and legacy columns exist so all dumps restore cleanly
     try {
+      const drizzleTables = Object.values(schema).filter(isTable);
+      for (const t of drizzleTables) {
+        const tableName = (t as any)[Symbol.for("drizzle:Name")];
+        if (!tableName) continue;
+        const cols = Object.values(getTableColumns(t as any));
+        for (const col of cols) {
+          const colName = (col as any).name;
+          if (colName === "id") continue;
+          const colType = (col as any).getSQLType();
+          try {
+            await pool.unsafe(`ALTER TABLE IF EXISTS "${tableName}" ADD COLUMN IF NOT EXISTS "${colName}" ${colType}`);
+          } catch {
+            // ignore
+          }
+        }
+      }
+
       await pool.unsafe(`
         ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS sender_id VARCHAR(50) DEFAULT '';
+        ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS bkash_number VARCHAR(50) DEFAULT '';
+        ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS nagad_number VARCHAR(50) DEFAULT '';
+        ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS rocket_number VARCHAR(50) DEFAULT '';
+        ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS bkash_type VARCHAR(30) DEFAULT 'Personal';
+        ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS nagad_type VARCHAR(30) DEFAULT 'Personal';
+        ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS rocket_type VARCHAR(30) DEFAULT 'Personal';
+        ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS bkash_type VARCHAR(30) DEFAULT 'Personal';
+        ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS nagad_type VARCHAR(30) DEFAULT 'Personal';
         ALTER TABLE global_items ADD COLUMN IF NOT EXISTS description TEXT;
         ALTER TABLE global_items ADD COLUMN IF NOT EXISTS category VARCHAR(100);
         ALTER TABLE global_items ADD COLUMN IF NOT EXISTS cd NUMERIC(14,2) DEFAULT 0;

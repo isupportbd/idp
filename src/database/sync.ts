@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import bcrypt from "bcryptjs";
-import { eq, sql } from "drizzle-orm";
+import { eq, getTableColumns, isTable, sql } from "drizzle-orm";
 import { db } from "@/framework/facade.js";
+import * as schema from "@/database/schema.js";
 import { roles } from "@/modules/auth/database/models/role.js";
 import { users } from "@/modules/auth/database/models/user.js";
 
@@ -155,8 +156,42 @@ export async function syncDatabaseSchemaAndSuperAdmin() {
     // Ensure System Roles exist
     await executeSingleSql(`INSERT INTO roles (name) VALUES ('superadmin'), ('admin'), ('user') ON CONFLICT (name) DO NOTHING`);
 
-    // Schema parity guard: ensure company_settings has sender_id column for legacy backup compatibility
+    // Schema parity guard: ensure all Drizzle columns exist across all tables
+    const drizzleTables = Object.values(schema).filter(isTable);
+    for (const t of drizzleTables) {
+      try {
+        const tableName = (t as any)[Symbol.for("drizzle:Name")];
+        if (!tableName) continue;
+        const cols = Object.values(getTableColumns(t as any));
+        for (const col of cols) {
+          const colName = (col as any).name;
+          if (colName === "id") continue;
+          const colType = (col as any).getSQLType();
+          await executeSingleSql(`ALTER TABLE IF EXISTS "${tableName}" ADD COLUMN IF NOT EXISTS "${colName}" ${colType}`);
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    // Parity guards for legacy and custom columns
     await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS sender_id VARCHAR(50) DEFAULT ''`);
+    await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS bkash_number VARCHAR(50) DEFAULT ''`);
+    await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS nagad_number VARCHAR(50) DEFAULT ''`);
+    await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS rocket_number VARCHAR(50) DEFAULT ''`);
+    await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS bkash_type VARCHAR(30) DEFAULT 'Personal'`);
+    await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS nagad_type VARCHAR(30) DEFAULT 'Personal'`);
+    await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS rocket_type VARCHAR(30) DEFAULT 'Personal'`);
+    await executeSingleSql(`ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS bkash_type VARCHAR(30) DEFAULT 'Personal'`);
+    await executeSingleSql(`ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS nagad_type VARCHAR(30) DEFAULT 'Personal'`);
+    await executeSingleSql(`ALTER TABLE global_items ADD COLUMN IF NOT EXISTS description TEXT`);
+    await executeSingleSql(`ALTER TABLE global_items ADD COLUMN IF NOT EXISTS category VARCHAR(100)`);
+    await executeSingleSql(`ALTER TABLE global_items ADD COLUMN IF NOT EXISTS cd NUMERIC(14,2) DEFAULT 0`);
+    await executeSingleSql(`ALTER TABLE global_items ADD COLUMN IF NOT EXISTS sd NUMERIC(14,2) DEFAULT 0`);
+    await executeSingleSql(`ALTER TABLE global_items ADD COLUMN IF NOT EXISTS vat NUMERIC(14,2) DEFAULT 0`);
+    await executeSingleSql(`ALTER TABLE global_items ADD COLUMN IF NOT EXISTS ait NUMERIC(14,2) DEFAULT 0`);
+    await executeSingleSql(`ALTER TABLE global_items ADD COLUMN IF NOT EXISTS rd NUMERIC(14,2) DEFAULT 0`);
+    await executeSingleSql(`ALTER TABLE global_items ADD COLUMN IF NOT EXISTS at NUMERIC(14,2) DEFAULT 0`);
 
     // High-performance search indexes: enable pg_trgm for lightning-fast leading-wildcard text search
     await executeSingleSql(`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
