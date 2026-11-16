@@ -2,6 +2,7 @@
 import axios from "axios";
 import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import IdpSelect from "@/components/common/IdpSelect.vue";
 import { useFirmApi } from "@/composables/useFirmApi";
 import { useToast } from "@/composables/useToast";
 
@@ -31,6 +32,7 @@ const form = ref({
 
 const mfsPaymentTypes = [
   "Send Money",
+  "Cash Out",
   "Payment"
 ];
 
@@ -235,22 +237,19 @@ const handleSave = async () => {
                   <span style="color: #e2136e; font-weight: 700;"><i class="bi bi-wallet-fill me-1"></i> bKash Account</span>
                   <span class="text-muted" style="font-size: 0.72rem;">Optional</span>
                 </label>
-                <div class="input-group">
+                <div class="d-flex gap-2">
                   <input
                     v-model="form.bkashNumber"
                     type="text"
-                    class="form-control idp-input font-monospace"
+                    class="form-control idp-input font-monospace flex-grow-1"
                     placeholder="01719950891"
                   />
-                  <select
+                  <IdpSelect
                     v-model="form.bkashType"
-                    class="form-select bg-dark border-secondary text-white small"
-                    style="max-width: 145px; font-size: 0.8rem;"
-                  >
-                    <option v-for="t in mfsPaymentTypes" :key="'bkash-' + t" :value="t">
-                      {{ t }}
-                    </option>
-                  </select>
+                    :options="mfsPaymentTypes"
+                    min-width="140px"
+                    width="140px"
+                  />
                 </div>
               </div>
 
@@ -260,22 +259,19 @@ const handleSave = async () => {
                   <span class="text-warning fw-bold"><i class="bi bi-cash-coin me-1"></i> Nagad Account</span>
                   <span class="text-muted" style="font-size: 0.72rem;">Optional</span>
                 </label>
-                <div class="input-group">
+                <div class="d-flex gap-2">
                   <input
                     v-model="form.nagadNumber"
                     type="text"
-                    class="form-control idp-input font-monospace"
+                    class="form-control idp-input font-monospace flex-grow-1"
                     placeholder="01719950891"
                   />
-                  <select
+                  <IdpSelect
                     v-model="form.nagadType"
-                    class="form-select bg-dark border-secondary text-white small"
-                    style="max-width: 145px; font-size: 0.8rem;"
-                  >
-                    <option v-for="t in mfsPaymentTypes" :key="'nagad-' + t" :value="t">
-                      {{ t }}
-                    </option>
-                  </select>
+                    :options="mfsPaymentTypes"
+                    min-width="140px"
+                    width="140px"
+                  />
                 </div>
               </div>
             </div>
