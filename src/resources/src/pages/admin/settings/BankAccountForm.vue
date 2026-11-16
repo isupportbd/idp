@@ -35,14 +35,17 @@ const fetchPaymentMethods = async () => {
   try {
     const res = await axios.get("/api/superadmin/payment-methods");
     if (res.data?.success && Array.isArray(res.data.data)) {
-      paymentMethodsList.value = res.data.data.filter((m: any) => m.isActive !== false);
+      // Filter ONLY MFS-compatible methods (e.g. Send Money, Cash Out, Payment)
+      const allActive = res.data.data.filter((m: any) => m.isActive !== false);
+      const mfsOnly = allActive.filter((m: any) => m.type === "mfs");
+      paymentMethodsList.value = mfsOnly.length > 0 ? mfsOnly : allActive.filter((m: any) => ["Send Money", "Cash Out", "Payment"].includes(m.name));
     }
   } catch (err) {
     console.warn("Could not fetch global payment methods, using fallback", err);
     paymentMethodsList.value = [
-      { id: 1, name: "Send Money" },
-      { id: 2, name: "Cash Out" },
-      { id: 3, name: "Payment" }
+      { id: 1, name: "Send Money", type: "mfs" },
+      { id: 2, name: "Cash Out", type: "mfs" },
+      { id: 3, name: "Payment", type: "mfs" }
     ];
   }
 };
