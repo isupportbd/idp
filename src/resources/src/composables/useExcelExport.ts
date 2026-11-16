@@ -9,6 +9,7 @@ export interface ExcelExportOptions {
   fitToWidth?: boolean;
   alignments?: Record<string, "left" | "center" | "right">;
   headerAlignments?: Record<string, "left" | "center" | "right">;
+  metaRows?: Array<[string, string]>; // Top informational rows e.g. [["Tax Period:", "2026-10"], ["Reference:", "Mr. Satish"]]
 }
 
 export function useExcelExport() {
@@ -24,7 +25,28 @@ export function useExcelExport() {
   ) => {
     if (!rows || rows.length === 0) return;
     const XLSX = await import("xlsx-js-style");
-    const ws = XLSX.utils.json_to_sheet(rows);
+    
+    // Check if metaRows are provided
+    const hasMeta = options?.metaRows && options.metaRows.length > 0;
+    let ws: any;
+    let headerRowIndex = 0;
+
+    if (hasMeta && options?.metaRows) {
+      const metaArray: any[][] = [];
+      for (const [lbl, val] of options.metaRows) {
+        metaArray.push([lbl, val]);
+      }
+      metaArray.push([]); // blank separator row
+      headerRowIndex = metaArray.length;
+
+      // Create sheet starting with metaArray
+      ws = XLSX.utils.aoa_to_sheet(metaArray);
+
+      // Append table data (header + rows)
+      XLSX.utils.sheet_add_json(ws, rows, { origin: headerRowIndex });
+    } else {
+      ws = XLSX.utils.json_to_sheet(rows);
+    }
 
     // Apply custom column widths if provided or auto-compute based on content
     if (options?.colWidths) {
@@ -44,12 +66,32 @@ export function useExcelExport() {
       });
     }
 
-    // Apply alignments and styling across header and data cells
+    // Apply alignments and styling across meta, header and data cells
     const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
     const keys = Object.keys(rows[0] || {});
 
-    for (let R = range.s.r; R <= range.e.r; ++R) {
-      const isHeader = R === range.s.r;
+    // Style meta rows if present
+    if (hasMeta) {
+      for (let R = 0; R < headerRowIndex - 1; ++R) {
+        const lblAddress = XLSX.utils.encode_cell({ r: R, c: 0 });
+        const valAddress = XLSX.utils.encode_cell({ r: R, c: 1 });
+        if (ws[lblAddress]) {
+          ws[lblAddress].s = {
+            font: { bold: true, name: "Calibri", sz: 11, color: { rgb: "374151" } },
+            alignment: { horizontal: "left", vertical: "center" }
+          };
+        }
+        if (ws[valAddress]) {
+          ws[valAddress].s = {
+            font: { bold: true, name: "Calibri", sz: 11, color: { rgb: "111827" } },
+            alignment: { horizontal: "left", vertical: "center" }
+          };
+        }
+      }
+    }
+
+    for (let R = headerRowIndex; R <= range.e.r; ++R) {
+      const isHeader = R === headerRowIndex;
       const isLastRow = R === range.e.r;
 
       for (let C = range.s.c; C <= range.e.c; ++C) {

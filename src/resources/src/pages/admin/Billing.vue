@@ -395,49 +395,83 @@ const handleCancelReceipt = async (col: Collection) => {
 // Excel Export
 const exportToExcel = async () => {
   let exportRows: any[] = [];
-  if (activeTab.value === "invoices" || activeTab.value === "dues") {
-    const source = activeTab.value === "dues" ? dueClientsList.value : bills.value;
-    exportRows = source.map((b) => ({
-      "Invoice No": b.billNo,
-      "Client Organization": b.clientName,
-      "BIN Number": b.clientBin || "N/A",
-      "Customer Type": b.customerTypeName || "Standard",
-      Reference: b.referenceName || "N/A",
-      "Tax Period": b.taxPeriod,
-      "Bill Date": new Date(b.billDate).toLocaleDateString(),
-      "Subtotal (Tk)": b.subtotal,
-      "Discount (Tk)": b.discountAmount,
-      "Previous Due (Tk)": b.previousDue,
-      "Grand Total (Tk)": b.grandTotal,
-      "Paid Amount (Tk)": b.paidAmount,
-      "Due Amount (Tk)": b.dueAmount,
-      Status: b.status.toUpperCase()
-    }));
-  } else if (activeTab.value === "collections") {
-    exportRows = collections.value.map((c) => ({
-      "Receipt No": c.receiptNo,
-      "Client Organization": c.clientName,
-      "Collection Date": new Date(c.collectionDate).toLocaleDateString(),
-      "Payment Method": c.paymentMethod.toUpperCase(),
-      "Collected Amount (Tk)": c.amount,
-      "Reference No": c.referenceNo || "N/A",
-      Notes: c.notes || "",
-      Status: c.status.toUpperCase()
-    }));
-  } else if (activeTab.value === "missing") {
-    exportRows = filteredMissingBills.value.map((m) => ({
-      "Client Organization": m.companyName,
-      "BIN Number": m.binNumber || "N/A",
-      "Service Scope": m.vatServiceType,
-      "Target Month": m.targetMonth,
-      "Submission ID": m.submissionId || "Pending",
-      Status: m.isSubmitted ? "Ready to Bill" : "Pending Submission",
-      "Previous Due (Tk)": m.previousDue,
-      "Service Fee (Tk)": m.monthlyServiceFee
-    }));
+  const selectedRef = references.value.find((r) => r.id === selectedReferenceId.value);
+  const refName = selectedRef?.name || (selectedReferenceId.value !== "all" ? `Ref #${selectedReferenceId.value}` : null);
+  const hasRefFilter = !!refName;
+
+  const metaRows: Array<[string, string]> = [
+    ["Tax Period:", selectedMonth.value]
+  ];
+  if (hasRefFilter) {
+    metaRows.push(["Reference:", refName]);
   }
 
-  exportSingleSheet(exportRows, "Billing Data", `IDP_Billing_${activeTab.value}_${selectedMonth.value}.xlsx`);
+  if (activeTab.value === "invoices" || activeTab.value === "dues" || activeTab.value === "periodic-dues") {
+    const source = activeTab.value === "dues" ? dueClientsList.value : bills.value;
+    exportRows = source.map((b) => {
+      const row: Record<string, unknown> = {
+        "Invoice No": b.billNo,
+        "Client Organization": b.clientName,
+        "BIN Number": b.clientBin || "N/A",
+        "Customer Type": b.customerTypeName || "Standard"
+      };
+
+      // Only include Reference column if NOT filtered by a specific Reference
+      if (!hasRefFilter) {
+        row["Reference"] = b.referenceName || "N/A";
+      }
+
+      row["Bill Date"] = new Date(b.billDate).toLocaleDateString();
+      row["Subtotal (Tk)"] = b.subtotal;
+      row["Discount (Tk)"] = b.discountAmount;
+      row["Previous Due (Tk)"] = b.previousDue;
+      row["Grand Total (Tk)"] = b.grandTotal;
+      row["Paid Amount (Tk)"] = b.paidAmount;
+      row["Due Amount (Tk)"] = b.dueAmount;
+      row["Status"] = b.status.toUpperCase();
+
+      return row;
+    });
+  } else if (activeTab.value === "collections") {
+    exportRows = collections.value.map((c) => {
+      const row: Record<string, unknown> = {
+        "Receipt No": c.receiptNo,
+        "Client Organization": c.clientName,
+        "Collection Date": new Date(c.collectionDate).toLocaleDateString(),
+        "Payment Method": c.paymentMethod.toUpperCase(),
+        "Collected Amount (Tk)": c.amount,
+        "Reference No": c.referenceNo || "N/A",
+        Notes: c.notes || "",
+        Status: c.status.toUpperCase()
+      };
+      return row;
+    });
+  } else if (activeTab.value === "missing") {
+    exportRows = filteredMissingBills.value.map((m) => {
+      const row: Record<string, unknown> = {
+        "Client Organization": m.companyName,
+        "BIN Number": m.binNumber || "N/A",
+        "Service Scope": m.vatServiceType
+      };
+
+      // Only include Reference column if NOT filtered by a specific Reference
+      if (!hasRefFilter) {
+        row["Reference"] = m.referenceName || "N/A";
+      }
+
+      row["Submission ID"] = m.submissionId || "Pending";
+      row["Status"] = m.isSubmitted ? "Ready to Bill" : "Pending Submission";
+      row["Previous Due (Tk)"] = m.previousDue;
+      row["Service Fee (Tk)"] = m.monthlyServiceFee;
+
+      return row;
+    });
+  }
+
+  const filePrefix = hasRefFilter ? `IDP_Billing_${activeTab.value}_${refName.replace(/\s+/g, "_")}_${selectedMonth.value}` : `IDP_Billing_${activeTab.value}_${selectedMonth.value}`;
+  exportSingleSheet(exportRows, "Billing Data", `${filePrefix}.xlsx`, {
+    metaRows
+  });
   toast.success("Excel report exported successfully");
 };
 
