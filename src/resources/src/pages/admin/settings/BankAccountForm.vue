@@ -50,8 +50,9 @@ const fetchPaymentMethods = async () => {
 const loadAccountForEdit = async (id: number) => {
   isLoading.value = true;
   try {
-    const accounts = await fetchBankAccounts();
-    const found = accounts.find((a: any) => a.id === id);
+    const res = await axios.get("/api/firm/bank-accounts");
+    const accounts = res.data?.data || [];
+    const found = accounts.find((a: any) => Number(a.id) === Number(id));
     if (found) {
       form.value = {
         bankName: found.bankName || "",
@@ -303,9 +304,6 @@ const handleSave = async () => {
                 <label class="form-check-label text-light small fw-medium" for="defaultAccountCheck">
                   Primary / Default for Invoices
                 </label>
-                <div class="text-muted" style="font-size: 0.75rem;">
-                  When enabled, this bank and MFS account will be printed on all client invoices by default.
-                </div>
               </div>
 
               <div class="form-check form-switch">
@@ -313,9 +311,6 @@ const handleSave = async () => {
                 <label class="form-check-label text-light small fw-medium" for="activeAccountCheck">
                   Active Status
                 </label>
-                <div class="text-muted" style="font-size: 0.75rem;">
-                  Active bank accounts are selectable in invoice payments and payouts.
-                </div>
               </div>
             </div>
           </div>

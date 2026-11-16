@@ -160,12 +160,14 @@ export function useFirmApi() {
   };
 
   // ── 2. BANK ACCOUNTS ────────────────────────────────
-  const fetchBankAccounts = async () => {
+  const fetchBankAccounts = async (): Promise<BankAccount[]> => {
     try {
       const res = await axios.get("/api/firm/bank-accounts");
       bankAccounts.value = res.data.data || [];
+      return bankAccounts.value;
     } catch (err) {
       error.value = getErrorMessage(err);
+      return [];
     }
   };
 
