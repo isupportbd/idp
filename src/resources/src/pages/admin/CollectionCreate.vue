@@ -28,7 +28,7 @@ const clientOverview = ref<any>(null);
 
 const collectionDate = ref(new Date().toISOString().slice(0, 10));
 const amount = ref<number>(0);
-const paymentMethod = ref<string>("cash");
+const paymentMethod = ref<string>("Cash");
 const paymentMethodsList = ref<Array<{ id: number; name: string; type?: string }>>([]);
 const referenceNo = ref("");
 const notes = ref("");
@@ -329,18 +329,18 @@ const handleSaveCollection = async () => {
               </label>
               <select v-model="paymentMethod" class="form-select idp-input">
                 <template v-if="paymentMethodsList.length > 0">
-                  <option v-for="m in paymentMethodsList" :key="m.id" :value="m.name.toLowerCase().replace(/\s+/g, '_')">
+                  <option v-for="m in paymentMethodsList" :key="m.id" :value="m.name">
                     {{ m.name }}
                   </option>
                 </template>
                 <template v-else>
-                  <option value="cash">Cash in Hand</option>
-                  <option value="bank">Bank Transfer / Deposit</option>
-                  <option value="cheque">Bank Cheque</option>
-                  <option value="bkash">bKash (MFS)</option>
-                  <option value="nagad">Nagad (MFS)</option>
-                  <option value="rocket">Rocket (MFS)</option>
-                  <option value="other">Other Payment</option>
+                  <option value="Cash">Cash in Hand</option>
+                  <option value="Bank Transfer">Bank Transfer / Deposit</option>
+                  <option value="Bank Cheque">Bank Cheque</option>
+                  <option value="bKash">bKash (MFS)</option>
+                  <option value="Nagad">Nagad (MFS)</option>
+                  <option value="Rocket">Rocket (MFS)</option>
+                  <option value="Other">Other Payment</option>
                 </template>
               </select>
             </div>

@@ -197,12 +197,13 @@ export async function syncDatabaseSchemaAndSuperAdmin() {
     `);
     await executeSingleSql(`
       INSERT INTO payment_methods (name, type, description) VALUES 
-        ('Send Money', 'mfs', 'MFS Send Money (Personal)'), 
-        ('Cash Out', 'mfs', 'MFS Cash Out'), 
-        ('Payment', 'mfs', 'MFS Merchant Payment'), 
-        ('Cash in Hand', 'cash', 'Direct Cash Receipt'), 
-        ('Bank Transfer', 'bank', 'Bank Deposit or EFT/NPSB'), 
-        ('Bank Cheque', 'bank', 'Account Payee Cheque') 
+        ('Cash', 'cash', 'Cash in Hand'),
+        ('Bank Transfer', 'bank', 'Bank Transfer / Deposit'),
+        ('Bank Cheque', 'bank', 'Bank Cheque'),
+        ('bKash', 'mfs', 'bKash Mobile Financial Service'),
+        ('Nagad', 'mfs', 'Nagad Mobile Financial Service'),
+        ('Rocket', 'mfs', 'Rocket Mobile Financial Service'),
+        ('Other', 'general', 'Other Payment Method')
       ON CONFLICT (name) DO NOTHING
     `);
     await executeSingleSql(`ALTER TABLE global_items ADD COLUMN IF NOT EXISTS description TEXT`);

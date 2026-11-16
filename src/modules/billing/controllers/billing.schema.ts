@@ -45,7 +45,7 @@ export const createCollectionSchema = z.object({
   billId: z.number().int().positive().optional().nullable(),
   collectionDate: z.string().min(1, "Collection date is required"),
   amount: z.number().positive("Collection amount must be greater than 0"),
-  paymentMethod: z.enum(["cash", "bank", "cheque", "bkash", "nagad", "rocket", "other"]).default("cash"),
+  paymentMethod: z.string().default("cash"),
   referenceNo: z.string().optional().nullable(),
   notes: z.string().optional().nullable()
 });
@@ -53,7 +53,7 @@ export const createCollectionSchema = z.object({
 export const updateCollectionSchema = z.object({
   collectionDate: z.string().optional(),
   amount: z.number().positive("Collection amount must be greater than 0").optional(),
-  paymentMethod: z.enum(["cash", "bank", "cheque", "bkash", "nagad", "rocket", "other"]).optional(),
+  paymentMethod: z.string().optional(),
   referenceNo: z.string().optional().nullable(),
   notes: z.string().optional().nullable()
 });
