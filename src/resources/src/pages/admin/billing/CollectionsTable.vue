@@ -33,8 +33,15 @@ const toggleCollectionActions = (event: MouseEvent, colId: number) => {
   const trigger = event.currentTarget as HTMLElement | null;
   const rect = trigger?.getBoundingClientRect();
   const menuWidth = 190;
+  const menuEstimatedHeight = 150;
   const left = rect ? Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)) : 8;
-  const top = rect ? rect.bottom + 4 : 8;
+
+  // If there's not enough room below the trigger and more space above, open upwards (dropup)
+  const spaceBelow = rect ? window.innerHeight - rect.bottom : 0;
+  const openUpwards = rect ? spaceBelow < menuEstimatedHeight && rect.top > spaceBelow : false;
+  const top = rect
+    ? (openUpwards ? Math.max(8, rect.top - menuEstimatedHeight - 4) : rect.bottom + 4)
+    : 8;
 
   actionsMenuStyle.value = { top: `${top}px`, left: `${left}px` };
   openActionsColId.value = colId;
