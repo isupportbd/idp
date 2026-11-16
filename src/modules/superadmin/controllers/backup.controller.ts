@@ -1,11 +1,27 @@
-import { sql } from "drizzle-orm";
+import { getTableColumns, isTable, sql } from "drizzle-orm";
 import { databasePool } from "@/framework/database/connection.js";
 import type { AppContext } from "@/framework/facade.js";
 import { db } from "@/framework/facade.js";
+import * as schema from "@/database/schema.js";
 
 // 22. Full Database SQL Backup Export
 export async function exportDatabaseBackup(c: AppContext) {
   try {
+    // Build a map of valid column names for each table from Drizzle models
+    const drizzleTables = Object.values(schema).filter(isTable);
+    const validColumnsMap = new Map<string, Set<string>>();
+    for (const t of drizzleTables) {
+      try {
+        const tableName = (t as any)[Symbol.for("drizzle:Name")];
+        if (tableName) {
+          const cols = Object.values(getTableColumns(t as any)).map((c: any) => c.name);
+          validColumnsMap.set(tableName, new Set(cols));
+        }
+      } catch {
+        // Skip non-table exports
+      }
+    }
+
     const tablesRes = await db.execute(sql`
       SELECT tablename 
       FROM pg_tables 
@@ -97,7 +113,9 @@ export async function exportDatabaseBackup(c: AppContext) {
         sqlDump += `-- --------------------------------------------------------\n`;
 
         if (rows.length > 0) {
-          const columns = Object.keys(rows[0]);
+          const rawColumns = Object.keys(rows[0]);
+          const validCols = validColumnsMap.get(table);
+          const columns = validCols ? rawColumns.filter((c) => validCols.has(c)) : rawColumns;
           const colsList = columns.map((col) => `"${col}"`).join(", ");
 
           for (const row of rows) {
@@ -199,9 +217,19 @@ export async function restoreDatabaseBackup(c: AppContext) {
     // Execute restore using native postgres driver pool to support large multi-statement dumps without Drizzle statement-cache limitations
     const pool = databasePool();
 
-    // Auto-align schema: ensure sender_id column exists so legacy dumps restore cleanly
+    // Auto-align schema: ensure legacy/custom columns exist so all dumps restore cleanly
     try {
-      await pool.unsafe(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS sender_id VARCHAR(50) DEFAULT ''`);
+      await pool.unsafe(`
+        ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS sender_id VARCHAR(50) DEFAULT '';
+        ALTER TABLE global_items ADD COLUMN IF NOT EXISTS description TEXT;
+        ALTER TABLE global_items ADD COLUMN IF NOT EXISTS category VARCHAR(100);
+        ALTER TABLE global_items ADD COLUMN IF NOT EXISTS cd NUMERIC(14,2) DEFAULT 0;
+        ALTER TABLE global_items ADD COLUMN IF NOT EXISTS sd NUMERIC(14,2) DEFAULT 0;
+        ALTER TABLE global_items ADD COLUMN IF NOT EXISTS vat NUMERIC(14,2) DEFAULT 0;
+        ALTER TABLE global_items ADD COLUMN IF NOT EXISTS ait NUMERIC(14,2) DEFAULT 0;
+        ALTER TABLE global_items ADD COLUMN IF NOT EXISTS rd NUMERIC(14,2) DEFAULT 0;
+        ALTER TABLE global_items ADD COLUMN IF NOT EXISTS at NUMERIC(14,2) DEFAULT 0;
+      `);
     } catch {
       // ignore
     }
