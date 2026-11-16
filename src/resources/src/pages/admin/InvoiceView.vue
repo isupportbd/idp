@@ -75,8 +75,8 @@ const paymentInfo = computed(() => (bill.value?.payment as any) || null);
 const mfsChannels = computed<{ label: string; value: string }[]>(() => {
   const p = paymentInfo.value || {};
   const list: { label: string; value: string }[] = [];
-  if (p.bkashNumber) list.push({ label: "Bkash (Send Money)", value: String(p.bkashNumber) });
-  if (p.nagadNumber) list.push({ label: "Nagad (Send Money)", value: String(p.nagadNumber) });
+  if (p.bkashNumber) list.push({ label: `Bkash (${p.bkashType || "Send Money"})`, value: String(p.bkashNumber) });
+  if (p.nagadNumber) list.push({ label: `Nagad (${p.nagadType || "Send Money"})`, value: String(p.nagadNumber) });
   if (p.rocketNumber) list.push({ label: "Rocket (Send Money)", value: String(p.rocketNumber) });
   return list;
 });
@@ -199,8 +199,8 @@ const handleWhatsAppShare = async () => {
     // the message never advertises a method the firm does not accept.
     const pay = paymentInfo.value || {};
     const paymentLines: string[] = [];
-    if (pay.bkashNumber) paymentLines.push(`• bKash: ${pay.bkashNumber} (Send Money)`);
-    if (pay.nagadNumber) paymentLines.push(`• Nagad: ${pay.nagadNumber} (Send Money)`);
+    if (pay.bkashNumber) paymentLines.push(`• bKash: ${pay.bkashNumber} (${pay.bkashType || "Send Money"})`);
+    if (pay.nagadNumber) paymentLines.push(`• Nagad: ${pay.nagadNumber} (${pay.nagadType || "Send Money"})`);
     if (pay.rocketNumber) paymentLines.push(`• Rocket: ${pay.rocketNumber} (Send Money)`);
     if (pay.accountNumber) {
       paymentLines.push(

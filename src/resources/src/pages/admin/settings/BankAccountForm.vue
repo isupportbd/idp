@@ -15,8 +15,6 @@ const accountId = ref<number | null>(null);
 const isLoading = ref(false);
 const isSaving = ref(false);
 
-const paymentMethodsList = ref<Array<{ id: number; name: string; type?: string }>>([]);
-
 const form = ref({
   bankName: "",
   accountName: "",
@@ -31,24 +29,12 @@ const form = ref({
   isActive: true
 });
 
-const fetchPaymentMethods = async () => {
-  try {
-    const res = await axios.get("/api/superadmin/payment-methods");
-    if (res.data?.success && Array.isArray(res.data.data)) {
-      // Filter ONLY MFS-compatible methods (e.g. Send Money, Cash Out, Payment)
-      const allActive = res.data.data.filter((m: any) => m.isActive !== false);
-      const mfsOnly = allActive.filter((m: any) => m.type === "mfs");
-      paymentMethodsList.value = mfsOnly.length > 0 ? mfsOnly : allActive.filter((m: any) => ["Send Money", "Cash Out", "Payment"].includes(m.name));
-    }
-  } catch (err) {
-    console.warn("Could not fetch global payment methods, using fallback", err);
-    paymentMethodsList.value = [
-      { id: 1, name: "Send Money", type: "mfs" },
-      { id: 2, name: "Cash Out", type: "mfs" },
-      { id: 3, name: "Payment", type: "mfs" }
-    ];
-  }
-};
+const mfsPaymentTypes = [
+  "Send Money",
+  "Payment",
+  "Cash In",
+  "Cash Out"
+];
 
 const loadAccountForEdit = async (id: number) => {
   isLoading.value = true;
@@ -261,10 +247,10 @@ const handleSave = async () => {
                   <select
                     v-model="form.bkashType"
                     class="form-select bg-dark border-secondary text-white small"
-                    style="max-width: 135px; font-size: 0.8rem;"
+                    style="max-width: 145px; font-size: 0.8rem;"
                   >
-                    <option v-for="m in paymentMethodsList" :key="'bkash-' + m.id" :value="m.name">
-                      {{ m.name }}
+                    <option v-for="t in mfsPaymentTypes" :key="'bkash-' + t" :value="t">
+                      {{ t }}
                     </option>
                   </select>
                 </div>
@@ -286,10 +272,10 @@ const handleSave = async () => {
                   <select
                     v-model="form.nagadType"
                     class="form-select bg-dark border-secondary text-white small"
-                    style="max-width: 135px; font-size: 0.8rem;"
+                    style="max-width: 145px; font-size: 0.8rem;"
                   >
-                    <option v-for="m in paymentMethodsList" :key="'nagad-' + m.id" :value="m.name">
-                      {{ m.name }}
+                    <option v-for="t in mfsPaymentTypes" :key="'nagad-' + t" :value="t">
+                      {{ t }}
                     </option>
                   </select>
                 </div>
