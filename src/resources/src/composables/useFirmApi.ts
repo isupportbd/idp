@@ -71,54 +71,55 @@ export interface ExpenseHead {
   isActive: boolean;
 }
 
-export function useFirmApi() {
-  const company = ref<CompanySettings>({
-    companyName: "",
-    proprietorName: "",
-    phone: "",
-    email: "",
-    website: "",
-    address: "",
-    binNumber: "",
-    tinNumber: "",
-    tradeLicenseNo: "",
-    bkashNumber: "",
-    nagadNumber: "",
-    rocketNumber: "",
-    invoicePrefix: "INV",
-    startingInvoiceNumber: 1001,
-    currentInvoiceSequence: 1001,
-    receiptPrefix: "RCP",
-    startingReceiptNumber: 5001,
-    currentReceiptSequence: 5001,
-    currency: "BDT (৳)",
-    decimalPlaces: 2,
-    invoiceTerms:
-      "1. Payment is due within 15 days of invoice date.\n2. Please mention the invoice number as reference in payment.\n3. Checks/Transfers are subject to realization.",
-    invoiceFooterText: "",
-    receiptFooterText: "This is a computer-generated money receipt and does not require a physical signature.",
-    autoDueCarryForward: true,
-    binUniqueEnforcement: true,
-    allowDuplicateMobile: true,
-    allowNegativeBalance: false,
-    smsApiKey: "",
-    smsSenderId: "",
-    smsProvider: "",
-    smsEndpointUrl: "",
-    smsOnBill: true,
-    smsOnCollection: true,
-    smsOnSubmission: true,
-    autoDueReminder: false,
-    dueReminderDays: 7,
-    dueReminderMinAmount: 1000,
-    services: [],
-    expenseHeads: []
-  });
+const company = ref<CompanySettings>({
+  companyName: "",
+  proprietorName: "",
+  phone: "",
+  email: "",
+  website: "",
+  address: "",
+  binNumber: "",
+  tinNumber: "",
+  tradeLicenseNo: "",
+  bkashNumber: "",
+  nagadNumber: "",
+  rocketNumber: "",
+  invoicePrefix: "INV",
+  startingInvoiceNumber: 1001,
+  currentInvoiceSequence: 1001,
+  receiptPrefix: "RCP",
+  startingReceiptNumber: 5001,
+  currentReceiptSequence: 5001,
+  currency: "BDT (৳)",
+  decimalPlaces: 2,
+  invoiceTerms:
+    "1. Payment is due within 15 days of invoice date.\n2. Please mention the invoice number as reference in payment.\n3. Checks/Transfers are subject to realization.",
+  invoiceFooterText: "",
+  receiptFooterText: "This is a computer-generated money receipt and does not require a physical signature.",
+  autoDueCarryForward: true,
+  binUniqueEnforcement: true,
+  allowDuplicateMobile: true,
+  allowNegativeBalance: false,
+  smsApiKey: "",
+  smsSenderId: "",
+  smsProvider: "",
+  smsEndpointUrl: "",
+  smsOnBill: true,
+  smsOnCollection: true,
+  smsOnSubmission: true,
+  autoDueReminder: false,
+  dueReminderDays: 7,
+  dueReminderMinAmount: 1000,
+  services: [],
+  expenseHeads: []
+});
 
-  const bankAccounts = ref<BankAccount[]>([]);
-  const expenseHeads = ref<ExpenseHead[]>([]);
-  const loading = ref(false);
-  const error = ref<string | null>(null);
+const bankAccounts = ref<BankAccount[]>([]);
+const expenseHeads = ref<ExpenseHead[]>([]);
+const loading = ref(false);
+const error = ref<string | null>(null);
+
+export function useFirmApi() {
 
   const getErrorMessage = (err: unknown): string => {
     if (axios.isAxiosError(err)) {
