@@ -86,7 +86,7 @@ export const listBills = async (c: AppContext) => {
         totalPreviousDueAmount: sql<number>`coalesce(sum(${bills.previousDue}), 0)::float`,
         totalBilledAmount: sql<number>`coalesce(sum(${bills.subtotal} - ${bills.discountAmount}), 0)::float`,
         totalPaidAmount: sql<number>`coalesce(sum(${bills.paidAmount}), 0)::float`,
-        totalDueAmount: sql<number>`coalesce(sum(${bills.grandTotal}), 0)::float`,
+        totalDueAmount: sql<number>`coalesce(sum(${bills.dueAmount}), 0)::float`,
         periodicDueAmount: sql<number>`coalesce(sum(greatest(0, (${bills.subtotal} - ${bills.discountAmount}) - greatest(0, ${bills.paidAmount} - ${bills.previousDue}))), 0)::float`,
         paidCount: sql<number>`coalesce(sum(case when ${bills.status} = 'paid' then 1 else 0 end), 0)::int`,
         unpaidCount: sql<number>`coalesce(sum(case when ${bills.status} = 'unpaid' then 1 else 0 end), 0)::int`,
