@@ -184,6 +184,27 @@ export async function syncDatabaseSchemaAndSuperAdmin() {
     await executeSingleSql(`ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS rocket_type VARCHAR(30) DEFAULT 'Personal'`);
     await executeSingleSql(`ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS bkash_type VARCHAR(30) DEFAULT 'Personal'`);
     await executeSingleSql(`ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS nagad_type VARCHAR(30) DEFAULT 'Personal'`);
+    await executeSingleSql(`
+      CREATE TABLE IF NOT EXISTS payment_methods (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL UNIQUE,
+        type VARCHAR(50) DEFAULT 'general',
+        description TEXT,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await executeSingleSql(`
+      INSERT INTO payment_methods (name, type, description) VALUES 
+        ('Send Money', 'mfs', 'MFS Send Money (Personal)'), 
+        ('Cash Out', 'mfs', 'MFS Cash Out'), 
+        ('Payment', 'mfs', 'MFS Merchant Payment'), 
+        ('Cash in Hand', 'cash', 'Direct Cash Receipt'), 
+        ('Bank Transfer', 'bank', 'Bank Deposit or EFT/NPSB'), 
+        ('Bank Cheque', 'bank', 'Account Payee Cheque') 
+      ON CONFLICT (name) DO NOTHING
+    `);
     await executeSingleSql(`ALTER TABLE global_items ADD COLUMN IF NOT EXISTS description TEXT`);
     await executeSingleSql(`ALTER TABLE global_items ADD COLUMN IF NOT EXISTS category VARCHAR(100)`);
     await executeSingleSql(`ALTER TABLE global_items ADD COLUMN IF NOT EXISTS cd NUMERIC(14,2) DEFAULT 0`);

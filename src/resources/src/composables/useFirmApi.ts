@@ -55,7 +55,9 @@ export interface BankAccount {
   branchName?: string | null;
   routingNumber?: string | null;
   bkashNumber?: string | null;
+  bkashType?: string | null;
   nagadNumber?: string | null;
+  nagadType?: string | null;
   isDefault: boolean;
   isActive: boolean;
 }

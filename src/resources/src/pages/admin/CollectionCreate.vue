@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import axios from "axios";
 import ClientSearchSelect from "@/components/common/ClientSearchSelect.vue";
 import { type Bill, useBillingApi } from "@/composables/useBillingApi";
 import { useClientsApi } from "@/composables/useClientsApi";
@@ -27,10 +28,22 @@ const clientOverview = ref<any>(null);
 
 const collectionDate = ref(new Date().toISOString().slice(0, 10));
 const amount = ref<number>(0);
-const paymentMethod = ref<"cash" | "bank" | "cheque" | "bkash" | "nagad" | "rocket" | "other">("cash");
+const paymentMethod = ref<string>("cash");
+const paymentMethodsList = ref<Array<{ id: number; name: string; type?: string }>>([]);
 const referenceNo = ref("");
 const notes = ref("");
 const isSaving = ref(false);
+
+const fetchPaymentMethods = async () => {
+  try {
+    const res = await axios.get("/api/superadmin/payment-methods");
+    if (res.data?.success && Array.isArray(res.data.data)) {
+      paymentMethodsList.value = res.data.data.filter((m: any) => m.isActive !== false);
+    }
+  } catch (err) {
+    console.warn("Could not fetch global payment methods, fallback to default", err);
+  }
+};
 
 let lastLoadedClientId: number | null = null;
 
@@ -74,7 +87,7 @@ const loadClientDetails = async () => {
 };
 
 onMounted(async () => {
-  await fetchClients();
+  await Promise.all([fetchClients(), fetchPaymentMethods()]);
 
   if (isEditMode.value && collectionId.value) {
     try {
@@ -315,13 +328,20 @@ const handleSaveCollection = async () => {
                 Payment Method <span class="text-danger">*</span>
               </label>
               <select v-model="paymentMethod" class="form-select idp-input">
-                <option value="cash">Cash in Hand</option>
-                <option value="bank">Bank Transfer / Deposit</option>
-                <option value="cheque">Bank Cheque</option>
-                <option value="bkash">bKash (MFS)</option>
-                <option value="nagad">Nagad (MFS)</option>
-                <option value="rocket">Rocket (MFS)</option>
-                <option value="other">Other Payment</option>
+                <template v-if="paymentMethodsList.length > 0">
+                  <option v-for="m in paymentMethodsList" :key="m.id" :value="m.name.toLowerCase().replace(/\s+/g, '_')">
+                    {{ m.name }}
+                  </option>
+                </template>
+                <template v-else>
+                  <option value="cash">Cash in Hand</option>
+                  <option value="bank">Bank Transfer / Deposit</option>
+                  <option value="cheque">Bank Cheque</option>
+                  <option value="bkash">bKash (MFS)</option>
+                  <option value="nagad">Nagad (MFS)</option>
+                  <option value="rocket">Rocket (MFS)</option>
+                  <option value="other">Other Payment</option>
+                </template>
               </select>
             </div>
 

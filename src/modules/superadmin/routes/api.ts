@@ -11,6 +11,7 @@ import {
   createLocation,
   createMeasurementUnit,
   createPlan,
+  createPaymentMethod,
   createServiceUnit,
   createUnitConversion,
   createVatNote,
@@ -21,6 +22,7 @@ import {
   deleteLocation,
   deleteMeasurementUnit,
   deletePlan,
+  deletePaymentMethod,
   deleteServiceUnit,
   deleteTenant,
   deleteUnitConversion,
@@ -36,6 +38,7 @@ import {
   getLocations,
   getMeasurementUnits,
   getNotifications,
+  getPaymentMethods,
   getPaymentSettings,
   getPendingRecharges,
   getPendingSignups,
@@ -58,6 +61,7 @@ import {
   toggleGlobalItemStatus,
   toggleLocationStatus,
   toggleMeasurementUnitStatus,
+  togglePaymentMethodStatus,
   toggleServiceUnitStatus,
   toggleTenantStatus,
   toggleVatNoteStatus,
@@ -67,6 +71,7 @@ import {
   updateGlobalItem,
   updateLocation,
   updateMeasurementUnit,
+  updatePaymentMethod,
   updatePlan,
   updateServiceUnit,
   updateUnitConversion,
@@ -82,6 +87,7 @@ import {
   GlobalItemSchema,
   LocationSchema,
   MeasurementUnitSchema,
+  PaymentMethodSchema,
   PaymentSettingsSchema,
   PlanSchema,
   RejectSignupSchema,
@@ -159,6 +165,16 @@ superAdminRouter.api(publicPaymentSettingsRoute, [], getPaymentSettings);
  * Any authenticated user in good standing can read global dropdown definitions.
  */
 const masterDataMiddleware = [authMiddleware];
+
+const getPaymentMethodsRoute = createRoute({
+  path: "/payment-methods",
+  method: "get",
+  tags: ["SuperAdmin", "Master Data"],
+  description: "List payment methods",
+  responses: {
+    [HttpStatusCodes.OK]: jsonContent(OkData, "Payment methods list")
+  }
+});
 
 const getClientTypesRoute = createRoute({
   path: "/client-types",
@@ -260,6 +276,7 @@ const getUnitConversionsRoute = createRoute({
   }
 });
 
+superAdminRouter.api(getPaymentMethodsRoute, masterDataMiddleware, getPaymentMethods);
 superAdminRouter.api(getClientTypesRoute, masterDataMiddleware, getClientTypes);
 superAdminRouter.api(getLocationsRoute, masterDataMiddleware, getLocations);
 superAdminRouter.api(getCommercialAreasRoute, masterDataMiddleware, getCommercialAreas);
@@ -580,6 +597,64 @@ const savePaymentSettingsRoute = createRoute({
 });
 
 superAdminRouter.api(savePaymentSettingsRoute, superAdminMiddleware, savePaymentSettings);
+
+// ── Payment Methods ────────────────────────────────────────────────────────
+const createPaymentMethodRoute = createRoute({
+  path: "/payment-methods",
+  method: "post",
+  tags: ["SuperAdmin", "Payment Methods"],
+  description: "Create a payment method",
+  request: {
+    body: jsonContent(PaymentMethodSchema, "Payment method payload")
+  },
+  responses: {
+    [HttpStatusCodes.CREATED]: jsonContent(OkDataMessage, "Payment method created")
+  }
+});
+superAdminRouter.api(createPaymentMethodRoute, superAdminMiddleware, createPaymentMethod);
+
+const updatePaymentMethodRoute = createRoute({
+  path: "/payment-methods/:id",
+  method: "put",
+  tags: ["SuperAdmin", "Payment Methods"],
+  description: "Update a payment method",
+  request: {
+    params: z.object({ id: z.coerce.number() }),
+    body: jsonContent(PaymentMethodSchema, "Payment method payload")
+  },
+  responses: {
+    [HttpStatusCodes.OK]: jsonContent(OkDataMessage, "Payment method updated")
+  }
+});
+superAdminRouter.api(updatePaymentMethodRoute, superAdminMiddleware, updatePaymentMethod);
+
+const togglePaymentMethodStatusRoute = createRoute({
+  path: "/payment-methods/:id/toggle",
+  method: "patch",
+  tags: ["SuperAdmin", "Payment Methods"],
+  description: "Toggle payment method active status",
+  request: {
+    params: z.object({ id: z.coerce.number() })
+  },
+  responses: {
+    [HttpStatusCodes.OK]: jsonContent(OkMessage, "Status toggled")
+  }
+});
+superAdminRouter.api(togglePaymentMethodStatusRoute, superAdminMiddleware, togglePaymentMethodStatus);
+
+const deletePaymentMethodRoute = createRoute({
+  path: "/payment-methods/:id",
+  method: "delete",
+  tags: ["SuperAdmin", "Payment Methods"],
+  description: "Delete a payment method",
+  request: {
+    params: z.object({ id: z.coerce.number() })
+  },
+  responses: {
+    [HttpStatusCodes.OK]: jsonContent(OkMessage, "Payment method deleted")
+  }
+});
+superAdminRouter.api(deletePaymentMethodRoute, superAdminMiddleware, deletePaymentMethod);
 
 // ── Client Types ──────────────────────────────────────────────────────────
 const createClientTypeRoute = createRoute({

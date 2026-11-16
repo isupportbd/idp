@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { useRouter } from "vue-router";
 import type { BankAccount } from "@/composables/useFirmApi";
 import { useFirmApi } from "@/composables/useFirmApi";
 import { useToast } from "@/composables/useToast";
@@ -13,77 +13,16 @@ const props = defineProps<{
 
 const emit = defineEmits<(e: "refresh") => void>();
 
+const router = useRouter();
 const toast = useToast();
-const { createBankAccount, updateBankAccount, deleteBankAccount } = useFirmApi();
+const { deleteBankAccount } = useFirmApi();
 
-const showBankModal = ref(false);
-const isEditingBank = ref(false);
-const bankForm = ref({
-  id: 0,
-  bankName: "",
-  accountName: "",
-  accountNumber: "",
-  branchName: "",
-  routingNumber: "",
-  bkashNumber: "",
-  nagadNumber: "",
-  isDefault: false,
-  isActive: true
-});
-
-const openAddBankModal = () => {
-  isEditingBank.value = false;
-  bankForm.value = {
-    id: 0,
-    bankName: "",
-    accountName: props.defaultAccountName || "",
-    accountNumber: "",
-    branchName: "",
-    routingNumber: "",
-    bkashNumber: props.defaultPhone || "",
-    nagadNumber: "",
-    isDefault: props.bankAccounts.length === 0,
-    isActive: true
-  };
-  showBankModal.value = true;
+const goToAddBankAccount = () => {
+  router.push("/admin/settings/bank-accounts/create");
 };
 
-const openEditBankModal = (b: BankAccount) => {
-  isEditingBank.value = true;
-  bankForm.value = {
-    id: b.id,
-    bankName: b.bankName,
-    accountName: b.accountName,
-    accountNumber: b.accountNumber,
-    branchName: b.branchName || "",
-    routingNumber: b.routingNumber || "",
-    bkashNumber: b.bkashNumber || "",
-    nagadNumber: b.nagadNumber || "",
-    isDefault: b.isDefault,
-    isActive: b.isActive
-  };
-  showBankModal.value = true;
-};
-
-const saveBankAccount = async () => {
-  if (!bankForm.value.bankName.trim() || !bankForm.value.accountNumber.trim()) {
-    toast.error("Bank name and account number are required");
-    return;
-  }
-
-  try {
-    if (isEditingBank.value) {
-      await updateBankAccount(bankForm.value.id, bankForm.value);
-      toast.success("Bank account updated");
-    } else {
-      await createBankAccount(bankForm.value);
-      toast.success("Bank account added");
-    }
-    showBankModal.value = false;
-    emit("refresh");
-  } catch (err: any) {
-    toast.error(err.response?.data?.message || "Failed to save bank account");
-  }
+const goToEditBankAccount = (b: BankAccount) => {
+  router.push(`/admin/settings/bank-accounts/${b.id}/edit`);
 };
 
 const handleDeleteBankAccount = async (id: number) => {
@@ -117,7 +56,7 @@ const handleDeleteBankAccount = async (id: number) => {
           type="button"
           class="btn btn-primary btn-sm px-3 fw-semibold d-flex align-items-center gap-1 text-nowrap flex-shrink-0 shadow-sm"
           style="white-space: nowrap; height: 38px;"
-          @click="openAddBankModal"
+          @click="goToAddBankAccount"
         >
           <i class="bi bi-plus-lg"></i> <span>Add Bank Account</span>
         </button>
@@ -148,11 +87,17 @@ const handleDeleteBankAccount = async (id: number) => {
                 <div class="text-muted small">{{ b.accountName }}</div>
               </td>
               <td>
-                <div v-if="b.bkashNumber" class="small" style="color: #e2136e;">
-                  <strong>bKash:</strong> {{ b.bkashNumber }} <span class="badge bg-dark border border-secondary text-secondary" style="font-size: 0.68rem;">Send Money</span>
+                <div v-if="b.bkashNumber" class="small mb-1" style="color: #e2136e;">
+                  <strong>bKash:</strong> {{ b.bkashNumber }}
+                  <span class="badge bg-dark border border-secondary text-secondary ms-1" style="font-size: 0.68rem;">
+                    {{ b.bkashType || 'Send Money' }}
+                  </span>
                 </div>
                 <div v-if="b.nagadNumber" class="text-warning small">
-                  <strong>Nagad:</strong> {{ b.nagadNumber }} <span class="badge bg-dark border border-secondary text-secondary" style="font-size: 0.68rem;">Send Money</span>
+                  <strong>Nagad:</strong> {{ b.nagadNumber }}
+                  <span class="badge bg-dark border border-secondary text-secondary ms-1" style="font-size: 0.68rem;">
+                    {{ b.nagadType || 'Send Money' }}
+                  </span>
                 </div>
                 <div v-if="!b.bkashNumber && !b.nagadNumber" class="text-muted small">—</div>
               </td>
@@ -164,7 +109,7 @@ const handleDeleteBankAccount = async (id: number) => {
               </td>
               <td v-if="canEdit" style="text-align: right;">
                 <div class="d-flex gap-1 justify-content-end">
-                  <button class="action-btn btn-edit" title="Edit Bank Account" @click="openEditBankModal(b)">
+                  <button class="action-btn btn-edit" title="Edit Bank Account" @click="goToEditBankAccount(b)">
                     <i class="bi bi-pencil-fill"></i>
                   </button>
                   <button class="action-btn btn-del" title="Delete Bank Account" @click="handleDeleteBankAccount(b.id)">
@@ -185,127 +130,35 @@ const handleDeleteBankAccount = async (id: number) => {
         </table>
       </div>
     </div>
-
-    <!-- Add / Edit Bank Modal -->
-    <div
-      v-if="showBankModal"
-      class="modal fade show d-block"
-      tabindex="-1"
-      style="background: rgba(0, 0, 0, 0.75);"
-    >
-      <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
-        <div class="modal-content idp-card shadow-lg border border-secondary border-opacity-25" style="border-radius: 12px;">
-          <div class="modal-header border-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-start">
-            <h5 class="modal-title text-white fw-bold mb-0">
-              <i class="bi bi-bank text-primary me-2"></i> {{ isEditingBank ? 'Edit Bank Account' : 'Add Bank Account' }}
-            </h5>
-            <button type="button" class="btn-close btn-close-white" @click="showBankModal = false"></button>
-          </div>
-          <div class="modal-body px-4 py-3">
-            <div class="row g-3 mb-3">
-              <div class="col-12">
-                <label class="form-label text-light small fw-medium mb-1">Bank Name <span class="text-danger">*</span></label>
-                <input
-                  v-model="bankForm.bankName"
-                  type="text"
-                  class="form-control idp-input"
-                  placeholder="e.g. Dutch-Bangla Bank PLC"
-                  required
-                />
-              </div>
-
-              <div class="col-12">
-                <label class="form-label text-light small fw-medium mb-1">Account Title / Name <span class="text-danger">*</span></label>
-                <input
-                  v-model="bankForm.accountName"
-                  type="text"
-                  class="form-control idp-input"
-                  placeholder="e.g. Associates & Co. Consultancy"
-                  required
-                />
-              </div>
-
-              <div class="col-md-7">
-                <label class="form-label text-light small fw-medium mb-1">Account Number <span class="text-danger">*</span></label>
-                <input
-                  v-model="bankForm.accountNumber"
-                  type="text"
-                  class="form-control idp-input font-monospace"
-                  placeholder="115.120.987654"
-                  required
-                />
-              </div>
-
-              <div class="col-md-5">
-                <label class="form-label text-light small fw-medium mb-1">Routing Number</label>
-                <input
-                  v-model="bankForm.routingNumber"
-                  type="text"
-                  class="form-control idp-input font-monospace"
-                  placeholder="090271829"
-                />
-              </div>
-
-              <div class="col-12">
-                <label class="form-label text-light small fw-medium mb-1">Branch Name</label>
-                <input
-                  v-model="bankForm.branchName"
-                  type="text"
-                  class="form-control idp-input"
-                  placeholder="e.g. Naya Paltan Branch, Dhaka"
-                />
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label text-light small fw-medium mb-1">bKash Account (Optional)</label>
-                <div class="input-group">
-                  <input
-                    v-model="bankForm.bkashNumber"
-                    type="text"
-                    class="form-control idp-input font-monospace"
-                    placeholder="01819234567"
-                  />
-                  <span class="input-group-text bg-dark border-secondary text-secondary small py-0 px-2" style="font-size: 0.72rem;">
-                    Send Money
-                  </span>
-                </div>
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label text-light small fw-medium mb-1">Nagad Account (Optional)</label>
-                <div class="input-group">
-                  <input
-                    v-model="bankForm.nagadNumber"
-                    type="text"
-                    class="form-control idp-input font-monospace"
-                    placeholder="01711234567"
-                  />
-                  <span class="input-group-text bg-dark border-secondary text-secondary small py-0 px-2" style="font-size: 0.72rem;">
-                    Send Money
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div class="d-flex gap-4 pt-1">
-              <div class="form-check form-switch">
-                <input v-model="bankForm.isDefault" class="form-check-input" type="checkbox" id="bankDefaultCheck" />
-                <label class="form-check-label text-light small" for="bankDefaultCheck">Primary / Default for Invoices</label>
-              </div>
-              <div class="form-check form-switch">
-                <input v-model="bankForm.isActive" class="form-check-input" type="checkbox" id="bankActiveCheck" />
-                <label class="form-check-label text-light small" for="bankActiveCheck">Active</label>
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer border-0 pt-0 pb-4 px-4 d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-secondary btn-sm px-3 text-light" style="background-color: #1e293b; border: 1px solid #334155;" @click="showBankModal = false">Cancel</button>
-            <button type="button" class="btn btn-primary btn-sm px-4 fw-semibold" @click="saveBankAccount">
-              Save Bank Account
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
+
+<style scoped>
+.action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #343a40;
+  background: transparent;
+  color: #adb5bd;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.action-btn:hover {
+  background: #2b3035;
+}
+
+.btn-edit:hover {
+  color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.btn-del:hover {
+  color: #dc3545;
+  border-color: #dc3545;
+}
+</style>

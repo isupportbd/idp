@@ -19,6 +19,7 @@ export * from "./client-metadata.controller.js";
 export * from "./conversions.controller.js";
 export * from "./items-units.controller.js";
 export * from "./locations.controller.js";
+export * from "./payment-methods.controller.js";
 export * from "./plans.controller.js";
 export * from "./platform.controller.js";
 export * from "./recharge.controller.js";

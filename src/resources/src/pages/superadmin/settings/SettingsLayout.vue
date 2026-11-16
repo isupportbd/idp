@@ -86,6 +86,13 @@ const route = useRoute();
       >
         <i class="bi bi-arrow-left-right me-1"></i> Unit Conversions
       </router-link>
+      <router-link
+        to="/superadmin/settings/payment-methods"
+        class="btn btn-sm"
+        :class="route.path.includes('/payment-methods') ? 'btn-primary' : 'btn-dark border-secondary text-muted'"
+      >
+        <i class="bi bi-wallet2 me-1"></i> Payment Method
+      </router-link>
     </div>
 
     <!-- Sub Route View -->

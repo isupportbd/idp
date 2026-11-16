@@ -46,7 +46,9 @@ export const CreateBankAccountSchema = z.object({
   branchName: z.string().max(150).optional().nullable(),
   routingNumber: z.string().max(50).optional().nullable(),
   bkashNumber: z.string().max(50).optional().nullable(),
+  bkashType: z.string().max(50).optional().nullable(),
   nagadNumber: z.string().max(50).optional().nullable(),
+  nagadType: z.string().max(50).optional().nullable(),
   isDefault: z.boolean().default(false),
   isActive: z.boolean().default(true)
 });

@@ -34,6 +34,13 @@ export const PaymentSettingsSchema = z.object({
   rocketNumber: z.string().optional().nullable()
 });
 
+export const PaymentMethodSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  type: z.string().optional().default("general"),
+  description: z.string().optional().nullable(),
+  isActive: z.boolean().optional().default(true)
+});
+
 export const ClientTypeSchema = z
   .object({
     name: z.string().optional(),

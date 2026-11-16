@@ -214,6 +214,18 @@ export const routes = [
         meta: { title: "Firm Settings" }
       },
       {
+        path: "admin/settings/bank-accounts/create",
+        name: "bank-account-create",
+        component: () => import("@/pages/admin/settings/BankAccountForm.vue"),
+        meta: { title: "Add Bank Account" }
+      },
+      {
+        path: "admin/settings/bank-accounts/:id/edit",
+        name: "bank-account-edit",
+        component: () => import("@/pages/admin/settings/BankAccountForm.vue"),
+        meta: { title: "Edit Bank Account" }
+      },
+      {
         path: "admin/users",
         name: "users",
         component: () => import("@/pages/admin/Users.vue"),
@@ -330,6 +342,12 @@ export const routes = [
             name: "settings-references",
             component: () => import("@/pages/superadmin/settings/ClientReferences.vue"),
             meta: { title: "Client References" }
+          },
+          {
+            path: "payment-methods",
+            name: "settings-payment-methods",
+            component: () => import("@/pages/superadmin/settings/PaymentMethods.vue"),
+            meta: { title: "Payment Method" }
           }
         ]
       },

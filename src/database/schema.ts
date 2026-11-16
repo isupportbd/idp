@@ -26,6 +26,7 @@ export * from "../modules/superadmin/database/models/column_mappings.js";
 export * from "../modules/superadmin/database/models/global_items.js";
 export * from "../modules/superadmin/database/models/locations.js";
 export * from "../modules/superadmin/database/models/measurement_units.js";
+export * from "../modules/superadmin/database/models/payment_methods.js";
 export * from "../modules/superadmin/database/models/payment_settings.js";
 export * from "../modules/superadmin/database/models/plans.js";
 export * from "../modules/superadmin/database/models/subscription_transactions.js";
