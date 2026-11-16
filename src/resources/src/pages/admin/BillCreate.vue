@@ -76,8 +76,9 @@ const loadClientData = async () => {
       billingMonth.value = allowedMonths.value[0].taxPeriod;
     }
 
-    // Set suggested line items only in create mode when items are empty
-    if (!isEditMode.value && items.value.length === 0 && data.suggestedItems && data.suggestedItems.length > 0) {
+    // Set suggested line items ONLY in create mode when items are empty.
+    // Under edit mode (isEditMode or editBillId), never touch or append to existing invoice items.
+    if (!isEditMode.value && !editBillId.value && items.value.length === 0 && data.suggestedItems && data.suggestedItems.length > 0) {
       items.value = data.suggestedItems.map((it: any) => ({
         serviceItemId: it.serviceItemId,
         itemName: it.itemName,

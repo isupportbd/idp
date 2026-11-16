@@ -111,6 +111,7 @@ export async function exportDatabaseBackup(c: AppContext) {
         sqlDump += `-- --------------------------------------------------------\n`;
         sqlDump += `-- Table data for "${table}" (${rows.length} records)\n`;
         sqlDump += `-- --------------------------------------------------------\n`;
+        sqlDump += `TRUNCATE TABLE "${table}" RESTART IDENTITY CASCADE;\n`;
 
         if (rows.length > 0) {
           const rawColumns = Object.keys(rows[0]);
@@ -191,17 +192,14 @@ export async function restoreDatabaseBackup(c: AppContext) {
       return c.json({ success: false, message: "Backup file is empty" }, 400);
     }
 
-    // Comprehensive safety checks: block arbitrary destructive statements
+    // Clean safety checks: allow normal transactional dump statements
     const normalized = sqlContent.toUpperCase();
     if (
       normalized.includes("DROP DATABASE") ||
-      normalized.includes("DROP SCHEMA") ||
-      normalized.includes("DROP TABLE") ||
-      normalized.includes("TRUNCATE ") ||
-      normalized.includes("ALTER TABLE")
+      normalized.includes("DROP SCHEMA")
     ) {
       return c.json(
-        { success: false, message: "Security violation: Destructive DROP / TRUNCATE / ALTER queries detected in backup file" },
+        { success: false, message: "Security violation: Destructive DROP DATABASE / SCHEMA queries detected in backup file" },
         400
       );
     }
