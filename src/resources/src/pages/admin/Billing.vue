@@ -422,16 +422,38 @@ const exportToExcel = async () => {
       }
 
       row["Bill Date"] = new Date(b.billDate).toLocaleDateString();
-      row["Subtotal (Tk)"] = b.subtotal;
-      row["Discount (Tk)"] = b.discountAmount;
-      row["Previous Due (Tk)"] = b.previousDue;
-      row["Grand Total (Tk)"] = b.grandTotal;
-      row["Paid Amount (Tk)"] = b.paidAmount;
-      row["Due Amount (Tk)"] = b.dueAmount;
+      row["Subtotal (Tk)"] = Number(b.subtotal || 0);
+      row["Discount (Tk)"] = Number(b.discountAmount || 0);
+      row["Previous Due (Tk)"] = Number(b.previousDue || 0);
+      row["Grand Total (Tk)"] = Number(b.grandTotal || 0);
+      row["Paid Amount (Tk)"] = Number(b.paidAmount || 0);
+      row["Due Amount (Tk)"] = Number(b.dueAmount || 0);
       row["Status"] = b.status.toUpperCase();
 
       return row;
     });
+
+    // Add Subtotal row at bottom
+    if (exportRows.length > 0) {
+      const totalRow: Record<string, unknown> = {
+        "Invoice No": "",
+        "Client Organization": "Subtotal =",
+        "BIN Number": "",
+        "Customer Type": ""
+      };
+      if (!hasRefFilter) {
+        totalRow["Reference"] = "";
+      }
+      totalRow["Bill Date"] = "";
+      totalRow["Subtotal (Tk)"] = exportRows.reduce((acc, r) => acc + (Number(r["Subtotal (Tk)"]) || 0), 0);
+      totalRow["Discount (Tk)"] = exportRows.reduce((acc, r) => acc + (Number(r["Discount (Tk)"]) || 0), 0);
+      totalRow["Previous Due (Tk)"] = exportRows.reduce((acc, r) => acc + (Number(r["Previous Due (Tk)"]) || 0), 0);
+      totalRow["Grand Total (Tk)"] = exportRows.reduce((acc, r) => acc + (Number(r["Grand Total (Tk)"]) || 0), 0);
+      totalRow["Paid Amount (Tk)"] = exportRows.reduce((acc, r) => acc + (Number(r["Paid Amount (Tk)"]) || 0), 0);
+      totalRow["Due Amount (Tk)"] = exportRows.reduce((acc, r) => acc + (Number(r["Due Amount (Tk)"]) || 0), 0);
+      totalRow["Status"] = "";
+      exportRows.push(totalRow);
+    }
   } else if (activeTab.value === "collections") {
     exportRows = collections.value.map((c) => {
       const row: Record<string, unknown> = {
@@ -439,13 +461,28 @@ const exportToExcel = async () => {
         "Client Organization": c.clientName,
         "Collection Date": new Date(c.collectionDate).toLocaleDateString(),
         "Payment Method": c.paymentMethod.toUpperCase(),
-        "Collected Amount (Tk)": c.amount,
+        "Collected Amount (Tk)": Number(c.amount || 0),
         "Reference No": c.referenceNo || "N/A",
         Notes: c.notes || "",
         Status: c.status.toUpperCase()
       };
       return row;
     });
+
+    // Add Subtotal row at bottom
+    if (exportRows.length > 0) {
+      const totalRow: Record<string, unknown> = {
+        "Receipt No": "",
+        "Client Organization": "Subtotal =",
+        "Collection Date": "",
+        "Payment Method": "",
+        "Collected Amount (Tk)": exportRows.reduce((acc, r) => acc + (Number(r["Collected Amount (Tk)"]) || 0), 0),
+        "Reference No": "",
+        Notes: "",
+        Status: ""
+      };
+      exportRows.push(totalRow);
+    }
   } else if (activeTab.value === "missing") {
     exportRows = filteredMissingBills.value.map((m) => {
       const row: Record<string, unknown> = {
@@ -461,11 +498,28 @@ const exportToExcel = async () => {
 
       row["Submission ID"] = m.submissionId || "Pending";
       row["Status"] = m.isSubmitted ? "Ready to Bill" : "Pending Submission";
-      row["Previous Due (Tk)"] = m.previousDue;
-      row["Service Fee (Tk)"] = m.monthlyServiceFee;
+      row["Previous Due (Tk)"] = Number(m.previousDue || 0);
+      row["Service Fee (Tk)"] = Number(m.monthlyServiceFee || 0);
 
       return row;
     });
+
+    // Add Subtotal row at bottom
+    if (exportRows.length > 0) {
+      const totalRow: Record<string, unknown> = {
+        "Client Organization": "Subtotal =",
+        "BIN Number": "",
+        "Service Scope": ""
+      };
+      if (!hasRefFilter) {
+        totalRow["Reference"] = "";
+      }
+      totalRow["Submission ID"] = "";
+      totalRow["Status"] = "";
+      totalRow["Previous Due (Tk)"] = exportRows.reduce((acc, r) => acc + (Number(r["Previous Due (Tk)"]) || 0), 0);
+      totalRow["Service Fee (Tk)"] = exportRows.reduce((acc, r) => acc + (Number(r["Service Fee (Tk)"]) || 0), 0);
+      exportRows.push(totalRow);
+    }
   }
 
   const filePrefix = hasRefFilter ? `IDP_Billing_${activeTab.value}_${refName.replace(/\s+/g, "_")}_${selectedMonth.value}` : `IDP_Billing_${activeTab.value}_${selectedMonth.value}`;

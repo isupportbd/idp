@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte, or, sql } from "drizzle-orm";
 import type { Handler } from "hono";
 import type { AppContext } from "@/framework/facade.js";
 import { db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
@@ -53,7 +53,13 @@ export const getStatementReport = async (c: AppContext) => {
     }
 
     // 1. Build Client filter conditions
-    const clientConditions: import("drizzle-orm").SQL[] = [eq(clients.isActive, true)];
+    const clientConditions: import("drizzle-orm").SQL[] = [
+      or(
+        eq(clients.isActive, true),
+        sql`${clients.id} IN (SELECT client_id FROM purchases)`,
+        sql`${clients.id} IN (SELECT client_id FROM vat_submissions)`
+      )!
+    ];
 
     if (!isSuperAdmin && tenantAdminId) {
       clientConditions.push(eq(clients.createdBy, tenantAdminId));

@@ -115,9 +115,19 @@ export function useExcelExport() {
             }
           };
         } else {
-          horizontalAlign = options?.alignments?.[colKey] || "left";
-          const isTotalRow = String(cell.v).includes("Total =") || (isLastRow && rows[rows.length - 1]?.["Client"] === "Total =");
+          const rowData = rows[R - headerRowIndex - 1];
+          const isTotalRow =
+            (rowData &&
+              Object.values(rowData).some(
+                (val) =>
+                  typeof val === "string" &&
+                  (val.includes("Total =") || val.includes("Subtotal =") || val.startsWith("Total") || val.startsWith("Subtotal"))
+              )) ||
+            String(cell.v).includes("Total =") ||
+            String(cell.v).includes("Subtotal =");
           
+          horizontalAlign = options?.alignments?.[colKey] || (typeof cell.v === "number" ? "right" : "left");
+
           cell.s = {
             font: {
               bold: isTotalRow,
@@ -126,7 +136,7 @@ export function useExcelExport() {
             },
             alignment: { horizontal: horizontalAlign, vertical: "center" },
             border: {
-              top: { style: isTotalRow ? "thin" : "hair", color: { rgb: "D1D5DB" } },
+              top: { style: isTotalRow ? "thin" : "hair", color: { rgb: isTotalRow ? "374151" : "D1D5DB" } },
               bottom: { style: isTotalRow ? "double" : "hair", color: { rgb: isTotalRow ? "000000" : "D1D5DB" } },
               left: { style: "thin", color: { rgb: "E5E7EB" } },
               right: { style: "thin", color: { rgb: "E5E7EB" } }

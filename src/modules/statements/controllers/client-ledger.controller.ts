@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, lt, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lt, lte, or, sql } from "drizzle-orm";
 import type { AppContext } from "@/framework/facade.js";
 import { db, HttpStatusCodes, resolveTenantContext } from "@/framework/facade.js";
 import { bills } from "@/modules/billing/database/models/bills.js";
@@ -61,8 +61,15 @@ export const getClientLedgerStatement = async (c: AppContext) => {
     const fromDate = new Date(startY, startM - 1, 1, 0, 0, 0);
     const toDate = new Date(endY, endM, 0, 23, 59, 59, 999);
 
-    // 1. Build Client filter conditions
-    const clientConditions: import("drizzle-orm").SQL[] = [eq(clients.isActive, true)];
+    // 1. Build Client filter conditions (include active clients OR any client with bills, collections, or opening balance)
+    const clientConditions: import("drizzle-orm").SQL[] = [
+      or(
+        eq(clients.isActive, true),
+        sql`${clients.id} IN (SELECT client_id FROM bills WHERE status != 'cancelled')`,
+        sql`${clients.id} IN (SELECT client_id FROM collections WHERE status = 'completed')`,
+        sql`coalesce(${clients.openingBalance}, 0) != 0`
+      )!
+    ];
 
     if (!isSuperAdmin && tenantAdminId) {
       clientConditions.push(eq(clients.createdBy, tenantAdminId));

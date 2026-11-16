@@ -549,6 +549,22 @@ const handleExport = () => {
       Status: t.status
     }));
 
+    if (rows.length > 0) {
+      const totalBilled = rows.reduce((acc, r) => acc + (Number(r["Billed (Debit)"]) || 0), 0);
+      const totalPaid = rows.reduce((acc, r) => acc + (Number(r["Paid (Credit)"]) || 0), 0);
+      const closingBalance = rows[rows.length - 1]["Balance (Tk)"];
+      rows.push({
+        Date: "",
+        "Tax Period": "",
+        Particulars: "Subtotal =",
+        "Ref No": "",
+        "Billed (Debit)": totalBilled,
+        "Paid (Credit)": totalPaid,
+        "Balance (Tk)": closingBalance,
+        Status: ""
+      });
+    }
+
     const safeName = activeClientSummary.value.companyName.replace(/[^a-zA-Z0-9_-]/g, "_");
     exportSingleSheet(rows, "Client Ledger", `Ledger_${safeName}_${fromMonth.value}_to_${toMonth.value}.xlsx`);
   } else if (isRefSummaryView) {
