@@ -31,9 +31,7 @@ const form = ref({
 
 const mfsPaymentTypes = [
   "Send Money",
-  "Payment",
-  "Cash In",
-  "Cash Out"
+  "Payment"
 ];
 
 const loadAccountForEdit = async (id: number) => {
