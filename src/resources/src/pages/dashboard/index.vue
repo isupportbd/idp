@@ -63,7 +63,7 @@ const hasAnyAdminTools = computed(() => {
 <template>
   <div class="dashboard-container">
     <!-- SUPER ADMIN DASHBOARD VIEW -->
-    <template v-if="isSuperAdmin">
+    <template v-if="authStore.isAuthenticated && isSuperAdmin">
       <!-- Welcome Header -->
       <div class="dashboard-header mb-4">
         <h3 class="dashboard-title">
@@ -140,7 +140,7 @@ const hasAnyAdminTools = computed(() => {
     </template>
 
     <!-- TENANT ADMIN & STAFF DASHBOARD VIEW -->
-    <template v-else>
+    <template v-else-if="authStore.isAuthenticated">
       <!-- Welcome Header -->
       <div class="dashboard-header mb-4">
         <h3 class="dashboard-title">
