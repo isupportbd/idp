@@ -30,17 +30,19 @@ export async function getClientRunningDue(clientId: number, excludeBillId?: numb
     totalBilledNet += b.subtotal - b.discountAmount;
   }
 
-  // Sum of completed collections
+  // Sum of completed collections (excluding collections linked to the bill being edited/created)
   const clientCollections = await db
     .select({
       amount: collections.amount,
-      status: collections.status
+      status: collections.status,
+      billId: collections.billId
     })
     .from(collections)
     .where(and(eq(collections.clientId, clientId), eq(collections.status, "completed")));
 
   let totalCollected = 0;
   for (const c of clientCollections) {
+    if (excludeBillId && c.billId === excludeBillId) continue;
     totalCollected += c.amount;
   }
 
