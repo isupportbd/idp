@@ -485,7 +485,6 @@ const exportToExcel = async () => {
         "ক্রমিক": idx + 1,
         "ক্লায়েন্ট নাম ও বিন": clientOrgBin,
         "কাস্টমার টাইপ": b.customerTypeName || "Standard",
-        "বিলিং ডেট": new Date(b.billDate).toLocaleDateString("en-GB"),
         "বিলিং এমাউন্ট": billingAmount,
         "ডিসকাউন্ট": discount,
         "টোটাল পেয়েবল": totalPayable,
@@ -519,7 +518,6 @@ const exportToExcel = async () => {
         "ক্রমিক": "",
         "ক্লায়েন্ট নাম ও বিন": "Total =",
         "কাস্টমার টাইপ": "",
-        "বিলিং ডেট": "",
         "বিলিং এমাউন্ট": totalBilling,
         "ডিসকাউন্ট": totalDisc,
         "টোটাল পেয়েবল": totalPayableSum,
@@ -616,8 +614,8 @@ const exportToExcel = async () => {
     activeTab.value === "collections"
       ? [6, 16, 32, 14, 15, 16, 16, 12]
       : activeTab.value === "missing"
-      ? [6, 36, 18, 16, 16, 16, 16]
-      : [6, 38, 16, 13, 16, 12, 16, 16, 17, 15, 20];
+      ? [6, 42, 18, 16, 16, 16, 16]
+      : [6, 48, 18, 16, 12, 16, 16, 17, 15, 20];
 
   exportSingleSheet(exportRows, "Billing Data", `${filePrefix}.xlsx`, {
     metaRows,
@@ -784,15 +782,14 @@ const printReport = () => {
           <tr>
             <th style="width: 28px;" class="text-center">#</th>
             <th>Client Organization &amp; BIN</th>
-            <th style="width: 80px;">Customer Type</th>
-            <th style="width: 70px;" class="text-center">Billing Date</th>
-            <th style="width: 75px;" class="text-end">Billing Amt</th>
-            <th style="width: 65px;" class="text-end">Discount</th>
-            <th style="width: 75px;" class="text-end">Total Payable</th>
-            <th style="width: 75px;" class="text-end">Prev Due</th>
-            <th style="width: 80px;" class="text-end">Net Payable</th>
-            <th style="width: 70px;" class="text-end">Paid</th>
-            <th style="width: 90px;" class="text-end">Current Balance</th>
+            <th style="width: 90px;">Customer Type</th>
+            <th style="width: 80px;" class="text-end">Billing Amt</th>
+            <th style="width: 70px;" class="text-end">Discount</th>
+            <th style="width: 80px;" class="text-end">Total Payable</th>
+            <th style="width: 80px;" class="text-end">Prev Due</th>
+            <th style="width: 85px;" class="text-end">Net Payable</th>
+            <th style="width: 75px;" class="text-end">Paid</th>
+            <th style="width: 95px;" class="text-end">Current Balance</th>
           </tr>
         </thead>
         <tbody>
@@ -802,11 +799,10 @@ const printReport = () => {
             <tr>
               <td class="text-center">${r.idx}</td>
               <td>
-                <div class="fw-bold">${r.clientName}</div>
-                ${r.clientBin ? `<div class="text-muted font-monospace" style="font-size: 8.5px;">BIN: ${r.clientBin}</div>` : ''}
+                <div class="fw-bold" style="font-size: 10.5px;">${r.clientName}</div>
+                ${r.clientBin ? `<div class="text-muted font-monospace" style="font-size: 9px;">BIN: ${r.clientBin}</div>` : ''}
               </td>
               <td>${r.customerType}</td>
-              <td class="text-center font-monospace">${new Date(r.billDate).toLocaleDateString("en-GB")}</td>
               <td class="text-end font-monospace">${formatTkStr(r.billingAmount)}</td>
               <td class="text-end font-monospace">${r.discount > 0 ? formatTkStr(r.discount) : "0.00"}</td>
               <td class="text-end font-monospace fw-bold">${formatTkStr(r.totalPayable)}</td>
@@ -823,7 +819,7 @@ const printReport = () => {
         </tbody>
         <tfoot>
           <tr class="total-row">
-            <td colspan="4" class="text-end fw-bold">Total (${processedRows.length} Invoices):</td>
+            <td colspan="3" class="text-end fw-bold">Total (${processedRows.length} Invoices):</td>
             <td class="text-end font-monospace fw-bold">৳ ${formatTkStr(subtotalSum)}</td>
             <td class="text-end font-monospace fw-bold">৳ ${formatTkStr(discountSum)}</td>
             <td class="text-end font-monospace fw-bold">৳ ${formatTkStr(totalPayableSum)}</td>
