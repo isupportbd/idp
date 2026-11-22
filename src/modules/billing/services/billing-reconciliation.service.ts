@@ -214,8 +214,14 @@ export async function reconcileBillsForPeriod(month?: string, clientId?: number,
         .reduce((sum, pb) => sum + Math.max(0, (Number(pb.subtotal) || 0) - (Number(pb.discountAmount) || 0)), 0);
 
       const fromDate = `${b.taxPeriod}-01`;
+      const toDateOnlyStr = (d: any) => {
+        if (!d) return "";
+        if (typeof d === "string") return d.slice(0, 10);
+        return new Date(d).toISOString().slice(0, 10);
+      };
+
       const priorColsSum = clCols
-        .filter((c) => c.collectionDate < fromDate)
+        .filter((c) => toDateOnlyStr(c.collectionDate) < fromDate)
         .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
 
       const calculatedPreviousDue = r2(initialOpening + priorBillsSum - priorColsSum);
@@ -229,12 +235,12 @@ export async function reconcileBillsForPeriod(month?: string, clientId?: number,
       const toDate = `${b.taxPeriod}-${String(lastDay).padStart(2, "0")}`;
 
       const totalColsUpToPeriod = clCols
-        .filter((c) => c.collectionDate <= toDate)
+        .filter((c) => toDateOnlyStr(c.collectionDate) <= toDate)
         .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
 
       // Collections specifically tagged to this bill that occurred after the period month
       const subsequentLinkedCols = clCols
-        .filter((c) => c.collectionDate > toDate && c.billId === b.id)
+        .filter((c) => toDateOnlyStr(c.collectionDate) > toDate && c.billId === b.id)
         .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
 
       const totalBilledUpToPeriod = initialOpening + priorBillsSum + currentBilled;
