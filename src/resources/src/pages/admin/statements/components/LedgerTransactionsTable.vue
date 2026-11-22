@@ -83,7 +83,7 @@ const getStatusBadge = (status: string, type: string) => {
         <thead>
           <tr class="text-uppercase small text-muted border-bottom border-secondary border-opacity-25" style="background-color: #1a1d21;">
             <th class="ps-3" style="width: 120px;">Date</th>
-            <th style="width: 110px;">Tax Period</th>
+            <th v-if="!isReferenceView" style="width: 110px;">Tax Period</th>
             <th>Particulars / Description</th>
             <th v-if="!isReferenceView" style="width: 160px;">Ref No</th>
             <th class="text-end" style="width: 140px;">Billed (Debit)</th>
@@ -93,7 +93,7 @@ const getStatusBadge = (status: string, type: string) => {
         </thead>
         <tbody>
           <tr v-if="transactions.length === 0">
-            <td :colspan="isReferenceView ? 6 : 7" class="text-center py-5 text-muted">
+            <td :colspan="isReferenceView ? 5 : 7" class="text-center py-5 text-muted">
               <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
               No billing or collection transactions found in the period {{ fromMonth }} to {{ toMonth }}.
             </td>
@@ -111,8 +111,8 @@ const getStatusBadge = (status: string, type: string) => {
               <span v-else>{{ tx.date }}</span>
             </td>
 
-            <!-- Tax Period -->
-            <td class="text-muted">
+            <!-- Tax Period (Only in individual client view) -->
+            <td v-if="!isReferenceView" class="text-muted">
               <span v-if="tx.taxPeriod && tx.taxPeriod !== '—'" class="badge bg-dark border border-secondary text-light">
                 {{ tx.taxPeriod }}
               </span>
@@ -186,7 +186,7 @@ const getStatusBadge = (status: string, type: string) => {
         <!-- Footer Row with Summary -->
         <tfoot v-if="(client || isReferenceView) && transactions.length > 0">
           <tr class="fw-bold text-uppercase small border-top border-secondary border-opacity-25" style="background-color: #1a1d21;">
-            <td :colspan="isReferenceView ? 3 : 4" class="ps-3 text-light">
+            <td :colspan="isReferenceView ? 2 : 4" class="ps-3 text-light">
               <span v-if="client">Total for {{ client.companyName }} ({{ fromMonth }} to {{ toMonth }})</span>
               <span v-else>Total for {{ referenceName || "Reference" }} ({{ fromMonth }} to {{ toMonth }})</span>
             </td>

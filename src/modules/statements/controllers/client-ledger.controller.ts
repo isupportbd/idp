@@ -352,40 +352,25 @@ export const getClientLedgerStatement = async (c: AppContext) => {
     // Sort client summaries by highest closing balance (or name)
     clientSummaries.sort((a, b) => b.closingBalance - a.closingBalance);
 
-    // If a reference was filtered (e.g. Satish Chandra Das), build clean month-wise consolidated reference transactions
+    // If a reference was filtered (e.g. Satish Chandra Das), build clean date-wise consolidated reference transactions
     let referenceTransactions: LedgerTransaction[] = [];
     if (referenceIdParam && matchedClients.length > 0 && !clientIdParam) {
-      // 1. Group in-period bills strictly by month (taxPeriod)
-      const monthlyBillsMap = new Map<string, { totalBilled: number; earliestDate: string }>();
+      // 1. Group in-period bills strictly by billDate (date-wise)
+      const dailyBillsMap = new Map<string, { totalBilled: number }>();
 
       for (const cl of matchedClients) {
         const inPeriodBills = allBills.filter((b) => b.clientId === cl.id && b.taxPeriod >= fromMonth && b.taxPeriod <= toMonth);
         for (const b of inPeriodBills) {
-          const currentBilled = Math.max(0, (b.subtotal || 0) - (b.discountAmount || 0));
-          const existing = monthlyBillsMap.get(b.taxPeriod) || {
-            totalBilled: 0,
-            earliestDate: new Date(b.billDate).toISOString().slice(0, 10)
-          };
-          existing.totalBilled = Math.round((existing.totalBilled + currentBilled) * 100) / 100;
+          const currentBilled = Math.max(0, (Number(b.subtotal) || 0) - (Number(b.discountAmount) || 0));
           const bDateStr = new Date(b.billDate).toISOString().slice(0, 10);
-          if (bDateStr < existing.earliestDate) {
-            existing.earliestDate = bDateStr;
-          }
-          monthlyBillsMap.set(b.taxPeriod, existing);
+          const existing = dailyBillsMap.get(bDateStr) || { totalBilled: 0 };
+          existing.totalBilled = Math.round((existing.totalBilled + currentBilled) * 100) / 100;
+          dailyBillsMap.set(bDateStr, existing);
         }
       }
 
-      // 2. Collect in-period payments
-      // Aggregate collections by month/period as well for genuine consolidated summary
-      const monthlyCollsMap = new Map<
-        string,
-        {
-          period: string;
-          totalCollected: number;
-          latestDate: string;
-          count: number;
-        }
-      >();
+      // 2. Collect in-period payments strictly by collectionDate (date-wise)
+      const dailyCollsMap = new Map<string, { totalCollected: number }>();
 
       for (const cl of matchedClients) {
         const inPeriodCollections = allCollections.filter(
@@ -395,30 +380,17 @@ export const getClientLedgerStatement = async (c: AppContext) => {
         for (const col of inPeriodCollections) {
           const cDate = new Date(col.collectionDate);
           const dateStr = cDate.toISOString().slice(0, 10);
-          const period = col.billTaxPeriod || cDate.toISOString().slice(0, 7);
-          const existing = monthlyCollsMap.get(period);
           const amt = Math.round((Number(col.amount) || 0) * 100) / 100;
-          if (existing) {
-            existing.totalCollected = Math.round((existing.totalCollected + amt) * 100) / 100;
-            existing.count += 1;
-            if (dateStr > existing.latestDate) {
-              existing.latestDate = dateStr;
-            }
-          } else {
-            monthlyCollsMap.set(period, {
-              period,
-              totalCollected: amt,
-              latestDate: dateStr,
-              count: 1
-            });
-          }
+          const existing = dailyCollsMap.get(dateStr) || { totalCollected: 0 };
+          existing.totalCollected = Math.round((existing.totalCollected + amt) * 100) / 100;
+          dailyCollsMap.set(dateStr, existing);
         }
       }
 
-      // Build unified timeline entries: month bills and consolidated month collections
+      // Build unified timeline entries: daily bills and daily collections
       type TimelineEntry =
         | {
-            kind: "month_bill";
+            kind: "daily_bill";
             sortKey: string;
             dateStr: string;
             taxPeriod: string;
@@ -428,7 +400,7 @@ export const getClientLedgerStatement = async (c: AppContext) => {
             description: string;
           }
         | {
-            kind: "month_payment";
+            kind: "daily_payment";
             sortKey: string;
             dateStr: string;
             taxPeriod: string;
@@ -440,12 +412,12 @@ export const getClientLedgerStatement = async (c: AppContext) => {
 
       const timeline: TimelineEntry[] = [];
 
-      for (const [period, data] of monthlyBillsMap.entries()) {
+      for (const [dateStr, data] of dailyBillsMap.entries()) {
         timeline.push({
-          kind: "month_bill",
-          sortKey: `${data.earliestDate}-0-bill`,
-          dateStr: data.earliestDate,
-          taxPeriod: period,
+          kind: "daily_bill",
+          sortKey: `${dateStr}-0-bill`,
+          dateStr,
+          taxPeriod: "—",
           debit: data.totalBilled,
           credit: 0,
           refNo: "—",
@@ -453,12 +425,12 @@ export const getClientLedgerStatement = async (c: AppContext) => {
         });
       }
 
-      for (const [period, data] of monthlyCollsMap.entries()) {
+      for (const [dateStr, data] of dailyCollsMap.entries()) {
         timeline.push({
-          kind: "month_payment",
-          sortKey: `${data.latestDate}-1-coll`,
-          dateStr: data.latestDate,
-          taxPeriod: period,
+          kind: "daily_payment",
+          sortKey: `${dateStr}-1-coll`,
+          dateStr,
+          taxPeriod: "—",
           debit: 0,
           credit: data.totalCollected,
           refNo: "—",
@@ -484,9 +456,9 @@ export const getClientLedgerStatement = async (c: AppContext) => {
 
       timeline.forEach((entry, idx) => {
         refRunning = Math.round((refRunning + entry.debit - entry.credit) * 100) / 100;
-        if (entry.kind === "month_bill") {
+        if (entry.kind === "daily_bill") {
           referenceTransactions.push({
-            id: `ref-bill-${entry.taxPeriod}-${idx}`,
+            id: `ref-bill-${entry.dateStr}-${idx}`,
             type: "bill",
             date: entry.dateStr,
             taxPeriod: entry.taxPeriod,
@@ -499,7 +471,7 @@ export const getClientLedgerStatement = async (c: AppContext) => {
           });
         } else {
           referenceTransactions.push({
-            id: `ref-coll-${entry.taxPeriod}-${idx}`,
+            id: `ref-coll-${entry.dateStr}-${idx}`,
             type: "collection",
             date: entry.dateStr,
             taxPeriod: entry.taxPeriod,
