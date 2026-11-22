@@ -406,26 +406,61 @@ const exportToExcel = async () => {
   const refName = selectedRef?.name || (selectedReferenceId.value !== "all" ? `Ref #${selectedReferenceId.value}` : null);
   const hasRefFilter = !!refName;
 
+  const tabLabels: Record<string, string> = {
+    invoices: "Monthly Invoices",
+    dues: "Due Invoices",
+    "periodic-dues": "Periodic Dues",
+    collections: "Payment Receipts",
+    missing: "Missing Bills"
+  };
+
   const metaRows: Array<[string, string]> = [
+    ["Report:", tabLabels[activeTab.value] || "Billing Report"],
     ["Tax Period:", selectedMonth.value]
   ];
   if (hasRefFilter) {
     metaRows.push(["Reference:", refName]);
   }
 
+  // Include Quick Stats Summary directly into the Excel Sheet
   if (activeTab.value === "invoices" || activeTab.value === "dues" || activeTab.value === "periodic-dues") {
-    const source = activeTab.value === "dues" ? dueClientsList.value : bills.value;
+    metaRows.push(["Previous Due (Pre-Period):", `${(stats.value.totalPreviousDueAmount || 0).toLocaleString()} Tk`]);
+    metaRows.push(["Total Invoiced:", `${(stats.value.totalBilledAmount || 0).toLocaleString()} Tk (${stats.value.totalInvoicesCount || 0} Invoices)`]);
+    metaRows.push(["Total Collections:", `${(totalCollectionsAmount.value || 0).toLocaleString()} Tk (${collections.value.length || 0} Receipts)`]);
+    metaRows.push(["Closing Balance (Total Dues):", `${(stats.value.totalDueAmount || 0).toLocaleString()} Tk`]);
+  } else if (activeTab.value === "collections") {
+    metaRows.push(["Total Collected:", `${(totalCollectionsAmount.value || 0).toLocaleString()} Tk`]);
+    metaRows.push(["Total Receipts:", `${collections.value.length} Receipts`]);
+  }
+
+  if (activeTab.value === "invoices" || activeTab.value === "dues" || activeTab.value === "periodic-dues") {
+    let source: any[] = [];
+    if (activeTab.value === "periodic-dues") source = periodicDueList.value;
+    else if (activeTab.value === "dues") source = dueClientsList.value;
+    else source = bills.value;
+
+    if (searchQuery.value && searchQuery.value.trim()) {
+      const q = searchQuery.value.toLowerCase().trim();
+      source = source.filter(
+        (b) =>
+          (b.billNo && b.billNo.toLowerCase().includes(q)) ||
+          (b.clientName && b.clientName.toLowerCase().includes(q)) ||
+          (b.clientBin && b.clientBin.toLowerCase().includes(q)) ||
+          (b.referenceName && b.referenceName.toLowerCase().includes(q)) ||
+          (b.customerTypeName && b.customerTypeName.toLowerCase().includes(q))
+      );
+    }
+
     exportRows = source.map((b) => {
       const row: Record<string, unknown> = {
         "Invoice No": b.billNo,
         "Client Organization": b.clientName,
-        "BIN Number": b.clientBin || "N/A",
+        "BIN Number": b.clientBin || "—",
         "Customer Type": b.customerTypeName || "Standard"
       };
 
-      // Only include Reference column if NOT filtered by a specific Reference
       if (!hasRefFilter) {
-        row["Reference"] = b.referenceName || "N/A";
+        row["Reference"] = b.referenceName || "—";
       }
 
       row["Bill Date"] = new Date(b.billDate).toLocaleDateString();
@@ -440,11 +475,11 @@ const exportToExcel = async () => {
       return row;
     });
 
-    // Add Subtotal row at bottom
+    // Add Totals row at bottom
     if (exportRows.length > 0) {
       const totalRow: Record<string, unknown> = {
         "Invoice No": "",
-        "Client Organization": "Subtotal =",
+        "Client Organization": "Total =",
         "BIN Number": "",
         "Customer Type": ""
       };
@@ -462,25 +497,36 @@ const exportToExcel = async () => {
       exportRows.push(totalRow);
     }
   } else if (activeTab.value === "collections") {
-    exportRows = collections.value.map((c) => {
+    let source = collections.value;
+    if (searchQuery.value && searchQuery.value.trim()) {
+      const q = searchQuery.value.toLowerCase().trim();
+      source = source.filter(
+        (c) =>
+          (c.receiptNo && c.receiptNo.toLowerCase().includes(q)) ||
+          (c.clientName && c.clientName.toLowerCase().includes(q)) ||
+          (c.referenceNo && c.referenceNo.toLowerCase().includes(q)) ||
+          (c.paymentMethod && c.paymentMethod.toLowerCase().includes(q))
+      );
+    }
+
+    exportRows = source.map((c) => {
       const row: Record<string, unknown> = {
         "Receipt No": c.receiptNo,
         "Client Organization": c.clientName,
         "Collection Date": new Date(c.collectionDate).toLocaleDateString(),
         "Payment Method": c.paymentMethod.toUpperCase(),
         "Collected Amount (Tk)": Number(c.amount || 0),
-        "Reference No": c.referenceNo || "N/A",
+        "Reference No": c.referenceNo || "—",
         Notes: c.notes || "",
         Status: c.status.toUpperCase()
       };
       return row;
     });
 
-    // Add Subtotal row at bottom
     if (exportRows.length > 0) {
       const totalRow: Record<string, unknown> = {
         "Receipt No": "",
-        "Client Organization": "Subtotal =",
+        "Client Organization": "Total =",
         "Collection Date": "",
         "Payment Method": "",
         "Collected Amount (Tk)": exportRows.reduce((acc, r) => acc + (Number(r["Collected Amount (Tk)"]) || 0), 0),
@@ -494,13 +540,12 @@ const exportToExcel = async () => {
     exportRows = filteredMissingBills.value.map((m) => {
       const row: Record<string, unknown> = {
         "Client Organization": m.companyName,
-        "BIN Number": m.binNumber || "N/A",
-        "Service Scope": m.vatServiceType
+        "BIN Number": m.binNumber || "—",
+        "Service Scope": m.vatServiceType || "Standard"
       };
 
-      // Only include Reference column if NOT filtered by a specific Reference
       if (!hasRefFilter) {
-        row["Reference"] = m.referenceName || "N/A";
+        row["Reference"] = m.referenceName || "—";
       }
 
       row["Submission ID"] = m.submissionId || "Pending";
@@ -511,10 +556,9 @@ const exportToExcel = async () => {
       return row;
     });
 
-    // Add Subtotal row at bottom
     if (exportRows.length > 0) {
       const totalRow: Record<string, unknown> = {
-        "Client Organization": "Subtotal =",
+        "Client Organization": "Total =",
         "BIN Number": "",
         "Service Scope": ""
       };
@@ -529,9 +573,32 @@ const exportToExcel = async () => {
     }
   }
 
-  const filePrefix = hasRefFilter ? `IDP_Billing_${activeTab.value}_${refName.replace(/\s+/g, "_")}_${selectedMonth.value}` : `IDP_Billing_${activeTab.value}_${selectedMonth.value}`;
+  if (exportRows.length === 0) {
+    toast.error("No data available to export for current view");
+    return;
+  }
+
+  const filePrefix = hasRefFilter
+    ? `IDP_Billing_${activeTab.value}_${refName.replace(/\s+/g, "_")}_${selectedMonth.value}`
+    : `IDP_Billing_${activeTab.value}_${selectedMonth.value}`;
+
   exportSingleSheet(exportRows, "Billing Data", `${filePrefix}.xlsx`, {
-    metaRows
+    metaRows,
+    alignments: {
+      "Subtotal (Tk)": "right",
+      "Discount (Tk)": "right",
+      "Previous Due (Tk)": "right",
+      "Grand Total (Tk)": "right",
+      "Paid Amount (Tk)": "right",
+      "Due Amount (Tk)": "right",
+      "Collected Amount (Tk)": "right",
+      "Service Fee (Tk)": "right",
+      Status: "center",
+      "Invoice No": "left",
+      "Receipt No": "left",
+      "Bill Date": "center",
+      "Collection Date": "center"
+    }
   });
   toast.success("Excel report exported successfully");
 };
