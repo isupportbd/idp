@@ -117,7 +117,7 @@ export async function getReconciledBillingStats(params: {
       sum: sql<number>`coalesce(sum(${collections.amount}), 0)::float`
     })
     .from(collections)
-    .where(and(inArray(billsCollectionClientScope(clientIds)), sql`${collections.collectionDate} < ${fromDateStr}`, eq(collections.status, "completed")));
+    .where(and(inArray(collections.clientId, clientIds), sql`${collections.collectionDate} < ${fromDateStr}`, eq(collections.status, "completed")));
 
   // Ledger Opening Balance for matching clients
   const openingBalance = r2(totalClientOpening + (priorBillsRow?.sum || 0) - (priorColsRow?.sum || 0));
@@ -169,10 +169,6 @@ export async function getReconciledBillingStats(params: {
     unpaidCount: inPeriodBillsRow?.unpaidCount || 0,
     partialCount: inPeriodBillsRow?.partialCount || 0
   };
-}
-
-function billsCollectionClientScope(clientIds: number[]) {
-  return inArray(collections.clientId, clientIds);
 }
 
 /**
