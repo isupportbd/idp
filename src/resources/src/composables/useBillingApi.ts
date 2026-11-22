@@ -400,6 +400,21 @@ export function useBillingApi() {
     }
   };
 
+  // 12. Reconcile Balances with Ledger
+  const reconcileBalances = async (month?: string, clientId?: number) => {
+    try {
+      loading.value = true;
+      const res = await axios.post("/api/billing/reconcile", { month, clientId });
+      toast.success(res.data.message || "Invoice balances synchronized with ledger");
+      return res.data;
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to reconcile balances");
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     bills,
     collections,
@@ -419,6 +434,7 @@ export function useBillingApi() {
     fetchCollectionDetails,
     createCollection,
     updateCollection,
-    cancelCollection
+    cancelCollection,
+    reconcileBalances
   };
 }

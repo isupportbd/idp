@@ -16,6 +16,7 @@ import {
   getMissingBills,
   listBills,
   listCollections,
+  reconcileBillingBalances,
   updateBill,
   updateCollection
 } from "../controllers/billing.controller.js";
@@ -167,6 +168,14 @@ const deleteBillRoute = createRoute({
   responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ success: z.boolean(), message: z.string() }), "Deletion result") }
 });
 
+const reconcileBillingBalancesRoute = createRoute({
+  path: "/reconcile",
+  method: "post",
+  tags: ["Billing - Invoices"],
+  description: "Synchronize and reconcile all bill balances with ledger",
+  responses: { [HttpStatusCodes.OK]: jsonContent(z.object({ message: z.string(), updatedCount: z.number().optional() }), "Reconciliation result") }
+});
+
 // ── BIND ROUTERS WITH CREATE_ROUTE API ────────────────────────────────
 
 billingRouter.api(listCollectionsRoute, [requirePermission("collections.view", "reports.view")], listCollections);
@@ -186,5 +195,6 @@ billingRouter.api(batchGenerateBillsAsyncRoute, [requirePermission("billing.crea
 billingRouter.api(getBillDetailsRoute, [requirePermission(...BILL_READERS)], getBillDetails);
 billingRouter.api(updateBillRoute, [requirePermission("billing.edit")], updateBill);
 billingRouter.api(deleteBillRoute, [requirePermission("billing.delete")], deleteBill);
+billingRouter.api(reconcileBillingBalancesRoute, [requirePermission("billing.create")], reconcileBillingBalances);
 
 export default billingRouter;

@@ -11,6 +11,7 @@ import { vatSubmissions } from "@/modules/submissions/database/models/vat_submis
 import { billItems } from "../database/models/bill_items.js";
 import { bills } from "../database/models/bills.js";
 import { collections } from "../database/models/collections.js";
+import { getReconciledBillingStats, reconcileBillsForPeriod } from "../services/billing-reconciliation.service.js";
 import { loadScopedBill, r2, resolvePaymentInfo } from "./billing.helpers.js";
 
 // ── 3. LIST INVOICES / BILLS ─────────────────────────────────────────
@@ -79,24 +80,22 @@ export const listBills = async (c: AppContext) => {
     }
     const clientScopeWhere = clientScopeConditions.length > 0 ? and(...clientScopeConditions) : undefined;
 
-    // Fast SQL summary statistics across all matching records
-    const [statsResult] = await db
-      .select({
-        totalInvoicesCount: sql<number>`count(*)::int`,
-        totalPreviousDueAmount: sql<number>`coalesce(sum(${bills.previousDue}), 0)::float`,
-        totalBilledAmount: sql<number>`coalesce(sum(${bills.subtotal} - ${bills.discountAmount}), 0)::float`,
-        totalPaidAmount: sql<number>`coalesce(sum(${bills.paidAmount}), 0)::float`,
-        totalDueAmount: sql<number>`coalesce(sum(${bills.dueAmount}), 0)::float`,
-        periodicDueAmount: sql<number>`coalesce(sum(greatest(0, (${bills.subtotal} - ${bills.discountAmount}) - greatest(0, ${bills.paidAmount} - ${bills.previousDue}))), 0)::float`,
-        paidCount: sql<number>`coalesce(sum(case when ${bills.status} = 'paid' then 1 else 0 end), 0)::int`,
-        unpaidCount: sql<number>`coalesce(sum(case when ${bills.status} = 'unpaid' then 1 else 0 end), 0)::int`,
-        partialCount: sql<number>`coalesce(sum(case when ${bills.status} = 'partial' then 1 else 0 end), 0)::int`
-      })
-      .from(bills)
-      .leftJoin(clients, eq(bills.clientId, clients.id))
-      .leftJoin(customerTypes, eq(clients.customerTypeId, customerTypes.id))
-      .leftJoin(clientReferences, eq(clients.referenceId, clientReferences.id))
-      .where(whereClause);
+    // Compute ledger-reconciled overview statistics ensuring exact parity with Statements/Ledger
+    const stats = await getReconciledBillingStats({
+      month,
+      referenceId: query.referenceId && query.referenceId !== "all" ? Number(query.referenceId) : undefined,
+      clientId: query.clientId && query.clientId !== "all" ? Number(query.clientId) : undefined,
+      customerTypeId: query.customerTypeId && query.customerTypeId !== "all" ? Number(query.customerTypeId) : undefined,
+      tenantAdminId,
+      isSuperAdmin
+    });
+
+    // Opportunistically reconcile/heal any stale bill balance rows in the background
+    if (month && month !== "all") {
+      reconcileBillsForPeriod(month, query.clientId && query.clientId !== "all" ? Number(query.clientId) : undefined, tenantAdminId).catch((err) => {
+        console.error("[Billing Auto-Reconcile Background Warning]", err?.message || err);
+      });
+    }
 
     const billsQuery = db
       .select({
@@ -153,18 +152,7 @@ export const listBills = async (c: AppContext) => {
       items: itemsMap[r.id] || []
     }));
 
-    const totalCount = statsResult?.totalInvoicesCount || 0;
-    const stats = {
-      totalInvoicesCount: totalCount,
-      totalPreviousDueAmount: r2(statsResult?.totalPreviousDueAmount || 0),
-      totalBilledAmount: r2(statsResult?.totalBilledAmount || 0),
-      totalPaidAmount: r2(statsResult?.totalPaidAmount || 0),
-      totalDueAmount: r2(statsResult?.totalDueAmount || 0),
-      periodicDueAmount: r2(statsResult?.periodicDueAmount || 0),
-      paidCount: statsResult?.paidCount || 0,
-      unpaidCount: statsResult?.unpaidCount || 0,
-      partialCount: statsResult?.partialCount || 0
-    };
+    const totalCount = stats.totalInvoicesCount;
 
     return c.json(
       {
@@ -321,6 +309,23 @@ export const getBillDetails = async (c: AppContext) => {
     );
   } catch (err: unknown) {
     return c.json({ message: "Failed to fetch bill details" }, HttpStatusCodes.INTERNAL_SERVER_ERROR);
+  }
+};
+
+export const reconcileBillingBalances = async (c: AppContext) => {
+  try {
+    const { isSuperAdmin, tenantAdminId } = await resolveTenantContext(c);
+    const body = await c.req.json().catch(() => ({}));
+    const month = body.month;
+    const clientId = body.clientId ? Number(body.clientId) : undefined;
+
+    const updatedCount = await reconcileBillsForPeriod(month, clientId, isSuperAdmin ? undefined : tenantAdminId);
+    return c.json({
+      message: `Successfully synchronized ${updatedCount} invoice balances with ledger`,
+      updatedCount
+    });
+  } catch (err: unknown) {
+    return handleControllerError(c, err, "Failed to reconcile billing balances");
   }
 };
 

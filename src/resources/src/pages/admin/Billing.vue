@@ -35,7 +35,8 @@ const {
   fetchMissingBills,
   batchGenerateBills,
   deleteBill,
-  cancelCollection
+  cancelCollection,
+  reconcileBalances
 } = useBillingApi();
 
 const { customerTypes, references, fetchCustomerTypes, fetchReferences } = useServicesApi();
@@ -322,6 +323,12 @@ const { currentPage, itemsPerPage, totalPages, paginateList } = usePagination("b
 const paginatedList = computed<any[]>(() => paginateList(currentTabList.value));
 
 // Navigate to Create Invoice (Full Page)
+const handleSyncBalances = async () => {
+  await reconcileBalances(selectedMonth.value);
+  await loadBills();
+  await loadCollections();
+};
+
 const goToCreateBill = (clientId?: number, month?: string) => {
   const query: any = {};
   if (clientId) query.clientId = clientId;
@@ -580,6 +587,19 @@ const printReport = () => {
         >
           <i class="bi bi-printer text-info"></i>
           <span>Print</span>
+        </button>
+
+        <!-- Sync Balances with Ledger -->
+        <button
+          v-if="can('billing.create')"
+          type="button"
+          class="btn btn-outline-info btn-sm d-flex align-items-center gap-1 px-3 shadow-sm"
+          title="Reconcile and sync invoice balances with ledger"
+          :disabled="loading"
+          @click="handleSyncBalances"
+        >
+          <i class="bi bi-arrow-repeat" :class="{ 'spin-icon': loading }"></i>
+          <span>Sync Due</span>
         </button>
 
         <!-- Receive Payment (Full Page) -->
