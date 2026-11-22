@@ -5,6 +5,7 @@ import { can } from "@/composables/useAuth";
 import { type Bill, type Collection, useBillingApi } from "@/composables/useBillingApi";
 import { useClientsApi } from "@/composables/useClientsApi";
 import { useExcelExport } from "@/composables/useExcelExport";
+import { useFirmApi } from "@/composables/useFirmApi";
 import { usePagination } from "@/composables/usePagination";
 import { useServicesApi } from "@/composables/useServicesApi";
 import { useToast } from "@/composables/useToast";
@@ -41,6 +42,7 @@ const {
 
 const { customerTypes, references, fetchCustomerTypes, fetchReferences } = useServicesApi();
 const { assignableUsers, fetchAssignableUsers } = useClientsApi();
+const { company } = useFirmApi();
 
 const BILLING_FILTER_KEY = "idp_billing_filters";
 
@@ -613,7 +615,468 @@ const goToEditCollection = (id: number) => {
 
 // Print Report
 const printReport = () => {
-  window.print();
+  const selectedRef = references.value.find((r) => r.id === selectedReferenceId.value);
+  const refName = selectedRef?.name || (selectedReferenceId.value !== "all" ? `Ref #${selectedReferenceId.value}` : null);
+  const hasRefFilter = !!refName;
+
+  const tabLabels: Record<string, string> = {
+    invoices: "Monthly Invoices Report",
+    dues: "Due Invoices Report",
+    "periodic-dues": "Periodic Unsettled Bills Report",
+    collections: "Payment Receipts & Collections Report",
+    missing: "Missing Monthly Bills Report"
+  };
+
+  const reportTitle = tabLabels[activeTab.value] || "Billing & Invoicing Report";
+
+  // Determine source list
+  let sourceList: any[] = [];
+  if (activeTab.value === "periodic-dues") sourceList = periodicDueList.value;
+  else if (activeTab.value === "dues") sourceList = dueClientsList.value;
+  else if (activeTab.value === "collections") sourceList = collections.value;
+  else if (activeTab.value === "missing") sourceList = filteredMissingBills.value;
+  else sourceList = bills.value;
+
+  if (searchQuery.value && searchQuery.value.trim()) {
+    const q = searchQuery.value.toLowerCase().trim();
+    if (activeTab.value === "collections") {
+      sourceList = sourceList.filter(
+        (c) =>
+          (c.receiptNo && c.receiptNo.toLowerCase().includes(q)) ||
+          (c.clientName && c.clientName.toLowerCase().includes(q)) ||
+          (c.referenceNo && c.referenceNo.toLowerCase().includes(q)) ||
+          (c.paymentMethod && c.paymentMethod.toLowerCase().includes(q))
+      );
+    } else {
+      sourceList = sourceList.filter(
+        (b) =>
+          (b.billNo && b.billNo.toLowerCase().includes(q)) ||
+          (b.clientName && b.clientName.toLowerCase().includes(q)) ||
+          (b.clientBin && b.clientBin.toLowerCase().includes(q)) ||
+          (b.referenceName && b.referenceName.toLowerCase().includes(q)) ||
+          (b.customerTypeName && b.customerTypeName.toLowerCase().includes(q))
+      );
+    }
+  }
+
+  if (sourceList.length === 0) {
+    toast.error("No data available to print for current view");
+    return;
+  }
+
+  const formatTkStr = (amount?: number | null): string => {
+    if (amount === undefined || amount === null) return "0.00";
+    return Number(amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.zIndex = "-9999";
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow?.document;
+  if (!doc) {
+    window.print();
+    return;
+  }
+
+  let tableHtml = "";
+
+  if (activeTab.value === "invoices" || activeTab.value === "dues" || activeTab.value === "periodic-dues") {
+    const subtotalSum = sourceList.reduce((acc, b) => acc + (Number(b.subtotal) || 0), 0);
+    const prevDueSum = sourceList.reduce((acc, b) => acc + (Number(b.previousDue) || 0), 0);
+    const grandTotalSum = sourceList.reduce((acc, b) => acc + (Number(b.grandTotal) || 0), 0);
+    const paidSum = sourceList.reduce((acc, b) => acc + (Number(b.paidAmount) || 0), 0);
+    const dueSum = sourceList.reduce((acc, b) => acc + (Number(b.dueAmount) || 0), 0);
+
+    tableHtml = `
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th style="width: 30px;" class="text-center">#</th>
+            <th style="width: 95px;">Invoice No</th>
+            <th>Client Organization &amp; BIN</th>
+            ${!hasRefFilter ? '<th style="width: 110px;">Reference</th>' : ''}
+            <th style="width: 75px;" class="text-center">Bill Date</th>
+            <th style="width: 80px;" class="text-end">Subtotal</th>
+            <th style="width: 80px;" class="text-end">Prev Due</th>
+            <th style="width: 85px;" class="text-end">Grand Total</th>
+            <th style="width: 75px;" class="text-end">Paid</th>
+            <th style="width: 80px;" class="text-end">Due</th>
+            <th style="width: 60px;" class="text-center">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sourceList
+            .map(
+              (b, idx) => `
+            <tr>
+              <td class="text-center">${idx + 1}</td>
+              <td class="font-monospace fw-bold">${b.billNo}</td>
+              <td>
+                <div class="fw-bold">${b.clientName}</div>
+                ${b.clientBin ? `<div class="text-muted small font-monospace">BIN: ${b.clientBin}</div>` : ''}
+              </td>
+              ${!hasRefFilter ? `<td>${b.referenceName || '—'}</td>` : ''}
+              <td class="text-center font-monospace">${new Date(b.billDate).toLocaleDateString("en-GB")}</td>
+              <td class="text-end font-monospace">${formatTkStr(b.subtotal)}</td>
+              <td class="text-end font-monospace">${formatTkStr(b.previousDue)}</td>
+              <td class="text-end font-monospace fw-bold">${formatTkStr(b.grandTotal)}</td>
+              <td class="text-end font-monospace text-success">${formatTkStr(b.paidAmount)}</td>
+              <td class="text-end font-monospace fw-bold ${b.dueAmount > 0 ? 'text-danger' : 'text-muted'}">${formatTkStr(b.dueAmount)}</td>
+              <td class="text-center">
+                <span class="badge ${b.status === 'paid' ? 'badge-success' : (b.status === 'partial' ? 'badge-warning' : 'badge-danger')}">
+                  ${b.status.toUpperCase()}
+                </span>
+              </td>
+            </tr>
+          `
+            )
+            .join("")}
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="${!hasRefFilter ? '5' : '4'}" class="text-end fw-bold">Total (${sourceList.length} Invoices):</td>
+            <td class="text-end font-monospace fw-bold">৳ ${formatTkStr(subtotalSum)}</td>
+            <td class="text-end font-monospace fw-bold">৳ ${formatTkStr(prevDueSum)}</td>
+            <td class="text-end font-monospace fw-bold">৳ ${formatTkStr(grandTotalSum)}</td>
+            <td class="text-end font-monospace fw-bold text-success">৳ ${formatTkStr(paidSum)}</td>
+            <td class="text-end font-monospace fw-bold text-danger">৳ ${formatTkStr(dueSum)}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    `;
+  } else if (activeTab.value === "collections") {
+    const totalCollected = sourceList.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
+
+    tableHtml = `
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th style="width: 30px;" class="text-center">#</th>
+            <th style="width: 100px;">Receipt No</th>
+            <th>Client Organization</th>
+            <th style="width: 85px;" class="text-center">Date</th>
+            <th style="width: 90px;" class="text-center">Method</th>
+            <th style="width: 100px;">Ref No</th>
+            <th style="width: 110px;" class="text-end">Collected (Tk)</th>
+            <th style="width: 75px;" class="text-center">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sourceList
+            .map(
+              (c, idx) => `
+            <tr>
+              <td class="text-center">${idx + 1}</td>
+              <td class="font-monospace fw-bold">${c.receiptNo}</td>
+              <td class="fw-bold">${c.clientName}</td>
+              <td class="text-center font-monospace">${new Date(c.collectionDate).toLocaleDateString("en-GB")}</td>
+              <td class="text-center">${c.paymentMethod.toUpperCase()}</td>
+              <td class="font-monospace">${c.referenceNo || '—'}</td>
+              <td class="text-end font-monospace fw-bold text-success">৳ ${formatTkStr(c.amount)}</td>
+              <td class="text-center">
+                <span class="badge ${c.status === 'completed' ? 'badge-success' : 'badge-danger'}">
+                  ${c.status.toUpperCase()}
+                </span>
+              </td>
+            </tr>
+          `
+            )
+            .join("")}
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="6" class="text-end fw-bold">Total Collected (${sourceList.length} Receipts):</td>
+            <td class="text-end font-monospace fw-bold text-success">৳ ${formatTkStr(totalCollected)}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    `;
+  } else if (activeTab.value === "missing") {
+    const prevDueSum = sourceList.reduce((acc, m) => acc + (Number(m.previousDue) || 0), 0);
+    const feeSum = sourceList.reduce((acc, m) => acc + (Number(m.monthlyServiceFee) || 0), 0);
+
+    tableHtml = `
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th style="width: 30px;" class="text-center">#</th>
+            <th>Client Organization</th>
+            <th style="width: 120px;">BIN Number</th>
+            ${!hasRefFilter ? '<th style="width: 120px;">Reference</th>' : ''}
+            <th style="width: 110px;">Submission ID</th>
+            <th style="width: 95px;" class="text-end">Prev Due</th>
+            <th style="width: 95px;" class="text-end">Service Fee</th>
+            <th style="width: 90px;" class="text-center">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sourceList
+            .map(
+              (m, idx) => `
+            <tr>
+              <td class="text-center">${idx + 1}</td>
+              <td class="fw-bold">${m.companyName}</td>
+              <td class="font-monospace">${m.binNumber || '—'}</td>
+              ${!hasRefFilter ? `<td>${m.referenceName || '—'}</td>` : ''}
+              <td class="font-monospace">${m.submissionId || 'Pending'}</td>
+              <td class="text-end font-monospace">${formatTkStr(m.previousDue)}</td>
+              <td class="text-end font-monospace fw-bold">৳ ${formatTkStr(m.monthlyServiceFee)}</td>
+              <td class="text-center">
+                <span class="badge ${m.isSubmitted ? 'badge-success' : 'badge-warning'}">
+                  ${m.isSubmitted ? 'Ready to Bill' : 'Pending'}
+                </span>
+              </td>
+            </tr>
+          `
+            )
+            .join("")}
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="${!hasRefFilter ? '5' : '4'}" class="text-end fw-bold">Total (${sourceList.length} Clients):</td>
+            <td class="text-end font-monospace fw-bold">৳ ${formatTkStr(prevDueSum)}</td>
+            <td class="text-end font-monospace fw-bold">৳ ${formatTkStr(feeSum)}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    `;
+  }
+
+  const firmName = company?.value?.companyName || "IDP - Intelligent Data Platform";
+  const firmAddress = company?.value?.address || "";
+  const firmPhone = company?.value?.phone || "";
+
+  doc.open();
+  doc.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${reportTitle} - ${selectedMonth.value}</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 8mm 6mm;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #111827;
+      background: #ffffff;
+      font-size: 10.5px;
+      line-height: 1.35;
+      margin: 0;
+      padding: 0;
+    }
+    .print-header {
+      border-bottom: 2px solid #1e293b;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+    .header-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .header-table td {
+      vertical-align: middle;
+      padding: 0;
+    }
+    .firm-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.2px;
+      margin: 0 0 2px 0;
+    }
+    .firm-subtitle {
+      font-size: 9.5px;
+      color: #64748b;
+    }
+    .report-title-box {
+      text-align: right;
+    }
+    .report-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1e40af;
+      margin: 0 0 2px 0;
+    }
+    .report-meta {
+      font-size: 9.5px;
+      color: #475569;
+    }
+    .print-summary-grid {
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+      margin-bottom: 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      background: #f8fafc;
+    }
+    .summary-cell {
+      display: table-cell;
+      padding: 6px 10px;
+      border-right: 1px solid #e2e8f0;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .summary-cell:last-child {
+      border-right: none;
+    }
+    .summary-lbl {
+      font-size: 8.5px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: 0.3px;
+      margin-bottom: 2px;
+    }
+    .summary-val {
+      font-size: 12px;
+      font-weight: 800;
+      font-family: monospace;
+      color: #0f172a;
+    }
+    .text-success { color: #15803d !important; }
+    .text-danger { color: #b91c1c !important; }
+    .text-muted { color: #64748b !important; }
+    .fw-bold { font-weight: 700 !important; }
+    .text-center { text-align: center !important; }
+    .text-end { text-align: right !important; }
+    .font-monospace {
+      font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace !important;
+    }
+    .report-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 4px;
+    }
+    .report-table th {
+      background-color: #f1f5f9 !important;
+      color: #1e293b !important;
+      font-weight: 700;
+      font-size: 9.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      border: 1px solid #94a3b8;
+      padding: 5px 6px;
+      vertical-align: middle;
+    }
+    .report-table td {
+      border: 1px solid #cbd5e1;
+      padding: 4px 6px;
+      font-size: 9.5px;
+      vertical-align: middle;
+    }
+    .report-table tbody tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+    .report-table tfoot td {
+      background-color: #f1f5f9 !important;
+      border-top: 2px solid #0f172a !important;
+      border-bottom: 2px solid #0f172a !important;
+      font-size: 10px;
+      padding: 6px 6px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 1px 4px;
+      font-size: 8px;
+      font-weight: 700;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+    .badge-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .badge-warning { background: #fef9c3; color: #854d0e; border: 1px solid #fef08a; }
+    .badge-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+  </style>
+</head>
+<body>
+  <div class="print-header">
+    <table class="header-table">
+      <tr>
+        <td>
+          <div class="firm-title">${firmName}</div>
+          <div class="firm-subtitle">${firmAddress ? `${firmAddress} | ` : ''}${firmPhone ? `Phone: ${firmPhone}` : ''}</div>
+        </td>
+        <td class="report-title-box">
+          <div class="report-title">${reportTitle}</div>
+          <div class="report-meta">
+            Tax Period: <strong>${selectedMonth.value}</strong>
+            ${hasRefFilter ? ` | Ref: <strong>${refName}</strong>` : ''}
+            | Date: <strong>${new Date().toLocaleDateString("en-GB")}</strong>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  ${
+    activeTab.value === "invoices" || activeTab.value === "dues" || activeTab.value === "periodic-dues"
+      ? `
+    <div class="print-summary-grid">
+      <div class="summary-cell">
+        <div class="summary-lbl">Previous Due</div>
+        <div class="summary-val">৳ ${formatTkStr(stats.value.totalPreviousDueAmount)}</div>
+      </div>
+      <div class="summary-cell">
+        <div class="summary-lbl">Total Invoiced</div>
+        <div class="summary-val">৳ ${formatTkStr(stats.value.totalBilledAmount)}</div>
+      </div>
+      <div class="summary-cell">
+        <div class="summary-lbl">Total Collections</div>
+        <div class="summary-val text-success">৳ ${formatTkStr(totalCollectionsAmount.value)}</div>
+      </div>
+      <div class="summary-cell">
+        <div class="summary-lbl">Total Dues</div>
+        <div class="summary-val text-danger">৳ ${formatTkStr(stats.value.totalDueAmount)}</div>
+      </div>
+    </div>
+  `
+      : ""
+  }
+
+  ${
+    activeTab.value === "collections"
+      ? `
+    <div class="print-summary-grid">
+      <div class="summary-cell">
+        <div class="summary-lbl">Total Collections</div>
+        <div class="summary-val text-success">৳ ${formatTkStr(totalCollectionsAmount.value)}</div>
+      </div>
+      <div class="summary-cell">
+        <div class="summary-lbl">Total Receipts</div>
+        <div class="summary-val">${collections.value.length} Receipts</div>
+      </div>
+    </div>
+  `
+      : ""
+  }
+
+  ${tableHtml}
+</body>
+</html>`);
+  doc.close();
+
+  setTimeout(() => {
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+    setTimeout(() => {
+      iframe.remove();
+    }, 2000);
+  }, 400);
 };
 </script>
 
