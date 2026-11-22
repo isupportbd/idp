@@ -232,8 +232,16 @@ export async function reconcileBillsForPeriod(month?: string, clientId?: number,
         .filter((c) => c.collectionDate <= toDate)
         .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
 
+      // Collections specifically tagged to this bill that occurred after the period month
+      const subsequentLinkedCols = clCols
+        .filter((c) => c.collectionDate > toDate && c.billId === b.id)
+        .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+
       const totalBilledUpToPeriod = initialOpening + priorBillsSum + currentBilled;
-      const outstandingDue = r2(Math.max(0, totalBilledUpToPeriod - totalColsUpToPeriod));
+      const periodOutstandingDue = r2(Math.max(0, totalBilledUpToPeriod - totalColsUpToPeriod));
+      
+      // Net live outstanding due considering subsequent direct payments for this invoice
+      const outstandingDue = r2(Math.max(0, periodOutstandingDue - subsequentLinkedCols));
       const effectivePaid = r2(Math.max(0, calculatedGrandTotal - outstandingDue));
 
       let newStatus = b.status;

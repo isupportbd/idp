@@ -267,11 +267,12 @@ const referenceOptions = computed(() => [
 
 // Filtered Lists for Tabs
 const dueClientsList = computed(() => {
-  return bills.value.filter((b) => b.dueAmount > 0);
+  return bills.value.filter((b) => b.dueAmount > 0 && b.status !== "paid");
 });
 
 const periodicDueList = computed(() => {
   return bills.value.filter((b) => {
+    if (b.status === "paid" || b.dueAmount <= 0) return false;
     const netBilled = Math.max(0, (Number(b.subtotal) || 0) - (Number(b.discountAmount) || 0));
     const paidTowardCurrent = Math.max(0, (Number(b.paidAmount) || 0) - (Number(b.previousDue) || 0));
     const periodicDue = Math.max(0, netBilled - paidTowardCurrent);
