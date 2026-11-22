@@ -943,8 +943,8 @@ const printReport = () => {
   <title>${reportTitle} - ${selectedMonth.value}</title>
   <style>
     @page {
-      size: A4 portrait;
-      margin: 8mm 6mm;
+      size: A4 landscape;
+      margin: 8mm 8mm;
     }
     *, *::before, *::after {
       box-sizing: border-box;

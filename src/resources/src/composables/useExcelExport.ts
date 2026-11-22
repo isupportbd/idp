@@ -7,6 +7,7 @@ export interface ExcelSheetData {
 export interface ExcelExportOptions {
   colWidths?: number[];
   fitToWidth?: boolean;
+  orientation?: "portrait" | "landscape";
   alignments?: Record<string, "left" | "center" | "right">;
   headerAlignments?: Record<string, "left" | "center" | "right">;
   metaRows?: Array<[string, string]>; // Top informational rows e.g. [["Tax Period:", "2026-10"], ["Reference:", "Mr. Satish"]]
@@ -177,7 +178,7 @@ export function useExcelExport() {
     // Page setup for printing on A4 nicely
     ws["!pageSetup"] = {
       paperSize: 9, // 9 = A4 paper
-      orientation: "portrait",
+      orientation: options?.orientation || "landscape",
       fitToWidth: 1,
       fitToHeight: 0
     };
