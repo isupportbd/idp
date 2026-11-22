@@ -34,8 +34,14 @@ export function useExcelExport() {
 
     if (hasMeta && options?.metaRows) {
       const metaArray: any[][] = [];
-      for (const [lbl, val] of options.metaRows) {
-        metaArray.push([lbl, val]);
+      for (const item of options.metaRows) {
+        if (Array.isArray(item)) {
+          if (item.length === 1 || item[1] === undefined || item[1] === null || item[1] === "") {
+            metaArray.push([item[0]]);
+          } else {
+            metaArray.push([item[0], item[1]]);
+          }
+        }
       }
       metaArray.push([]); // blank separator row
       headerRowIndex = metaArray.length;
@@ -152,9 +158,10 @@ export function useExcelExport() {
             }
           };
 
-          // Format numeric currency columns nicely with commas and 2 decimals
+          // Format numeric columns: integer for serials, commas + 2 decimals for currency
           if (typeof cell.v === "number") {
-            cell.z = "#,##0.00";
+            const isSerialCol = colKey === "SL" || colKey === "ক্রমিক" || colKey === "#";
+            cell.z = isSerialCol ? "0" : "#,##0.00";
           }
         }
       }

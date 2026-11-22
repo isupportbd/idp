@@ -410,23 +410,23 @@ const exportToExcel = async () => {
     missing: "Missing Bills"
   };
 
-  const metaRows: Array<[string, string]> = [
-    ["Report:", tabLabels[activeTab.value] || "Billing Report"],
-    ["Tax Period:", selectedMonth.value]
+  // Single Column Clean Metadata Box (All in Column A, No splitting across columns)
+  const metaRows: Array<[string]> = [
+    [`Report: ${tabLabels[activeTab.value] || "Billing Report"}`],
+    [`Tax Period: ${selectedMonth.value}`]
   ];
   if (hasRefFilter) {
-    metaRows.push(["Reference:", refName]);
+    metaRows.push([`Reference: ${refName}`]);
   }
 
-  // Include Clean Quick Stats Summary directly into the Excel Sheet
   if (activeTab.value === "invoices" || activeTab.value === "dues" || activeTab.value === "periodic-dues") {
-    metaRows.push(["Previous Due:", `${(stats.value.totalPreviousDueAmount || 0).toLocaleString()} Tk`]);
-    metaRows.push(["Total Invoiced:", `${(stats.value.totalBilledAmount || 0).toLocaleString()} Tk (${stats.value.totalInvoicesCount || 0} Invoices)`]);
-    metaRows.push(["Total Collections:", `${(totalCollectionsAmount.value || 0).toLocaleString()} Tk (${collections.value.length || 0} Receipts)`]);
-    metaRows.push(["Closing Balance:", `${(stats.value.totalDueAmount || 0).toLocaleString()} Tk`]);
+    metaRows.push([`Previous Due: ${(stats.value.totalPreviousDueAmount || 0).toLocaleString()} Tk`]);
+    metaRows.push([`Total Invoiced: ${(stats.value.totalBilledAmount || 0).toLocaleString()} Tk (${stats.value.totalInvoicesCount || 0} Invoices)`]);
+    metaRows.push([`Total Collections: ${(totalCollectionsAmount.value || 0).toLocaleString()} Tk (${collections.value.length || 0} Receipts)`]);
+    metaRows.push([`Closing Balance: ${(stats.value.totalDueAmount || 0).toLocaleString()} Tk`]);
   } else if (activeTab.value === "collections") {
-    metaRows.push(["Total Collected:", `${(totalCollectionsAmount.value || 0).toLocaleString()} Tk`]);
-    metaRows.push(["Total Receipts:", `${collections.value.length} Receipts`]);
+    metaRows.push([`Total Collected: ${(totalCollectionsAmount.value || 0).toLocaleString()} Tk`]);
+    metaRows.push([`Total Receipts: ${collections.value.length} Receipts`]);
   }
 
   if (activeTab.value === "invoices" || activeTab.value === "dues" || activeTab.value === "periodic-dues") {
@@ -447,7 +447,7 @@ const exportToExcel = async () => {
       );
     }
 
-    // Build client collections pool to accurately map payments even if unallocated at bill row level
+    // Build client collections pool to accurately map payments
     const clientColsPool = new Map<number, number>();
     for (const c of collections.value) {
       if (c.status === "completed" || !c.status) {
@@ -482,16 +482,16 @@ const exportToExcel = async () => {
       const clientOrgBin = b.clientBin ? `${b.clientName}\nBIN: ${b.clientBin}` : b.clientName;
 
       const row: Record<string, unknown> = {
-        "ক্রমিক": idx + 1,
-        "ক্লায়েন্ট নাম ও বিন": clientOrgBin,
-        "কাস্টমার টাইপ": b.customerTypeName || "Standard",
-        "বিলিং এমাউন্ট": billingAmount,
-        "ডিসকাউন্ট": discount,
-        "টোটাল পেয়েবল": totalPayable,
-        "প্রিভিয়াস ডিউ": prevDue,
-        "নেট পেয়েবল": netPayable,
-        "পেইড": paid,
-        "কারেন্ট ব্যালেন্স": curBalFormatted
+        SL: idx + 1,
+        "Client Organization & BIN": clientOrgBin,
+        "Customer Type": b.customerTypeName || "Standard",
+        "Billing Amount": billingAmount,
+        Discount: discount,
+        "Total Payable": totalPayable,
+        "Previous Due": prevDue,
+        "Net Payable": netPayable,
+        Paid: paid,
+        "Current Balance": curBalFormatted
       };
 
       return row;
@@ -499,12 +499,12 @@ const exportToExcel = async () => {
 
     // Add Totals row at bottom
     if (exportRows.length > 0) {
-      const totalBilling = exportRows.reduce((acc, r) => acc + (Number(r["বিলিং এমাউন্ট"]) || 0), 0);
-      const totalDisc = exportRows.reduce((acc, r) => acc + (Number(r["ডিসকাউন্ট"]) || 0), 0);
-      const totalPayableSum = exportRows.reduce((acc, r) => acc + (Number(r["টোটাল পেয়েবল"]) || 0), 0);
-      const totalPrevDueSum = exportRows.reduce((acc, r) => acc + (Number(r["প্রিভিয়াস ডিউ"]) || 0), 0);
-      const totalNetPayableSum = exportRows.reduce((acc, r) => acc + (Number(r["নেট পেয়েবল"]) || 0), 0);
-      const totalPaidSum = exportRows.reduce((acc, r) => acc + (Number(r["পেইড"]) || 0), 0);
+      const totalBilling = exportRows.reduce((acc, r) => acc + (Number(r["Billing Amount"]) || 0), 0);
+      const totalDisc = exportRows.reduce((acc, r) => acc + (Number(r["Discount"]) || 0), 0);
+      const totalPayableSum = exportRows.reduce((acc, r) => acc + (Number(r["Total Payable"]) || 0), 0);
+      const totalPrevDueSum = exportRows.reduce((acc, r) => acc + (Number(r["Previous Due"]) || 0), 0);
+      const totalNetPayableSum = exportRows.reduce((acc, r) => acc + (Number(r["Net Payable"]) || 0), 0);
+      const totalPaidSum = exportRows.reduce((acc, r) => acc + (Number(r["Paid"]) || 0), 0);
       const netClosingDue = totalNetPayableSum - totalPaidSum;
 
       const totalClosingFormatted =
@@ -515,16 +515,16 @@ const exportToExcel = async () => {
           : "0.00";
 
       const totalRow: Record<string, unknown> = {
-        "ক্রমিক": "",
-        "ক্লায়েন্ট নাম ও বিন": "Total =",
-        "কাস্টমার টাইপ": "",
-        "বিলিং এমাউন্ট": totalBilling,
-        "ডিসকাউন্ট": totalDisc,
-        "টোটাল পেয়েবল": totalPayableSum,
-        "প্রিভিয়াস ডিউ": totalPrevDueSum,
-        "নেট পেয়েবল": totalNetPayableSum,
-        "পেইড": totalPaidSum,
-        "কারেন্ট ব্যালেন্স": totalClosingFormatted
+        SL: "",
+        "Client Organization & BIN": "Total =",
+        "Customer Type": "",
+        "Billing Amount": totalBilling,
+        Discount: totalDisc,
+        "Total Payable": totalPayableSum,
+        "Previous Due": totalPrevDueSum,
+        "Net Payable": totalNetPayableSum,
+        Paid: totalPaidSum,
+        "Current Balance": totalClosingFormatted
       };
       exportRows.push(totalRow);
     }
@@ -543,30 +543,30 @@ const exportToExcel = async () => {
 
     exportRows = source.map((c, idx) => {
       const row: Record<string, unknown> = {
-        "ক্রমিক": idx + 1,
-        "রিসিট নং": c.receiptNo,
-        "ক্লায়েন্ট নাম": c.clientName,
-        "কালেকশন ডেট": new Date(c.collectionDate).toLocaleDateString("en-GB"),
-        "পেমেন্ট মেথড": c.paymentMethod.toUpperCase(),
-        "কালেক্টেড এমাউন্ট": Number(c.amount || 0),
-        "রেফারেন্স নং": c.referenceNo || "—",
-        "নোট": c.notes || "",
-        "স্ট্যাটাস": c.status.toUpperCase()
+        SL: idx + 1,
+        "Receipt No": c.receiptNo,
+        "Client Organization": c.clientName,
+        "Collection Date": new Date(c.collectionDate).toLocaleDateString("en-GB"),
+        "Payment Method": c.paymentMethod.toUpperCase(),
+        "Collected Amount": Number(c.amount || 0),
+        "Reference No": c.referenceNo || "—",
+        Notes: c.notes || "",
+        Status: c.status.toUpperCase()
       };
       return row;
     });
 
     if (exportRows.length > 0) {
       const totalRow: Record<string, unknown> = {
-        "ক্রমিক": "",
-        "রিসিট নং": "",
-        "ক্লায়েন্ট নাম": "Total =",
-        "কালেকশন ডেট": "",
-        "পেমেন্ট মেথড": "",
-        "কালেক্টেড এমাউন্ট": exportRows.reduce((acc, r) => acc + (Number(r["কালেক্টেড এমাউন্ট"]) || 0), 0),
-        "রেফারেন্স নং": "",
-        "নোট": "",
-        "স্ট্যাটাস": ""
+        SL: "",
+        "Receipt No": "",
+        "Client Organization": "Total =",
+        "Collection Date": "",
+        "Payment Method": "",
+        "Collected Amount": exportRows.reduce((acc, r) => acc + (Number(r["Collected Amount"]) || 0), 0),
+        "Reference No": "",
+        Notes: "",
+        Status: ""
       };
       exportRows.push(totalRow);
     }
@@ -575,13 +575,13 @@ const exportToExcel = async () => {
       const clientOrgBin = m.binNumber ? `${m.companyName}\nBIN: ${m.binNumber}` : m.companyName;
 
       const row: Record<string, unknown> = {
-        "ক্রমিক": idx + 1,
-        "ক্লায়েন্ট নাম ও বিন": clientOrgBin,
-        "সার্ভিস স্কোপ": m.vatServiceType || "Standard",
-        "সাবমিশন আইডি": m.submissionId || "Pending",
-        "স্ট্যাটাস": m.isSubmitted ? "Ready to Bill" : "Pending Submission",
-        "প্রিভিয়াস ডিউ": Number(m.previousDue || 0),
-        "সার্ভিস ফি": Number(m.monthlyServiceFee || 0)
+        SL: idx + 1,
+        "Client Organization & BIN": clientOrgBin,
+        "Service Scope": m.vatServiceType || "Standard",
+        "Submission ID": m.submissionId || "Pending",
+        Status: m.isSubmitted ? "Ready to Bill" : "Pending Submission",
+        "Previous Due": Number(m.previousDue || 0),
+        "Service Fee": Number(m.monthlyServiceFee || 0)
       };
 
       return row;
@@ -589,13 +589,13 @@ const exportToExcel = async () => {
 
     if (exportRows.length > 0) {
       const totalRow: Record<string, unknown> = {
-        "ক্রমিক": "",
-        "ক্লায়েন্ট নাম ও বিন": "Total =",
-        "সার্ভিস স্কোপ": "",
-        "সাবমিশন আইডি": "",
-        "স্ট্যাটাস": "",
-        "প্রিভিয়াস ডিউ": exportRows.reduce((acc, r) => acc + (Number(r["প্রিভিয়াস ডিউ"]) || 0), 0),
-        "সার্ভিস ফি": exportRows.reduce((acc, r) => acc + (Number(r["সার্ভিস ফি"]) || 0), 0)
+        SL: "",
+        "Client Organization & BIN": "Total =",
+        "Service Scope": "",
+        "Submission ID": "",
+        Status: "",
+        "Previous Due": exportRows.reduce((acc, r) => acc + (Number(r["Previous Due"]) || 0), 0),
+        "Service Fee": exportRows.reduce((acc, r) => acc + (Number(r["Service Fee"]) || 0), 0)
       };
       exportRows.push(totalRow);
     }
@@ -621,25 +621,24 @@ const exportToExcel = async () => {
     metaRows,
     colWidths,
     alignments: {
-      "ক্রমিক": "center",
-      "ক্লায়েন্ট নাম ও বিন": "left",
-      "ক্লায়েন্ট নাম": "left",
-      "রিসিট নং": "center",
-      "কাস্টমার টাইপ": "left",
-      "বিলিং ডেট": "center",
-      "কালেকশন ডেট": "center",
-      "পেমেন্ট মেথড": "center",
-      "বিলিং এমাউন্ট": "right",
-      "ডিসকাউন্ট": "right",
-      "টোটাল পেয়েবল": "right",
-      "প্রিভিয়াস ডিউ": "right",
-      "নেট পেয়েবল": "right",
-      "পেইড": "right",
-      "কারেন্ট ব্যালেন্স": "right",
-      "কালেক্টেড এমাউন্ট": "right",
-      "সার্ভিস ফি": "right",
-      "স্ট্যাটাস": "center",
-      "সাবমিশন আইডি": "center"
+      SL: "center",
+      "Client Organization & BIN": "left",
+      "Client Organization": "left",
+      "Receipt No": "center",
+      "Customer Type": "left",
+      "Collection Date": "center",
+      "Payment Method": "center",
+      "Billing Amount": "right",
+      Discount: "right",
+      "Total Payable": "right",
+      "Previous Due": "right",
+      "Net Payable": "right",
+      Paid: "right",
+      "Current Balance": "right",
+      "Collected Amount": "right",
+      "Service Fee": "right",
+      Status: "center",
+      "Submission ID": "center"
     }
   });
   toast.success("Excel report exported successfully");
