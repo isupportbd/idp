@@ -781,14 +781,14 @@ const printReport = () => {
           <tr>
             <th style="width: 28px;" class="text-center">#</th>
             <th>Client Organization &amp; BIN</th>
-            <th style="width: 90px;">Customer Type</th>
-            <th style="width: 80px;" class="text-end">Billing Amt</th>
-            <th style="width: 70px;" class="text-end">Discount</th>
-            <th style="width: 80px;" class="text-end">Total Payable</th>
-            <th style="width: 80px;" class="text-end">Prev Due</th>
-            <th style="width: 85px;" class="text-end">Net Payable</th>
-            <th style="width: 75px;" class="text-end">Paid</th>
-            <th style="width: 95px;" class="text-end">Current Balance</th>
+            <th style="width: 78px;">Customer Type</th>
+            <th style="width: 72px;" class="text-end">Billing Amt</th>
+            <th style="width: 62px;" class="text-end">Discount</th>
+            <th style="width: 76px;" class="text-end">Total Payable</th>
+            <th style="width: 74px;" class="text-end">Prev Due</th>
+            <th style="width: 78px;" class="text-end">Net Payable</th>
+            <th style="width: 70px;" class="text-end">Paid</th>
+            <th style="width: 90px;" class="text-end">Current Balance</th>
           </tr>
         </thead>
         <tbody>
@@ -797,9 +797,9 @@ const printReport = () => {
               (r) => `
             <tr>
               <td class="text-center">${r.idx}</td>
-              <td>
-                <div class="fw-bold" style="font-size: 10.5px;">${r.clientName}</div>
-                ${r.clientBin ? `<div class="text-muted font-monospace" style="font-size: 9px;">BIN: ${r.clientBin}</div>` : ''}
+              <td style="white-space: nowrap;">
+                <div class="fw-bold" style="font-size: 10px; line-height: 1.25;">${r.clientName}</div>
+                ${r.clientBin ? `<div class="text-muted font-monospace" style="font-size: 8.5px; line-height: 1.2;">BIN: ${r.clientBin}</div>` : ''}
               </td>
               <td>${r.customerType}</td>
               <td class="text-end font-monospace">${formatTkStr(r.billingAmount)}</td>
