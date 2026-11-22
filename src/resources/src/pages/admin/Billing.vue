@@ -558,13 +558,17 @@ const exportToExcel = async () => {
     });
 
     if (exportRows.length > 0) {
+      const completedCollectedSum = source
+        .filter((c) => c.status === "completed" || !c.status)
+        .reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
+
       const totalRow: Record<string, unknown> = {
         SL: "",
         "Receipt No": "",
         "Client Organization": "Total =",
         "Collection Date": "",
         "Payment Method": "",
-        "Collected Amount": exportRows.reduce((acc, r) => acc + (Number(r["Collected Amount"]) || 0), 0),
+        "Collected Amount": completedCollectedSum,
         "Reference No": "",
         Notes: "",
         Status: ""
@@ -832,7 +836,10 @@ const printReport = () => {
       </table>
     `;
   } else if (activeTab.value === "collections") {
-    const totalCollected = sourceList.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
+    const totalCollected = sourceList
+      .filter((c) => c.status === "completed" || !c.status)
+      .reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
+    const completedCount = sourceList.filter((c) => c.status === "completed" || !c.status).length;
 
     tableHtml = `
       <table class="report-table">
@@ -852,14 +859,14 @@ const printReport = () => {
           ${sourceList
             .map(
               (c, idx) => `
-            <tr>
+            <tr style="${c.status === 'cancelled' ? 'opacity: 0.6;' : ''}">
               <td class="text-center">${idx + 1}</td>
-              <td class="font-monospace fw-bold">${c.receiptNo}</td>
+              <td class="font-monospace fw-bold" style="${c.status === 'cancelled' ? 'text-decoration: line-through;' : ''}">${c.receiptNo}</td>
               <td class="fw-bold">${c.clientName}</td>
               <td class="text-center font-monospace">${new Date(c.collectionDate).toLocaleDateString("en-GB")}</td>
               <td class="text-center">${c.paymentMethod.toUpperCase()}</td>
               <td class="font-monospace">${c.referenceNo || '—'}</td>
-              <td class="text-end font-monospace fw-bold text-success">৳ ${formatTkStr(c.amount)}</td>
+              <td class="text-end font-monospace fw-bold ${c.status === 'cancelled' ? 'text-muted' : 'text-success'}" style="${c.status === 'cancelled' ? 'text-decoration: line-through;' : ''}">৳ ${formatTkStr(c.amount)}</td>
               <td class="text-center">
                 <span class="badge ${c.status === 'completed' ? 'badge-success' : 'badge-danger'}">
                   ${c.status.toUpperCase()}
@@ -872,7 +879,7 @@ const printReport = () => {
         </tbody>
         <tfoot>
           <tr class="total-row">
-            <td colspan="6" class="text-end fw-bold">Total Collected (${sourceList.length} Receipts):</td>
+            <td colspan="6" class="text-end fw-bold">Total Collected (${completedCount} Completed / ${sourceList.length} Total Receipts):</td>
             <td class="text-end font-monospace fw-bold text-success">৳ ${formatTkStr(totalCollected)}</td>
             <td></td>
           </tr>
