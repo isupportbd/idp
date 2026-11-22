@@ -424,12 +424,12 @@ const exportToExcel = async () => {
     metaRows.push(["Reference:", refName]);
   }
 
-  // Include Quick Stats Summary directly into the Excel Sheet
+  // Include Clean Quick Stats Summary directly into the Excel Sheet
   if (activeTab.value === "invoices" || activeTab.value === "dues" || activeTab.value === "periodic-dues") {
-    metaRows.push(["Previous Due (Pre-Period):", `${(stats.value.totalPreviousDueAmount || 0).toLocaleString()} Tk`]);
+    metaRows.push(["Previous Due:", `${(stats.value.totalPreviousDueAmount || 0).toLocaleString()} Tk`]);
     metaRows.push(["Total Invoiced:", `${(stats.value.totalBilledAmount || 0).toLocaleString()} Tk (${stats.value.totalInvoicesCount || 0} Invoices)`]);
     metaRows.push(["Total Collections:", `${(totalCollectionsAmount.value || 0).toLocaleString()} Tk (${collections.value.length || 0} Receipts)`]);
-    metaRows.push(["Closing Balance (Total Dues):", `${(stats.value.totalDueAmount || 0).toLocaleString()} Tk`]);
+    metaRows.push(["Closing Balance:", `${(stats.value.totalDueAmount || 0).toLocaleString()} Tk`]);
   } else if (activeTab.value === "collections") {
     metaRows.push(["Total Collected:", `${(totalCollectionsAmount.value || 0).toLocaleString()} Tk`]);
     metaRows.push(["Total Receipts:", `${collections.value.length} Receipts`]);
@@ -453,49 +453,87 @@ const exportToExcel = async () => {
       );
     }
 
-    exportRows = source.map((b) => {
-      const row: Record<string, unknown> = {
-        "Invoice No": b.billNo,
-        "Client Organization": b.clientName,
-        "BIN Number": b.clientBin || "—",
-        "Customer Type": b.customerTypeName || "Standard"
-      };
+    // Build client collections pool to accurately map payments even if unallocated at bill row level
+    const clientColsPool = new Map<number, number>();
+    for (const c of collections.value) {
+      if (c.status === "completed" || !c.status) {
+        const cur = clientColsPool.get(c.clientId) || 0;
+        clientColsPool.set(c.clientId, cur + (Number(c.amount) || 0));
+      }
+    }
 
-      if (!hasRefFilter) {
-        row["Reference"] = b.referenceName || "—";
+    exportRows = source.map((b, idx) => {
+      const billingAmount = Number(b.subtotal || 0);
+      const discount = Number(b.discountAmount || 0);
+      const totalPayable = Math.max(0, billingAmount - discount);
+      const prevDue = Number(b.previousDue || 0);
+      const netPayable = totalPayable + prevDue;
+
+      // Allocate payment from bill or completed collections pool
+      let paid = Number(b.paidAmount || 0);
+      if (paid === 0 && clientColsPool.has(b.clientId)) {
+        const available = clientColsPool.get(b.clientId) || 0;
+        paid = Math.min(netPayable, available);
+        clientColsPool.set(b.clientId, available - paid);
       }
 
-      row["Bill Date"] = new Date(b.billDate).toLocaleDateString();
-      row["Subtotal (Tk)"] = Number(b.subtotal || 0);
-      row["Discount (Tk)"] = Number(b.discountAmount || 0);
-      row["Previous Due (Tk)"] = Number(b.previousDue || 0);
-      row["Grand Total (Tk)"] = Number(b.grandTotal || 0);
-      row["Paid Amount (Tk)"] = Number(b.paidAmount || 0);
-      row["Due Amount (Tk)"] = Number(b.dueAmount || 0);
-      row["Status"] = b.status.toUpperCase();
+      const curBalNum = netPayable - paid;
+      const curBalFormatted =
+        curBalNum > 0
+          ? `${curBalNum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Due)`
+          : curBalNum < 0
+          ? `${Math.abs(curBalNum).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Adv)`
+          : "0.00";
+
+      const clientOrgBin = b.clientBin ? `${b.clientName}\nBIN: ${b.clientBin}` : b.clientName;
+
+      const row: Record<string, unknown> = {
+        "ক্রমিক": idx + 1,
+        "ক্লায়েন্ট নাম ও বিন": clientOrgBin,
+        "কাস্টমার টাইপ": b.customerTypeName || "Standard",
+        "বিলিং ডেট": new Date(b.billDate).toLocaleDateString("en-GB"),
+        "বিলিং এমাউন্ট": billingAmount,
+        "ডিসকাউন্ট": discount,
+        "টোটাল পেয়েবল": totalPayable,
+        "প্রিভিয়াস ডিউ": prevDue,
+        "নেট পেয়েবল": netPayable,
+        "পেইড": paid,
+        "কারেন্ট ব্যালেন্স": curBalFormatted
+      };
 
       return row;
     });
 
     // Add Totals row at bottom
     if (exportRows.length > 0) {
+      const totalBilling = exportRows.reduce((acc, r) => acc + (Number(r["বিলিং এমাউন্ট"]) || 0), 0);
+      const totalDisc = exportRows.reduce((acc, r) => acc + (Number(r["ডিসকাউন্ট"]) || 0), 0);
+      const totalPayableSum = exportRows.reduce((acc, r) => acc + (Number(r["টোটাল পেয়েবল"]) || 0), 0);
+      const totalPrevDueSum = exportRows.reduce((acc, r) => acc + (Number(r["প্রিভিয়াস ডিউ"]) || 0), 0);
+      const totalNetPayableSum = exportRows.reduce((acc, r) => acc + (Number(r["নেট পেয়েবল"]) || 0), 0);
+      const totalPaidSum = exportRows.reduce((acc, r) => acc + (Number(r["পেইড"]) || 0), 0);
+      const netClosingDue = totalNetPayableSum - totalPaidSum;
+
+      const totalClosingFormatted =
+        netClosingDue > 0
+          ? `${netClosingDue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Due)`
+          : netClosingDue < 0
+          ? `${Math.abs(netClosingDue).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Adv)`
+          : "0.00";
+
       const totalRow: Record<string, unknown> = {
-        "Invoice No": "",
-        "Client Organization": "Total =",
-        "BIN Number": "",
-        "Customer Type": ""
+        "ক্রমিক": "",
+        "ক্লায়েন্ট নাম ও বিন": "Total =",
+        "কাস্টমার টাইপ": "",
+        "বিলিং ডেট": "",
+        "বিলিং এমাউন্ট": totalBilling,
+        "ডিসকাউন্ট": totalDisc,
+        "টোটাল পেয়েবল": totalPayableSum,
+        "প্রিভিয়াস ডিউ": totalPrevDueSum,
+        "নেট পেয়েবল": totalNetPayableSum,
+        "পেইড": totalPaidSum,
+        "কারেন্ট ব্যালেন্স": totalClosingFormatted
       };
-      if (!hasRefFilter) {
-        totalRow["Reference"] = "";
-      }
-      totalRow["Bill Date"] = "";
-      totalRow["Subtotal (Tk)"] = exportRows.reduce((acc, r) => acc + (Number(r["Subtotal (Tk)"]) || 0), 0);
-      totalRow["Discount (Tk)"] = exportRows.reduce((acc, r) => acc + (Number(r["Discount (Tk)"]) || 0), 0);
-      totalRow["Previous Due (Tk)"] = exportRows.reduce((acc, r) => acc + (Number(r["Previous Due (Tk)"]) || 0), 0);
-      totalRow["Grand Total (Tk)"] = exportRows.reduce((acc, r) => acc + (Number(r["Grand Total (Tk)"]) || 0), 0);
-      totalRow["Paid Amount (Tk)"] = exportRows.reduce((acc, r) => acc + (Number(r["Paid Amount (Tk)"]) || 0), 0);
-      totalRow["Due Amount (Tk)"] = exportRows.reduce((acc, r) => acc + (Number(r["Due Amount (Tk)"]) || 0), 0);
-      totalRow["Status"] = "";
       exportRows.push(totalRow);
     }
   } else if (activeTab.value === "collections") {
@@ -511,66 +549,62 @@ const exportToExcel = async () => {
       );
     }
 
-    exportRows = source.map((c) => {
+    exportRows = source.map((c, idx) => {
       const row: Record<string, unknown> = {
-        "Receipt No": c.receiptNo,
-        "Client Organization": c.clientName,
-        "Collection Date": new Date(c.collectionDate).toLocaleDateString(),
-        "Payment Method": c.paymentMethod.toUpperCase(),
-        "Collected Amount (Tk)": Number(c.amount || 0),
-        "Reference No": c.referenceNo || "—",
-        Notes: c.notes || "",
-        Status: c.status.toUpperCase()
+        "ক্রমিক": idx + 1,
+        "রিসিট নং": c.receiptNo,
+        "ক্লায়েন্ট নাম": c.clientName,
+        "কালেকশন ডেট": new Date(c.collectionDate).toLocaleDateString("en-GB"),
+        "পেমেন্ট মেথড": c.paymentMethod.toUpperCase(),
+        "কালেক্টেড এমাউন্ট": Number(c.amount || 0),
+        "রেফারেন্স নং": c.referenceNo || "—",
+        "নোট": c.notes || "",
+        "স্ট্যাটাস": c.status.toUpperCase()
       };
       return row;
     });
 
     if (exportRows.length > 0) {
       const totalRow: Record<string, unknown> = {
-        "Receipt No": "",
-        "Client Organization": "Total =",
-        "Collection Date": "",
-        "Payment Method": "",
-        "Collected Amount (Tk)": exportRows.reduce((acc, r) => acc + (Number(r["Collected Amount (Tk)"]) || 0), 0),
-        "Reference No": "",
-        Notes: "",
-        Status: ""
+        "ক্রমিক": "",
+        "রিসিট নং": "",
+        "ক্লায়েন্ট নাম": "Total =",
+        "কালেকশন ডেট": "",
+        "পেমেন্ট মেথড": "",
+        "কালেক্টেড এমাউন্ট": exportRows.reduce((acc, r) => acc + (Number(r["কালেক্টেড এমাউন্ট"]) || 0), 0),
+        "রেফারেন্স নং": "",
+        "নোট": "",
+        "স্ট্যাটাস": ""
       };
       exportRows.push(totalRow);
     }
   } else if (activeTab.value === "missing") {
-    exportRows = filteredMissingBills.value.map((m) => {
+    exportRows = filteredMissingBills.value.map((m, idx) => {
+      const clientOrgBin = m.binNumber ? `${m.companyName}\nBIN: ${m.binNumber}` : m.companyName;
+
       const row: Record<string, unknown> = {
-        "Client Organization": m.companyName,
-        "BIN Number": m.binNumber || "—",
-        "Service Scope": m.vatServiceType || "Standard"
+        "ক্রমিক": idx + 1,
+        "ক্লায়েন্ট নাম ও বিন": clientOrgBin,
+        "সার্ভিস স্কোপ": m.vatServiceType || "Standard",
+        "সাবমিশন আইডি": m.submissionId || "Pending",
+        "স্ট্যাটাস": m.isSubmitted ? "Ready to Bill" : "Pending Submission",
+        "প্রিভিয়াস ডিউ": Number(m.previousDue || 0),
+        "সার্ভিস ফি": Number(m.monthlyServiceFee || 0)
       };
-
-      if (!hasRefFilter) {
-        row["Reference"] = m.referenceName || "—";
-      }
-
-      row["Submission ID"] = m.submissionId || "Pending";
-      row["Status"] = m.isSubmitted ? "Ready to Bill" : "Pending Submission";
-      row["Previous Due (Tk)"] = Number(m.previousDue || 0);
-      row["Service Fee (Tk)"] = Number(m.monthlyServiceFee || 0);
 
       return row;
     });
 
     if (exportRows.length > 0) {
       const totalRow: Record<string, unknown> = {
-        "Client Organization": "Total =",
-        "BIN Number": "",
-        "Service Scope": ""
+        "ক্রমিক": "",
+        "ক্লায়েন্ট নাম ও বিন": "Total =",
+        "সার্ভিস স্কোপ": "",
+        "সাবমিশন আইডি": "",
+        "স্ট্যাটাস": "",
+        "প্রিভিয়াস ডিউ": exportRows.reduce((acc, r) => acc + (Number(r["প্রিভিয়াস ডিউ"]) || 0), 0),
+        "সার্ভিস ফি": exportRows.reduce((acc, r) => acc + (Number(r["সার্ভিস ফি"]) || 0), 0)
       };
-      if (!hasRefFilter) {
-        totalRow["Reference"] = "";
-      }
-      totalRow["Submission ID"] = "";
-      totalRow["Status"] = "";
-      totalRow["Previous Due (Tk)"] = exportRows.reduce((acc, r) => acc + (Number(r["Previous Due (Tk)"]) || 0), 0);
-      totalRow["Service Fee (Tk)"] = exportRows.reduce((acc, r) => acc + (Number(r["Service Fee (Tk)"]) || 0), 0);
       exportRows.push(totalRow);
     }
   }
@@ -584,22 +618,36 @@ const exportToExcel = async () => {
     ? `IDP_Billing_${activeTab.value}_${refName.replace(/\s+/g, "_")}_${selectedMonth.value}`
     : `IDP_Billing_${activeTab.value}_${selectedMonth.value}`;
 
+  const colWidths =
+    activeTab.value === "collections"
+      ? [6, 16, 32, 14, 15, 16, 16, 12]
+      : activeTab.value === "missing"
+      ? [6, 36, 18, 16, 16, 16, 16]
+      : [6, 38, 16, 13, 16, 12, 16, 16, 17, 15, 20];
+
   exportSingleSheet(exportRows, "Billing Data", `${filePrefix}.xlsx`, {
     metaRows,
+    colWidths,
     alignments: {
-      "Subtotal (Tk)": "right",
-      "Discount (Tk)": "right",
-      "Previous Due (Tk)": "right",
-      "Grand Total (Tk)": "right",
-      "Paid Amount (Tk)": "right",
-      "Due Amount (Tk)": "right",
-      "Collected Amount (Tk)": "right",
-      "Service Fee (Tk)": "right",
-      Status: "center",
-      "Invoice No": "left",
-      "Receipt No": "left",
-      "Bill Date": "center",
-      "Collection Date": "center"
+      "ক্রমিক": "center",
+      "ক্লায়েন্ট নাম ও বিন": "left",
+      "ক্লায়েন্ট নাম": "left",
+      "রিসিট নং": "center",
+      "কাস্টমার টাইপ": "left",
+      "বিলিং ডেট": "center",
+      "কালেকশন ডেট": "center",
+      "পেমেন্ট মেথড": "center",
+      "বিলিং এমাউন্ট": "right",
+      "ডিসকাউন্ট": "right",
+      "টোটাল পেয়েবল": "right",
+      "প্রিভিয়াস ডিউ": "right",
+      "নেট পেয়েবল": "right",
+      "পেইড": "right",
+      "কারেন্ট ব্যালেন্স": "right",
+      "কালেক্টেড এমাউন্ট": "right",
+      "সার্ভিস ফি": "right",
+      "স্ট্যাটাস": "center",
+      "সাবমিশন আইডি": "center"
     }
   });
   toast.success("Excel report exported successfully");
@@ -688,51 +736,91 @@ const printReport = () => {
   let tableHtml = "";
 
   if (activeTab.value === "invoices" || activeTab.value === "dues" || activeTab.value === "periodic-dues") {
-    const subtotalSum = sourceList.reduce((acc, b) => acc + (Number(b.subtotal) || 0), 0);
-    const prevDueSum = sourceList.reduce((acc, b) => acc + (Number(b.previousDue) || 0), 0);
-    const grandTotalSum = sourceList.reduce((acc, b) => acc + (Number(b.grandTotal) || 0), 0);
-    const paidSum = sourceList.reduce((acc, b) => acc + (Number(b.paidAmount) || 0), 0);
-    const dueSum = sourceList.reduce((acc, b) => acc + (Number(b.dueAmount) || 0), 0);
+    // Build client collections pool to accurately map payments
+    const clientColsPool = new Map<number, number>();
+    for (const c of collections.value) {
+      if (c.status === "completed" || !c.status) {
+        const cur = clientColsPool.get(c.clientId) || 0;
+        clientColsPool.set(c.clientId, cur + (Number(c.amount) || 0));
+      }
+    }
+
+    const processedRows = sourceList.map((b, idx) => {
+      const billingAmount = Number(b.subtotal || 0);
+      const discount = Number(b.discountAmount || 0);
+      const totalPayable = Math.max(0, billingAmount - discount);
+      const prevDue = Number(b.previousDue || 0);
+      const netPayable = totalPayable + prevDue;
+
+      let paid = Number(b.paidAmount || 0);
+      if (paid === 0 && clientColsPool.has(b.clientId)) {
+        const available = clientColsPool.get(b.clientId) || 0;
+        paid = Math.min(netPayable, available);
+        clientColsPool.set(b.clientId, available - paid);
+      }
+
+      const curBal = netPayable - paid;
+      return {
+        idx: idx + 1,
+        clientName: b.clientName,
+        clientBin: b.clientBin,
+        customerType: b.customerTypeName || "Standard",
+        billDate: b.billDate,
+        billingAmount,
+        discount,
+        totalPayable,
+        prevDue,
+        netPayable,
+        paid,
+        curBal
+      };
+    });
+
+    const subtotalSum = processedRows.reduce((acc, r) => acc + r.billingAmount, 0);
+    const discountSum = processedRows.reduce((acc, r) => acc + r.discount, 0);
+    const totalPayableSum = processedRows.reduce((acc, r) => acc + r.totalPayable, 0);
+    const prevDueSum = processedRows.reduce((acc, r) => acc + r.prevDue, 0);
+    const netPayableSum = processedRows.reduce((acc, r) => acc + r.netPayable, 0);
+    const paidSum = processedRows.reduce((acc, r) => acc + r.paid, 0);
+    const closingBalSum = netPayableSum - paidSum;
 
     tableHtml = `
       <table class="report-table">
         <thead>
           <tr>
-            <th style="width: 30px;" class="text-center">#</th>
-            <th style="width: 95px;">Invoice No</th>
+            <th style="width: 28px;" class="text-center">#</th>
             <th>Client Organization &amp; BIN</th>
-            ${!hasRefFilter ? '<th style="width: 110px;">Reference</th>' : ''}
-            <th style="width: 75px;" class="text-center">Bill Date</th>
-            <th style="width: 80px;" class="text-end">Subtotal</th>
-            <th style="width: 80px;" class="text-end">Prev Due</th>
-            <th style="width: 85px;" class="text-end">Grand Total</th>
-            <th style="width: 75px;" class="text-end">Paid</th>
-            <th style="width: 80px;" class="text-end">Due</th>
-            <th style="width: 60px;" class="text-center">Status</th>
+            <th style="width: 80px;">Customer Type</th>
+            <th style="width: 70px;" class="text-center">Billing Date</th>
+            <th style="width: 75px;" class="text-end">Billing Amt</th>
+            <th style="width: 65px;" class="text-end">Discount</th>
+            <th style="width: 75px;" class="text-end">Total Payable</th>
+            <th style="width: 75px;" class="text-end">Prev Due</th>
+            <th style="width: 80px;" class="text-end">Net Payable</th>
+            <th style="width: 70px;" class="text-end">Paid</th>
+            <th style="width: 90px;" class="text-end">Current Balance</th>
           </tr>
         </thead>
         <tbody>
-          ${sourceList
+          ${processedRows
             .map(
-              (b, idx) => `
+              (r) => `
             <tr>
-              <td class="text-center">${idx + 1}</td>
-              <td class="font-monospace fw-bold">${b.billNo}</td>
+              <td class="text-center">${r.idx}</td>
               <td>
-                <div class="fw-bold">${b.clientName}</div>
-                ${b.clientBin ? `<div class="text-muted small font-monospace">BIN: ${b.clientBin}</div>` : ''}
+                <div class="fw-bold">${r.clientName}</div>
+                ${r.clientBin ? `<div class="text-muted font-monospace" style="font-size: 8.5px;">BIN: ${r.clientBin}</div>` : ''}
               </td>
-              ${!hasRefFilter ? `<td>${b.referenceName || '—'}</td>` : ''}
-              <td class="text-center font-monospace">${new Date(b.billDate).toLocaleDateString("en-GB")}</td>
-              <td class="text-end font-monospace">${formatTkStr(b.subtotal)}</td>
-              <td class="text-end font-monospace">${formatTkStr(b.previousDue)}</td>
-              <td class="text-end font-monospace fw-bold">${formatTkStr(b.grandTotal)}</td>
-              <td class="text-end font-monospace text-success">${formatTkStr(b.paidAmount)}</td>
-              <td class="text-end font-monospace fw-bold ${b.dueAmount > 0 ? 'text-danger' : 'text-muted'}">${formatTkStr(b.dueAmount)}</td>
-              <td class="text-center">
-                <span class="badge ${b.status === 'paid' ? 'badge-success' : (b.status === 'partial' ? 'badge-warning' : 'badge-danger')}">
-                  ${b.status.toUpperCase()}
-                </span>
+              <td>${r.customerType}</td>
+              <td class="text-center font-monospace">${new Date(r.billDate).toLocaleDateString("en-GB")}</td>
+              <td class="text-end font-monospace">${formatTkStr(r.billingAmount)}</td>
+              <td class="text-end font-monospace">${r.discount > 0 ? formatTkStr(r.discount) : "0.00"}</td>
+              <td class="text-end font-monospace fw-bold">${formatTkStr(r.totalPayable)}</td>
+              <td class="text-end font-monospace">${formatTkStr(r.prevDue)}</td>
+              <td class="text-end font-monospace fw-bold">${formatTkStr(r.netPayable)}</td>
+              <td class="text-end font-monospace text-success fw-semibold">${formatTkStr(r.paid)}</td>
+              <td class="text-end font-monospace fw-bold ${r.curBal > 0 ? 'text-danger' : (r.curBal < 0 ? 'text-primary' : 'text-success')}">
+                ${r.curBal > 0 ? `${formatTkStr(r.curBal)} (Due)` : (r.curBal < 0 ? `${formatTkStr(Math.abs(r.curBal))} (Adv)` : "0.00")}
               </td>
             </tr>
           `
@@ -741,13 +829,14 @@ const printReport = () => {
         </tbody>
         <tfoot>
           <tr class="total-row">
-            <td colspan="${!hasRefFilter ? '5' : '4'}" class="text-end fw-bold">Total (${sourceList.length} Invoices):</td>
+            <td colspan="4" class="text-end fw-bold">Total (${processedRows.length} Invoices):</td>
             <td class="text-end font-monospace fw-bold">৳ ${formatTkStr(subtotalSum)}</td>
+            <td class="text-end font-monospace fw-bold">৳ ${formatTkStr(discountSum)}</td>
+            <td class="text-end font-monospace fw-bold">৳ ${formatTkStr(totalPayableSum)}</td>
             <td class="text-end font-monospace fw-bold">৳ ${formatTkStr(prevDueSum)}</td>
-            <td class="text-end font-monospace fw-bold">৳ ${formatTkStr(grandTotalSum)}</td>
+            <td class="text-end font-monospace fw-bold">৳ ${formatTkStr(netPayableSum)}</td>
             <td class="text-end font-monospace fw-bold text-success">৳ ${formatTkStr(paidSum)}</td>
-            <td class="text-end font-monospace fw-bold text-danger">৳ ${formatTkStr(dueSum)}</td>
-            <td></td>
+            <td class="text-end font-monospace fw-bold text-danger">৳ ${closingBalSum > 0 ? `${formatTkStr(closingBalSum)} (Due)` : (closingBalSum < 0 ? `${formatTkStr(Math.abs(closingBalSum))} (Adv)` : "0.00")}</td>
           </tr>
         </tfoot>
       </table>
@@ -1040,7 +1129,7 @@ const printReport = () => {
         <div class="summary-val text-success">৳ ${formatTkStr(totalCollectionsAmount.value)}</div>
       </div>
       <div class="summary-cell">
-        <div class="summary-lbl">Total Dues</div>
+        <div class="summary-lbl">Closing Balance</div>
         <div class="summary-val text-danger">৳ ${formatTkStr(stats.value.totalDueAmount)}</div>
       </div>
     </div>

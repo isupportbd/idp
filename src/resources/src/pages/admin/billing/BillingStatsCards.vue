@@ -34,7 +34,7 @@ const emit = defineEmits<{
         <div class="stat-val text-white">
           {{ (stats.totalPreviousDueAmount || 0).toLocaleString() }} <span class="fs-6 fw-normal text-muted">Tk</span>
         </div>
-        <div class="text-secondary small mt-1 font-monospace">Pre-Period unadjusted</div>
+        <div class="text-secondary small mt-1 font-monospace">Previous Due</div>
       </div>
     </div>
 
@@ -97,11 +97,11 @@ const emit = defineEmits<{
         @click="emit('update:activeTab', 'dues')"
       >
         <div class="d-flex justify-content-between align-items-center mb-1">
-          <span class="text-muted stat-label">Total Dues</span>
+          <span class="text-muted stat-label">Closing Balance</span>
           <i class="bi bi-exclamation-octagon text-danger"></i>
         </div>
         <div class="stat-val text-danger">{{ stats.totalDueAmount.toLocaleString() }} <span class="fs-6 fw-normal text-muted">Tk</span></div>
-        <div class="text-secondary small mt-1 font-monospace">{{ dueClientsCount }} Due Invoices</div>
+        <div class="text-secondary small mt-1 font-monospace">{{ dueClientsCount }} Unsettled Dues</div>
       </div>
     </div>
 

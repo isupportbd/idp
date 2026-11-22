@@ -105,13 +105,14 @@ export function useExcelExport() {
         if (isHeader) {
           horizontalAlign = options?.headerAlignments?.[colKey] || options?.alignments?.[colKey] || "left";
           cell.s = {
-            font: { bold: true, name: "Calibri", sz: 11 },
-            alignment: { horizontal: horizontalAlign, vertical: "center" },
+            fill: { fgColor: { rgb: "F1F5F9" } },
+            font: { bold: true, name: "Calibri", sz: 11, color: { rgb: "1E293B" } },
+            alignment: { horizontal: horizontalAlign, vertical: "center", wrapText: true },
             border: {
-              top: { style: "thin", color: { rgb: "D1D5DB" } },
-              bottom: { style: "thin", color: { rgb: "000000" } },
-              left: { style: "thin", color: { rgb: "D1D5DB" } },
-              right: { style: "thin", color: { rgb: "D1D5DB" } }
+              top: { style: "thin", color: { rgb: "94A3B8" } },
+              bottom: { style: "medium", color: { rgb: "0F172A" } },
+              left: { style: "thin", color: { rgb: "CBD5E1" } },
+              right: { style: "thin", color: { rgb: "CBD5E1" } }
             }
           };
         } else {
@@ -125,31 +126,53 @@ export function useExcelExport() {
               )) ||
             String(cell.v).includes("Total =") ||
             String(cell.v).includes("Subtotal =");
-          
+
           horizontalAlign = options?.alignments?.[colKey] || (typeof cell.v === "number" ? "right" : "left");
+          const shouldWrap = typeof cell.v === "string" && cell.v.includes("\n");
 
           cell.s = {
+            fill: isTotalRow ? { fgColor: { rgb: "F8FAFC" } } : undefined,
             font: {
               bold: isTotalRow,
               name: "Calibri",
-              sz: 11
+              sz: 11,
+              color: isTotalRow ? { rgb: "0F172A" } : { rgb: "1E293B" }
             },
-            alignment: { horizontal: horizontalAlign, vertical: "center" },
+            alignment: {
+              horizontal: horizontalAlign,
+              vertical: "center",
+              wrapText: shouldWrap || isTotalRow
+            },
             border: {
-              top: { style: isTotalRow ? "thin" : "hair", color: { rgb: isTotalRow ? "374151" : "D1D5DB" } },
-              bottom: { style: isTotalRow ? "double" : "hair", color: { rgb: isTotalRow ? "000000" : "D1D5DB" } },
-              left: { style: "thin", color: { rgb: "E5E7EB" } },
-              right: { style: "thin", color: { rgb: "E5E7EB" } }
+              top: { style: isTotalRow ? "thin" : "hair", color: { rgb: isTotalRow ? "0F172A" : "CBD5E1" } },
+              bottom: { style: isTotalRow ? "double" : "hair", color: { rgb: isTotalRow ? "0F172A" : "CBD5E1" } },
+              left: { style: "thin", color: { rgb: "E2E8F0" } },
+              right: { style: "thin", color: { rgb: "E2E8F0" } }
             }
           };
 
-          // Format numeric currency columns nicely
+          // Format numeric currency columns nicely with commas and 2 decimals
           if (typeof cell.v === "number") {
             cell.z = "#,##0.00";
           }
         }
       }
     }
+
+    // Set row heights: header row and multi-line rows
+    const rowHeights: Array<{ hpt: number }> = [];
+    for (let R = 0; R <= range.e.r; ++R) {
+      if (R < headerRowIndex) {
+        rowHeights.push({ hpt: 20 });
+      } else if (R === headerRowIndex) {
+        rowHeights.push({ hpt: 26 }); // header height
+      } else {
+        const rowData = rows[R - headerRowIndex - 1];
+        const hasMultiline = rowData && Object.values(rowData).some((val) => typeof val === "string" && val.includes("\n"));
+        rowHeights.push({ hpt: hasMultiline ? 32 : 22 });
+      }
+    }
+    ws["!rows"] = rowHeights;
 
     // Page setup for printing on A4 nicely
     ws["!pageSetup"] = {
