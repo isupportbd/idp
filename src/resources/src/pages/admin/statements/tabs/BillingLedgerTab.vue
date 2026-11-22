@@ -342,7 +342,6 @@ const handlePrint = () => {
           <tr>
             <th style="width: 35px;" class="text-center">#</th>
             <th style="width: 90px;">Date</th>
-            <th style="width: 85px;">Period</th>
             <th>Particulars / Description</th>
             <th style="width: 105px;" class="text-end">Billed (Tk)</th>
             <th style="width: 105px;" class="text-end">Paid (Tk)</th>
@@ -354,7 +353,6 @@ const handlePrint = () => {
             <tr>
               <td class="text-center">${idx + 1}</td>
               <td>${t.date}</td>
-              <td>${t.taxPeriod || "-"}</td>
               <td>${t.description}</td>
               <td class="text-end">${t.debit > 0 ? formatTkStr(t.debit) : "-"}</td>
               <td class="text-end">${t.credit > 0 ? formatTkStr(t.credit) : "-"}</td>
@@ -364,7 +362,7 @@ const handlePrint = () => {
         </tbody>
         <tfoot>
           <tr class="total-row">
-            <td colspan="4" class="text-end fw-bold pe-3">Total for ${activeReferenceName.value}:</td>
+            <td colspan="3" class="text-end fw-bold pe-3">Total for ${activeReferenceName.value}:</td>
             <td class="text-end fw-bold">৳ ${formatTkStr(summary.value.totalBilled)}</td>
             <td class="text-end fw-bold">৳ ${formatTkStr(summary.value.totalPaid)}</td>
             <td class="text-end fw-bold ${summary.value.closingBalance > 0 ? 'text-danger' : (summary.value.closingBalance < 0 ? 'text-primary' : 'text-success')}">৳ ${formatBalanceWithTag(summary.value.closingBalance)}</td>
@@ -572,9 +570,7 @@ const handleExport = () => {
     const rows: Record<string, any>[] = referenceTransactions.value.map((t, i) => ({
       "#": i + 1,
       Date: t.date,
-      "Tax Period": t.taxPeriod || "—",
       Particulars: t.description,
-      "Ref No": t.refNo || "—",
       "Billed (Tk)": t.debit,
       "Paid (Tk)": t.credit,
       "Balance (Tk)": t.balance
@@ -584,21 +580,17 @@ const handleExport = () => {
     rows.push({
       "#": "",
       Date: "",
-      "Tax Period": "",
       Particulars: `Total for ${activeReferenceName.value} =`,
-      "Ref No": "",
       "Billed (Tk)": summary.value.totalBilled,
       "Paid (Tk)": summary.value.totalPaid,
       "Balance (Tk)": summary.value.closingBalance
     });
 
-    const colWidths = [6, 12, 12, 40, 18, 14, 14, 16];
+    const colWidths = [6, 14, 40, 16, 16, 18];
     const alignments: Record<string, "left" | "center" | "right"> = {
       "#": "center",
       Date: "center",
-      "Tax Period": "center",
       Particulars: "left",
-      "Ref No": "center",
       "Billed (Tk)": "right",
       "Paid (Tk)": "right",
       "Balance (Tk)": "right"
